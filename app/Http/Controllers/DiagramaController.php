@@ -29,14 +29,20 @@ class DiagramaController extends Controller
         $slug = Diagrama::uniqueSlug($data['title']);
         $diskPath = $slug.'/diagram.bpmn';
 
-        Storage::disk('diagrams')->put($diskPath, Diagrama::EMPTY_BPMN);
-
         $diagrama = Diagrama::create([
             'title' => $data['title'],
             'slug' => $slug,
             'author_id' => $request->user()->id,
             'disk_path' => $diskPath,
         ]);
+
+        try {
+            Storage::disk('diagrams')->put($diskPath, Diagrama::EMPTY_BPMN);
+        } catch (\Throwable $e) {
+            $diagrama->delete();
+
+            throw $e;
+        }
 
         return redirect()->route('diagramas.show', $diagrama->slug);
     }
@@ -87,23 +93,34 @@ class DiagramaController extends Controller
         $newSlug = Diagrama::uniqueSlug($data['title'], $diagrama->id);
         $oldSlug = $diagrama->slug;
         $filename = basename($diagrama->disk_path);
+        $slugChanged = $newSlug !== $oldSlug;
 
-        DB::transaction(function () use ($diagrama, $oldSlug, $newSlug, $filename, $data) {
-            if ($newSlug !== $oldSlug) {
-                DiagramaSlugAntigo::create([
-                    'diagrama_id' => $diagrama->id,
-                    'slug_antigo' => $oldSlug,
+        if ($slugChanged) {
+            Storage::disk('diagrams')->move($oldSlug, $newSlug);
+        }
+
+        try {
+            DB::transaction(function () use ($diagrama, $oldSlug, $newSlug, $filename, $data, $slugChanged) {
+                if ($slugChanged) {
+                    DiagramaSlugAntigo::create([
+                        'diagrama_id' => $diagrama->id,
+                        'slug_antigo' => $oldSlug,
+                    ]);
+                }
+
+                $diagrama->update([
+                    'title' => $data['title'],
+                    'slug' => $newSlug,
+                    'disk_path' => $newSlug.'/'.$filename,
                 ]);
-
-                Storage::disk('diagrams')->move($oldSlug, $newSlug);
+            });
+        } catch (\Throwable $e) {
+            if ($slugChanged) {
+                Storage::disk('diagrams')->move($newSlug, $oldSlug);
             }
 
-            $diagrama->update([
-                'title' => $data['title'],
-                'slug' => $newSlug,
-                'disk_path' => $newSlug.'/'.$filename,
-            ]);
-        });
+            throw $e;
+        }
 
         return response()->json([
             'slug' => $diagrama->slug,
@@ -115,8 +132,11 @@ class DiagramaController extends Controller
     {
         [$diagrama] = $this->resolve($slug);
 
-        Storage::disk('diagrams')->deleteDirectory($diagrama->slug);
+        $slug = $diagrama->slug;
+
         $diagrama->delete();
+
+        Storage::disk('diagrams')->deleteDirectory($slug);
 
         return response()->json(['deleted' => true]);
     }
