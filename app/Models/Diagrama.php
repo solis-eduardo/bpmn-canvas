@@ -36,6 +36,17 @@ class Diagrama extends Model
 </bpmn:definitions>
 BPMN;
 
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'locked_at' => 'datetime',
+            'last_heartbeat_at' => 'datetime',
+        ];
+    }
+
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'author_id');
@@ -44,6 +55,85 @@ BPMN;
     public function forkedFrom(): BelongsTo
     {
         return $this->belongsTo(Diagrama::class, 'forked_from_id');
+    }
+
+    /**
+     * Segundos sem heartbeat após os quais a Trava de Edição é considerada
+     * liberada por inatividade.
+     */
+    public const LOCK_INACTIVITY_TIMEOUT_SECONDS = 90;
+
+    public function lockedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'locked_by');
+    }
+
+    /**
+     * Verdadeiro se o Diagrama está travado e o heartbeat (ou, na ausência
+     * de heartbeat, o momento de aquisição) ainda está dentro do timeout de
+     * inatividade.
+     */
+    public function hasActiveLock(): bool
+    {
+        if ($this->locked_by === null) {
+            return false;
+        }
+
+        $reference = $this->last_heartbeat_at ?? $this->locked_at;
+
+        if ($reference === null) {
+            return false;
+        }
+
+        return $reference->greaterThan(now()->subSeconds(self::LOCK_INACTIVITY_TIMEOUT_SECONDS));
+    }
+
+    public function isLockedByOther(User $user): bool
+    {
+        return $this->hasActiveLock() && (int) $this->locked_by !== $user->id;
+    }
+
+    public function acquireLock(User $user): void
+    {
+        $this->forceFill([
+            'locked_by' => $user->id,
+            'locked_at' => now(),
+            'last_heartbeat_at' => now(),
+        ])->save();
+    }
+
+    /**
+     * Atualiza o heartbeat da Trava. Só tem efeito se o Usuário informado
+     * for quem detém a Trava atualmente.
+     */
+    public function heartbeat(User $user): bool
+    {
+        if ((int) $this->locked_by !== $user->id) {
+            return false;
+        }
+
+        $this->forceFill(['last_heartbeat_at' => now()])->save();
+
+        return true;
+    }
+
+    /**
+     * Libera a Trava. Se um Usuário for informado, só libera se ele for
+     * quem detém a Trava atualmente (no-op silencioso caso contrário).
+     */
+    public function releaseLock(?User $user = null): bool
+    {
+        if ($user !== null && (int) $this->locked_by !== $user->id) {
+            return false;
+        }
+
+        $this->forceFill([
+            'locked_by' => null,
+            'locked_at' => null,
+            'last_heartbeat_at' => null,
+        ])->save();
+
+        return true;
     }
 
     public function slugsAntigos(): HasMany

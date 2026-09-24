@@ -29,5 +29,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/diagramas/{slug}/conteudo', [DiagramaController::class, 'save'])->name('diagramas.save');
     Route::put('/diagramas/{slug}', [DiagramaController::class, 'rename'])->name('diagramas.rename');
     Route::delete('/diagramas/{slug}', [DiagramaController::class, 'destroy'])->name('diagramas.destroy');
+    Route::post('/diagramas/{slug}/heartbeat', [DiagramaController::class, 'heartbeat'])->name('diagramas.heartbeat');
+    Route::delete('/diagramas/{slug}/lock', [DiagramaController::class, 'unlock'])->name('diagramas.unlock');
+    Route::post('/diagramas/{slug}/fork', [DiagramaController::class, 'fork'])->name('diagramas.fork');
     Route::get('/diagramas/{slug}', [DiagramaController::class, 'show'])->name('diagramas.show');
 });
