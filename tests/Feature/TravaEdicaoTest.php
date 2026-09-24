@@ -163,6 +163,7 @@ class TravaEdicaoTest extends TestCase
         $holder = User::factory()->create();
         $blocked = User::factory()->create();
         $diagrama = Diagrama::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagrama, $blocked);
         $this->actingAs($holder)->get('/diagramas/'.$diagrama->slug);
         Storage::disk('diagrams')->put($diagrama->disk_path, '<bpmn:definitions>conteúdo original</bpmn:definitions>');
 
@@ -177,5 +178,17 @@ class TravaEdicaoTest extends TestCase
             Storage::disk('diagrams')->get($diagrama->disk_path),
             Storage::disk('diagrams')->get($forked->disk_path)
         );
+    }
+
+    public function test_a_user_without_permission_to_view_the_diagrama_cannot_fork_it(): void
+    {
+        $holder = User::factory()->create();
+        $outsider = User::factory()->create();
+        $diagrama = Diagrama::factory()->for($holder, 'author')->create();
+
+        $response = $this->actingAs($outsider)->post('/diagramas/'.$diagrama->slug.'/fork');
+
+        $response->assertForbidden();
+        $this->assertDatabaseMissing('diagramas', ['forked_from_id' => $diagrama->id]);
     }
 }

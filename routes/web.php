@@ -39,5 +39,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/diagramas/{slug}/heartbeat', [DiagramaController::class, 'heartbeat'])->name('diagramas.heartbeat');
     Route::delete('/diagramas/{slug}/lock', [DiagramaController::class, 'unlock'])->name('diagramas.unlock');
     Route::post('/diagramas/{slug}/fork', [DiagramaController::class, 'fork'])->name('diagramas.fork');
+
+    Route::get('/diagramas/{slug}/versoes', [DiagramaController::class, 'versoes'])->name('diagramas.versoes');
+    Route::post('/diagramas/{slug}/versoes/{versao}/restaurar', [DiagramaController::class, 'restaurarVersao'])->name('diagramas.versoes.restaurar');
     Route::get('/diagramas/{slug}', [DiagramaController::class, 'show'])->name('diagramas.show');
 });
