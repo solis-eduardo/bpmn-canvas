@@ -146,6 +146,11 @@ BPMN;
         return $this->hasMany(DiagramaColaborador::class);
     }
 
+    public function compartilhamentos(): HasMany
+    {
+        return $this->hasMany(Compartilhamento::class);
+    }
+
     /**
      * Gera um slug único a partir de um nome livre, normalizando-o e
      * anexando um sufixo alfanumérico curto em caso de colisão com o slug

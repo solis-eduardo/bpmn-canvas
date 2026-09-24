@@ -3,6 +3,8 @@
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\KeycloakLoginController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\CompartilhamentoController;
+use App\Http\Controllers\CompartilhamentoPublicoController;
 use App\Http\Controllers\DiagramaColaboradorController;
 use App\Http\Controllers\DiagramaController;
 use Illuminate\Support\Facades\Route;
@@ -17,6 +19,11 @@ Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')-
 
 Route::get('/login/keycloak', [KeycloakLoginController::class, 'redirect'])->name('login.keycloak');
 Route::get('/login/keycloak/callback', [KeycloakLoginController::class, 'callback'])->name('login.keycloak.callback');
+
+Route::middleware('signed')->group(function () {
+    Route::get('/compartilhamentos/{compartilhamento}', [CompartilhamentoPublicoController::class, 'show'])->name('compartilhamentos.show');
+    Route::get('/compartilhamentos/{compartilhamento}/download/{formato}', [CompartilhamentoPublicoController::class, 'download'])->name('compartilhamentos.download');
+});
 
 Route::middleware('auth')->group(function () {
     Route::view('/home', 'home')->name('home');
@@ -43,4 +50,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/diagramas/{slug}/versoes', [DiagramaController::class, 'versoes'])->name('diagramas.versoes');
     Route::post('/diagramas/{slug}/versoes/{versao}/restaurar', [DiagramaController::class, 'restaurarVersao'])->name('diagramas.versoes.restaurar');
     Route::get('/diagramas/{slug}', [DiagramaController::class, 'show'])->name('diagramas.show');
+
+    Route::get('/diagramas/{slug}/compartilhamentos', [CompartilhamentoController::class, 'index'])->name('compartilhamentos.index');
+    Route::post('/diagramas/{slug}/compartilhamentos', [CompartilhamentoController::class, 'store'])->name('compartilhamentos.store');
+    Route::delete('/compartilhamentos/{compartilhamento}', [CompartilhamentoController::class, 'destroy'])->name('compartilhamentos.destroy');
 });
