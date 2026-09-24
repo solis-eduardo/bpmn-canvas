@@ -16,4 +16,6 @@
 ## Comments
 
 Implementado via TDD (14 testes de Feature, seam HTTP + banco): `LoginController` (login/logout por sessão), Gate `manage-users` + `Admin\UserController` (criar usuário, conceder/revogar `is_admin`), migration `is_admin`/`keycloak_id` nullable em `users`, `AdminUserSeeder` (idempotente, via `ADMIN_EMAIL`/`ADMIN_PASSWORD`/`ADMIN_NAME`, rodado automaticamente no boot do container `app`). Verificado ponta a ponta via HTTP contra a stack Docker (login real, cookie de sessão, `/home` autenticado).
+
+Rodado `mattpocock-skills:code-review` (Standards + Spec) sobre este commit. Achado crítico corrigido: o seeder só criava o Administrador se `ADMIN_EMAIL` estivesse configurado — em um deploy "out of the box" (`.env.example` traz `ADMIN_EMAIL` vazio), nenhum Administrador era criado, quebrando a garantia "desde o início" que este critério exige. Corrigido para sempre criar um Administrador (e-mail default `admin@<host>` derivado de `APP_URL`, senha aleatória logada no console se `ADMIN_PASSWORD` não for definida). Também corrigidos 2 achados de Standards: `POST /login` sem rate limiting (`throttle:5,1` adicionado) e rotas `/admin/users` sem nome (`admin.users.store`/`admin.users.update`). 3 novos testes cobrindo esses casos — suíte final: 17 testes.
 </content>

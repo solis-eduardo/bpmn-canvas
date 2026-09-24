@@ -49,6 +49,19 @@ class LoginTest extends TestCase
         $this->assertGuest();
     }
 
+    public function test_login_attempts_are_rate_limited(): void
+    {
+        $user = User::factory()->create(['password' => 'senha-correta']);
+
+        for ($i = 0; $i < 5; $i++) {
+            $this->post('/login', ['email' => $user->email, 'password' => 'senha-errada']);
+        }
+
+        $response = $this->post('/login', ['email' => $user->email, 'password' => 'senha-correta']);
+
+        $response->assertStatus(429);
+    }
+
     public function test_user_can_log_out(): void
     {
         $user = User::factory()->create();

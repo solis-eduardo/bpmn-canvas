@@ -32,4 +32,27 @@ class AdminSeederTest extends TestCase
 
         $this->assertSame(1, User::where('email', 'admin@example.com')->count());
     }
+
+    public function test_seeder_creates_an_admin_even_without_admin_email_configured(): void
+    {
+        config(['bpmn.admin_email' => null, 'bpmn.admin_password' => null]);
+
+        $this->seed(AdminUserSeeder::class);
+
+        $this->assertSame(1, User::where('is_admin', true)->count());
+    }
+
+    public function test_seeder_does_not_reset_an_existing_admin_password_on_rerun(): void
+    {
+        config(['bpmn.admin_email' => null, 'bpmn.admin_password' => null]);
+
+        $this->seed(AdminUserSeeder::class);
+        $admin = User::where('is_admin', true)->firstOrFail();
+        $originalHash = $admin->password;
+
+        $this->seed(AdminUserSeeder::class);
+
+        $this->assertSame(1, User::where('is_admin', true)->count());
+        $this->assertSame($originalHash, $admin->fresh()->password);
+    }
 }
