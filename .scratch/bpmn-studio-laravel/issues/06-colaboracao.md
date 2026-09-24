@@ -40,4 +40,6 @@ Rodado `mattpocock-skills:code-review` (Standards + Spec) após o merge. Achados
 - **Integração com o ticket 03 (Trava de Edição, mergeado em paralelo)**: `DiagramaController::show()` agora aplica `authorize('view')` ANTES da lógica de trava — um Usuário sem permissão de editar (não-Autor, não-Colaborador aprovado) recebe 403 mesmo que o Diagrama não esteja travado por ninguém; só quem já tem permissão de editar chega a ver a tela de "travado por fulano". Os testes do ticket 03 que usavam um segundo usuário sem nenhuma relação com o Diagrama foram ajustados para torná-lo Colaborador aprovado primeiro, já que a tela de bloqueio só faz sentido entre pessoas que poderiam editar de qualquer forma.
 
 +3 testes (autorização de `conteudo`, preservação de status aprovado) — suíte final: 59 testes.
+
+Nota (integração com o ticket 07): a ability `manage` da `DiagramaPolicy` foi renomeada para `manageColaboradores` e uma segunda ability `manageCompartilhamentos` (só Autor, sem Admin) foi adicionada — ver `## Comments` do ticket 07 para o motivo (regras de negócio diferentes entre Colaboradores e Compartilhamentos).
 </content>

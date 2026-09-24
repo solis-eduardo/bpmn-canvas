@@ -6,15 +6,14 @@ use App\Models\Compartilhamento;
 use App\Models\Diagrama;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\URL;
 
 class CompartilhamentoController extends Controller
 {
-    public function index(Request $request, string $slug): JsonResponse
+    public function index(string $slug): JsonResponse
     {
         $diagrama = Diagrama::where('slug', $slug)->firstOrFail();
 
-        $this->autorizarAutor($request, $diagrama);
+        $this->authorize('manageCompartilhamentos', $diagrama);
 
         $compartilhamentos = $diagrama->compartilhamentos()
             ->whereNull('revoked_at')
@@ -31,7 +30,7 @@ class CompartilhamentoController extends Controller
     {
         $diagrama = Diagrama::where('slug', $slug)->firstOrFail();
 
-        $this->autorizarAutor($request, $diagrama);
+        $this->authorize('manageCompartilhamentos', $diagrama);
 
         $data = $request->validate([
             'dias' => ['sometimes', 'integer', 'min:1', 'max:60'],
@@ -50,18 +49,13 @@ class CompartilhamentoController extends Controller
         return response()->json($this->apresentar($compartilhamento), 201);
     }
 
-    public function destroy(Request $request, Compartilhamento $compartilhamento): JsonResponse
+    public function destroy(Compartilhamento $compartilhamento): JsonResponse
     {
-        $this->autorizarAutor($request, $compartilhamento->diagrama);
+        $this->authorize('manageCompartilhamentos', $compartilhamento->diagrama);
 
         $compartilhamento->update(['revoked_at' => now()]);
 
         return response()->json(['revoked' => true]);
-    }
-
-    private function autorizarAutor(Request $request, Diagrama $diagrama): void
-    {
-        abort_unless($diagrama->author_id === $request->user()->id, 403);
     }
 
     /**
@@ -71,21 +65,13 @@ class CompartilhamentoController extends Controller
     {
         $data = [
             'id' => $compartilhamento->id,
-            'url' => URL::temporarySignedRoute(
-                'compartilhamentos.show',
-                now()->addYears(10),
-                ['compartilhamento' => $compartilhamento->id],
-            ),
+            'url' => $compartilhamento->showUrl(),
             'expires_at' => $compartilhamento->expires_at->toIso8601String(),
             'allow_download' => $compartilhamento->allow_download,
         ];
 
-        if ($compartilhamento->allow_download) {
-            $data['download_url'] = URL::temporarySignedRoute(
-                'compartilhamentos.download',
-                now()->addYears(10),
-                ['compartilhamento' => $compartilhamento->id, 'formato' => 'bpmn'],
-            );
+        if ($downloadUrl = $compartilhamento->downloadUrl()) {
+            $data['download_url'] = $downloadUrl;
         }
 
         return $data;

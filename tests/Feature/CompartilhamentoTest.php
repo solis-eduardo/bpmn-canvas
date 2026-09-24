@@ -30,21 +30,17 @@ class CompartilhamentoTest extends TestCase
         return $diagrama;
     }
 
-    private function signedShowUrl(Compartilhamento $compartilhamento): string
-    {
-        return URL::temporarySignedRoute(
-            'compartilhamentos.show',
-            now()->addYears(10),
-            ['compartilhamento' => $compartilhamento->id],
-        );
-    }
-
-    private function signedDownloadUrl(Compartilhamento $compartilhamento, string $formato = 'bpmn'): string
+    /**
+     * Constrói a URL de download mesmo quando allow_download é falso: usada
+     * para provar que o servidor recusa o acesso, já que
+     * Compartilhamento::downloadUrl() retorna null nesse caso.
+     */
+    private function signedDownloadUrlIgnorandoPermissao(Compartilhamento $compartilhamento): string
     {
         return URL::temporarySignedRoute(
             'compartilhamentos.download',
             now()->addYears(10),
-            ['compartilhamento' => $compartilhamento->id, 'formato' => $formato],
+            ['compartilhamento' => $compartilhamento->id, 'formato' => 'bpmn'],
         );
     }
 
@@ -128,7 +124,7 @@ class CompartilhamentoTest extends TestCase
             'expires_at' => now()->addDays(7),
         ]);
 
-        $response = $this->get($this->signedShowUrl($compartilhamento));
+        $response = $this->get($compartilhamento->showUrl());
 
         $response->assertOk();
         $response->assertSee($diagrama->title);
@@ -142,7 +138,7 @@ class CompartilhamentoTest extends TestCase
             'expires_at' => now()->addDays(7),
         ]);
 
-        $url = $this->signedShowUrl($compartilhamento);
+        $url = $compartilhamento->showUrl();
 
         Carbon::setTestNow(now()->addDays(8));
 
@@ -163,7 +159,7 @@ class CompartilhamentoTest extends TestCase
             'revoked_at' => now(),
         ]);
 
-        $response = $this->get($this->signedShowUrl($compartilhamento));
+        $response = $this->get($compartilhamento->showUrl());
 
         $response->assertOk();
         $response->assertSee('revogado', false);
@@ -178,7 +174,7 @@ class CompartilhamentoTest extends TestCase
             'allow_download' => true,
         ]);
 
-        $response = $this->get($this->signedDownloadUrl($compartilhamento));
+        $response = $this->get($compartilhamento->downloadUrl());
 
         $response->assertOk();
         $response->assertSee('conteudo-para-baixar', false);
@@ -193,7 +189,7 @@ class CompartilhamentoTest extends TestCase
             'allow_download' => false,
         ]);
 
-        $response = $this->get($this->signedDownloadUrl($compartilhamento));
+        $response = $this->get($this->signedDownloadUrlIgnorandoPermissao($compartilhamento));
 
         $response->assertStatus(403);
     }
@@ -207,7 +203,7 @@ class CompartilhamentoTest extends TestCase
             'allow_download' => true,
         ]);
 
-        $url = $this->signedDownloadUrl($compartilhamento);
+        $url = $compartilhamento->downloadUrl();
 
         Carbon::setTestNow(now()->addDays(8));
 
@@ -255,7 +251,7 @@ class CompartilhamentoTest extends TestCase
         $response->assertOk();
         $this->assertNotNull($compartilhamento->fresh()->revoked_at);
 
-        $visit = $this->get($this->signedShowUrl($compartilhamento));
+        $visit = $this->get($compartilhamento->showUrl());
         $visit->assertSee('revogado', false);
     }
 
@@ -286,14 +282,32 @@ class CompartilhamentoTest extends TestCase
             'expires_at' => now()->addDays(20),
         ]);
 
-        $this->get($this->signedShowUrl($comDownload))->assertOk();
-        $this->get($this->signedShowUrl($semDownload))->assertOk();
+        $this->get($comDownload->showUrl())->assertOk();
+        $this->get($semDownload->showUrl())->assertOk();
 
-        $this->get($this->signedDownloadUrl($comDownload))->assertOk();
-        $this->get($this->signedDownloadUrl($semDownload))->assertStatus(403);
+        $this->get($comDownload->downloadUrl())->assertOk();
+        $this->get($this->signedDownloadUrlIgnorandoPermissao($semDownload))->assertStatus(403);
 
         $list = $this->actingAs($author)->getJson("/diagramas/{$diagrama->slug}/compartilhamentos");
         $list->assertOk();
         $list->assertJsonCount(2, 'compartilhamentos');
+    }
+
+    public function test_an_admin_cannot_manage_compartilhamentos_of_a_diagrama_they_do_not_author(): void
+    {
+        $author = User::factory()->create();
+        $admin = User::factory()->create(['is_admin' => true]);
+        $diagrama = Diagrama::factory()->for($author, 'author')->create();
+
+        $this->actingAs($admin)->postJson("/diagramas/{$diagrama->slug}/compartilhamentos")
+            ->assertForbidden();
+
+        $this->actingAs($admin)->getJson("/diagramas/{$diagrama->slug}/compartilhamentos")
+            ->assertForbidden();
+
+        $compartilhamento = Compartilhamento::factory()->for($diagrama)->for($author, 'autor')->create();
+
+        $this->actingAs($admin)->deleteJson("/compartilhamentos/{$compartilhamento->id}")
+            ->assertForbidden();
     }
 }
