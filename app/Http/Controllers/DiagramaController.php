@@ -2,13 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Diagramas\LiberarTrava;
+use App\Actions\Diagramas\SolicitarTrava;
 use App\Models\Diagrama;
 use App\Models\DiagramaSlugAntigo;
+use App\Repositories\DiagramaRepository;
 use App\Services\VersaoRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
@@ -39,7 +41,7 @@ class DiagramaController extends Controller
 
         try {
             Storage::disk('diagrams')->put($diskPath, Diagrama::EMPTY_BPMN);
-            $versoes->ensureRepositorio($diagrama, $request->user());
+            $versoes->inicializar($diagrama, $request->user());
         } catch (\Throwable $e) {
             $diagrama->delete();
 
@@ -98,11 +100,11 @@ class DiagramaController extends Controller
             'content' => ['required', 'string'],
         ]);
 
-        $versoes->ensureRepositorio($diagrama, $request->user());
+        $versoes->inicializar($diagrama, $request->user());
 
         Storage::disk('diagrams')->put($diagrama->disk_path, $data['content']);
 
-        $versoes->commit($diagrama, $request->user());
+        $versoes->salvar($diagrama, $request->user());
 
         return response()->json(['saved' => true]);
     }
@@ -113,7 +115,7 @@ class DiagramaController extends Controller
 
         $this->authorize('view', $diagrama);
 
-        $agrupado = collect($versoes->historico($diagrama))
+        $agrupado = collect($versoes->listar($diagrama))
             ->groupBy(fn (array $versao) => $versao['salvo_em']->toDateString())
             ->map(fn ($itens, string $dia) => [
                 'dia' => $dia,
@@ -200,13 +202,31 @@ class DiagramaController extends Controller
         return response()->json(['heartbeat' => true]);
     }
 
-    public function unlock(Request $request, string $slug): JsonResponse
+    public function unlock(Request $request, string $slug, LiberarTrava $liberarTrava): JsonResponse
     {
         [$diagrama] = $this->resolve($slug);
 
-        $diagrama->releaseLock($request->user());
+        if (! $liberarTrava($diagrama, $request->user())) {
+            return response()->json(['message' => 'Você não detém a trava deste diagrama.'], 403);
+        }
 
         return response()->json(['unlocked' => true]);
+    }
+
+    /**
+     * Solicita a Trava de um Diagrama travado por outro Usuário. Devolve
+     * "obtida" se a Trava foi adquirida (direto, ou por transferência
+     * automática após LOCK_REQUEST_TRANSFER_SECONDS sem resposta do
+     * detentor) ou "aguardando" enquanto o prazo não vence — o cliente deve
+     * chamar de novo em polling até obter "obtida".
+     */
+    public function solicitarTrava(Request $request, string $slug, SolicitarTrava $solicitarTrava): JsonResponse
+    {
+        [$diagrama] = $this->resolve($slug);
+
+        $this->authorize('view', $diagrama);
+
+        return response()->json($solicitarTrava($diagrama, $request->user()));
     }
 
     public function fork(Request $request, string $slug): RedirectResponse

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Diagramas\ConcederOuSolicitarColaborador;
 use App\Models\Diagrama;
 use App\Models\DiagramaColaborador;
 use App\Models\User;
@@ -31,15 +32,10 @@ class DiagramaColaboradorController extends Controller
 
     /**
      * Convite direto do Autor/Administrador (acesso imediato, status "aprovado")
-     * ou solicitação do próprio Usuário (status "solicitado").
-     *
-     * Regra de distinção: se quem faz a request é o Autor do Diagrama OU um
-     * Administrador, a linha é gravada como "aprovado", não importa quem seja
-     * o alvo. Caso contrário, só é permitido quando o alvo é o próprio
-     * solicitante (auto-solicitação), gravada como "solicitado"; tentar
-     * adicionar outra pessoa sem ser Autor/Administrador é bloqueado (403).
+     * ou solicitação do próprio Usuário (status "solicitado") — ver
+     * ConcederOuSolicitarColaborador para a regra completa.
      */
-    public function store(Request $request, string $slug): JsonResponse
+    public function store(Request $request, string $slug, ConcederOuSolicitarColaborador $conceder): JsonResponse
     {
         $diagrama = $this->resolveDiagrama($slug);
 
@@ -52,28 +48,7 @@ class DiagramaColaboradorController extends Controller
             ? User::findOrFail($data['user_id'])
             : User::where('email', $data['email'])->firstOrFail();
 
-        $solicitante = $request->user();
-        $podeConcederDireto = $solicitante->can('manageColaboradores', $diagrama);
-
-        if (! $podeConcederDireto && $solicitante->id !== $alvo->id) {
-            abort(403);
-        }
-
-        $existente = DiagramaColaborador::where('diagrama_id', $diagrama->id)
-            ->where('usuario_id', $alvo->id)
-            ->first();
-
-        // Uma auto-solicitação nunca rebaixa um colaborador já aprovado de volta
-        // para "solicitado" — só concede direto (Autor/Admin) grava "aprovado";
-        // auto-solicitação preserva o status aprovado existente, se houver.
-        $status = $podeConcederDireto
-            ? DiagramaColaborador::STATUS_APROVADO
-            : ($existente->status ?? DiagramaColaborador::STATUS_SOLICITADO);
-
-        $colaborador = DiagramaColaborador::updateOrCreate(
-            ['diagrama_id' => $diagrama->id, 'usuario_id' => $alvo->id],
-            ['status' => $status]
-        );
+        $colaborador = $conceder($diagrama, $request->user(), $alvo);
 
         return response()->json([
             'usuario_id' => $colaborador->usuario_id,

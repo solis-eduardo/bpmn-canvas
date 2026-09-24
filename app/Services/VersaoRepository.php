@@ -12,8 +12,9 @@ use Symfony\Component\Process\Process;
 /**
  * Guarda o histórico de Versões de um Diagrama usando um repositório Git
  * próprio por Diagrama, no mesmo diretório onde o arquivo `.bpmn` vive
- * (ver ADR-0004). Nenhum termo de Git deve escapar desta classe: quem
- * consome este serviço só enxerga "Versão", "salva em" e "restaurar".
+ * (ver ADR-0004). Nenhum termo de Git deve escapar desta classe: a
+ * interface fala só em "Versão" — inicializar, salvar, listar, obter,
+ * restaurar.
  */
 class VersaoRepository
 {
@@ -31,7 +32,7 @@ class VersaoRepository
      * ticket 02, ou via qualquer outro caminho que não passe por este
      * serviço, como um Fork).
      */
-    public function ensureRepositorio(Diagrama $diagrama, User $autor): void
+    public function inicializar(Diagrama $diagrama, User $autor): void
     {
         $diretorio = $this->diretorio($diagrama);
 
@@ -40,7 +41,7 @@ class VersaoRepository
         }
 
         if (Storage::disk('diagrams')->exists($diagrama->disk_path)) {
-            $this->commit($diagrama, $autor, self::MENSAGEM_INICIAL);
+            $this->salvar($diagrama, $autor, self::MENSAGEM_INICIAL);
         }
     }
 
@@ -54,7 +55,7 @@ class VersaoRepository
      * @return string|null Identificador opaco da Versão criada, ou null se
      *                      nada mudou e nenhuma Versão foi criada.
      */
-    public function commit(Diagrama $diagrama, User $autor, ?string $mensagem = null, bool $permitirVazio = false): ?string
+    public function salvar(Diagrama $diagrama, User $autor, ?string $mensagem = null, bool $permitirVazio = false): ?string
     {
         $diretorio = $this->diretorio($diagrama);
         $arquivo = $this->arquivo($diagrama);
@@ -107,7 +108,7 @@ class VersaoRepository
      *
      * @return array<int, array{id: string, salvo_em: Carbon, autor: string}>
      */
-    public function historico(Diagrama $diagrama): array
+    public function listar(Diagrama $diagrama): array
     {
         $diretorio = $this->diretorio($diagrama);
 
@@ -142,7 +143,7 @@ class VersaoRepository
     /**
      * Conteúdo do Diagrama tal como estava em uma Versão específica.
      */
-    public function conteudoDaVersao(Diagrama $diagrama, string $versao): string
+    public function obter(Diagrama $diagrama, string $versao): string
     {
         $this->validarIdentificador($versao);
 
@@ -163,11 +164,11 @@ class VersaoRepository
      */
     public function restaurar(Diagrama $diagrama, string $versao, User $autor): void
     {
-        $conteudo = $this->conteudoDaVersao($diagrama, $versao);
+        $conteudo = $this->obter($diagrama, $versao);
 
         Storage::disk('diagrams')->put($diagrama->disk_path, $conteudo);
 
-        $this->commit($diagrama, $autor, self::MENSAGEM_RESTAURACAO, permitirVazio: true);
+        $this->salvar($diagrama, $autor, self::MENSAGEM_RESTAURACAO, permitirVazio: true);
     }
 
     /**

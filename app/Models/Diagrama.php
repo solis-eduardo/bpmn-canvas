@@ -44,6 +44,7 @@ BPMN;
         return [
             'locked_at' => 'datetime',
             'last_heartbeat_at' => 'datetime',
+            'lock_requested_at' => 'datetime',
         ];
     }
 
@@ -63,9 +64,21 @@ BPMN;
      */
     public const LOCK_INACTIVITY_TIMEOUT_SECONDS = 90;
 
+    /**
+     * Segundos que o detentor da Trava tem para responder (heartbeat) a uma
+     * solicitação antes dela ser transferida automaticamente para quem
+     * solicitou (CONTEXT.md, "Trava de Edição").
+     */
+    public const LOCK_REQUEST_TRANSFER_SECONDS = 30;
+
     public function lockedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'locked_by');
+    }
+
+    public function lockRequestedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'lock_requested_by');
     }
 
     /**
@@ -104,7 +117,9 @@ BPMN;
 
     /**
      * Atualiza o heartbeat da Trava. Só tem efeito se o Usuário informado
-     * for quem detém a Trava atualmente.
+     * for quem detém a Trava atualmente. Qualquer heartbeat conta como o
+     * detentor "respondendo", cancelando uma solicitação de transferência
+     * pendente.
      */
     public function heartbeat(User $user): bool
     {
@@ -112,7 +127,11 @@ BPMN;
             return false;
         }
 
-        $this->forceFill(['last_heartbeat_at' => now()])->save();
+        $this->forceFill([
+            'last_heartbeat_at' => now(),
+            'lock_requested_by' => null,
+            'lock_requested_at' => null,
+        ])->save();
 
         return true;
     }
@@ -131,9 +150,61 @@ BPMN;
             'locked_by' => null,
             'locked_at' => null,
             'last_heartbeat_at' => null,
+            'lock_requested_by' => null,
+            'lock_requested_at' => null,
         ])->save();
 
         return true;
+    }
+
+    /**
+     * Verdadeiro se há uma solicitação de Trava pendente feita por $user.
+     */
+    public function pendingLockRequestIsFrom(User $user): bool
+    {
+        return $this->lock_requested_by !== null && (int) $this->lock_requested_by === $user->id;
+    }
+
+    /**
+     * Verdadeiro se a solicitação pendente já passou de
+     * LOCK_REQUEST_TRANSFER_SECONDS sem o detentor responder, e portanto
+     * está pronta para ser transferida automaticamente.
+     */
+    public function lockRequestTransferIsDue(): bool
+    {
+        return $this->lock_requested_at !== null
+            && $this->lock_requested_at->lessThanOrEqualTo(now()->subSeconds(self::LOCK_REQUEST_TRANSFER_SECONDS));
+    }
+
+    /**
+     * Registra $user como quem está solicitando a Trava, iniciando a janela
+     * de LOCK_REQUEST_TRANSFER_SECONDS. Não reinicia a janela se já houver
+     * uma solicitação pendente do mesmo Usuário.
+     */
+    public function registerLockRequest(User $user): void
+    {
+        if ($this->pendingLockRequestIsFrom($user)) {
+            return;
+        }
+
+        $this->forceFill([
+            'lock_requested_by' => $user->id,
+            'lock_requested_at' => now(),
+        ])->save();
+    }
+
+    /**
+     * Transfere a Trava para $user, encerrando a solicitação pendente.
+     */
+    public function transferLockTo(User $user): void
+    {
+        $this->forceFill([
+            'locked_by' => $user->id,
+            'locked_at' => now(),
+            'last_heartbeat_at' => now(),
+            'lock_requested_by' => null,
+            'lock_requested_at' => null,
+        ])->save();
     }
 
     public function slugsAntigos(): HasMany
