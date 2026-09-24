@@ -57,7 +57,31 @@ class VersaoDiagramaTest extends TestCase
         $itens = collect($response->json('versoes'))->flatMap(fn ($dia) => $dia['itens']);
 
         // Versão inicial (criação via factory, que também gera uma versão) + 3 saves.
-        $this->assertGreaterThanOrEqual(4, $itens->count());
+        $this->assertCount(4, $itens);
+    }
+
+    public function test_saving_identical_content_does_not_create_a_new_version(): void
+    {
+        $user = User::factory()->create();
+        $diagrama = Diagrama::factory()->for($user, 'author')->create();
+
+        $this->actingAs($user)->putJson('/diagramas/'.$diagrama->slug.'/conteudo', [
+            'content' => '<bpmn:definitions>mesmo conteudo</bpmn:definitions>',
+        ])->assertOk();
+
+        $antes = collect(
+            $this->actingAs($user)->getJson('/diagramas/'.$diagrama->slug.'/versoes')->json('versoes')
+        )->flatMap(fn ($dia) => $dia['itens']);
+
+        $this->actingAs($user)->putJson('/diagramas/'.$diagrama->slug.'/conteudo', [
+            'content' => '<bpmn:definitions>mesmo conteudo</bpmn:definitions>',
+        ])->assertOk();
+
+        $depois = collect(
+            $this->actingAs($user)->getJson('/diagramas/'.$diagrama->slug.'/versoes')->json('versoes')
+        )->flatMap(fn ($dia) => $dia['itens']);
+
+        $this->assertCount($antes->count(), $depois);
     }
 
     public function test_version_history_is_grouped_by_calendar_day(): void

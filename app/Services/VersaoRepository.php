@@ -35,11 +35,9 @@ class VersaoRepository
     {
         $diretorio = $this->diretorio($diagrama);
 
-        if (is_dir($diretorio.'/.git')) {
+        if ($this->garantirGitInit($diretorio)) {
             return;
         }
-
-        (new Process(['git', 'init', '--quiet'], $diretorio))->mustRun();
 
         if (Storage::disk('diagrams')->exists($diagrama->disk_path)) {
             $this->commit($diagrama, $autor, self::MENSAGEM_INICIAL);
@@ -61,15 +59,18 @@ class VersaoRepository
         $diretorio = $this->diretorio($diagrama);
         $arquivo = $this->arquivo($diagrama);
 
-        if (! is_dir($diretorio.'/.git')) {
-            (new Process(['git', 'init', '--quiet'], $diretorio))->mustRun();
-        }
+        $this->garantirGitInit($diretorio);
 
-        (new Process(['git', 'add', '--', $arquivo], $diretorio))->mustRun();
+        $this->git(['git', 'add', '--', $arquivo], $diretorio)->mustRun();
 
-        $diff = new Process(['git', 'diff', '--cached', '--quiet'], $diretorio);
+        $diff = $this->git(['git', 'diff', '--cached', '--quiet'], $diretorio);
         $diff->run();
-        $temMudanca = ! $diff->isSuccessful();
+
+        $temMudanca = match ($diff->getExitCode()) {
+            0 => false,
+            1 => true,
+            default => throw new ProcessFailedException($diff),
+        };
 
         if (! $temMudanca && ! $permitirVazio) {
             return null;
@@ -91,11 +92,10 @@ class VersaoRepository
         // em vez do relógio do sistema onde o processo `git` roda.
         $agora = Carbon::now()->toIso8601String();
 
-        $processo = new Process($args, $diretorio, [
+        $this->git($args, $diretorio, [
             'GIT_AUTHOR_DATE' => $agora,
             'GIT_COMMITTER_DATE' => $agora,
-        ]);
-        $processo->mustRun();
+        ])->mustRun();
 
         return $this->versaoAtual($diagrama);
     }
@@ -115,7 +115,7 @@ class VersaoRepository
             return [];
         }
 
-        $process = new Process(['git', 'log', '--pretty=format:%H%x09%cI%x09%an'], $diretorio);
+        $process = $this->git(['git', 'log', '--pretty=format:%H%x09%cI%x09%an'], $diretorio);
         $process->run();
 
         if (! $process->isSuccessful()) {
@@ -146,7 +146,7 @@ class VersaoRepository
     {
         $this->validarIdentificador($versao);
 
-        $process = new Process(['git', 'show', $versao.':'.$this->arquivo($diagrama)], $this->diretorio($diagrama));
+        $process = $this->git(['git', 'show', $versao.':'.$this->arquivo($diagrama)], $this->diretorio($diagrama));
         $process->run();
 
         if (! $process->isSuccessful()) {
@@ -170,12 +170,38 @@ class VersaoRepository
         $this->commit($diagrama, $autor, self::MENSAGEM_RESTAURACAO, permitirVazio: true);
     }
 
+    /**
+     * @return bool true se o repositório já existia (nada a fazer); false se
+     *              acabou de ser inicializado agora.
+     */
+    private function garantirGitInit(string $diretorio): bool
+    {
+        if (is_dir($diretorio.'/.git')) {
+            return true;
+        }
+
+        $this->git(['git', 'init', '--quiet'], $diretorio)->mustRun();
+
+        return false;
+    }
+
     private function versaoAtual(Diagrama $diagrama): string
     {
-        $process = new Process(['git', 'rev-parse', 'HEAD'], $this->diretorio($diagrama));
+        $process = $this->git(['git', 'rev-parse', 'HEAD'], $this->diretorio($diagrama));
         $process->mustRun();
 
         return trim($process->getOutput());
+    }
+
+    /**
+     * @param  array<string, string>  $env
+     */
+    private function git(array $args, string $cwd, array $env = []): Process
+    {
+        $process = new Process($args, $cwd, $env ?: null);
+        $process->setTimeout(30);
+
+        return $process;
     }
 
     private function validarIdentificador(string $versao): void

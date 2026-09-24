@@ -21,7 +21,7 @@ Usuário com permissão de editar um Diagrama do qual não é Autor. Permissão 
 _Avoid_: Editor (papel, não confundir com a interface Editor)
 
 **Administrador**:
-Usuário com privilégio de conceder Colaborador em qualquer Diagrama independentemente do Autor, e de criar contas manualmente. Nesta fase (Keycloak ainda não integrado), o papel é setado manualmente por outro Administrador; quando a integração com Keycloak (opcional, ver Usuário) for ativada, também poderá vir de uma role do Keycloak.
+Usuário com privilégio de conceder Colaborador em qualquer Diagrama independentemente do Autor, e de criar contas manualmente. O papel pode vir de duas origens que coexistem: setado manualmente por outro Administrador, ou concedido automaticamente pela role/claim correspondente no token do Keycloak (ver Usuário). Uma vez concedido, não é revogado pela ausência da claim — só uma origem manual desliga.
 
 **Compartilhamento**:
 Link público, assinado e com expiração (`expires_at`) definida em dias pelo Autor (padrão 7, máximo 60), que dá acesso de leitura a um Diagrama sem exigir login. Tem uma permissão de download (`allow_download`, desabilitada por padrão) e pode ser revogado antes de expirar (`revoked_at`). Um Diagrama pode ter múltiplos Compartilhamentos ativos simultaneamente, cada um com sua própria expiração/permissão. Somente o Autor cria e revoga Compartilhamentos.
@@ -44,7 +44,7 @@ Diagrama novo e independente criado a partir do conteúdo de outro no momento em
 Registro histórico do conteúdo de um Diagrama em um momento salvo. Cada save gera uma Versão internamente (via Git), retendo tudo; a agregação por dia é apenas uma forma de exibição do histórico ao Usuário, sem expor a mecânica Git. Restaurar uma Versão antiga cria uma nova Versão no topo do histórico com aquele conteúdo (estilo "revert") — nunca descarta as Versões intermediárias.
 
 **Usuário**:
-Conta autenticada no sistema. Nesta fase, provisionada exclusivamente por um Administrador (login local) — o Keycloak já existe na organização, mas o client deste projeto ainda não foi criado nele, então a integração SSO (login via Keycloak, provisionamento just-in-time) é tratada como opcional/adiada, a ser ligada depois sem alterar esse modelo. Substitui o login único compartilhado (Basic Auth) do stack legado.
+Conta autenticada no sistema. Duas formas de login coexistem, e o Usuário escolhe qual usar — não é uma migração de uma para outra: login local (conta provisionada manualmente por um Administrador) e login via Keycloak SSO (OpenID Connect), com provisionamento just-in-time no primeiro acesso. Uma conta local e uma identidade Keycloak com o mesmo e-mail são vinculadas automaticamente à mesma conta, nunca duplicadas. Substitui o login único compartilhado (Basic Auth) do stack legado.
 
 **Ambiente de Trabalho** _(futuro, não implementado nesta fase)_:
 Contexto de agrupamento de Usuários e Diagramas planejado para uma fase futura. Diagramas de um Ambiente seriam automaticamente visíveis/editáveis (nível Colaborador) por todos os membros, sem passar pelo fluxo de Colaborador. Nesta fase, cada Usuário é implicitamente seu próprio Ambiente, sem nenhum compartilhamento automático.
