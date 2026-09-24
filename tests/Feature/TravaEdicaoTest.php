@@ -191,4 +191,82 @@ class TravaEdicaoTest extends TestCase
         $response->assertForbidden();
         $this->assertDatabaseMissing('diagramas', ['forked_from_id' => $diagrama->id]);
     }
+
+    public function test_requesting_the_lock_when_it_is_free_acquires_it_directly(): void
+    {
+        $user = User::factory()->create();
+        $diagrama = Diagrama::factory()->for($user, 'author')->create();
+
+        $response = $this->actingAs($user)->postJson('/diagramas/'.$diagrama->slug.'/trava/solicitar');
+
+        $response->assertOk()->assertJson(['estado' => 'obtida']);
+        $this->assertSame($user->id, $diagrama->fresh()->locked_by);
+    }
+
+    public function test_requesting_a_lock_held_by_someone_else_waits_until_the_holder_fails_to_respond(): void
+    {
+        $holder = User::factory()->create();
+        $requester = User::factory()->create();
+        $diagrama = Diagrama::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagrama, $requester);
+        $this->actingAs($holder)->get('/diagramas/'.$diagrama->slug);
+
+        $waiting = $this->actingAs($requester)->postJson('/diagramas/'.$diagrama->slug.'/trava/solicitar');
+        $waiting->assertOk()->assertJson(['estado' => 'aguardando']);
+        $this->assertSame($holder->id, $diagrama->fresh()->locked_by);
+
+        $this->travel(Diagrama::LOCK_REQUEST_TRANSFER_SECONDS + 1)->seconds();
+
+        $transferred = $this->actingAs($requester)->postJson('/diagramas/'.$diagrama->slug.'/trava/solicitar');
+        $transferred->assertOk()->assertJson(['estado' => 'obtida']);
+        $this->assertSame($requester->id, $diagrama->fresh()->locked_by);
+    }
+
+    public function test_a_heartbeat_from_the_holder_cancels_a_pending_lock_request(): void
+    {
+        $holder = User::factory()->create();
+        $requester = User::factory()->create();
+        $diagrama = Diagrama::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagrama, $requester);
+        $this->actingAs($holder)->get('/diagramas/'.$diagrama->slug);
+
+        $this->actingAs($requester)->postJson('/diagramas/'.$diagrama->slug.'/trava/solicitar')
+            ->assertJson(['estado' => 'aguardando']);
+
+        $this->travel(20)->seconds();
+        $this->actingAs($holder)->postJson('/diagramas/'.$diagrama->slug.'/heartbeat')->assertOk();
+        $this->travel(20)->seconds();
+
+        $response = $this->actingAs($requester)->postJson('/diagramas/'.$diagrama->slug.'/trava/solicitar');
+
+        $response->assertOk()->assertJson(['estado' => 'aguardando']);
+        $this->assertSame($holder->id, $diagrama->fresh()->locked_by);
+    }
+
+    public function test_an_administrador_can_force_release_a_lock_held_by_someone_else(): void
+    {
+        $holder = User::factory()->create();
+        $admin = User::factory()->create(['is_admin' => true]);
+        $diagrama = Diagrama::factory()->for($holder, 'author')->create();
+        $this->actingAs($holder)->get('/diagramas/'.$diagrama->slug);
+
+        $response = $this->actingAs($admin)->deleteJson('/diagramas/'.$diagrama->slug.'/lock');
+
+        $response->assertOk()->assertJson(['unlocked' => true]);
+        $this->assertNull($diagrama->fresh()->locked_by);
+    }
+
+    public function test_a_non_admin_cannot_release_a_lock_held_by_someone_else(): void
+    {
+        $holder = User::factory()->create();
+        $other = User::factory()->create();
+        $diagrama = Diagrama::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagrama, $other);
+        $this->actingAs($holder)->get('/diagramas/'.$diagrama->slug);
+
+        $response = $this->actingAs($other)->deleteJson('/diagramas/'.$diagrama->slug.'/lock');
+
+        $response->assertStatus(403);
+        $this->assertSame($holder->id, $diagrama->fresh()->locked_by);
+    }
 }

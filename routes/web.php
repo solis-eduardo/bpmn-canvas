@@ -44,6 +44,7 @@ Route::middleware('auth')->group(function () {
     Route::delete('/diagramas/{slug}/colaboradores/{user}', [DiagramaColaboradorController::class, 'destroy'])->name('diagramas.colaboradores.destroy');
 
     Route::post('/diagramas/{slug}/heartbeat', [DiagramaController::class, 'heartbeat'])->name('diagramas.heartbeat');
+    Route::post('/diagramas/{slug}/trava/solicitar', [DiagramaController::class, 'solicitarTrava'])->name('diagramas.trava.solicitar');
     Route::delete('/diagramas/{slug}/lock', [DiagramaController::class, 'unlock'])->name('diagramas.unlock');
     Route::post('/diagramas/{slug}/fork', [DiagramaController::class, 'fork'])->name('diagramas.fork');
 
