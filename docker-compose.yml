@@ -1,0 +1,65 @@
+services:
+  app:
+    build:
+      context: .
+      target: app
+      args:
+        BPMN_JS_VERSION: ${BPMN_JS_VERSION:-18.30.0}
+    image: bpmn-studio-app:local
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      # Os .bpmn ficam nesta pasta do host (fácil de versionar em Git / fazer backup)
+      - ./diagrams:/var/www/html/storage/app/diagrams
+      - app-storage:/var/www/html/storage/framework
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - default
+
+  web:
+    build:
+      context: .
+      target: web
+      args:
+        BPMN_JS_VERSION: ${BPMN_JS_VERSION:-18.30.0}
+    image: bpmn-studio-web:local
+    container_name: bpmn-studio
+    restart: unless-stopped
+    depends_on:
+      - app
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/up"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - default
+      - nginx-network
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-bpmn}
+      POSTGRES_USER: ${DB_USERNAME:-bpmn}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-bpmn} -d ${DB_DATABASE:-bpmn}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - default
+
+volumes:
+  db-data: {}
+  app-storage: {}
+
+networks:
+  default: {}
+  nginx-network:
+    external: true
