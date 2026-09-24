@@ -60,8 +60,16 @@ BPMN;
     {
         $base = Slugger::slugify($name);
         $slug = $base;
+        $attempts = 0;
+        $maxAttempts = 20;
 
         while (static::slugIsTaken($slug, $ignoreDiagramaId)) {
+            if (++$attempts > $maxAttempts) {
+                $slug = $base.'-'.Str::lower(Str::random(12));
+
+                break;
+            }
+
             $slug = $base.'-'.Str::lower(Str::random(4));
         }
 
