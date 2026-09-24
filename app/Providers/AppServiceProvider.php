@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Diagrama;
 use App\Models\User;
+use App\Policies\DiagramaPolicy;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -25,6 +27,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::define('manage-users', fn (User $user) => $user->is_admin);
+
+        Gate::policy(Diagrama::class, DiagramaPolicy::class);
 
         Event::listen(SocialiteWasCalled::class, [KeycloakExtendSocialite::class, 'handle']);
     }

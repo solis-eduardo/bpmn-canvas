@@ -3,6 +3,7 @@
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\KeycloakLoginController;
 use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\DiagramaColaboradorController;
 use App\Http\Controllers\DiagramaController;
 use Illuminate\Support\Facades\Route;
 
@@ -29,5 +30,11 @@ Route::middleware('auth')->group(function () {
     Route::put('/diagramas/{slug}/conteudo', [DiagramaController::class, 'save'])->name('diagramas.save');
     Route::put('/diagramas/{slug}', [DiagramaController::class, 'rename'])->name('diagramas.rename');
     Route::delete('/diagramas/{slug}', [DiagramaController::class, 'destroy'])->name('diagramas.destroy');
+
+    Route::get('/diagramas/{slug}/colaboradores', [DiagramaColaboradorController::class, 'index'])->name('diagramas.colaboradores.index');
+    Route::post('/diagramas/{slug}/colaboradores', [DiagramaColaboradorController::class, 'store'])->name('diagramas.colaboradores.store');
+    Route::put('/diagramas/{slug}/colaboradores/{user}', [DiagramaColaboradorController::class, 'update'])->name('diagramas.colaboradores.update');
+    Route::delete('/diagramas/{slug}/colaboradores/{user}', [DiagramaColaboradorController::class, 'destroy'])->name('diagramas.colaboradores.destroy');
+
     Route::get('/diagramas/{slug}', [DiagramaController::class, 'show'])->name('diagramas.show');
 });

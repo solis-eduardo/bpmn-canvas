@@ -51,6 +51,11 @@ BPMN;
         return $this->hasMany(DiagramaSlugAntigo::class);
     }
 
+    public function colaboradores(): HasMany
+    {
+        return $this->hasMany(DiagramaColaborador::class);
+    }
+
     /**
      * Gera um slug único a partir de um nome livre, normalizando-o e
      * anexando um sufixo alfanumérico curto em caso de colisão com o slug
