@@ -19,6 +19,8 @@
     data-rename-url="{{ route('diagramas.rename', $diagrama->slug) }}"
     data-delete-url="{{ route('diagramas.destroy', $diagrama->slug) }}"
     data-index-url="{{ route('diagramas.index') }}"
+    data-heartbeat-url="{{ route('diagramas.heartbeat', $diagrama->slug) }}"
+    data-unlock-url="{{ route('diagramas.unlock', $diagrama->slug) }}"
 >
     <div class="app">
         <header>

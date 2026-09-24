@@ -8,6 +8,8 @@
   const renameUrl = body.dataset.renameUrl;
   const deleteUrl = body.dataset.deleteUrl;
   const indexUrl = body.dataset.indexUrl;
+  const heartbeatUrl = body.dataset.heartbeatUrl;
+  const unlockUrl = body.dataset.unlockUrl;
 
   const modeler = new BpmnJS({ container: '#canvas' });
   const $ = id => document.getElementById(id);
@@ -106,6 +108,22 @@
 
   modeler.on('commandStack.changed', () => setDirty(true));
   window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+
+  const heartbeatInterval = setInterval(() => {
+    api('POST', heartbeatUrl).catch(e => console.error(e));
+  }, 30000);
+
+  function releaseLock() {
+    clearInterval(heartbeatInterval);
+    fetch(unlockUrl, {
+      method: 'DELETE',
+      credentials: 'same-origin',
+      keepalive: true,
+      headers: { 'X-CSRF-TOKEN': csrfToken },
+    }).catch(() => {});
+  }
+
+  window.addEventListener('pagehide', releaseLock);
 
   loadContent();
 })();

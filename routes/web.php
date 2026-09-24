@@ -36,5 +36,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/diagramas/{slug}/colaboradores/{user}', [DiagramaColaboradorController::class, 'update'])->name('diagramas.colaboradores.update');
     Route::delete('/diagramas/{slug}/colaboradores/{user}', [DiagramaColaboradorController::class, 'destroy'])->name('diagramas.colaboradores.destroy');
 
+    Route::post('/diagramas/{slug}/heartbeat', [DiagramaController::class, 'heartbeat'])->name('diagramas.heartbeat');
+    Route::delete('/diagramas/{slug}/lock', [DiagramaController::class, 'unlock'])->name('diagramas.unlock');
+    Route::post('/diagramas/{slug}/fork', [DiagramaController::class, 'fork'])->name('diagramas.fork');
     Route::get('/diagramas/{slug}', [DiagramaController::class, 'show'])->name('diagramas.show');
 });
