@@ -12,8 +12,9 @@ RUN composer install --no-dev --no-interaction --no-progress --no-scripts --opti
 
 # --- Etapa 3: aplicação PHP-FPM (Laravel) ---
 FROM php:8.4-fpm-alpine AS app
-RUN apk add --no-cache postgresql-dev \
-    && docker-php-ext-install pdo pdo_pgsql opcache
+RUN apk add --no-cache postgresql-dev git \
+    && docker-php-ext-install pdo pdo_pgsql opcache \
+    && git config --system --add safe.directory '*'
 WORKDIR /var/www/html
 
 COPY --from=composer-deps /build/vendor ./vendor
