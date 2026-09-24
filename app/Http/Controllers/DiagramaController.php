@@ -1,0 +1,143 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\Diagrama;
+use App\Models\DiagramaSlugAntigo;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\View\View;
+
+class DiagramaController extends Controller
+{
+    public function index(): View
+    {
+        $diagramas = Diagrama::with('author')->orderBy('title')->get();
+
+        return view('diagramas.index', compact('diagramas'));
+    }
+
+    public function store(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+        ]);
+
+        $slug = Diagrama::uniqueSlug($data['title']);
+        $diskPath = $slug.'/diagram.bpmn';
+
+        Storage::disk('diagrams')->put($diskPath, Diagrama::EMPTY_BPMN);
+
+        $diagrama = Diagrama::create([
+            'title' => $data['title'],
+            'slug' => $slug,
+            'author_id' => $request->user()->id,
+            'disk_path' => $diskPath,
+        ]);
+
+        return redirect()->route('diagramas.show', $diagrama->slug);
+    }
+
+    public function show(string $slug): View|RedirectResponse
+    {
+        [$diagrama, $isOldSlug] = $this->resolve($slug);
+
+        if ($isOldSlug) {
+            return redirect()->route('diagramas.show', $diagrama->slug);
+        }
+
+        return view('diagramas.show', compact('diagrama'));
+    }
+
+    public function content(string $slug): JsonResponse
+    {
+        [$diagrama] = $this->resolve($slug);
+
+        return response()->json([
+            'slug' => $diagrama->slug,
+            'title' => $diagrama->title,
+            'content' => Storage::disk('diagrams')->get($diagrama->disk_path),
+        ]);
+    }
+
+    public function save(Request $request, string $slug): JsonResponse
+    {
+        [$diagrama] = $this->resolve($slug);
+
+        $data = $request->validate([
+            'content' => ['required', 'string'],
+        ]);
+
+        Storage::disk('diagrams')->put($diagrama->disk_path, $data['content']);
+
+        return response()->json(['saved' => true]);
+    }
+
+    public function rename(Request $request, string $slug): JsonResponse
+    {
+        [$diagrama] = $this->resolve($slug);
+
+        $data = $request->validate([
+            'title' => ['required', 'string', 'max:255'],
+        ]);
+
+        $newSlug = Diagrama::uniqueSlug($data['title'], $diagrama->id);
+        $oldSlug = $diagrama->slug;
+        $filename = basename($diagrama->disk_path);
+
+        DB::transaction(function () use ($diagrama, $oldSlug, $newSlug, $filename, $data) {
+            if ($newSlug !== $oldSlug) {
+                DiagramaSlugAntigo::create([
+                    'diagrama_id' => $diagrama->id,
+                    'slug_antigo' => $oldSlug,
+                ]);
+
+                Storage::disk('diagrams')->move($oldSlug, $newSlug);
+            }
+
+            $diagrama->update([
+                'title' => $data['title'],
+                'slug' => $newSlug,
+                'disk_path' => $newSlug.'/'.$filename,
+            ]);
+        });
+
+        return response()->json([
+            'slug' => $diagrama->slug,
+            'title' => $diagrama->title,
+        ]);
+    }
+
+    public function destroy(string $slug): JsonResponse
+    {
+        [$diagrama] = $this->resolve($slug);
+
+        Storage::disk('diagrams')->deleteDirectory($diagrama->slug);
+        $diagrama->delete();
+
+        return response()->json(['deleted' => true]);
+    }
+
+    /**
+     * @return array{0: Diagrama, 1: bool}
+     */
+    private function resolve(string $slug): array
+    {
+        $diagrama = Diagrama::where('slug', $slug)->first();
+
+        if ($diagrama) {
+            return [$diagrama, false];
+        }
+
+        $antigo = DiagramaSlugAntigo::with('diagrama')->where('slug_antigo', $slug)->first();
+
+        if ($antigo && $antigo->diagrama) {
+            return [$antigo->diagrama, true];
+        }
+
+        abort(404);
+    }
+}
