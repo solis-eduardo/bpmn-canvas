@@ -1,0 +1,28 @@
+services:
+  bpmn:
+    build:
+      context: .
+      args:
+        BPMN_JS_VERSION: ${BPMN_JS_VERSION:-18.30.0}
+    image: bpmn-studio:local
+    container_name: bpmn-studio
+    restart: unless-stopped
+    environment:
+      EDITOR_USER: ${EDITOR_USER:?defina EDITOR_USER no .env}
+      EDITOR_PASSWORD: ${EDITOR_PASSWORD:?defina EDITOR_PASSWORD no .env}
+    volumes:
+      # Os .bpmn ficam nesta pasta do host (fácil de versionar em Git / fazer backup)
+      - ./diagrams:/data/diagrams
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/view/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    networks:
+      - default
+      - nginx-network
+
+networks:
+  default: {}
+  nginx-network:
+    external: true
