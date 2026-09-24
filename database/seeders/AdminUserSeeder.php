@@ -11,18 +11,23 @@ class AdminUserSeeder extends Seeder
 {
     public function run(): void
     {
-        $email = config('bpmn.admin_email');
-
-        if (! $email) {
-            $this->command?->warn('ADMIN_EMAIL não definido — nenhum Administrador semeado.');
-
-            return;
-        }
+        $host = parse_url((string) config('app.url'), PHP_URL_HOST) ?: 'localhost';
+        $email = config('bpmn.admin_email') ?: "admin@{$host}";
 
         $user = User::firstOrNew(['email' => $email]);
+        $isNew = ! $user->exists;
+
+        if ($isNew) {
+            $password = config('bpmn.admin_password') ?: Str::random(24);
+            $user->password = Hash::make($password);
+        }
+
         $user->name = config('bpmn.admin_name');
-        $user->password = Hash::make(config('bpmn.admin_password') ?: Str::random(32));
         $user->is_admin = true;
         $user->save();
+
+        if ($isNew && ! config('bpmn.admin_password')) {
+            $this->command?->warn("ADMIN_EMAIL/ADMIN_PASSWORD não definidos — Administrador criado com e-mail {$email} e senha gerada: {$password}");
+        }
     }
 }

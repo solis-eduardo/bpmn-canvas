@@ -9,12 +9,12 @@ Route::get('/', function () {
 });
 
 Route::get('/login', [LoginController::class, 'create'])->middleware('guest')->name('login');
-Route::post('/login', [LoginController::class, 'store'])->middleware('guest');
+Route::post('/login', [LoginController::class, 'store'])->middleware(['guest', 'throttle:5,1']);
 Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')->name('logout');
 
 Route::middleware('auth')->group(function () {
     Route::view('/home', 'home')->name('home');
 
-    Route::post('/admin/users', [UserController::class, 'store']);
-    Route::put('/admin/users/{user}', [UserController::class, 'update']);
+    Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');
+    Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
 });
