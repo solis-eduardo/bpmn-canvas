@@ -29,5 +29,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/diagramas/{slug}/conteudo', [DiagramaController::class, 'save'])->name('diagramas.save');
     Route::put('/diagramas/{slug}', [DiagramaController::class, 'rename'])->name('diagramas.rename');
     Route::delete('/diagramas/{slug}', [DiagramaController::class, 'destroy'])->name('diagramas.destroy');
+    Route::get('/diagramas/{slug}/versoes', [DiagramaController::class, 'versoes'])->name('diagramas.versoes');
+    Route::post('/diagramas/{slug}/versoes/{versao}/restaurar', [DiagramaController::class, 'restaurarVersao'])->name('diagramas.versoes.restaurar');
     Route::get('/diagramas/{slug}', [DiagramaController::class, 'show'])->name('diagramas.show');
 });
