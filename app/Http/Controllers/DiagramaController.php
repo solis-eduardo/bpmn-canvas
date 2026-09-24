@@ -23,30 +23,22 @@ class DiagramaController extends Controller
         return view('diagramas.index', compact('diagramas'));
     }
 
-    public function store(Request $request, VersaoRepository $versoes): RedirectResponse
+    public function store(Request $request, DiagramaRepository $diagramas, VersaoRepository $versoes): RedirectResponse
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
         ]);
 
         $slug = Diagrama::uniqueSlug($data['title']);
-        $diskPath = $slug.'/diagram.bpmn';
 
-        $diagrama = Diagrama::create([
+        $diagrama = $diagramas->criar([
             'title' => $data['title'],
             'slug' => $slug,
             'author_id' => $request->user()->id,
-            'disk_path' => $diskPath,
-        ]);
+            'disk_path' => $slug.'/diagram.bpmn',
+        ], Diagrama::EMPTY_BPMN);
 
-        try {
-            Storage::disk('diagrams')->put($diskPath, Diagrama::EMPTY_BPMN);
-            $versoes->inicializar($diagrama, $request->user());
-        } catch (\Throwable $e) {
-            $diagrama->delete();
-
-            throw $e;
-        }
+        $versoes->inicializar($diagrama, $request->user());
 
         return redirect()->route('diagramas.show', $diagrama->slug);
     }
@@ -145,7 +137,7 @@ class DiagramaController extends Controller
         return response()->json(['restaurado' => true]);
     }
 
-    public function rename(Request $request, string $slug): JsonResponse
+    public function rename(Request $request, string $slug, DiagramaRepository $diagramas): JsonResponse
     {
         [$diagrama] = $this->resolve($slug);
 
@@ -154,36 +146,8 @@ class DiagramaController extends Controller
         ]);
 
         $newSlug = Diagrama::uniqueSlug($data['title'], $diagrama->id);
-        $oldSlug = $diagrama->slug;
-        $filename = basename($diagrama->disk_path);
-        $slugChanged = $newSlug !== $oldSlug;
 
-        if ($slugChanged) {
-            Storage::disk('diagrams')->move($oldSlug, $newSlug);
-        }
-
-        try {
-            DB::transaction(function () use ($diagrama, $oldSlug, $newSlug, $filename, $data, $slugChanged) {
-                if ($slugChanged) {
-                    DiagramaSlugAntigo::create([
-                        'diagrama_id' => $diagrama->id,
-                        'slug_antigo' => $oldSlug,
-                    ]);
-                }
-
-                $diagrama->update([
-                    'title' => $data['title'],
-                    'slug' => $newSlug,
-                    'disk_path' => $newSlug.'/'.$filename,
-                ]);
-            });
-        } catch (\Throwable $e) {
-            if ($slugChanged) {
-                Storage::disk('diagrams')->move($newSlug, $oldSlug);
-            }
-
-            throw $e;
-        }
+        $diagrama = $diagramas->mover($diagrama, $data['title'], $newSlug);
 
         return response()->json([
             'slug' => $diagrama->slug,
@@ -229,43 +193,30 @@ class DiagramaController extends Controller
         return response()->json($solicitarTrava($diagrama, $request->user()));
     }
 
-    public function fork(Request $request, string $slug): RedirectResponse
+    public function fork(Request $request, string $slug, DiagramaRepository $diagramas): RedirectResponse
     {
         [$diagrama] = $this->resolve($slug);
 
         $this->authorize('view', $diagrama);
 
         $newSlug = Diagrama::uniqueSlug($diagrama->title);
-        $diskPath = $newSlug.'/diagram.bpmn';
 
-        $forked = Diagrama::create([
+        $forked = $diagramas->criar([
             'title' => $diagrama->title,
             'slug' => $newSlug,
             'author_id' => $request->user()->id,
-            'disk_path' => $diskPath,
+            'disk_path' => $newSlug.'/diagram.bpmn',
             'forked_from_id' => $diagrama->id,
-        ]);
-
-        try {
-            Storage::disk('diagrams')->put($diskPath, Storage::disk('diagrams')->get($diagrama->disk_path));
-        } catch (\Throwable $e) {
-            $forked->delete();
-
-            throw $e;
-        }
+        ], Storage::disk('diagrams')->get($diagrama->disk_path));
 
         return redirect()->route('diagramas.show', $forked->slug);
     }
 
-    public function destroy(string $slug): JsonResponse
+    public function destroy(string $slug, DiagramaRepository $diagramas): JsonResponse
     {
         [$diagrama] = $this->resolve($slug);
 
-        $slug = $diagrama->slug;
-
-        $diagrama->delete();
-
-        Storage::disk('diagrams')->deleteDirectory($slug);
+        $diagramas->remover($diagrama);
 
         return response()->json(['deleted' => true]);
     }
