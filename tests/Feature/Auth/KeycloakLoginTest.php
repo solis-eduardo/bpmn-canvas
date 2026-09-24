@@ -45,6 +45,22 @@ class KeycloakLoginTest extends TestCase
         Socialite::shouldReceive('driver')->with('keycloak')->andReturn($provider);
     }
 
+    public function test_callback_failure_redirects_to_login_with_error_instead_of_500(): void
+    {
+        $provider = Mockery::mock(SocialiteProvider::class);
+        $provider->shouldReceive('user')->andThrow(
+            new \Laravel\Socialite\Two\InvalidStateException
+        );
+
+        Socialite::shouldReceive('driver')->with('keycloak')->andReturn($provider);
+
+        $response = $this->get('/login/keycloak/callback');
+
+        $response->assertRedirect('/login');
+        $response->assertSessionHas('error');
+        $this->assertGuest();
+    }
+
     public function test_user_can_log_in_via_keycloak_and_reach_a_protected_route(): void
     {
         $this->mockSocialiteUser($this->fakeSocialiteUser('keycloak-sub-1', 'Ana Silva', 'ana@example.com'));
