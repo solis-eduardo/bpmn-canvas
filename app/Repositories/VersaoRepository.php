@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Services;
+namespace App\Repositories;
 
 use App\Models\Diagrama;
 use App\Models\User;
@@ -199,6 +199,13 @@ class VersaoRepository
      */
     private function git(array $args, string $cwd, array $env = []): Process
     {
+        // Nunca confia em descoberta implícita de cwd: se o diretório não
+        // existir de verdade neste instante, falha alto em vez de deixar o
+        // processo filho cair para o cwd do PHP (ver diretorio()).
+        if (! is_dir($cwd)) {
+            throw new \RuntimeException("Diretório de repositório de Versões inexistente: {$cwd}");
+        }
+
         $process = new Process($args, $cwd, $env ?: null);
         $process->setTimeout(30);
 
@@ -214,7 +221,24 @@ class VersaoRepository
 
     private function diretorio(Diagrama $diagrama): string
     {
-        return Storage::disk('diagrams')->path(dirname($diagrama->disk_path));
+        $relativo = dirname($diagrama->disk_path);
+
+        // Garante que o diretório existe ANTES de qualquer comando git rodar
+        // nele. Sem isso, se o diretório não existir (ex.: disk_path mal
+        // formado, ou o arquivo ainda não foi gravado), o proc_open do PHP
+        // cai silenciosamente para o cwd do processo pai — que ao rodar via
+        // `php artisan test`/`artisan serve` é a raiz do projeto, fazendo o
+        // `git commit` acontecer no repositório do PROJETO em vez do
+        // repositório isolado do Diagrama (incidente real: ver histórico).
+        Storage::disk('diagrams')->makeDirectory($relativo);
+
+        $caminho = Storage::disk('diagrams')->path($relativo);
+
+        if (! is_dir($caminho)) {
+            throw new \RuntimeException("Não foi possível preparar o diretório de Versões: {$caminho}");
+        }
+
+        return $caminho;
     }
 
     private function arquivo(Diagrama $diagrama): string
