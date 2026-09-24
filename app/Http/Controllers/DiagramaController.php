@@ -77,6 +77,8 @@ class DiagramaController extends Controller
     {
         [$diagrama] = $this->resolve($slug);
 
+        $this->authorize('view', $diagrama);
+
         return response()->json([
             'slug' => $diagrama->slug,
             'title' => $diagrama->title,

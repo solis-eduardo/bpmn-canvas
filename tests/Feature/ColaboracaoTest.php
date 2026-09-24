@@ -87,6 +87,7 @@ class ColaboracaoTest extends TestCase
         ])->assertCreated();
 
         $this->actingAs($solicitante)->get("/diagramas/{$diagrama->slug}")->assertForbidden();
+        $this->actingAs($solicitante)->getJson("/diagramas/{$diagrama->slug}/conteudo")->assertForbidden();
         $this->actingAs($solicitante)->putJson("/diagramas/{$diagrama->slug}/conteudo", [
             'content' => '<bpmn:definitions>x</bpmn:definitions>',
         ])->assertForbidden();
@@ -247,5 +248,28 @@ class ColaboracaoTest extends TestCase
 
         $this->actingAs($outsider)->deleteJson("/diagramas/{$diagrama->slug}/colaboradores/{$colaborador->id}")
             ->assertForbidden();
+    }
+
+    public function test_a_self_request_never_downgrades_an_already_approved_collaborator(): void
+    {
+        $author = User::factory()->create();
+        $colaborador = User::factory()->create();
+        $diagrama = Diagrama::factory()->for($author, 'author')->create();
+
+        DiagramaColaborador::create([
+            'diagrama_id' => $diagrama->id,
+            'usuario_id' => $colaborador->id,
+            'status' => DiagramaColaborador::STATUS_APROVADO,
+        ]);
+
+        $this->actingAs($colaborador)->postJson("/diagramas/{$diagrama->slug}/colaboradores", [
+            'user_id' => $colaborador->id,
+        ])->assertCreated()->assertJson(['status' => DiagramaColaborador::STATUS_APROVADO]);
+
+        $this->assertDatabaseHas('diagrama_colaboradores', [
+            'diagrama_id' => $diagrama->id,
+            'usuario_id' => $colaborador->id,
+            'status' => DiagramaColaborador::STATUS_APROVADO,
+        ]);
     }
 }

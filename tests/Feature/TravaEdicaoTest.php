@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Diagrama;
+use App\Models\DiagramaColaborador;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -17,6 +18,20 @@ class TravaEdicaoTest extends TestCase
         parent::setUp();
 
         Storage::fake('diagrams');
+    }
+
+    /**
+     * A Trava só é relevante entre quem já tem permissão de editar (Autor ou
+     * Colaborador aprovado, ver ticket 06) — um Usuário sem essa permissão é
+     * barrado por autorização antes mesmo de a Trava entrar em jogo.
+     */
+    private function approveCollaborator(Diagrama $diagrama, User $user): void
+    {
+        DiagramaColaborador::create([
+            'diagrama_id' => $diagrama->id,
+            'usuario_id' => $user->id,
+            'status' => DiagramaColaborador::STATUS_APROVADO,
+        ]);
     }
 
     public function test_opening_the_editor_without_an_active_lock_acquires_it_for_the_current_user(): void
@@ -37,6 +52,7 @@ class TravaEdicaoTest extends TestCase
         $holder = User::factory()->create(['name' => 'Ana Autora']);
         $other = User::factory()->create();
         $diagrama = Diagrama::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagrama, $other);
 
         $this->actingAs($holder)->get('/diagramas/'.$diagrama->slug);
 
@@ -80,6 +96,7 @@ class TravaEdicaoTest extends TestCase
         $holder = User::factory()->create();
         $other = User::factory()->create();
         $diagrama = Diagrama::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagrama, $other);
         $this->actingAs($holder)->get('/diagramas/'.$diagrama->slug);
 
         $this->actingAs($holder)->deleteJson('/diagramas/'.$diagrama->slug.'/lock')->assertOk();
@@ -98,6 +115,7 @@ class TravaEdicaoTest extends TestCase
         $holder = User::factory()->create();
         $other = User::factory()->create();
         $diagrama = Diagrama::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagrama, $other);
         $this->actingAs($holder)->get('/diagramas/'.$diagrama->slug);
 
         $this->travel(91)->seconds();
@@ -114,6 +132,7 @@ class TravaEdicaoTest extends TestCase
         $holder = User::factory()->create();
         $other = User::factory()->create();
         $diagrama = Diagrama::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagrama, $other);
         $this->actingAs($holder)->get('/diagramas/'.$diagrama->slug);
 
         $this->travel(60)->seconds();

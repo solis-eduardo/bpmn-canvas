@@ -17,7 +17,7 @@ class DiagramaColaboradorController extends Controller
     {
         $diagrama = $this->resolveDiagrama($slug);
 
-        $this->authorizeGerenciamento($request->user(), $diagrama);
+        $this->authorize('manage', $diagrama);
 
         $colaboradores = $diagrama->colaboradores()->with('usuario')->get()->map(fn (DiagramaColaborador $colaborador) => [
             'usuario_id' => $colaborador->usuario_id,
@@ -53,13 +53,22 @@ class DiagramaColaboradorController extends Controller
             : User::where('email', $data['email'])->firstOrFail();
 
         $solicitante = $request->user();
-        $podeConcederDireto = $solicitante->id === $diagrama->author_id || $solicitante->is_admin;
+        $podeConcederDireto = $solicitante->can('manage', $diagrama);
 
         if (! $podeConcederDireto && $solicitante->id !== $alvo->id) {
             abort(403);
         }
 
-        $status = $podeConcederDireto ? DiagramaColaborador::STATUS_APROVADO : DiagramaColaborador::STATUS_SOLICITADO;
+        $existente = DiagramaColaborador::where('diagrama_id', $diagrama->id)
+            ->where('usuario_id', $alvo->id)
+            ->first();
+
+        // Uma auto-solicitação nunca rebaixa um colaborador já aprovado de volta
+        // para "solicitado" — só concede direto (Autor/Admin) grava "aprovado";
+        // auto-solicitação preserva o status aprovado existente, se houver.
+        $status = $podeConcederDireto
+            ? DiagramaColaborador::STATUS_APROVADO
+            : ($existente->status ?? DiagramaColaborador::STATUS_SOLICITADO);
 
         $colaborador = DiagramaColaborador::updateOrCreate(
             ['diagrama_id' => $diagrama->id, 'usuario_id' => $alvo->id],
@@ -79,7 +88,7 @@ class DiagramaColaboradorController extends Controller
     {
         $diagrama = $this->resolveDiagrama($slug);
 
-        $this->authorizeGerenciamento($request->user(), $diagrama);
+        $this->authorize('manage', $diagrama);
 
         $colaborador = DiagramaColaborador::where('diagrama_id', $diagrama->id)
             ->where('usuario_id', $user->id)
@@ -101,7 +110,7 @@ class DiagramaColaboradorController extends Controller
     {
         $diagrama = $this->resolveDiagrama($slug);
 
-        $this->authorizeGerenciamento($request->user(), $diagrama);
+        $this->authorize('manage', $diagrama);
 
         DiagramaColaborador::where('diagrama_id', $diagrama->id)
             ->where('usuario_id', $user->id)
@@ -113,12 +122,5 @@ class DiagramaColaboradorController extends Controller
     private function resolveDiagrama(string $slug): Diagrama
     {
         return Diagrama::where('slug', $slug)->firstOrFail();
-    }
-
-    private function authorizeGerenciamento(User $user, Diagrama $diagrama): void
-    {
-        if ($user->id !== $diagrama->author_id && ! $user->is_admin) {
-            abort(403);
-        }
     }
 }
