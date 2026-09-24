@@ -15,7 +15,7 @@ class DiagramaController extends Controller
 {
     public function index(): View
     {
-        $diagramas = Diagrama::with('author')->orderBy('title')->get();
+        $diagramas = Diagrama::with(['author', 'lockedBy'])->orderBy('title')->get();
 
         return view('diagramas.index', compact('diagramas'));
     }
@@ -47,12 +47,25 @@ class DiagramaController extends Controller
         return redirect()->route('diagramas.show', $diagrama->slug);
     }
 
-    public function show(string $slug): View|RedirectResponse
+    public function show(Request $request, string $slug): View|RedirectResponse
     {
         [$diagrama, $isOldSlug] = $this->resolve($slug);
 
         if ($isOldSlug) {
             return redirect()->route('diagramas.show', $diagrama->slug);
+        }
+
+        $user = $request->user();
+
+        if ($diagrama->isLockedByOther($user)) {
+            return view('diagramas.locked', [
+                'diagrama' => $diagrama,
+                'lockedBy' => $diagrama->lockedBy,
+            ]);
+        }
+
+        if (! $diagrama->heartbeat($user)) {
+            $diagrama->acquireLock($user);
         }
 
         return view('diagramas.show', compact('diagrama'));
@@ -126,6 +139,52 @@ class DiagramaController extends Controller
             'slug' => $diagrama->slug,
             'title' => $diagrama->title,
         ]);
+    }
+
+    public function heartbeat(Request $request, string $slug): JsonResponse
+    {
+        [$diagrama] = $this->resolve($slug);
+
+        if (! $diagrama->heartbeat($request->user())) {
+            return response()->json(['message' => 'Você não detém a trava deste diagrama.'], 403);
+        }
+
+        return response()->json(['heartbeat' => true]);
+    }
+
+    public function unlock(Request $request, string $slug): JsonResponse
+    {
+        [$diagrama] = $this->resolve($slug);
+
+        $diagrama->releaseLock($request->user());
+
+        return response()->json(['unlocked' => true]);
+    }
+
+    public function fork(Request $request, string $slug): RedirectResponse
+    {
+        [$diagrama] = $this->resolve($slug);
+
+        $newSlug = Diagrama::uniqueSlug($diagrama->title);
+        $diskPath = $newSlug.'/diagram.bpmn';
+
+        $forked = Diagrama::create([
+            'title' => $diagrama->title,
+            'slug' => $newSlug,
+            'author_id' => $request->user()->id,
+            'disk_path' => $diskPath,
+            'forked_from_id' => $diagrama->id,
+        ]);
+
+        try {
+            Storage::disk('diagrams')->put($diskPath, Storage::disk('diagrams')->get($diagrama->disk_path));
+        } catch (\Throwable $e) {
+            $forked->delete();
+
+            throw $e;
+        }
+
+        return redirect()->route('diagramas.show', $forked->slug);
     }
 
     public function destroy(string $slug): JsonResponse
