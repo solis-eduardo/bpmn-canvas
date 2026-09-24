@@ -17,7 +17,7 @@ class DiagramaColaboradorController extends Controller
     {
         $diagrama = $this->resolveDiagrama($slug);
 
-        $this->authorize('manage', $diagrama);
+        $this->authorize('manageColaboradores', $diagrama);
 
         $colaboradores = $diagrama->colaboradores()->with('usuario')->get()->map(fn (DiagramaColaborador $colaborador) => [
             'usuario_id' => $colaborador->usuario_id,
@@ -53,7 +53,7 @@ class DiagramaColaboradorController extends Controller
             : User::where('email', $data['email'])->firstOrFail();
 
         $solicitante = $request->user();
-        $podeConcederDireto = $solicitante->can('manage', $diagrama);
+        $podeConcederDireto = $solicitante->can('manageColaboradores', $diagrama);
 
         if (! $podeConcederDireto && $solicitante->id !== $alvo->id) {
             abort(403);
@@ -88,7 +88,7 @@ class DiagramaColaboradorController extends Controller
     {
         $diagrama = $this->resolveDiagrama($slug);
 
-        $this->authorize('manage', $diagrama);
+        $this->authorize('manageColaboradores', $diagrama);
 
         $colaborador = DiagramaColaborador::where('diagrama_id', $diagrama->id)
             ->where('usuario_id', $user->id)
@@ -110,7 +110,7 @@ class DiagramaColaboradorController extends Controller
     {
         $diagrama = $this->resolveDiagrama($slug);
 
-        $this->authorize('manage', $diagrama);
+        $this->authorize('manageColaboradores', $diagrama);
 
         DiagramaColaborador::where('diagrama_id', $diagrama->id)
             ->where('usuario_id', $user->id)

@@ -25,11 +25,23 @@ class DiagramaPolicy
     }
 
     /**
-     * Gerenciar Colaboradores/Compartilhamentos de um Diagrama: Autor ou Administrador.
+     * Gerenciar Colaboradores de um Diagrama (convidar/aprovar/remover):
+     * Autor ou Administrador (spec.md, seção "Colaboração").
      */
-    public function manage(User $user, Diagrama $diagrama): bool
+    public function manageColaboradores(User $user, Diagrama $diagrama): bool
     {
         return $user->id === $diagrama->author_id || $user->is_admin;
+    }
+
+    /**
+     * Gerenciar Compartilhamentos de um Diagrama (criar/revogar): só o Autor,
+     * sem exceção para Administrador — "Somente o Autor cria e revoga
+     * Compartilhamentos" (CONTEXT.md). Regra deliberadamente mais restrita
+     * que manageColaboradores; não unificar as duas.
+     */
+    public function manageCompartilhamentos(User $user, Diagrama $diagrama): bool
+    {
+        return $user->id === $diagrama->author_id;
     }
 
     private function podeEditar(User $user, Diagrama $diagrama): bool
