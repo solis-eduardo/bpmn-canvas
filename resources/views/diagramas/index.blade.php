@@ -20,6 +20,9 @@
             <li>
                 <a href="{{ route('diagramas.show', $diagrama->slug) }}">{{ $diagrama->title }}</a>
                 (autor: {{ $diagrama->author->name }})
+                @if ($diagrama->hasActiveLock())
+                    — em edição por {{ $diagrama->lockedBy->name }}
+                @endif
             </li>
         @empty
             <li>Nenhum diagrama criado ainda.</li>
