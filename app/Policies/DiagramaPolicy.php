@@ -24,6 +24,14 @@ class DiagramaPolicy
         return $this->podeEditar($user, $diagrama);
     }
 
+    /**
+     * Gerenciar Colaboradores/Compartilhamentos de um Diagrama: Autor ou Administrador.
+     */
+    public function manage(User $user, Diagrama $diagrama): bool
+    {
+        return $user->id === $diagrama->author_id || $user->is_admin;
+    }
+
     private function podeEditar(User $user, Diagrama $diagrama): bool
     {
         if ($user->id === $diagrama->author_id) {
