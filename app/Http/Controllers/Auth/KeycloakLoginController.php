@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialiteUserContract;
 use Laravel\Socialite\Facades\Socialite;
+use Throwable;
 
 class KeycloakLoginController extends Controller
 {
@@ -21,7 +22,13 @@ class KeycloakLoginController extends Controller
 
     public function callback(Request $request): RedirectResponse
     {
-        $socialiteUser = Socialite::driver('keycloak')->user();
+        try {
+            $socialiteUser = Socialite::driver('keycloak')->user();
+        } catch (Throwable $e) {
+            report($e);
+
+            return redirect('/login')->with('error', 'Não foi possível entrar com o Keycloak. Tente novamente.');
+        }
 
         $user = $this->resolveUser($socialiteUser);
 
@@ -102,13 +109,19 @@ class KeycloakLoginController extends Controller
             return [];
         }
 
-        $payload = strtr($parts[1], '-_', '+/');
-        $payload = base64_decode(str_pad($payload, strlen($payload) % 4 === 0 ? strlen($payload) : strlen($payload) + (4 - strlen($payload) % 4), '=', STR_PAD_RIGHT), true);
+        $payload = $this->base64UrlDecode($parts[1]);
 
         if ($payload === false) {
             return [];
         }
 
         return json_decode($payload, true) ?? [];
+    }
+
+    private function base64UrlDecode(string $data): string|false
+    {
+        $padded = str_pad($data, strlen($data) + (4 - strlen($data) % 4) % 4, '=');
+
+        return base64_decode(strtr($padded, '-_', '+/'), true);
     }
 }
