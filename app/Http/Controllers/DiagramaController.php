@@ -55,6 +55,8 @@ class DiagramaController extends Controller
             return redirect()->route('diagramas.show', $diagrama->slug);
         }
 
+        $this->authorize('view', $diagrama);
+
         return view('diagramas.show', compact('diagrama'));
     }
 
@@ -72,6 +74,8 @@ class DiagramaController extends Controller
     public function save(Request $request, string $slug): JsonResponse
     {
         [$diagrama] = $this->resolve($slug);
+
+        $this->authorize('update', $diagrama);
 
         $data = $request->validate([
             'content' => ['required', 'string'],
