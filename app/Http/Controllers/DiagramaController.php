@@ -7,7 +7,7 @@ use App\Actions\Diagramas\SolicitarTrava;
 use App\Models\Diagrama;
 use App\Models\DiagramaSlugAntigo;
 use App\Repositories\DiagramaRepository;
-use App\Services\VersaoRepository;
+use App\Repositories\VersaoRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
