@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Diagrama;
 use App\Models\DiagramaSlugAntigo;
+use App\Services\VersaoRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ class DiagramaController extends Controller
         return view('diagramas.index', compact('diagramas'));
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request, VersaoRepository $versoes): RedirectResponse
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -38,6 +39,7 @@ class DiagramaController extends Controller
 
         try {
             Storage::disk('diagrams')->put($diskPath, Diagrama::EMPTY_BPMN);
+            $versoes->ensureRepositorio($diagrama, $request->user());
         } catch (\Throwable $e) {
             $diagrama->delete();
 
@@ -86,7 +88,7 @@ class DiagramaController extends Controller
         ]);
     }
 
-    public function save(Request $request, string $slug): JsonResponse
+    public function save(Request $request, string $slug, VersaoRepository $versoes): JsonResponse
     {
         [$diagrama] = $this->resolve($slug);
 
@@ -96,9 +98,49 @@ class DiagramaController extends Controller
             'content' => ['required', 'string'],
         ]);
 
+        $versoes->ensureRepositorio($diagrama, $request->user());
+
         Storage::disk('diagrams')->put($diagrama->disk_path, $data['content']);
 
+        $versoes->commit($diagrama, $request->user());
+
         return response()->json(['saved' => true]);
+    }
+
+    public function versoes(string $slug, VersaoRepository $versoes): JsonResponse
+    {
+        [$diagrama] = $this->resolve($slug);
+
+        $this->authorize('view', $diagrama);
+
+        $agrupado = collect($versoes->historico($diagrama))
+            ->groupBy(fn (array $versao) => $versao['salvo_em']->toDateString())
+            ->map(fn ($itens, string $dia) => [
+                'dia' => $dia,
+                'itens' => $itens->map(fn (array $versao) => [
+                    'id' => $versao['id'],
+                    'salvo_em' => $versao['salvo_em']->toIso8601String(),
+                    'autor' => $versao['autor'],
+                ])->values(),
+            ])
+            ->values();
+
+        return response()->json(['versoes' => $agrupado]);
+    }
+
+    public function restaurarVersao(Request $request, string $slug, string $versao, VersaoRepository $versoes): JsonResponse
+    {
+        [$diagrama] = $this->resolve($slug);
+
+        $this->authorize('update', $diagrama);
+
+        try {
+            $versoes->restaurar($diagrama, $versao, $request->user());
+        } catch (\RuntimeException $e) {
+            abort(404);
+        }
+
+        return response()->json(['restaurado' => true]);
     }
 
     public function rename(Request $request, string $slug): JsonResponse
@@ -170,6 +212,8 @@ class DiagramaController extends Controller
     public function fork(Request $request, string $slug): RedirectResponse
     {
         [$diagrama] = $this->resolve($slug);
+
+        $this->authorize('view', $diagrama);
 
         $newSlug = Diagrama::uniqueSlug($diagrama->title);
         $diskPath = $newSlug.'/diagram.bpmn';
