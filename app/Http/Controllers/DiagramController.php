@@ -13,12 +13,13 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use RuntimeException;
 
 class DiagramController extends Controller
 {
     public function index(): View
     {
-        $diagrams = Diagram::with(['author', 'lockedBy'])->orderBy('title')->get();
+        $diagrams = Diagram::with(['author', 'owner', 'lockedBy'])->orderBy('title')->get();
 
         return view('diagrams.index', compact('diagrams'));
     }
@@ -35,8 +36,9 @@ class DiagramController extends Controller
             'title' => $data['title'],
             'slug' => $slug,
             'author_id' => $request->user()->id,
+            'owner_id' => $request->user()->id,
             'disk_path' => $slug.'/diagram.bpmn',
-        ], Diagram::EMPTY_BPMN);
+        ], Diagram::emptyBpmn());
 
         $versions->initialize($diagram, $request->user());
 
@@ -65,6 +67,8 @@ class DiagramController extends Controller
         if (! $diagram->heartbeat($user)) {
             $diagram->acquireLock($user);
         }
+
+        $diagram->loadMissing(['author', 'owner']);
 
         return view('diagrams.show', compact('diagram'));
     }
@@ -111,11 +115,38 @@ class DiagramController extends Controller
                     'id' => $version['id'],
                     'saved_at' => $version['saved_at']->toIso8601String(),
                     'author' => $version['author'],
+                    'number' => $version['number'],
+                    'name' => $version['name'],
+                    'renamed' => $version['renamed'],
                 ])->values(),
             ])
             ->values();
 
         return response()->json(['versions' => $grouped]);
+    }
+
+    /**
+     * BPMN content of a single Version, used to compare it against another
+     * source (e.g. the current content) on the canvas. Deliberately generic
+     * — it doesn't assume "old vs current": it just returns one Version's
+     * content, so it works for comparing any two Versions too.
+     */
+    public function versionContent(string $slug, string $version, VersionRepository $versions): JsonResponse
+    {
+        [$diagram] = $this->resolve($slug);
+
+        $this->authorize('update', $diagram);
+
+        try {
+            $content = $versions->get($diagram, $version);
+        } catch (\RuntimeException $e) {
+            abort(404);
+        }
+
+        return response()->json([
+            'id' => $version,
+            'content' => $content,
+        ]);
     }
 
     public function restoreVersion(Request $request, string $slug, string $version, VersionRepository $versions): JsonResponse
@@ -126,11 +157,42 @@ class DiagramController extends Controller
 
         try {
             $versions->restore($diagram, $version, $request->user());
-        } catch (\RuntimeException $e) {
+        } catch (RuntimeException $e) {
             abort(404);
         }
 
         return response()->json(['restored' => true]);
+    }
+
+    /**
+     * Gives a Version a custom name to mark a milestone. Anyone who can edit
+     * the Diagram can rename a Version — same permission as saving/restoring
+     * (CONTEXT.md, "Version").
+     */
+    public function renameVersion(Request $request, string $slug, string $version, VersionRepository $versions): JsonResponse
+    {
+        [$diagram] = $this->resolve($slug);
+
+        $this->authorize('update', $diagram);
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+        ]);
+
+        try {
+            $versions->rename($diagram, $version, $data['name']);
+        } catch (RuntimeException $e) {
+            abort(404);
+        }
+
+        $renamed = collect($versions->list($diagram))->firstWhere('id', $version);
+
+        return response()->json([
+            'id' => $version,
+            'number' => $renamed['number'] ?? null,
+            'name' => $data['name'],
+            'renamed' => true,
+        ]);
     }
 
     public function rename(Request $request, string $slug, DiagramRepository $diagrams): JsonResponse
@@ -189,11 +251,22 @@ class DiagramController extends Controller
         return response()->json($requestLock($diagram, $request->user()));
     }
 
-    public function fork(Request $request, string $slug, DiagramRepository $diagrams): RedirectResponse
+    public function fork(Request $request, string $slug, DiagramRepository $diagrams, VersionRepository $versions): RedirectResponse
     {
         [$diagram] = $this->resolve($slug);
 
         $this->authorize('view', $diagram);
+
+        // The "diagrams" disk is configured with `throw => false`, so a
+        // failed read comes back as null rather than an exception. Catch
+        // that explicitly: silently coercing null/false into an empty
+        // string would register a Fork with corrupted (empty) content
+        // instead of registering nothing.
+        $content = Storage::disk('diagrams')->get($diagram->disk_path);
+
+        if (! is_string($content)) {
+            throw new RuntimeException("Could not read the Diagram's content to fork it: {$diagram->disk_path}");
+        }
 
         $newSlug = Diagram::uniqueSlug($diagram->title);
 
@@ -201,9 +274,15 @@ class DiagramController extends Controller
             'title' => $diagram->title,
             'slug' => $newSlug,
             'author_id' => $request->user()->id,
+            'owner_id' => $request->user()->id,
             'disk_path' => $newSlug.'/diagram.bpmn',
             'forked_from_id' => $diagram->id,
-        ], Storage::disk('diagrams')->get($diagram->disk_path));
+        ], $content);
+
+        // A Fork has its own, independent Version history, starting again at
+        // Version 1 (CONTEXT.md, "Version") — its own Git repository, never
+        // sharing history with the origin Diagram's.
+        $versions->initialize($forked, $request->user());
 
         return redirect()->route('diagrams.show', $forked->slug);
     }
@@ -211,6 +290,8 @@ class DiagramController extends Controller
     public function destroy(string $slug, DiagramRepository $diagrams): JsonResponse
     {
         [$diagram] = $this->resolve($slug);
+
+        $this->authorize('delete', $diagram);
 
         $diagrams->remove($diagram);
 
