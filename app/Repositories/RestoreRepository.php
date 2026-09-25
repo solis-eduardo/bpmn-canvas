@@ -36,6 +36,10 @@ class RestoreRepository
             throw new RuntimeException("Backup artifact not found: {$artifact}");
         }
 
+        if (! str_ends_with($artifact, '.tar.gz')) {
+            throw new RuntimeException("Invalid artifact name: {$artifact}");
+        }
+
         $stagingDir = $disk->path('.restore-'.(string) Str::uuid());
 
         try {
