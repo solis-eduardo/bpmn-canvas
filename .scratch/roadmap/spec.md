@@ -214,4 +214,4 @@ See `CONTEXT.md` for the glossary and ADR-0006/0007 for the decisions behind thi
 - Decisions were settled in a grilling session on 2026-09-24. The glossary (`CONTEXT.md`), the PT→EN mapping (`docs/GLOSSARY.md`) and ADR-0006/0007 were updated in the same session.
 - Three fronts touch the Diagram list: the list redesign, search/filters, and grouping by Workspace. Search and grouping depend on the redesign, to avoid rework.
 - The Diagram Owner prefactor comes before Notifications and Workspaces, because both refer to the Diagram Owner.
-- The ticket breakdown is published under `.scratch/roadmap/issues/` via `/to-tickets` once approved.
+- The ticket breakdown is published as GitHub Issues on `solis-eduardo/bpmn-canvas` via `/to-tickets` once approved.
