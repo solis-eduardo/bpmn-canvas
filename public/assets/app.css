@@ -77,6 +77,10 @@ main { position: relative; min-height: 0; }
 .dropdown.open .dropdown-menu { display: block; }
 .dropdown-menu button { display: block; width: 100%; text-align: left; border: 0; }
 
+/* Tailwind-based dropdown styling for public viewer */
+.dropdown-menu.hidden { display: none; }
+.dropdown.open .dropdown-menu { display: block !important; }
+
 .zoom { position: absolute; right: 16px; bottom: 64px; display: flex; flex-direction: column; gap: 4px; z-index: 10; }
 .zoom button { width: 36px; height: 36px; padding: 0; font-size: 18px; }
 

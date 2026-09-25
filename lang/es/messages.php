@@ -9,8 +9,11 @@ return [
     'password' => 'Contraseña',
     'invalid_credentials' => 'Credenciales inválidas.',
     'keycloak_login_failed' => 'No se pudo iniciar sesión con Keycloak. Inténtalo de nuevo.',
+    'login_with_keycloak' => 'Iniciar sesión con Keycloak',
+    'or' => 'O',
 
     // Navigation
+    'home' => 'Inicio',
     'diagrams' => 'Diagramas',
 
     // Diagram list

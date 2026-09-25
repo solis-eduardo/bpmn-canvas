@@ -9,8 +9,11 @@ return [
     'password' => 'Password',
     'invalid_credentials' => 'Invalid credentials.',
     'keycloak_login_failed' => 'Could not log in with Keycloak. Please try again.',
+    'login_with_keycloak' => 'Log in with Keycloak',
+    'or' => 'Or',
 
     // Navigation
+    'home' => 'Home',
     'diagrams' => 'Diagrams',
 
     // Diagram list
