@@ -157,7 +157,7 @@ class DiagramController extends Controller
 
         try {
             $versions->rename($diagram, $version, $data['name']);
-        } catch (\RuntimeException $e) {
+        } catch (RuntimeException $e) {
             abort(404);
         }
 
