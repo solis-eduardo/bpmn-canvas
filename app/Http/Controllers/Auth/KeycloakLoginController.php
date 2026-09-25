@@ -35,6 +35,7 @@ class KeycloakLoginController extends Controller
 
         if ($this->hasAdminRoleClaim($socialiteUser)) {
             $user->is_admin = true;
+            $user->is_admin_via_keycloak_claim = true;
         }
 
         $user->save();
