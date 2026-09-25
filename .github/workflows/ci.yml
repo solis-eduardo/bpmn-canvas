@@ -8,9 +8,9 @@ on:
 jobs:
   pint:
     name: Pint (code style)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -26,9 +26,9 @@ jobs:
 
   tests:
     name: PHPUnit
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
@@ -41,13 +41,15 @@ jobs:
         uses: ramsey/composer-install@v3
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
-          cache: npm
 
       - name: Install npm dependencies
-        run: npm ci
+        # `npm ci` requires a committed package-lock.json, which not every
+        # branch has yet (only PRs that touched the front-end build added
+        # one); `npm install` works either way.
+        run: npm install
 
       - name: Build front-end assets
         # Several views render through the shared layout's @vite directive
@@ -66,9 +68,9 @@ jobs:
 
   phpmd:
     name: PHPMD (static analysis)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
