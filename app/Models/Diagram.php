@@ -64,6 +64,7 @@ BPMN;
         ];
     }
 
+    /** @return BelongsTo<User, $this> */
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'author_id');
@@ -76,6 +77,7 @@ BPMN;
      * check that used to gate on "is the Author" now gates on
      * {@see isOwnedBy()} instead.
      */
+    /** @return BelongsTo<User, $this> */
     public function owner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'owner_id');
@@ -93,6 +95,7 @@ BPMN;
         return (int) $this->owner_id === $user->id;
     }
 
+    /** @return BelongsTo<Diagram, $this> */
     public function forkedFrom(): BelongsTo
     {
         return $this->belongsTo(Diagram::class, 'forked_from_id');
@@ -111,11 +114,13 @@ BPMN;
      */
     public const LOCK_REQUEST_TRANSFER_SECONDS = 30;
 
+    /** @return BelongsTo<User, $this> */
     public function lockedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'locked_by');
     }
 
+    /** @return BelongsTo<User, $this> */
     public function lockRequestedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'lock_requested_by');
@@ -246,16 +251,19 @@ BPMN;
         ])->save();
     }
 
+    /** @return HasMany<DiagramOldSlug, $this> */
     public function oldSlugs(): HasMany
     {
         return $this->hasMany(DiagramOldSlug::class);
     }
 
+    /** @return HasMany<DiagramCollaborator, $this> */
     public function collaborators(): HasMany
     {
         return $this->hasMany(DiagramCollaborator::class);
     }
 
+    /** @return HasMany<Share, $this> */
     public function shares(): HasMany
     {
         return $this->hasMany(Share::class);
@@ -273,7 +281,7 @@ BPMN;
         $attempts = 0;
         $maxAttempts = 20;
 
-        while (static::slugIsTaken($slug, $ignoreDiagramId)) {
+        while (self::slugIsTaken($slug, $ignoreDiagramId)) {
             if (++$attempts > $maxAttempts) {
                 $slug = $base.'-'.Str::lower(Str::random(12));
 
