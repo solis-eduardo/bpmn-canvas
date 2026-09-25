@@ -11,20 +11,25 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
-#[Fillable(['slug', 'title', 'author_id', 'disk_path', 'forked_from_id'])]
+#[Fillable(['slug', 'title', 'author_id', 'owner_id', 'disk_path', 'forked_from_id'])]
 class Diagram extends Model
 {
     /** @use HasFactory<DiagramFactory> */
     use HasFactory;
 
-    public const EMPTY_BPMN = <<<'BPMN'
+    /**
+     * Template for a newly created Diagram's seed BPMN XML. The start
+     * event's label is filled in per the current locale by emptyBpmn()
+     * (see "messages.start_event_label"), instead of being fixed here.
+     */
+    private const EMPTY_BPMN_TEMPLATE = <<<'BPMN'
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
                   id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
   <bpmn:process id="Process_1" isExecutable="false">
-    <bpmn:startEvent id="StartEvent_1" name="Start" />
+    <bpmn:startEvent id="StartEvent_1" name="%s" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
@@ -35,6 +40,17 @@ class Diagram extends Model
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
 BPMN;
+
+    /**
+     * Seed BPMN XML for a newly created Diagram, with the start event's
+     * label localized to the current locale.
+     */
+    public static function emptyBpmn(): string
+    {
+        $label = htmlspecialchars(__('messages.start_event_label'), ENT_QUOTES | ENT_XML1, 'UTF-8');
+
+        return sprintf(self::EMPTY_BPMN_TEMPLATE, $label);
+    }
 
     /**
      * @return array<string, string>
@@ -51,6 +67,30 @@ BPMN;
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'author_id');
+    }
+
+    /**
+     * The Diagram Owner (CONTEXT.md, "Diagram Owner"; ADR-0006): the User
+     * currently responsible for this Diagram. Starts as the Author but,
+     * unlike authorship, is transferable (see issue #14). Every permission
+     * check that used to gate on "is the Author" now gates on
+     * {@see isOwnedBy()} instead.
+     */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * True if $user is this Diagram's current Diagram Owner. The single
+     * helper every permission check ("delete", "manageCollaborators",
+     * "manageShares", editing) should use instead of comparing author_id
+     * directly — keeps future tickets (ownership transfer, etc.) from
+     * having to touch each call site again.
+     */
+    public function isOwnedBy(User $user): bool
+    {
+        return (int) $this->owner_id === $user->id;
     }
 
     public function forkedFrom(): BelongsTo

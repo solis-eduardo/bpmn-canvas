@@ -6,6 +6,7 @@ use App\Models\Diagram;
 use App\Models\DiagramOldSlug;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 /**
  * Keeps the Diagram's database row and its `.bpmn` file on disk consistent
@@ -26,7 +27,14 @@ class DiagramRepository
         $diagram = Diagram::create($data);
 
         try {
-            Storage::disk('diagrams')->put($diagram->disk_path, $initialContent);
+            // The "diagrams" disk is configured with `throw => false`, so a
+            // failed write reports itself by returning false rather than
+            // throwing. Turn that into a real exception so the catch below
+            // (and any caller further up) can react to it.
+            $this->assertDiskSucceeded(
+                Storage::disk('diagrams')->put($diagram->disk_path, $initialContent),
+                "Could not write the Diagram file to disk: {$diagram->disk_path}"
+            );
         } catch (\Throwable $e) {
             $diagram->delete();
 
@@ -49,7 +57,14 @@ class DiagramRepository
         $slugChanged = $newSlug !== $oldSlug;
 
         if ($slugChanged) {
-            Storage::disk('diagrams')->move($oldSlug, $newSlug);
+            // Same reasoning as create(): `throw => false` means a failed
+            // move reports itself via a false return, not an exception.
+            // Surface it explicitly — nothing has touched the database yet,
+            // so there's nothing to compensate, just a clean failure.
+            $this->assertDiskSucceeded(
+                Storage::disk('diagrams')->move($oldSlug, $newSlug),
+                "Could not move the Diagram directory from {$oldSlug} to {$newSlug}."
+            );
         }
 
         try {
@@ -88,5 +103,18 @@ class DiagramRepository
         $diagram->delete();
 
         Storage::disk('diagrams')->deleteDirectory($slug);
+    }
+
+    /**
+     * The "diagrams" disk is configured with `throw => false`, so a failed
+     * disk operation reports itself by returning false rather than
+     * throwing. Turn that into a real exception so callers can react to it
+     * the same way they would to any other failure.
+     */
+    private function assertDiskSucceeded(bool $succeeded, string $message): void
+    {
+        if (! $succeeded) {
+            throw new RuntimeException($message);
+        }
     }
 }
