@@ -195,6 +195,17 @@ class DiagramController extends Controller
 
         $this->authorize('view', $diagram);
 
+        // The "diagrams" disk is configured with `throw => false`, so a
+        // failed read comes back as null rather than an exception. Catch
+        // that explicitly: silently coercing null/false into an empty
+        // string would register a Fork with corrupted (empty) content
+        // instead of registering nothing.
+        $content = Storage::disk('diagrams')->get($diagram->disk_path);
+
+        if (! is_string($content)) {
+            throw new \RuntimeException("Could not read the Diagram's content to fork it: {$diagram->disk_path}");
+        }
+
         $newSlug = Diagram::uniqueSlug($diagram->title);
 
         $forked = $diagrams->create([
@@ -203,7 +214,7 @@ class DiagramController extends Controller
             'author_id' => $request->user()->id,
             'disk_path' => $newSlug.'/diagram.bpmn',
             'forked_from_id' => $diagram->id,
-        ], Storage::disk('diagrams')->get($diagram->disk_path));
+        ], $content);
 
         return redirect()->route('diagrams.show', $forked->slug);
     }
