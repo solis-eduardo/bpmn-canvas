@@ -19,6 +19,7 @@
     </source>
     <php>
         <env name="APP_ENV" value="testing" force="true"/>
+        <env name="APP_KEY" value="base64:/Ra9mqeT4pIJ4w2a7jlFg1/uTTlwxmKkWxt1M8LfjZY=" force="true"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file" force="true"/>
         <env name="BCRYPT_ROUNDS" value="4" force="true"/>
         <env name="BROADCAST_CONNECTION" value="null" force="true"/>
@@ -40,6 +41,7 @@
             here to actually take effect.
         -->
         <server name="APP_ENV" value="testing"/>
+        <server name="APP_KEY" value="base64:/Ra9mqeT4pIJ4w2a7jlFg1/uTTlwxmKkWxt1M8LfjZY="/>
         <server name="APP_MAINTENANCE_DRIVER" value="file"/>
         <server name="BCRYPT_ROUNDS" value="4"/>
         <server name="BROADCAST_CONNECTION" value="null"/>
