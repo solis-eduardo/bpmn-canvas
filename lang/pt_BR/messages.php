@@ -12,6 +12,7 @@ return [
 
     // Navigation
     'diagrams' => 'Diagramas',
+    'users' => 'Usuários',
 
     // Diagram list
     'diagram_name' => 'Nome do diagrama',
@@ -45,6 +46,21 @@ return [
     'being_edited' => 'Em edição',
     'currently_being_edited_by' => 'Este diagrama está sendo editado por :name no momento. Você não pode abrir o Editor até que a Trava seja liberada.',
     'create_a_copy_to_continue' => 'Criar uma cópia (Fork) para continuar agora',
+
+    // Gestão de usuários
+    'users_heading' => 'Usuários',
+    'name' => 'Nome',
+    'login_method' => 'Método de login',
+    'login_method_local' => 'Local',
+    'login_method_keycloak' => 'Keycloak',
+    'administrator_status' => 'Administrador',
+    'administrator_via_keycloak' => 'Administrador (via Keycloak)',
+    'not_administrator' => 'Não é administrador',
+    'grant_administrator' => 'Conceder Administrador',
+    'revoke_administrator' => 'Revogar Administrador',
+    'not_revocable_via_keycloak' => 'Concedido pelo Keycloak — não pode ser revogado aqui.',
+    'create_local_account' => 'Criar conta local',
+    'no_users_yet' => 'Nenhum usuário ainda.',
 
     // Public share viewer
     'download' => 'Baixar',

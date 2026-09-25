@@ -12,6 +12,7 @@ return [
 
     // Navigation
     'diagrams' => 'Diagrams',
+    'users' => 'Users',
 
     // Diagram list
     'diagram_name' => 'Diagram name',
@@ -45,6 +46,21 @@ return [
     'being_edited' => 'Being edited',
     'currently_being_edited_by' => "This diagram is currently being edited by :name. You can't open the Editor until the Lock is released.",
     'create_a_copy_to_continue' => 'Create a copy (Fork) to continue now',
+
+    // User management
+    'users_heading' => 'Users',
+    'name' => 'Name',
+    'login_method' => 'Login method',
+    'login_method_local' => 'Local',
+    'login_method_keycloak' => 'Keycloak',
+    'administrator_status' => 'Administrator',
+    'administrator_via_keycloak' => 'Administrator (via Keycloak)',
+    'not_administrator' => 'Not an administrator',
+    'grant_administrator' => 'Grant Administrator',
+    'revoke_administrator' => 'Revoke Administrator',
+    'not_revocable_via_keycloak' => "Granted by Keycloak — can't be revoked here.",
+    'create_local_account' => 'Create local account',
+    'no_users_yet' => 'No users yet.',
 
     // Public share viewer
     'download' => 'Download',
