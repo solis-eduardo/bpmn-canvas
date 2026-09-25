@@ -15,6 +15,7 @@ return [
 
     // Navigation
     'diagrams' => 'Diagrams',
+    'workspaces' => 'Workspaces',
     'users' => 'Users',
 
     // Diagram list
@@ -124,6 +125,19 @@ return [
     'invalid_link' => 'Invalid link',
     'invalid_share_link' => 'This share link has expired or was revoked by the Author. Ask whoever shared this Diagram with you for a new link.',
 
+    // Workspaces
+    'workspaces_heading' => 'Workspaces',
+    'workspace_name' => 'Workspace name',
+    'create_workspace' => 'Create workspace',
+    'no_workspaces_yet' => "You're not a Member of any Workspace yet.",
+    'workspace_owner_label' => '(Workspace Owner: :name)',
+    'members' => 'Members',
+    'member_email' => 'Member email',
+    'add_member' => 'Add member',
+    'remove_member' => 'Remove',
+    'no_members_yet' => 'No Members yet.',
+    'rename' => 'Rename',
+    'cannot_remove_workspace_owner' => "The Workspace Owner can't be removed as a Member.",
     // Notifications
     'notifications' => 'Notifications',
     'no_notifications_yet' => 'No notifications yet.',
