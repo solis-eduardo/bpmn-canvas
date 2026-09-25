@@ -27,6 +27,8 @@ services:
     image: bpmn-studio-web:local
     container_name: bpmn-studio
     restart: unless-stopped
+    ports:
+      - "${APP_PORT:-80}:80"
     depends_on:
       - app
     healthcheck:
@@ -36,7 +38,6 @@ services:
       retries: 3
     networks:
       - default
-      - nginx-network
 
   db:
     image: postgres:16-alpine
@@ -61,5 +62,3 @@ volumes:
 
 networks:
   default: {}
-  nginx-network:
-    external: true
