@@ -32,6 +32,15 @@ return [
     'fit_to_screen' => 'Ajustar a la pantalla',
     'lock_not_held' => 'No tienes el bloqueo de este diagrama.',
 
+    // Historial de versiones y comparación
+    'history' => 'Historial',
+    'versions' => 'Versiones',
+    'exit_comparison' => 'Salir de la comparación',
+    'diff_added' => 'Añadido',
+    'diff_removed' => 'Eliminado',
+    'diff_changed' => 'Modificado',
+    'diff_removed_elements' => 'Elementos eliminados (no están en el canvas actual)',
+
     // Locked diagram
     'being_edited' => 'En edición',
     'currently_being_edited_by' => 'Este diagrama está siendo editado por :name en este momento. No puedes abrir el Editor hasta que se libere el Bloqueo.',

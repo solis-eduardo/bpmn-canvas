@@ -32,6 +32,15 @@ return [
     'fit_to_screen' => 'Ajustar à tela',
     'lock_not_held' => 'Você não detém a trava deste diagrama.',
 
+    // Histórico de versões e comparação
+    'history' => 'Histórico',
+    'versions' => 'Versões',
+    'exit_comparison' => 'Sair da comparação',
+    'diff_added' => 'Adicionado',
+    'diff_removed' => 'Removido',
+    'diff_changed' => 'Alterado',
+    'diff_removed_elements' => 'Elementos removidos (não estão no canvas atual)',
+
     // Locked diagram
     'being_edited' => 'Em edição',
     'currently_being_edited_by' => 'Este diagrama está sendo editado por :name no momento. Você não pode abrir o Editor até que a Trava seja liberada.',
