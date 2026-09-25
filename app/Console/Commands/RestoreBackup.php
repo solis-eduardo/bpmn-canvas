@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Repositories\RestoreRepository;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 /**
  * Restores the database and Diagrams directory from a backup artifact
@@ -44,7 +45,13 @@ class RestoreBackup extends Command
 
         $this->info("Restoring from backup artifact: {$artifact}");
 
-        $restores->restore($artifact);
+        try {
+            $restores->restore($artifact);
+        } catch (RuntimeException $e) {
+            $this->error("Restore failed: {$e->getMessage()}");
+
+            return self::FAILURE;
+        }
 
         $this->info('Restore complete.');
 
