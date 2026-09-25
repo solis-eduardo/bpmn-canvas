@@ -11,16 +11,23 @@ return [
     'keycloak_login_failed' => 'Não foi possível entrar com o Keycloak. Tente novamente.',
 
     // Navigation
+    'home' => 'Início',
     'diagrams' => 'Diagramas',
 
     // Diagram list
     'diagram_name' => 'Nome do diagrama',
+    'title' => 'Título',
+    'author' => 'Autor',
+    'last_modified' => 'Última modificação',
+    'status' => 'Status',
+    'available' => 'Disponível',
     'start_event_label' => 'Início',
     'create_diagram' => 'Criar diagrama',
+    'create_your_first_diagram' => 'Crie seu primeiro diagrama usando o formulário acima',
     'no_diagrams_yet' => 'Nenhum diagrama criado ainda.',
     'author_label' => '(autor: :name)',
     'diagram_owner_label' => '(dono: :name)',
-    'being_edited_by' => '— em edição por :name',
+    'being_edited_by' => 'em edição por :name',
 
     // Editor
     'bpmn_editor' => 'Editor BPMN',
