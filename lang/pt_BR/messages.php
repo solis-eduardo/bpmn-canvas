@@ -7,12 +7,10 @@ return [
     'log_out' => 'Sair',
     'email' => 'E-mail',
     'password' => 'Senha',
-    'hello_user' => 'Olá, :name.',
     'invalid_credentials' => 'Credenciais inválidas.',
     'keycloak_login_failed' => 'Não foi possível entrar com o Keycloak. Tente novamente.',
 
     // Navigation
-    'home' => 'Início',
     'diagrams' => 'Diagramas',
 
     // Diagram list
