@@ -14,7 +14,7 @@ class DiagramCollaboratorController extends Controller
     /**
      * Author (or Administrator) lists a Diagram's Collaborators/requests.
      */
-    public function index(Request $request, string $slug): JsonResponse
+    public function index(string $slug): JsonResponse
     {
         $diagram = $this->resolveDiagram($slug);
 
@@ -59,7 +59,7 @@ class DiagramCollaboratorController extends Controller
     /**
      * Author or Administrator approves a pending request.
      */
-    public function update(Request $request, string $slug, User $user): JsonResponse
+    public function update(string $slug, User $user): JsonResponse
     {
         $diagram = $this->resolveDiagram($slug);
 
@@ -81,7 +81,7 @@ class DiagramCollaboratorController extends Controller
      * Author or Administrator declines a pending request or removes an
      * already-approved Collaborator — in both cases, the row is deleted.
      */
-    public function destroy(Request $request, string $slug, User $user): JsonResponse
+    public function destroy(string $slug, User $user): JsonResponse
     {
         $diagram = $this->resolveDiagram($slug);
 
