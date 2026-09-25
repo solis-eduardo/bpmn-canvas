@@ -129,3 +129,15 @@ aside li.comparing { background: var(--selected); }
   aside { border-right: 0; border-bottom: 1px solid var(--border); }
   input[type=text] { min-width: 140px; }
 }
+
+/* Pending Lock request notice, shown to the Lock holder in the Editor
+   (issue #9). Fixed rather than a grid child of .app so showing/hiding it
+   never reflows the header/canvas grid. */
+.lock-request-banner {
+  position: fixed; left: 0; right: 0; top: 0; z-index: 50;
+  background: #fff7e6; border-bottom: 1px solid #ffd591; color: #874d00;
+  padding: 8px 12px; font-size: 13px; text-align: center;
+}
+
+/* Blocked screen: request-Lock countdown (issue #9). */
+#lock-countdown { color: var(--muted); font-size: 13px; }
