@@ -139,7 +139,7 @@ class DiagramController extends Controller
 
         try {
             $content = $versions->get($diagram, $version);
-        } catch (\RuntimeException $e) {
+        } catch (RuntimeException $e) {
             abort(404);
         }
 

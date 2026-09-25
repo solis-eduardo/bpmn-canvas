@@ -54,6 +54,18 @@ return [
             'report' => false,
         ],
 
+        // Destination for backup artifacts produced by `backup:run` (see
+        // config/backup.php). Defaults to a directory inside the app's own
+        // storage, but is normally overridden to a path backed by a mounted
+        // host volume (see docker-compose.yml's `scheduler` service) so an
+        // artifact survives losing the container.
+        'backups' => [
+            'driver' => 'local',
+            'root' => env('BACKUP_DESTINATION', storage_path('app/backup')),
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),
