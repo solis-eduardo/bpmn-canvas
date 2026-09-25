@@ -46,11 +46,18 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
   let clearHighlight = null;
   let comparingId = null;
 
-  // Ticket 36: Versions checked for "compare any two Versions", keyed by id
-  // (Map preserves insertion order, so the first-checked one stays sideA
-  // even after a re-render — see toggleSelection). Never holds more than
-  // two entries at once.
+  // Ticket 36: Versions checked for "compare any two Versions", keyed by id.
+  // Never holds more than two entries at once. This is the *selection*
+  // (which checkboxes are ticked) and is intentionally independent of
+  // activeComparisonIds below (which comparison, if any, is on screen) —
+  // exiting a comparison shouldn't silently uncheck the boxes.
   const selectedForCompare = new Map();
+
+  // Ids of the two Versions whose diff is currently rendered, whichever
+  // flow produced it (compareWithCurrent uses just comparingId; compareSelected
+  // uses this set). Cleared by exitComparison so list rows stop showing as
+  // "comparing" once the diff is dismissed, even if still checked above.
+  let activeComparisonIds = new Set();
 
   // True while the canvas shows one of the two Versions selected for a pair
   // comparison (ticket 36) instead of the Diagram's actual current content
@@ -63,6 +70,23 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
 
   function versionRestoreUrl(id) {
     return versionRestoreUrlTemplate.replace('VERSION_ID', encodeURIComponent(id));
+  }
+
+  /**
+   * Fetches one Version's BPMN content. Shared by compareWithCurrent and
+   * compareSelected, which both otherwise only differ in what they compare
+   * that content against.
+   */
+  async function fetchVersionXml(id) {
+    const res = await fetch(versionContentUrl(id), {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    });
+
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    const { content } = await res.json();
+    return content;
   }
 
   function formatVersion(version) {
@@ -160,13 +184,26 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
     });
 
     updateCompareFooter();
-    highlightActiveComparison();
+    syncList();
   }
 
-  function highlightActiveComparison() {
+  /**
+   * Single pass over the list rows that keeps both the ticket-36 checkboxes
+   * (checked/disabled) and the "comparing" highlight (ticket 35's single
+   * comparingId, or ticket 36's activeComparisonIds pair) in sync. Replaces
+   * what used to be two separate full list walks.
+   */
+  function syncList() {
     list.querySelectorAll('li').forEach(li => {
       const id = li.dataset.versionId;
-      li.classList.toggle('comparing', id === comparingId || selectedForCompare.has(id));
+
+      li.classList.toggle('comparing', id === comparingId || activeComparisonIds.has(id));
+
+      const checkbox = li.querySelector('input[type="checkbox"]');
+      if (!checkbox) return;
+      const checked = selectedForCompare.has(id);
+      checkbox.checked = checked;
+      checkbox.disabled = !checked && selectedForCompare.size >= 2;
     });
   }
 
@@ -187,19 +224,7 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
     }
 
     updateCompareFooter();
-    renderCheckboxStates();
-  }
-
-  function renderCheckboxStates() {
-    list.querySelectorAll('li').forEach(li => {
-      const id = li.dataset.versionId;
-      const checkbox = li.querySelector('input[type="checkbox"]');
-      if (!checkbox) return;
-      const checked = selectedForCompare.has(id);
-      checkbox.checked = checked;
-      checkbox.disabled = !checked && selectedForCompare.size >= 2;
-    });
-    highlightActiveComparison();
+    syncList();
   }
 
   function updateCompareFooter() {
@@ -217,23 +242,16 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
     await exitComparison();
 
     try {
-      const [res, { xml: currentXml }] = await Promise.all([
-        fetch(versionContentUrl(version.id), {
-          credentials: 'same-origin',
-          headers: { Accept: 'application/json' },
-        }),
+      const [oldXml, { xml: currentXml }] = await Promise.all([
+        fetchVersionXml(version.id),
         modeler.saveXML({ format: true }),
       ]);
-
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-
-      const { content: oldXml } = await res.json();
 
       const result = await compareBpmnXml(oldXml, currentXml);
 
       clearHighlight = highlightDiff(modeler, result);
       comparingId = version.id;
-      highlightActiveComparison();
+      syncList();
 
       showDiffSummary('Comparing with ' + formatVersion(version), result);
     } catch (e) {
@@ -262,21 +280,10 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
     }
 
     try {
-      const [resA, resB] = await Promise.all([
-        fetch(versionContentUrl(sideA.id), {
-          credentials: 'same-origin',
-          headers: { Accept: 'application/json' },
-        }),
-        fetch(versionContentUrl(sideB.id), {
-          credentials: 'same-origin',
-          headers: { Accept: 'application/json' },
-        }),
+      const [xmlA, xmlB] = await Promise.all([
+        fetchVersionXml(sideA.id),
+        fetchVersionXml(sideB.id),
       ]);
-
-      if (!resA.ok) throw new Error('HTTP ' + resA.status);
-      if (!resB.ok) throw new Error('HTTP ' + resB.status);
-
-      const [{ content: xmlA }, { content: xmlB }] = await Promise.all([resA.json(), resB.json()]);
 
       const result = await compareBpmnXml(xmlA, xmlB);
 
@@ -288,7 +295,8 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
       pairComparisonActive = true;
 
       clearHighlight = highlightDiff(modeler, result);
-      highlightActiveComparison();
+      activeComparisonIds = new Set([sideA.id, sideB.id]);
+      syncList();
 
       showDiffSummary('Comparing ' + formatVersion(sideA) + ' with ' + formatVersion(sideB), result);
     } catch (e) {
@@ -332,9 +340,10 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
       clearHighlight = null;
     }
     comparingId = null;
+    activeComparisonIds = new Set();
     diffBanner.hidden = true;
     removedPanel.hidden = true;
-    highlightActiveComparison();
+    syncList();
 
     // Ticket 36: the canvas may currently be showing one of the two
     // compared Versions rather than the Diagram's actual current content
