@@ -61,6 +61,8 @@ class DiagramController extends Controller
             return view('diagrams.locked', [
                 'diagram' => $diagram,
                 'lockedBy' => $diagram->lockedBy,
+                'lockedAt' => $diagram->locked_at,
+                'lockRequestExpiresAt' => $diagram->lock_requested_at?->addSeconds($diagram::LOCK_REQUEST_TRANSFER_SECONDS),
             ]);
         }
 

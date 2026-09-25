@@ -44,6 +44,14 @@ return [
     // Locked diagram
     'being_edited' => 'En edición',
     'currently_being_edited_by' => 'Este diagrama está siendo editado por :name en este momento. No puedes abrir el Editor hasta que se libere el Bloqueo.',
+    'is_currently_editing' => 'está editando actualmente este diagrama.',
+    'locked_since' => 'Bloqueado desde',
+    'request_lock_title' => 'Solicitar transferencia de bloqueo',
+    'request_lock_description' => 'Solicita asumir la trava. Si el editor actual no responde en 30 segundos, la trava se transferirá a ti automáticamente.',
+    'request_lock' => 'Solicitar bloqueo',
+    'lock_transfer_in' => 'La trava se transferirá en',
+    'continue_working' => 'Continuar trabajando',
+    'fork_description' => 'Crear una copia independiente (fork) de este diagrama para continuar trabajando en él ahora. El fork tendrá su propio historial de versiones separado.',
     'create_a_copy_to_continue' => 'Crear una copia (Fork) para continuar ahora',
 
     // Public share viewer

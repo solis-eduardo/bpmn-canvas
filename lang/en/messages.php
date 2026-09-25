@@ -44,6 +44,14 @@ return [
     // Locked diagram
     'being_edited' => 'Being edited',
     'currently_being_edited_by' => "This diagram is currently being edited by :name. You can't open the Editor until the Lock is released.",
+    'is_currently_editing' => 'is currently editing this diagram.',
+    'locked_since' => 'Locked since',
+    'request_lock_title' => 'Request Lock Transfer',
+    'request_lock_description' => 'Request to take over the lock. If the current editor does not respond within 30 seconds, the lock will be transferred to you automatically.',
+    'request_lock' => 'Request Lock',
+    'lock_transfer_in' => 'Lock will transfer in',
+    'continue_working' => 'Continue Working',
+    'fork_description' => 'Create an independent copy (fork) of this diagram to continue working on it now. The fork will have its own separate version history.',
     'create_a_copy_to_continue' => 'Create a copy (Fork) to continue now',
 
     // Public share viewer
