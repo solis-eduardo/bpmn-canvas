@@ -65,38 +65,27 @@ See `.env.example` for the full list. Highlights:
 
 ## Backup and Restore
 
-Automatic backups run daily (scheduled in the `scheduler` service — see `bootstrap/app.php`) and are retained according to `config/backup.php` (default: 30 days).
+The `scheduler` compose service runs `backup:run` on a schedule (see `docs/adr/0008`). Each run produces one artifact — a `.tar.gz` containing a copy of the Diagrams directory (with each Diagram's Version history) and a `pg_dump --format=custom` database dump — on the `backups` disk, and prunes artifacts past the retention window.
 
-Each backup artifact is a single `.tar.gz` file containing:
-- `diagrams/` — all Diagram files and their internal Git repositories (preserving Version history)
-- `database.dump` — a PostgreSQL dump in custom archive format
-- `manifest.json` — metadata for validation during restore
+| Variable | Purpose |
+|---|---|
+| `BACKUP_DESTINATION` | Where artifacts are written (default `storage/app/backup`, normally a host-mounted volume — see `./backups` in docker-compose.yml) |
+| `BACKUP_RETENTION_DAYS` | How many days an artifact is kept before the next `backup:run` prunes it (default `14`) |
 
-### Scheduling backups
-
-Backups are scheduled via the `scheduler` service (not a host cron) and run daily at 02:15 UTC. To run a backup immediately:
+To restore an artifact onto a running stack:
 
 ```bash
-docker compose exec app php artisan backup:run
+# List available artifacts
+docker compose exec app ls storage/app/backup   # or your BACKUP_DESTINATION
+
+# Restore one — prompts for confirmation before overwriting anything
+docker compose exec app php artisan backup:restore backup-2026-01-01_000000-abcd1234.tar.gz
+
+# Non-interactive (scripted) use skips the prompt
+docker compose exec app php artisan backup:restore backup-2026-01-01_000000-abcd1234.tar.gz --force
 ```
 
-Backups are stored on the `backups` disk (default: `storage/app/backups/`, bind-mounted to `./backups` on the host).
-
-### Restoring from a backup
-
-To restore from a backup artifact on a clean or disaster-recovered environment:
-
-```bash
-docker compose exec app php artisan restore:run backup-2026-01-15_021500-12345678.tar.gz
-```
-
-The command will prompt for explicit confirmation before proceeding (since restore is destructive — it clears all diagrams and replays the database schema and data from the backup). After restore completes:
-- All Diagrams and their Version history are recovered.
-- Collaborators and Shares are restored.
-- The application is ready to serve — no additional steps required.
-
-**Warning**: Restore clears all current data. Always verify you are restoring to the correct environment and have a backup of your current state if needed.
-
+`backup:restore` validates the artifact's `manifest.json` before touching anything, then **overwrites** the current database and Diagrams directory with the artifact's contents — nothing is merged. It is an operator command, run manually; unlike `backup:run` it is not on the scheduler. After a restore, Diagrams open normally, their Version history lists and restores as before, and existing Share links keep working — the round trip has been exercised end to end against this stack.
 ## Structure
 
 ```
@@ -196,38 +185,27 @@ Ver `.env.example` para a lista completa. Destaques:
 
 ## Backup e Restauração
 
-Backups automáticos são executados diariamente (agendados no serviço `scheduler` — ver `bootstrap/app.php`) e são retidos de acordo com `config/backup.php` (padrão: 30 dias).
+O serviço `scheduler` do compose roda `backup:run` periodicamente (veja `docs/adr/0008`). Cada execução produz um único artefato — um `.tar.gz` contendo uma cópia do diretório de Diagramas (com o histórico de Versões de cada Diagrama) e um dump do banco via `pg_dump --format=custom` — no disco `backups`, e remove artefatos além da janela de retenção.
 
-Cada artefato de backup é um arquivo `.tar.gz` único contendo:
-- `diagrams/` — todos os arquivos de Diagrama e seus repositórios Git internos (preservando histórico de Versões)
-- `database.dump` — um dump do PostgreSQL em formato de arquivo personalizado
-- `manifest.json` — metadados para validação durante a restauração
+| Variável | Finalidade |
+|---|---|
+| `BACKUP_DESTINATION` | Onde os artefatos são gravados (padrão `storage/app/backup`, normalmente um volume montado do host — veja `./backups` no docker-compose.yml) |
+| `BACKUP_RETENTION_DAYS` | Quantos dias um artefato é mantido antes de ser removido pela próxima `backup:run` (padrão `14`) |
 
-### Agendando backups
-
-Backups são agendados através do serviço `scheduler` (não por cron do host) e executados diariamente às 02:15 UTC. Para executar um backup imediatamente:
+Para restaurar um artefato em uma stack em execução:
 
 ```bash
-docker compose exec app php artisan backup:run
+# Lista os artefatos disponíveis
+docker compose exec app ls storage/app/backup   # ou seu BACKUP_DESTINATION
+
+# Restaura um — pede confirmação antes de sobrescrever qualquer coisa
+docker compose exec app php artisan backup:restore backup-2026-01-01_000000-abcd1234.tar.gz
+
+# Uso não-interativo (script) pula a confirmação
+docker compose exec app php artisan backup:restore backup-2026-01-01_000000-abcd1234.tar.gz --force
 ```
 
-Os backups são armazenados no disco `backups` (padrão: `storage/app/backups/`, bind-mounted em `./backups` no host).
-
-### Restaurando de um backup
-
-Para restaurar de um artefato de backup em um ambiente limpo ou recuperado de desastre:
-
-```bash
-docker compose exec app php artisan restore:run backup-2026-01-15_021500-12345678.tar.gz
-```
-
-O comando solicitará confirmação explícita antes de prosseguir (pois restaurar é destrutivo — limpa todos os diagramas e reproduz o esquema e dados do banco a partir do backup). Após a conclusão da restauração:
-- Todos os Diagramas e seu histórico de Versões são recuperados.
-- Colaboradores e Compartilhamentos são restaurados.
-- A aplicação está pronta para servir — nenhuma etapa adicional é necessária.
-
-**Aviso**: Restauração limpa todos os dados atuais. Sempre verifique se está restaurando no ambiente correto e faça backup do estado atual se necessário.
-
+`backup:restore` valida o `manifest.json` do artefato antes de tocar em qualquer coisa, e então **sobrescreve** o banco de dados e o diretório de Diagramas atuais com o conteúdo do artefato — nada é mesclado. É um comando de operador, executado manualmente; diferente de `backup:run`, não está no scheduler. Após uma restauração, os Diagramas abrem normalmente, o histórico de Versões lista e restaura como antes, e links de Compartilhamento existentes continuam funcionando — o ciclo completo já foi executado de ponta a ponta nesta stack.
 ## Estrutura
 
 ```

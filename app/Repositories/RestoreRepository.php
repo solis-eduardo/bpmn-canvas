@@ -9,14 +9,14 @@ use Illuminate\Support\Str;
 use RuntimeException;
 
 /**
- * Restores backup artifacts. Validates the artifact before touching anything,
- * then restores both the diagrams directory (with its .git history) and the
- * database dump.
+ * Restores one backup artifact produced by {@see BackupRepository} (same
+ * `.tar.gz` layout: `diagrams/`, `database.dump`, `manifest.json`). No
+ * archive-format, staging-path, or shell-out terms should leak out of this
+ * class: callers only ever see "restore".
  *
- * Expected artifact structure (see BackupRepository):
- *   - `diagrams/`     a full copy of the Diagrams disk
- *   - `database.dump` a `pg_dump --format=custom` dump of the database
- *   - `manifest.json` metadata for validation
+ * Nothing existing is touched until the artifact has been extracted and its
+ * manifest validated — a corrupt or unsupported artifact fails before the
+ * database or Diagrams directory are ever overwritten.
  */
 class RestoreRepository
 {
@@ -25,108 +25,77 @@ class RestoreRepository
     public function __construct(private DatabaseRestorer $databaseRestorer) {}
 
     /**
-     * Validates and restores a backup artifact from the `backups` disk.
-     * Throws RuntimeException if validation fails.
-     *
-     * @throws RuntimeException
+     * Restores the database and Diagrams directory from $artifact (a
+     * filename on the `backups` disk), overwriting their current contents.
      */
-    public function restore(string $artifactName): void
+    public function restore(string $artifact): void
     {
         $disk = Storage::disk('backups');
 
-        if (! $disk->exists($artifactName)) {
-            throw new RuntimeException("Backup artifact not found: {$artifactName}");
+        if (! $disk->exists($artifact)) {
+            throw new RuntimeException("Backup artifact not found: {$artifact}");
         }
 
-        if (! str_ends_with($artifactName, '.tar.gz')) {
-            throw new RuntimeException("Invalid artifact name: {$artifactName}");
+        if (! str_ends_with($artifact, '.tar.gz')) {
+            throw new RuntimeException("Invalid artifact name: {$artifact}");
         }
 
-        $artifactPath = $disk->path($artifactName);
-        $extractDir = $disk->path('.extracting-'.(string) Str::uuid());
+        $stagingDir = $disk->path('.restore-'.(string) Str::uuid());
 
         try {
-            $this->makeDirectory($extractDir);
-            $this->extract($artifactPath, $extractDir);
+            $this->makeDirectory($stagingDir);
+            $this->extract($disk->path($artifact), $stagingDir);
+            $this->validateManifest($stagingDir.'/manifest.json');
 
-            // Validate manifest before touching anything
-            $this->validateManifest($extractDir.'/manifest.json');
-
-            // Restore diagrams directory
-            $this->restoreDiagrams($extractDir.'/diagrams');
-
-            // Restore database
-            $this->databaseRestorer->restore($extractDir.'/database.dump');
+            // Only once the artifact has been extracted and validated does
+            // anything existing get touched.
+            $this->databaseRestorer->restore($stagingDir.'/database.dump');
+            $this->replaceDiagrams($stagingDir.'/diagrams');
         } finally {
-            $this->removeDirectory($extractDir);
+            $this->removeDirectory($stagingDir);
         }
     }
 
-    /**
-     * Extracts the tar.gz artifact to a temporary directory.
-     */
-    private function extract(string $artifactPath, string $destination): void
+    private function extract(string $archivePath, string $destination): void
     {
-        ProcessRunner::run([
-            'tar', '-xzf', $artifactPath, '-C', $destination,
-        ]);
+        ProcessRunner::run(['tar', '-xzf', $archivePath, '-C', $destination]);
     }
 
-    /**
-     * Validates the manifest.json exists and has the correct format version.
-     *
-     * @throws RuntimeException
-     */
     private function validateManifest(string $manifestPath): void
     {
         if (! is_file($manifestPath)) {
-            throw new RuntimeException('Backup artifact is invalid: missing manifest.json');
+            throw new RuntimeException('Backup artifact is missing manifest.json.');
         }
 
-        $manifest = json_decode(file_get_contents($manifestPath), true);
+        $manifest = json_decode((string) file_get_contents($manifestPath), true);
 
-        if (! isset($manifest['format'])) {
-            throw new RuntimeException('Backup artifact is invalid: manifest has no format');
-        }
-
-        if ($manifest['format'] !== self::MANIFEST_FORMAT) {
-            throw new RuntimeException(sprintf(
-                'Backup artifact format version %d is not supported (expected %d)',
-                $manifest['format'],
-                self::MANIFEST_FORMAT,
-            ));
+        if (! is_array($manifest) || ($manifest['format'] ?? null) !== self::MANIFEST_FORMAT) {
+            throw new RuntimeException('Backup artifact has an unsupported manifest format.');
         }
     }
 
-    /**
-     * Restores the diagrams directory to the `diagrams` disk.
-     * Uses `cp -a` to preserve all files including hidden .git directories.
-     */
-    private function restoreDiagrams(string $sourceDir): void
+    private function replaceDiagrams(string $source): void
     {
-        $diagramsDisk = Storage::disk('diagrams');
-        $diagramsPath = $diagramsDisk->path('');
-
-        // Clear existing diagrams
-        if (is_dir($diagramsPath)) {
-            $this->removeDirectory($diagramsPath);
-        }
-
-        $this->makeDirectory($diagramsPath);
-
-        if (! is_dir($sourceDir)) {
-            // Backup had no diagrams, that's fine
+        if (! is_dir($source)) {
             return;
         }
 
-        // Copy with hidden files preserved (including .git)
-        ProcessRunner::run(['cp', '-a', rtrim($sourceDir, '/').'/.', $diagramsPath]);
+        $diagramsRoot = rtrim(Storage::disk('diagrams')->path(''), '/');
+        $this->makeDirectory($diagramsRoot);
+
+        // Clears the existing Diagrams directory before copying the
+        // artifact's copy in, so Diagrams removed since the backup don't
+        // linger after a restore. Uses `find -delete` rather than removing
+        // and recreating the directory itself, so the mount point (a Docker
+        // volume in production) isn't disturbed.
+        ProcessRunner::run(['find', $diagramsRoot, '-mindepth', '1', '-delete']);
+        ProcessRunner::run(['cp', '-a', rtrim($source, '/').'/.', $diagramsRoot]);
     }
 
     private function makeDirectory(string $path): void
     {
         if (! is_dir($path) && ! mkdir($path, 0755, true) && ! is_dir($path)) {
-            throw new RuntimeException("Could not create directory: {$path}");
+            throw new RuntimeException("Could not create restore staging directory: {$path}");
         }
     }
 
