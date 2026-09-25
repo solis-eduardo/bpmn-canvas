@@ -60,7 +60,7 @@
                     <p class="text-sm font-medium text-gray-500">{{ __('messages.members') }}</p>
 
                     <ul class="mt-2 divide-y divide-gray-100">
-                        @forelse ($workspace->members()->with('user')->get() as $member)
+                        @forelse ($workspace->members as $member)
                             <li class="flex items-center justify-between gap-3 py-2">
                                 <span class="text-sm text-gray-900">{{ $member->user->name }} ({{ $member->user->email }})</span>
 
