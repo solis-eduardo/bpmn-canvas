@@ -62,19 +62,11 @@ jobs:
       - name: Install Composer dependencies
         run: composer install --no-interaction --prefer-dist --no-progress
 
-      - name: Archive vendor directory
-        # Uploaded/downloaded as a plain directory, actions/upload-artifact
-        # zips it in a way that drops the executable bit on vendor/bin/*
-        # (they're symlinks to the real bin scripts), so `vendor/bin/pint`
-        # etc. fail with "Permission denied" downstream. tar preserves
-        # both the symlinks and their permissions.
-        run: tar -czf vendor.tar.gz vendor
-
-      - name: Upload vendor archive
+      - name: Upload vendor directory
         uses: actions/upload-artifact@v4
         with:
           name: vendor
-          path: vendor.tar.gz
+          path: vendor
           retention-days: 1
 
   pint:
@@ -86,13 +78,11 @@ jobs:
 
       - uses: ./.github/actions/setup-php
 
-      - name: Download vendor archive
+      - name: Download vendor directory
         uses: actions/download-artifact@v4
         with:
           name: vendor
-
-      - name: Extract vendor archive
-        run: tar -xzf vendor.tar.gz
+          path: vendor
 
       - name: Run Pint
         run: vendor/bin/pint --test
@@ -108,13 +98,11 @@ jobs:
         with:
           extensions: pdo_sqlite
 
-      - name: Download vendor archive
+      - name: Download vendor directory
         uses: actions/download-artifact@v4
         with:
           name: vendor
-
-      - name: Extract vendor archive
-        run: tar -xzf vendor.tar.gz
+          path: vendor
 
       - name: Setup Node
         uses: actions/setup-node@v5
@@ -151,13 +139,11 @@ jobs:
 
       - uses: ./.github/actions/setup-php
 
-      - name: Download vendor archive
+      - name: Download vendor directory
         uses: actions/download-artifact@v4
         with:
           name: vendor
-
-      - name: Extract vendor archive
-        run: tar -xzf vendor.tar.gz
+          path: vendor
 
       - name: Run PHPStan
         run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
