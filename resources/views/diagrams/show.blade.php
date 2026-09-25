@@ -111,6 +111,8 @@
             data-expires-label-template="{{ __('messages.expires_label', ['time' => 'EXPIRES_AT']) }}"
             data-download-allowed-label="{{ __('messages.download_allowed') }}"
             data-download-not-allowed-label="{{ __('messages.download_not_allowed') }}"
+            data-follow-latest-version-label="{{ __('messages.follow_latest_version') }}"
+            data-pinned-to-version-template="{{ __('messages.pinned_to_version', ['name' => 'VERSION_NAME']) }}"
         @endcan
         class="h-full"
     >
@@ -164,6 +166,11 @@
                                 <label class="checkbox">
                                     <input type="checkbox" id="share-allow-download">
                                     {{ __('messages.allow_download') }}
+                                </label>
+                                <label>{{ __('messages.pin_to_version') }}
+                                    <select id="share-pin-version">
+                                        <option value="">{{ __('messages.follow_latest_version') }}</option>
+                                    </select>
                                 </label>
                                 <button type="submit" class="primary">{{ __('messages.create_share') }}</button>
                             </form>

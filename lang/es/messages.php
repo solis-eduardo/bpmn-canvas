@@ -75,6 +75,9 @@ return [
     'expires_label' => 'Expira :time',
     'download_allowed' => 'Descarga permitida',
     'download_not_allowed' => 'Descarga no permitida',
+    'follow_latest_version' => 'Seguir la última versión',
+    'pin_to_version' => 'Fijar a una versión',
+    'pinned_to_version' => 'Fijado a :name',
 
     // Historial de versiones y comparación
     'history' => 'Historial',

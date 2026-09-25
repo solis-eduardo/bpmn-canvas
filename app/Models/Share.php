@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\URL;
 
-#[Fillable(['diagram_id', 'expires_at', 'allow_download', 'revoked_at', 'created_by'])]
+#[Fillable(['diagram_id', 'expires_at', 'allow_download', 'revoked_at', 'created_by', 'pinned_version_id'])]
 class Share extends Model
 {
     /** @use HasFactory<ShareFactory> */
@@ -39,6 +39,16 @@ class Share extends Model
     public function isValid(): bool
     {
         return $this->revoked_at === null && $this->expires_at->isFuture();
+    }
+
+    /**
+     * A pinned Share always serves the content of one specific Version; an
+     * unpinned Share follows the Diagram's latest Version (default,
+     * current behaviour) — see CONTEXT.md, "Share".
+     */
+    public function isPinned(): bool
+    {
+        return $this->pinned_version_id !== null;
     }
 
     public function showUrl(): string

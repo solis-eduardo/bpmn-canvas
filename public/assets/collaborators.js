@@ -16,6 +16,7 @@
   const canManageShares = body.dataset.canManageShares === 'true';
   const sharesUrl = body.dataset.sharesUrl;
   const shareDestroyUrlTemplate = body.dataset.shareDestroyUrlTemplate;
+  const versionsUrl = body.dataset.versionsUrl;
   const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
   const $ = id => document.getElementById(id);
@@ -29,6 +30,7 @@
   const shareForm = $('share-create-form');
   const shareDays = $('share-days');
   const shareAllowDownload = $('share-allow-download');
+  const sharePinVersion = $('share-pin-version');
 
   const versionPanel = $('version-panel');
   const versionEntryBtn = $('btn-version-history-entry');
@@ -213,6 +215,37 @@
 
   // --- Shares ----------------------------------------------------------
 
+  // Populates the "pin to version" select in the creation form, reusing
+  // the same Version history endpoint the Version panel already fetches
+  // (see versions.js) — one list, two consumers.
+  async function loadVersionsForPinSelect() {
+    if (!canManageShares || !sharePinVersion || !versionsUrl) return;
+
+    try {
+      const res = await fetch(versionsUrl, {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' },
+      });
+      const data = await res.json();
+      const days = (data && data.versions) || [];
+
+      while (sharePinVersion.options.length > 1) {
+        sharePinVersion.remove(1);
+      }
+
+      days.forEach(day => {
+        day.items.forEach(version => {
+          const option = document.createElement('option');
+          option.value = version.id;
+          option.textContent = version.name;
+          sharePinVersion.appendChild(option);
+        });
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   function formatExpiry(isoString) {
     const date = new Date(isoString);
     const locale = (document.documentElement.lang || '').replace('_', '-') || undefined;
@@ -262,6 +295,13 @@
         ? (body.dataset.downloadAllowedLabel || 'Download allowed')
         : (body.dataset.downloadNotAllowedLabel || 'Download not allowed');
       info.appendChild(download);
+
+      const pin = document.createElement('span');
+      pin.className = 'badge ' + (share.pinned_version ? 'badge-approved' : 'badge-muted');
+      pin.textContent = share.pinned_version
+        ? (body.dataset.pinnedToVersionTemplate || 'Pinned to VERSION_NAME').replace('VERSION_NAME', share.pinned_version.name)
+        : (body.dataset.followLatestVersionLabel || 'Follow latest version');
+      info.appendChild(pin);
 
       li.appendChild(info);
 
@@ -317,14 +357,16 @@
 
       const days = parseInt(shareDays.value, 10) || 7;
       const allowDownload = !!shareAllowDownload.checked;
+      const pinnedVersionId = sharePinVersion && sharePinVersion.value ? sharePinVersion.value : null;
 
       try {
         await requestJson(sharesUrl, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ days, allow_download: allowDownload }),
+          body: JSON.stringify({ days, allow_download: allowDownload, pinned_version_id: pinnedVersionId }),
         });
         toast(body.dataset.shareCreatedNotice || 'Share link created.');
+        if (sharePinVersion) sharePinVersion.value = '';
         await loadShares();
       } catch (e) {
         console.error(e);
@@ -342,6 +384,7 @@
 
   loadCollaborators();
   loadShares();
+  loadVersionsForPinSelect();
 
   // Deep link from the notification bell (issue #15): clicking a
   // "requested access" notification lands here with ?open-panel=collaborators.
