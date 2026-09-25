@@ -6,6 +6,7 @@ use App\Models\Diagram;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Symfony\Component\Process\Exception\ProcessFailedException;
 use Symfony\Component\Process\Process;
 
@@ -47,7 +48,7 @@ class VersionRepository
      * Version on top of the history).
      *
      * @return string|null Opaque identifier of the created Version, or null
-     *                      if nothing changed and no Version was created.
+     *                     if nothing changed and no Version was created.
      */
     public function save(Diagram $diagram, User $author, ?string $content = null, ?string $message = null, bool $allowEmpty = false): ?string
     {
@@ -158,7 +159,7 @@ class VersionRepository
         $process->run();
 
         if (! $process->isSuccessful()) {
-            throw new \RuntimeException('Version not found.', previous: new ProcessFailedException($process));
+            throw new RuntimeException('Version not found.', previous: new ProcessFailedException($process));
         }
 
         return $process->getOutput();
@@ -208,7 +209,7 @@ class VersionRepository
         // really exist at this instant, fail loudly instead of letting the
         // child process fall back to PHP's cwd (see directory()).
         if (! is_dir($cwd)) {
-            throw new \RuntimeException("Version repository directory does not exist: {$cwd}");
+            throw new RuntimeException("Version repository directory does not exist: {$cwd}");
         }
 
         $process = new Process($args, $cwd, $env ?: null);
@@ -220,7 +221,7 @@ class VersionRepository
     private function validateIdentifier(string $version): void
     {
         if (! preg_match('/^[0-9a-f]{4,40}$/i', $version)) {
-            throw new \RuntimeException('Invalid version identifier.');
+            throw new RuntimeException('Invalid version identifier.');
         }
     }
 
@@ -241,7 +242,7 @@ class VersionRepository
         $path = Storage::disk('diagrams')->path($relative);
 
         if (! is_dir($path)) {
-            throw new \RuntimeException("Could not prepare the Version directory: {$path}");
+            throw new RuntimeException("Could not prepare the Version directory: {$path}");
         }
 
         return $path;
