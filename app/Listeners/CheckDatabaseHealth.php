@@ -15,10 +15,11 @@ use Throwable;
 class CheckDatabaseHealth
 {
     /**
-     * @SuppressWarnings(PHPMD.UnusedFormalParameter) $event is required by
-     * Laravel's listener signature (it's how the dispatcher matches this
-     * listener to the DiagnosingHealth event) even though the body never
-     * reads it.
+     * $event is required by Laravel's listener signature (it's how the
+     * dispatcher matches this listener to the DiagnosingHealth event) even
+     * though the body never reads it.
+     *
+     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
      */
     public function handle(DiagnosingHealth $event): void
     {
