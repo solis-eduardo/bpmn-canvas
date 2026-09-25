@@ -18,6 +18,33 @@ services:
     networks:
       - default
 
+  # Runs Laravel's scheduler (`backup:run`, see bootstrap/app.php), so
+  # backups happen on a schedule from within the compose stack instead of a
+  # host cron entry.
+  scheduler:
+    build:
+      context: .
+      target: app
+      args:
+        BPMN_JS_VERSION: ${BPMN_JS_VERSION:-18.30.0}
+    image: bpmn-studio-app:local
+    restart: unless-stopped
+    entrypoint: ["/entrypoint-scheduler.sh"]
+    command: ["php", "artisan", "schedule:work"]
+    env_file: .env
+    volumes:
+      - ./diagrams:/var/www/html/storage/app/diagrams:ro
+      # Default destination for backup artifacts (see BACKUP_DESTINATION in
+      # .env.example): a host folder, easy to ship elsewhere / back up
+      # further.
+      - ./backups:/var/www/html/storage/app/backup
+      - app-storage:/var/www/html/storage/framework
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - default
+
   web:
     build:
       context: .
