@@ -63,6 +63,40 @@ See `.env.example` for the full list. Highlights:
 - `storage/app/diagrams` is bind-mounted to `./diagrams` on the host — include it in your backups.
 - Set `APP_ENV=production` and `APP_DEBUG=false` in your production `.env`.
 
+## Backup and Restore
+
+Automatic backups run daily (scheduled in the `scheduler` service — see `bootstrap/app.php`) and are retained according to `config/backup.php` (default: 30 days).
+
+Each backup artifact is a single `.tar.gz` file containing:
+- `diagrams/` — all Diagram files and their internal Git repositories (preserving Version history)
+- `database.dump` — a PostgreSQL dump in custom archive format
+- `manifest.json` — metadata for validation during restore
+
+### Scheduling backups
+
+Backups are scheduled via the `scheduler` service (not a host cron) and run daily at 02:15 UTC. To run a backup immediately:
+
+```bash
+docker compose exec app php artisan backup:run
+```
+
+Backups are stored on the `backups` disk (default: `storage/app/backups/`, bind-mounted to `./backups` on the host).
+
+### Restoring from a backup
+
+To restore from a backup artifact on a clean or disaster-recovered environment:
+
+```bash
+docker compose exec app php artisan restore:run backup-2026-01-15_021500-12345678.tar.gz
+```
+
+The command will prompt for explicit confirmation before proceeding (since restore is destructive — it clears all diagrams and replays the database schema and data from the backup). After restore completes:
+- All Diagrams and their Version history are recovered.
+- Collaborators and Shares are restored.
+- The application is ready to serve — no additional steps required.
+
+**Warning**: Restore clears all current data. Always verify you are restoring to the correct environment and have a backup of your current state if needed.
+
 ## Structure
 
 ```
@@ -159,6 +193,40 @@ Ver `.env.example` para a lista completa. Destaques:
 - Use HTTPS. Por padrão o `web` publica direto na `APP_PORT`; se este host já roda um reverse proxy compartilhado em uma rede externa `nginx-network`, suba a aplicação com o overlay extra: `docker network create nginx-network` (uma vez, se ainda não existir) e depois `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`.
 - `storage/app/diagrams` é bind-mounted em `./diagrams` no host — inclua no seu backup.
 - Ajuste `APP_ENV=production` e `APP_DEBUG=false` no `.env` de produção.
+
+## Backup e Restauração
+
+Backups automáticos são executados diariamente (agendados no serviço `scheduler` — ver `bootstrap/app.php`) e são retidos de acordo com `config/backup.php` (padrão: 30 dias).
+
+Cada artefato de backup é um arquivo `.tar.gz` único contendo:
+- `diagrams/` — todos os arquivos de Diagrama e seus repositórios Git internos (preservando histórico de Versões)
+- `database.dump` — um dump do PostgreSQL em formato de arquivo personalizado
+- `manifest.json` — metadados para validação durante a restauração
+
+### Agendando backups
+
+Backups são agendados através do serviço `scheduler` (não por cron do host) e executados diariamente às 02:15 UTC. Para executar um backup imediatamente:
+
+```bash
+docker compose exec app php artisan backup:run
+```
+
+Os backups são armazenados no disco `backups` (padrão: `storage/app/backups/`, bind-mounted em `./backups` no host).
+
+### Restaurando de um backup
+
+Para restaurar de um artefato de backup em um ambiente limpo ou recuperado de desastre:
+
+```bash
+docker compose exec app php artisan restore:run backup-2026-01-15_021500-12345678.tar.gz
+```
+
+O comando solicitará confirmação explícita antes de prosseguir (pois restaurar é destrutivo — limpa todos os diagramas e reproduz o esquema e dados do banco a partir do backup). Após a conclusão da restauração:
+- Todos os Diagramas e seu histórico de Versões são recuperados.
+- Colaboradores e Compartilhamentos são restaurados.
+- A aplicação está pronta para servir — nenhuma etapa adicional é necessária.
+
+**Aviso**: Restauração limpa todos os dados atuais. Sempre verifique se está restaurando no ambiente correto e faça backup do estado atual se necessário.
 
 ## Estrutura
 
