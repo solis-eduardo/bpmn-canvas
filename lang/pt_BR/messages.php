@@ -128,4 +128,21 @@ return [
     'mark_all_as_read' => 'Marcar todas como lidas',
     'notification_requested_access' => ':name solicitou acesso a :diagram',
 
+    // Workspaces
+    'workspaces' => 'Workspaces',
+    'workspace_name' => 'Nome do workspace',
+    'create_workspace' => 'Criar workspace',
+    'no_workspaces_yet' => 'Você ainda não é membro de nenhum workspace.',
+    'workspace_owner_label' => '(dono do workspace: :name)',
+    'back_to_workspaces' => 'Voltar para Workspaces',
+    'rename_workspace' => 'Renomear workspace',
+    'rename' => 'Renomear',
+    'members' => 'Membros',
+    'no_members_yet' => 'Nenhum membro ainda.',
+    'member_email' => 'Email do membro',
+    'add_member' => 'Adicionar membro',
+    'remove_member_confirm' => 'Remover este membro?',
+    'workspace_owner_badge' => 'Dono do workspace',
+    'workspace_member_not_found' => 'Nenhum usuário foi encontrado com esse email.',
+
 ];

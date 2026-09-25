@@ -7,6 +7,7 @@ use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
@@ -42,5 +43,17 @@ class User extends Authenticatable
     public function adminRoleIsManuallyRevocable(): bool
     {
         return $this->is_admin && ! $this->is_admin_via_keycloak_claim;
+    }
+
+    /**
+     * The Workspaces this User is a Member of (CONTEXT.md, "Member";
+     * ADR-0009) — includes Workspaces they own, since the Workspace Owner
+     * is also a Member.
+     *
+     * @return BelongsToMany<Workspace, $this>
+     */
+    public function workspaces(): BelongsToMany
+    {
+        return $this->belongsToMany(Workspace::class, 'workspace_members');
     }
 }

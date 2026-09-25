@@ -10,6 +10,8 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PublicShareController;
 use App\Http\Controllers\ShareController;
 use App\Http\Controllers\VersionController;
+use App\Http\Controllers\WorkspaceController;
+use App\Http\Controllers\WorkspaceMemberController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -68,4 +70,12 @@ Route::middleware('auth')->group(function () {
     Route::get('/diagrams/{slug}/shares', [ShareController::class, 'index'])->name('shares.index');
     Route::post('/diagrams/{slug}/shares', [ShareController::class, 'store'])->name('shares.store');
     Route::delete('/shares/{share}', [ShareController::class, 'destroy'])->name('shares.destroy');
+
+    Route::get('/workspaces', [WorkspaceController::class, 'index'])->name('workspaces.index');
+    Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');
+    Route::get('/workspaces/{workspace}', [WorkspaceController::class, 'show'])->name('workspaces.show');
+    Route::put('/workspaces/{workspace}', [WorkspaceController::class, 'update'])->name('workspaces.update');
+
+    Route::post('/workspaces/{workspace}/members', [WorkspaceMemberController::class, 'store'])->name('workspaces.members.store');
+    Route::delete('/workspaces/{workspace}/members/{user}', [WorkspaceMemberController::class, 'destroy'])->name('workspaces.members.destroy');
 });

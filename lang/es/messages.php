@@ -128,4 +128,21 @@ return [
     'mark_all_as_read' => 'Marcar todas como leídas',
     'notification_requested_access' => ':name solicitó acceso a :diagram',
 
+    // Workspaces
+    'workspaces' => 'Espacios de trabajo',
+    'workspace_name' => 'Nombre del espacio de trabajo',
+    'create_workspace' => 'Crear espacio de trabajo',
+    'no_workspaces_yet' => 'Todavía no eres Miembro de ningún Espacio de trabajo.',
+    'workspace_owner_label' => '(Propietario del espacio de trabajo: :name)',
+    'back_to_workspaces' => 'Volver a Espacios de trabajo',
+    'rename_workspace' => 'Renombrar espacio de trabajo',
+    'rename' => 'Renombrar',
+    'members' => 'Miembros',
+    'no_members_yet' => 'Todavía no hay Miembros.',
+    'member_email' => 'Email del miembro',
+    'add_member' => 'Añadir miembro',
+    'remove_member_confirm' => '¿Eliminar a este Miembro?',
+    'workspace_owner_badge' => 'Propietario del espacio de trabajo',
+    'workspace_member_not_found' => 'No se encontró ningún usuario con ese email.',
+
 ];

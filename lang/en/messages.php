@@ -128,4 +128,21 @@ return [
     'mark_all_as_read' => 'Mark all as read',
     'notification_requested_access' => ':name requested access to :diagram',
 
+    // Workspaces
+    'workspaces' => 'Workspaces',
+    'workspace_name' => 'Workspace name',
+    'create_workspace' => 'Create workspace',
+    'no_workspaces_yet' => 'You are not a Member of any Workspace yet.',
+    'workspace_owner_label' => '(Workspace Owner: :name)',
+    'back_to_workspaces' => 'Back to Workspaces',
+    'rename_workspace' => 'Rename workspace',
+    'rename' => 'Rename',
+    'members' => 'Members',
+    'no_members_yet' => 'No Members yet.',
+    'member_email' => 'Member email',
+    'add_member' => 'Add member',
+    'remove_member_confirm' => 'Remove this Member?',
+    'workspace_owner_badge' => 'Workspace Owner',
+    'workspace_member_not_found' => 'No user was found with that email.',
+
 ];
