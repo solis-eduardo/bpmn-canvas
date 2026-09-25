@@ -150,6 +150,40 @@ class ShareTest extends TestCase
         $response->assertSee($diagram->title);
     }
 
+    public function test_public_viewer_shows_download_buttons_when_share_allows_download(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author, '<bpmn>content</bpmn>');
+        $share = Share::factory()->for($diagram)->for($author, 'author')->create([
+            'expires_at' => now()->addDays(7),
+            'allow_download' => true,
+        ]);
+
+        $response = $this->get($share->showUrl());
+
+        $response->assertOk();
+        $response->assertSee($diagram->title);
+        $response->assertSee('id="btn-download"', false);
+        $response->assertSee('data-export="bpmn"', false);
+    }
+
+    public function test_public_viewer_hides_download_buttons_when_share_disallows_download(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author, '<bpmn>content</bpmn>');
+        $share = Share::factory()->for($diagram)->for($author, 'author')->create([
+            'expires_at' => now()->addDays(7),
+            'allow_download' => false,
+        ]);
+
+        $response = $this->get($share->showUrl());
+
+        $response->assertOk();
+        $response->assertSee($diagram->title);
+        $response->assertDontSee('id="btn-download"', false);
+        $response->assertDontSee('data-export="bpmn"', false);
+    }
+
     public function test_guest_sees_clear_message_when_share_expired(): void
     {
         $author = User::factory()->create();
