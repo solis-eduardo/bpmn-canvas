@@ -15,7 +15,7 @@ use App\Models\User;
 class RequestLock
 {
     /**
-     * @return array{state: 'acquired'|'waiting', expires_at?: string}
+     * @return array{state: 'acquired'|'waiting', requested_at?: string, expires_at?: string}
      */
     public function __invoke(Diagram $diagram, User $user): array
     {
@@ -33,8 +33,14 @@ class RequestLock
 
         $diagram->registerLockRequest($user);
 
+        // "requested_at" is the server's own clock reading for this request
+        // (not necessarily *this* call's time — it's a no-op, and keeps the
+        // original timestamp, if the same User already had a pending
+        // request). Exposed so the client can derive its 30-second countdown
+        // from the server's clock instead of trusting its own (issue #9).
         return [
             'state' => 'waiting',
+            'requested_at' => $diagram->lock_requested_at->toIso8601String(),
             'expires_at' => $diagram->lock_requested_at
                 ->addSeconds(Diagram::LOCK_REQUEST_TRANSFER_SECONDS)
                 ->toIso8601String(),

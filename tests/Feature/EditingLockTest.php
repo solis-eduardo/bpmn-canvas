@@ -6,6 +6,7 @@ use App\Models\Diagram;
 use App\Models\DiagramCollaborator;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -269,5 +270,106 @@ class EditingLockTest extends TestCase
 
         $response->assertStatus(403);
         $this->assertSame($holder->id, $diagram->fresh()->locked_by);
+    }
+
+    /**
+     * The blocked screen shows the holder and since when they've held the
+     * Lock, and offers requesting it (issue #9).
+     */
+    public function test_the_blocked_screen_shows_the_holder_and_when_the_lock_was_taken(): void
+    {
+        $holder = User::factory()->create(['name' => 'Dora Detain']);
+        $blocked = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $blocked);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $lockedAt = $diagram->fresh()->locked_at;
+
+        $response = $this->actingAs($blocked)->get('/diagrams/'.$diagram->slug);
+
+        $response->assertOk();
+        $response->assertViewIs('diagrams.locked');
+        $response->assertSee('Dora Detain');
+        $response->assertSee($lockedAt->toIso8601String(), false);
+        $response->assertSee('id="btn-request-lock"', false);
+    }
+
+    /**
+     * A "waiting" response from the lock-request endpoint exposes the
+     * server's own timestamp for the request, so the client can derive its
+     * countdown from the server's clock instead of the client's (issue #9).
+     */
+    public function test_requesting_a_held_lock_exposes_the_servers_request_timestamp(): void
+    {
+        $holder = User::factory()->create();
+        $requester = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $requester);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        $this->travelTo(now()->addMinute());
+        $response = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
+
+        $response->assertOk()->assertJson(['state' => 'waiting']);
+        $requestedAt = $response->json('requested_at');
+        $expiresAt = $response->json('expires_at');
+        $this->assertNotNull($requestedAt);
+        $this->assertSame(
+            now()->toIso8601String(),
+            Carbon::parse($requestedAt)->toIso8601String()
+        );
+        $this->assertSame(
+            now()->addSeconds(Diagram::LOCK_REQUEST_TRANSFER_SECONDS)->toIso8601String(),
+            Carbon::parse($expiresAt)->toIso8601String()
+        );
+    }
+
+    /**
+     * The Lock holder's heartbeat response carries whether someone has
+     * requested the Lock, so the Editor can show a visible notice without a
+     * second poll loop (issue #9).
+     */
+    public function test_the_holders_heartbeat_reports_a_pending_lock_request(): void
+    {
+        $holder = User::factory()->create();
+        $requester = User::factory()->create(['name' => 'Rita Requester']);
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $requester);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request')
+            ->assertJson(['state' => 'waiting']);
+
+        $response = $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/heartbeat');
+
+        $response->assertOk()->assertJson([
+            'heartbeat' => true,
+            'lock_requested_by' => 'Rita Requester',
+        ]);
+    }
+
+    /**
+     * A heartbeat counts as the holder responding and cancels the pending
+     * request (pre-existing behavior) — so once reported, a later
+     * heartbeat, with nothing new pending, reports none.
+     */
+    public function test_the_holders_heartbeat_reports_no_pending_request_once_it_has_been_cancelled(): void
+    {
+        $holder = User::factory()->create();
+        $requester = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $requester);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request')
+            ->assertJson(['state' => 'waiting']);
+
+        // First heartbeat after the request: still reports it, then cancels it.
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/heartbeat')
+            ->assertJson(['lock_requested_by' => $requester->name]);
+
+        // Second heartbeat: nothing pending anymore.
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/heartbeat')
+            ->assertJson(['lock_requested_by' => null]);
     }
 }

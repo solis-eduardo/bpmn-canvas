@@ -79,6 +79,19 @@ class DiagramTest extends TestCase
         $response->assertSee("Another User's Diagram");
     }
 
+    public function test_diagram_listing_shows_the_last_modification_time(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create([
+            'updated_at' => now()->subHours(3),
+        ]);
+
+        $response = $this->actingAs($user)->get('/diagrams');
+
+        $response->assertOk();
+        $response->assertSee($diagram->updated_at->diffForHumans());
+    }
+
     public function test_user_can_open_the_editor_of_an_existing_diagram_by_its_current_slug(): void
     {
         $user = User::factory()->create();
