@@ -1,0 +1,74 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  pint:
+    name: Pint (code style)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Install Composer dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: Run Pint
+        run: vendor/bin/pint --test
+
+  tests:
+    name: PHPUnit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite
+          coverage: none
+
+      - name: Install Composer dependencies
+        uses: ramsey/composer-install@v3
+
+      - name: Copy environment file
+        run: cp .env.example .env
+
+      - name: Generate application key
+        run: php artisan key:generate
+
+      - name: Run test suite
+        run: php artisan test
+
+  phpmd:
+    name: PHPMD (static analysis)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Download PHPMD
+        # Run as a standalone .phar rather than a Composer dev-dependency:
+        # phpmd/phpmd's own dependency tree (pdepend, an old symfony/*) does
+        # not resolve cleanly against this Laravel app's Symfony 8-based
+        # dependencies, so it's kept fully isolated from composer.json/lock.
+        run: |
+          curl -sSL -o phpmd.phar https://github.com/phpmd/phpmd/releases/latest/download/phpmd.phar
+          chmod +x phpmd.phar
+
+      - name: Run PHPMD
+        run: php phpmd.phar app,database,routes text phpmd.xml
