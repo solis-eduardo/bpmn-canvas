@@ -35,30 +35,74 @@ jobs:
               - '.github/workflows/ci.yml'
               - '.github/actions/**'
 
-  pint:
-    name: Pint (code style)
+  setup:
+    name: Install Composer dependencies
     needs: changes
     if: needs.changes.outputs.php == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
-      - uses: ./.github/actions/setup-php-composer
+      - uses: ./.github/actions/setup-php
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer dependencies
+        # Not ramsey/composer-install: its own action.yml pins an old
+        # actions/cache commit that still targets the deprecated Node 20
+        # runtime. actions/cache@v6 is current and avoids that warning.
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Upload vendor directory
+        uses: actions/upload-artifact@v4
+        with:
+          name: vendor
+          path: vendor
+          retention-days: 1
+
+  pint:
+    name: Pint (code style)
+    needs: setup
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: ./.github/actions/setup-php
+
+      - name: Download vendor directory
+        uses: actions/download-artifact@v4
+        with:
+          name: vendor
+          path: vendor
 
       - name: Run Pint
         run: vendor/bin/pint --test
 
   tests:
     name: PHPUnit
-    needs: changes
-    if: needs.changes.outputs.php == 'true'
+    needs: setup
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
-      - uses: ./.github/actions/setup-php-composer
+      - uses: ./.github/actions/setup-php
         with:
           extensions: pdo_sqlite
+
+      - name: Download vendor directory
+        uses: actions/download-artifact@v4
+        with:
+          name: vendor
+          path: vendor
 
       - name: Setup Node
         uses: actions/setup-node@v5
@@ -88,13 +132,18 @@ jobs:
 
   phpstan:
     name: PHPStan (static analysis)
-    needs: changes
-    if: needs.changes.outputs.php == 'true'
+    needs: setup
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
-      - uses: ./.github/actions/setup-php-composer
+      - uses: ./.github/actions/setup-php
+
+      - name: Download vendor directory
+        uses: actions/download-artifact@v4
+        with:
+          name: vendor
+          path: vendor
 
       - name: Run PHPStan
         run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
@@ -107,17 +156,15 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          coverage: none
+      - uses: ./.github/actions/setup-php
 
       - name: Download PHPMD
         # Run as a standalone .phar rather than a Composer dev-dependency:
         # phpmd/phpmd's own dependency tree (pdepend, an old symfony/*) does
         # not resolve cleanly against this Laravel app's Symfony 8-based
-        # dependencies, so it's kept fully isolated from composer.json/lock.
+        # dependencies, so it's kept fully isolated from composer.json/lock,
+        # and this job never needs the `vendor` artifact the other PHP jobs
+        # share.
         run: |
           curl -sSL -o phpmd.phar https://github.com/phpmd/phpmd/releases/latest/download/phpmd.phar
           chmod +x phpmd.phar
