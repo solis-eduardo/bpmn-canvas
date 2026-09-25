@@ -21,6 +21,7 @@ return [
     'no_diagrams_yet' => 'Nenhum diagrama criado ainda.',
     'author_label' => '(autor: :name)',
     'diagram_owner_label' => '(dono: :name)',
+    'last_modified_label' => 'Última modificação :time',
     'being_edited_by' => '— em edição por :name',
 
     // Editor
@@ -32,6 +33,9 @@ return [
     'zoom_out' => 'Afastar',
     'fit_to_screen' => 'Ajustar à tela',
     'lock_not_held' => 'Você não detém a trava deste diagrama.',
+    'back_to_diagrams' => 'Voltar para Diagramas',
+    'version_history' => 'Histórico de versões',
+    'collaborators' => 'Colaboradores',
 
     // Histórico de versões e comparação
     'history' => 'Histórico',
