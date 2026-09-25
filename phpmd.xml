@@ -11,8 +11,18 @@
         <exclude name="StaticAccess" />
         <!-- Laravel controllers/services commonly construct value objects and DTOs inline. -->
         <exclude name="BooleanArgumentFlag" />
+        <!-- `if ($x = foo())` to test-and-capture in one step is a common,
+             deliberate PHP idiom here (see ShareController::present()), not
+             an accidental `=`/`==` typo. -->
+        <exclude name="IfStatementAssignment" />
     </rule>
-    <rule ref="rulesets/codesize.xml" />
+    <rule ref="rulesets/codesize.xml">
+        <!-- A Laravel resource controller/model naturally accumulates public
+             methods (one per route action, or per relation/permission
+             helper); splitting them up for this metric alone would fight
+             the framework's own conventions rather than fix anything. -->
+        <exclude name="TooManyPublicMethods" />
+    </rule>
     <rule ref="rulesets/design.xml" />
     <rule ref="rulesets/unusedcode.xml" />
 </ruleset>
