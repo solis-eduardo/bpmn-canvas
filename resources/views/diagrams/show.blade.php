@@ -38,14 +38,24 @@
                 </svg>
             </button>
 
-            {{-- Reserved entry point for Collaborators / Shares (see #11). --}}
-            <div
-                id="btn-collaborators-entry"
-                data-slot="collaborators-entry"
-                class="h-8 w-8"
-                aria-hidden="true"
-                title="{{ __('messages.collaborators') }}"
-            ></div>
+            {{-- Entry point for the Collaborators / Shares panel (see #11). --}}
+            <div data-slot="collaborators-entry">
+                @can('manageCollaborators', $diagram)
+                    <button
+                        type="button"
+                        id="btn-collaborators-entry"
+                        class="flex h-8 w-8 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                        title="{{ __('messages.collaborators') }}"
+                        aria-label="{{ __('messages.collaborators') }}"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-1a4 4 0 0 0-3-3.87M9 20H4v-1a4 4 0 0 1 4-4h2a4 4 0 0 1 4 4v1Zm3-14a4 4 0 0 1 0 8m-6-4a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" />
+                        </svg>
+                    </button>
+                @else
+                    <div class="h-8 w-8" aria-hidden="true"></div>
+                @endcan
+            </div>
         </div>
     </x-slot:headerActions>
 
@@ -68,6 +78,40 @@
         data-version-restored-notice="{{ __('messages.version_restored') }}"
         data-version-restore-failed-notice="{{ __('messages.version_restore_failed') }}"
         data-restore-label="{{ __('messages.restore') }}"
+        @can('manageCollaborators', $diagram)
+            data-collaborators-url="{{ route('diagrams.collaborators.index', $diagram->slug) }}"
+            data-collaborator-url-template="{{ route('diagrams.collaborators.update', [$diagram->slug, 'USER_ID']) }}"
+            data-can-manage-shares="{{ auth()->user()->can('manageShares', $diagram) ? 'true' : 'false' }}"
+            data-shares-url="{{ route('shares.index', $diagram->slug) }}"
+            data-share-destroy-url-template="{{ route('shares.destroy', ['share' => 'SHARE_ID']) }}"
+            data-invite-failed-notice="{{ __('messages.collaborator_invite_failed') }}"
+            data-invited-notice="{{ __('messages.collaborator_invited') }}"
+            data-approve-failed-notice="{{ __('messages.collaborator_approve_failed') }}"
+            data-approved-notice="{{ __('messages.collaborator_approved') }}"
+            data-remove-failed-notice="{{ __('messages.collaborator_remove_failed') }}"
+            data-removed-notice="{{ __('messages.collaborator_removed') }}"
+            data-remove-collaborator-confirm="{{ __('messages.remove_collaborator_confirm') }}"
+            data-refuse-request-confirm="{{ __('messages.refuse_request_confirm') }}"
+            data-no-collaborators-notice="{{ __('messages.no_collaborators_yet') }}"
+            data-status-pending-label="{{ __('messages.status_pending') }}"
+            data-status-approved-label="{{ __('messages.status_approved') }}"
+            data-approve-label="{{ __('messages.approve') }}"
+            data-refuse-label="{{ __('messages.refuse') }}"
+            data-remove-label="{{ __('messages.remove') }}"
+            data-revoke-label="{{ __('messages.revoke') }}"
+            data-copy-link-label="{{ __('messages.copy_link') }}"
+            data-share-create-failed-notice="{{ __('messages.share_create_failed') }}"
+            data-share-created-notice="{{ __('messages.share_created') }}"
+            data-share-revoke-failed-notice="{{ __('messages.share_revoke_failed') }}"
+            data-share-revoked-notice="{{ __('messages.share_revoked') }}"
+            data-revoke-share-confirm="{{ __('messages.revoke_share_confirm') }}"
+            data-no-shares-notice="{{ __('messages.no_shares_yet') }}"
+            data-link-copied-notice="{{ __('messages.link_copied') }}"
+            data-link-copy-failed-notice="{{ __('messages.link_copy_failed') }}"
+            data-expires-label-template="{{ __('messages.expires_label', ['time' => 'EXPIRES_AT']) }}"
+            data-download-allowed-label="{{ __('messages.download_allowed') }}"
+            data-download-not-allowed-label="{{ __('messages.download_not_allowed') }}"
+        @endcan
         class="h-full"
     >
         <div class="app" id="app">
@@ -96,6 +140,38 @@
                 </div>
                 <ul id="version-list"></ul>
             </aside>
+            @can('manageCollaborators', $diagram)
+                <aside id="collaborators-panel" hidden>
+                    <div class="aside-head">
+                        <span>{{ __('messages.collaborators_and_shares') }}</span>
+                        <button type="button" id="btn-collaborators-close" aria-label="Close">✕</button>
+                    </div>
+                    <div class="collab-body">
+                        <section class="collab-section">
+                            <h3>{{ __('messages.collaborators') }}</h3>
+                            <form id="collab-invite-form">
+                                <input type="email" id="collab-invite-email" placeholder="{{ __('messages.invite_by_email') }}" autocomplete="off" required>
+                                <button type="submit" class="primary">{{ __('messages.invite') }}</button>
+                            </form>
+                            <ul id="collab-list"></ul>
+                        </section>
+                        <section class="collab-section" id="shares-section">
+                            <h3>{{ __('messages.shares') }}</h3>
+                            <form id="share-create-form">
+                                <label>{{ __('messages.expires_in_days') }}
+                                    <input type="number" id="share-days" min="1" max="60" value="7">
+                                </label>
+                                <label class="checkbox">
+                                    <input type="checkbox" id="share-allow-download">
+                                    {{ __('messages.allow_download') }}
+                                </label>
+                                <button type="submit" class="primary">{{ __('messages.create_share') }}</button>
+                            </form>
+                            <ul id="share-list"></ul>
+                        </section>
+                    </div>
+                </aside>
+            @endcan
             <main>
                 <div id="canvas"></div>
                 <div class="zoom">
@@ -123,4 +199,7 @@
     <script src="{{ asset('assets/editor.js') }}"></script>
     <script type="module" src="{{ asset('assets/diff.js') }}"></script>
     <script type="module" src="{{ asset('assets/versions.js') }}"></script>
+    @can('manageCollaborators', $diagram)
+        <script type="module" src="{{ asset('assets/collaborators.js') }}"></script>
+    @endcan
 </x-layouts.app>
