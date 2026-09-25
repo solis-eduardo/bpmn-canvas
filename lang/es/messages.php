@@ -32,6 +32,9 @@ return [
     'zoom_out' => 'Alejar',
     'fit_to_screen' => 'Ajustar a la pantalla',
     'lock_not_held' => 'No tienes el bloqueo de este diagrama.',
+    'back_to_diagrams' => 'Volver a Diagramas',
+    'version_history' => 'Historial de versiones',
+    'collaborators' => 'Colaboradores',
 
     // Historial de versiones y comparación
     'history' => 'Historial',

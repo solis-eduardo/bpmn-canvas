@@ -32,6 +32,9 @@ return [
     'zoom_out' => 'Zoom out',
     'fit_to_screen' => 'Fit to screen',
     'lock_not_held' => "You don't hold the lock on this diagram.",
+    'back_to_diagrams' => 'Back to Diagrams',
+    'version_history' => 'Version history',
+    'collaborators' => 'Collaborators',
 
     // Version history & comparison
     'history' => 'History',
