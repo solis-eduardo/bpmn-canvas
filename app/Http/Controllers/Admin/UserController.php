@@ -7,9 +7,19 @@ use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\View\View;
 
 class UserController extends Controller
 {
+    public function index(): View
+    {
+        $this->authorize('manage-users');
+
+        $users = User::orderBy('name')->get();
+
+        return view('admin.users.index', compact('users'));
+    }
+
     public function store(Request $request): RedirectResponse
     {
         $this->authorize('manage-users');
@@ -36,6 +46,10 @@ class UserController extends Controller
         $data = $request->validate([
             'is_admin' => ['required', 'boolean'],
         ]);
+
+        if (! $data['is_admin'] && $user->is_admin_via_keycloak_claim) {
+            abort(403, 'This Administrator role was granted by the Keycloak claim and cannot be revoked here.');
+        }
 
         $user->is_admin = $data['is_admin'];
         $user->save();
