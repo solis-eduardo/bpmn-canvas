@@ -3,9 +3,13 @@
 namespace Tests\Feature;
 
 use App\Models\Diagram;
+use App\Models\DiagramOldSlug;
 use App\Models\User;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
 use Tests\TestCase;
 
 class DiagramTest extends TestCase
@@ -209,5 +213,85 @@ class DiagramTest extends TestCase
         $this->actingAs($user)->get('/diagrams/'.$renamedSlug)->assertNotFound();
         $this->actingAs($user)->get('/diagrams/'.$currentSlug)->assertNotFound();
         $this->actingAs($user)->getJson('/diagrams/'.$renamedSlug.'/content')->assertNotFound();
+    }
+
+    public function test_creating_a_diagram_leaves_no_record_when_the_disk_write_fails(): void
+    {
+        $user = User::factory()->create();
+
+        $disk = Mockery::mock(Filesystem::class);
+        $disk->shouldReceive('put')->once()->andReturn(false);
+        Storage::set('diagrams', $disk);
+
+        $response = $this->actingAs($user)->post('/diagrams', ['title' => 'Doomed Diagram']);
+
+        $response->assertServerError();
+        $this->assertDatabaseMissing('diagrams', ['title' => 'Doomed Diagram']);
+    }
+
+    public function test_renaming_a_diagram_reverts_the_disk_move_when_the_database_transaction_fails(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create(['title' => 'Original Name']);
+        $originalSlug = $diagram->slug;
+        $originalPath = $diagram->disk_path;
+
+        // Injects a failure inside the transaction (the "old slug"
+        // bookkeeping row), the way a real constraint violation or deadlock
+        // would, without reaching into the repository's internals.
+        Event::listen('eloquent.creating: '.DiagramOldSlug::class, function (): void {
+            throw new \RuntimeException('Simulated database failure mid-transaction.');
+        });
+
+        try {
+            $response = $this->actingAs($user)->putJson('/diagrams/'.$originalSlug, [
+                'title' => 'New Name',
+            ]);
+        } finally {
+            Event::forget('eloquent.creating: '.DiagramOldSlug::class);
+        }
+
+        $response->assertServerError();
+
+        $diagram->refresh();
+        $this->assertSame($originalSlug, $diagram->slug);
+        $this->assertSame('Original Name', $diagram->title);
+        $this->assertSame($originalPath, $diagram->disk_path);
+        $this->assertDatabaseMissing('diagram_old_slugs', ['diagram_id' => $diagram->id]);
+
+        Storage::disk('diagrams')->assertExists($originalPath);
+
+        $this->actingAs($user)->get('/diagrams/'.$originalSlug)->assertOk();
+    }
+
+    public function test_deleting_a_diagram_removes_the_record_even_when_removing_the_directory_fails(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create(['title' => 'To Delete']);
+
+        $disk = Mockery::mock(Filesystem::class);
+        $disk->shouldReceive('deleteDirectory')->once()->andThrow(new \RuntimeException('Simulated disk failure.'));
+        Storage::set('diagrams', $disk);
+
+        $response = $this->actingAs($user)->delete('/diagrams/'.$diagram->slug);
+
+        $response->assertServerError();
+        $this->assertDatabaseMissing('diagrams', ['id' => $diagram->id]);
+    }
+
+    public function test_forking_a_diagram_registers_no_new_diagram_when_copying_the_content_fails(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create(['title' => 'Source Diagram']);
+
+        $disk = Mockery::mock(Filesystem::class);
+        $disk->shouldReceive('get')->with($diagram->disk_path)->once()->andReturn(null);
+        Storage::set('diagrams', $disk);
+
+        $response = $this->actingAs($user)->post('/diagrams/'.$diagram->slug.'/fork');
+
+        $response->assertServerError();
+        $this->assertDatabaseCount('diagrams', 1);
+        $this->assertDatabaseHas('diagrams', ['id' => $diagram->id]);
     }
 }

@@ -32,8 +32,16 @@ class DiagramFactory extends Factory
 
     public function configure(): static
     {
-        return $this->afterCreating(function (Diagram $diagram) {
-            Storage::disk('diagrams')->put($diagram->disk_path, Diagram::EMPTY_BPMN);
-        });
+        return $this
+            // Keeps disk_path derived from the final slug even when a test
+            // overrides 'slug' directly (definition() can't know about that
+            // override yet): disk_path must always point at the Diagram's
+            // own directory, the same invariant application code keeps.
+            ->afterMaking(function (Diagram $diagram) {
+                $diagram->disk_path = $diagram->slug.'/diagram.bpmn';
+            })
+            ->afterCreating(function (Diagram $diagram) {
+                Storage::disk('diagrams')->put($diagram->disk_path, Diagram::EMPTY_BPMN);
+            });
     }
 }
