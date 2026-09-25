@@ -161,4 +161,44 @@ class RestoreTest extends TestCase
             ->assertOk()
             ->assertJson(['restored' => true]);
     }
+
+    public function test_restore_command_requires_explicit_confirmation(): void
+    {
+        Storage::disk('backups')->put('backup-2026-01-01_000000-abcd1234.tar.gz', 'not a real archive');
+
+        $this->artisan('backup:restore', ['artifact' => 'backup-2026-01-01_000000-abcd1234.tar.gz'])
+            ->expectsConfirmation(
+                'This will OVERWRITE the current database and Diagrams directory with the contents of '
+                    .'"backup-2026-01-01_000000-abcd1234.tar.gz". This cannot be undone. Continue?',
+                'no',
+            )
+            ->assertFailed();
+    }
+
+    public function test_restore_command_fails_if_artifact_does_not_exist(): void
+    {
+        $this->artisan('backup:restore', ['artifact' => 'does-not-exist.tar.gz', '--force' => true])
+            ->assertFailed();
+    }
+
+    public function test_restore_command_fails_if_artifact_has_invalid_manifest(): void
+    {
+        // A real .tar.gz, so extraction succeeds and validateManifest() is
+        // actually exercised — it's missing manifest.json entirely.
+        $sourceDir = sys_get_temp_dir().'/restore-test-'.uniqid();
+        mkdir($sourceDir.'/diagrams', 0755, true);
+        file_put_contents($sourceDir.'/database.dump', 'fake dump');
+        $archivePath = $sourceDir.'.tar.gz';
+        exec(sprintf('tar -czf %s -C %s .', escapeshellarg($archivePath), escapeshellarg($sourceDir)));
+
+        Storage::disk('backups')->put(
+            'backup-2026-01-01_000000-abcd1234.tar.gz',
+            file_get_contents($archivePath),
+        );
+
+        $this->artisan('backup:restore', [
+            'artifact' => 'backup-2026-01-01_000000-abcd1234.tar.gz',
+            '--force' => true,
+        ])->assertFailed();
+    }
 }

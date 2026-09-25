@@ -21,6 +21,7 @@ return [
     'no_diagrams_yet' => 'No diagrams created yet.',
     'author_label' => '(author: :name)',
     'diagram_owner_label' => '(owner: :name)',
+    'last_modified_label' => 'Last modified :time',
     'being_edited_by' => '— being edited by :name',
 
     // Editor
