@@ -63,6 +63,30 @@ See `.env.example` for the full list. Highlights:
 - `storage/app/diagrams` is bind-mounted to `./diagrams` on the host — include it in your backups.
 - Set `APP_ENV=production` and `APP_DEBUG=false` in your production `.env`.
 
+## Backup and Restore
+
+The `scheduler` compose service runs `backup:run` on a schedule (see `docs/adr/0008`). Each run produces one artifact — a `.tar.gz` containing a copy of the Diagrams directory (with each Diagram's Version history) and a `pg_dump --format=custom` database dump — on the `backups` disk, and prunes artifacts past the retention window.
+
+| Variable | Purpose |
+|---|---|
+| `BACKUP_DESTINATION` | Where artifacts are written (default `storage/app/backup`, normally a host-mounted volume — see `./backups` in docker-compose.yml) |
+| `BACKUP_RETENTION_DAYS` | How many days an artifact is kept before the next `backup:run` prunes it (default `14`) |
+
+To restore an artifact onto a running stack:
+
+```bash
+# List available artifacts
+docker compose exec app ls storage/app/backup   # or your BACKUP_DESTINATION
+
+# Restore one — prompts for confirmation before overwriting anything
+docker compose exec app php artisan backup:restore backup-2026-01-01_000000-abcd1234.tar.gz
+
+# Non-interactive (scripted) use skips the prompt
+docker compose exec app php artisan backup:restore backup-2026-01-01_000000-abcd1234.tar.gz --force
+```
+
+`backup:restore` validates the artifact's `manifest.json` before touching anything, then **overwrites** the current database and Diagrams directory with the artifact's contents — nothing is merged. It is an operator command, run manually; unlike `backup:run` it is not on the scheduler. After a restore, Diagrams open normally, their Version history lists and restores as before, and existing Share links keep working — the round trip has been exercised end to end against this stack.
+
 ## Structure
 
 ```
@@ -159,6 +183,30 @@ Ver `.env.example` para a lista completa. Destaques:
 - Use HTTPS. Por padrão o `web` publica direto na `APP_PORT`; se este host já roda um reverse proxy compartilhado em uma rede externa `nginx-network`, suba a aplicação com o overlay extra: `docker network create nginx-network` (uma vez, se ainda não existir) e depois `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`.
 - `storage/app/diagrams` é bind-mounted em `./diagrams` no host — inclua no seu backup.
 - Ajuste `APP_ENV=production` e `APP_DEBUG=false` no `.env` de produção.
+
+## Backup e Restauração
+
+O serviço `scheduler` do compose roda `backup:run` periodicamente (veja `docs/adr/0008`). Cada execução produz um único artefato — um `.tar.gz` contendo uma cópia do diretório de Diagramas (com o histórico de Versões de cada Diagrama) e um dump do banco via `pg_dump --format=custom` — no disco `backups`, e remove artefatos além da janela de retenção.
+
+| Variável | Finalidade |
+|---|---|
+| `BACKUP_DESTINATION` | Onde os artefatos são gravados (padrão `storage/app/backup`, normalmente um volume montado do host — veja `./backups` no docker-compose.yml) |
+| `BACKUP_RETENTION_DAYS` | Quantos dias um artefato é mantido antes de ser removido pela próxima `backup:run` (padrão `14`) |
+
+Para restaurar um artefato em uma stack em execução:
+
+```bash
+# Lista os artefatos disponíveis
+docker compose exec app ls storage/app/backup   # ou seu BACKUP_DESTINATION
+
+# Restaura um — pede confirmação antes de sobrescrever qualquer coisa
+docker compose exec app php artisan backup:restore backup-2026-01-01_000000-abcd1234.tar.gz
+
+# Uso não-interativo (script) pula a confirmação
+docker compose exec app php artisan backup:restore backup-2026-01-01_000000-abcd1234.tar.gz --force
+```
+
+`backup:restore` valida o `manifest.json` do artefato antes de tocar em qualquer coisa, e então **sobrescreve** o banco de dados e o diretório de Diagramas atuais com o conteúdo do artefato — nada é mesclado. É um comando de operador, executado manualmente; diferente de `backup:run`, não está no scheduler. Após uma restauração, os Diagramas abrem normalmente, o histórico de Versões lista e restaura como antes, e links de Compartilhamento existentes continuam funcionando — o ciclo completo já foi executado de ponta a ponta nesta stack.
 
 ## Estrutura
 

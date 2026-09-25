@@ -7,7 +7,9 @@ use App\Models\Diagram;
 use App\Models\User;
 use App\Policies\DiagramPolicy;
 use App\Services\Backup\DatabaseDumper;
+use App\Services\Backup\DatabaseRestorer;
 use App\Services\Backup\PgDumpDatabaseDumper;
+use App\Services\Backup\PgRestoreDatabaseRestorer;
 use Illuminate\Foundation\Events\DiagnosingHealth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
@@ -23,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(DatabaseDumper::class, PgDumpDatabaseDumper::class);
+        $this->app->bind(DatabaseRestorer::class, PgRestoreDatabaseRestorer::class);
     }
 
     /**
