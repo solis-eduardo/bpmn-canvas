@@ -42,7 +42,9 @@ class DiagramCollaboratorController extends Controller
 
         $data = $request->validate(User::idOrEmailRules());
 
-        $collaborator = $grant($diagram, $request->user(), User::findByIdOrEmail($data));
+        $target = User::findByIdOrEmail($data);
+
+        $collaborator = $grant($diagram, $request->user(), $target);
 
         // A self-request (never a direct invite — those land as "approved")
         // notifies the Diagram Owner. GrantOrRequestCollaborator only
