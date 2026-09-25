@@ -1,13 +1,13 @@
 # syntax=docker/dockerfile:1
 
-# --- Etapa 1: baixa o bpmn-js (servido localmente, sem CDN) ---
+# --- Stage 1: download bpmn-js (served locally, no CDN) ---
 FROM node:22-alpine AS vendor
 ARG BPMN_JS_VERSION=18.30.0
 WORKDIR /build
 RUN --mount=type=cache,target=/root/.npm \
     npm install --no-audit --no-fund --omit=dev --save-exact bpmn-js@${BPMN_JS_VERSION}
 
-# --- Etapa 2: dependências PHP (Composer), sem dev ---
+# --- Stage 2: PHP dependencies (Composer), no dev ---
 FROM composer:2 AS composer-deps
 ENV COMPOSER_CACHE_DIR=/tmp/composer-cache
 WORKDIR /build
@@ -15,11 +15,11 @@ COPY composer.json composer.lock ./
 RUN --mount=type=cache,target=/tmp/composer-cache \
     composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader
 
-# --- Etapa 3: aplicação PHP-FPM (Laravel) ---
+# --- Stage 3: PHP-FPM application (Laravel) ---
 FROM php:8.4-fpm-alpine AS app
-# libpq-dev (não postgresql-dev) evita puxar transitivamente llvm/clang/icu
-# (suporte a JIT do servidor Postgres, irrelevante para o cliente pdo_pgsql);
-# os headers de build ficam num grupo virtual removido ao final da camada.
+# libpq-dev (not postgresql-dev) avoids transitively pulling in llvm/clang/icu
+# (Postgres server JIT support, irrelevant to the pdo_pgsql client); the build
+# headers go into a virtual group removed at the end of the layer.
 RUN --mount=type=cache,target=/var/cache/apk,sharing=locked \
     apk add --update --virtual .build-deps $PHPIZE_DEPS libpq-dev \
     && apk add --update libpq git \
@@ -42,7 +42,7 @@ VOLUME ["/var/www/html/storage/app/diagrams"]
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["php-fpm"]
 
-# --- Etapa 4: nginx (reverse proxy + estáticos) ---
+# --- Stage 4: nginx (reverse proxy + static files) ---
 FROM nginx:stable-alpine AS web
 COPY --from=vendor /build/node_modules/bpmn-js/dist/assets/                                 /var/www/html/public/vendor/bpmn-js/assets/
 COPY --from=vendor /build/node_modules/bpmn-js/dist/bpmn-modeler.production.min.js          /var/www/html/public/vendor/bpmn-js/

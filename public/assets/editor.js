@@ -49,12 +49,12 @@
       });
       const data = await res.json();
       const { warnings } = await modeler.importXML(data.content);
-      if (warnings && warnings.length) console.warn('Avisos na importação:', warnings);
+      if (warnings && warnings.length) console.warn('Import warnings:', warnings);
       modeler.get('canvas').zoom('fit-viewport', 'auto');
       setDirty(false);
     } catch (e) {
       console.error(e);
-      toast('Não foi possível carregar o diagrama.', true);
+      toast('Could not load the diagram.', true);
     }
   }
 
@@ -63,25 +63,25 @@
       const { xml } = await modeler.saveXML({ format: true });
       await api('PUT', saveUrl, { content: xml });
       setDirty(false);
-      toast('Salvo.');
+      toast('Saved.');
     } catch (e) {
       console.error(e);
-      toast('Erro ao salvar: ' + e.message, true);
+      toast('Error saving: ' + e.message, true);
     }
   }
 
   async function rename() {
     const title = nameInput.value.trim();
     if (!title) {
-      toast('Informe um nome para o diagrama.', true);
+      toast('Enter a name for the diagram.', true);
       return;
     }
     try {
       const data = await (await api('PUT', renameUrl, { title })).json();
-      location.href = data.slug ? renameUrl.replace(/\/diagramas\/[^/]+/, '/diagramas/' + data.slug) : location.href;
+      location.href = data.slug ? renameUrl.replace(/\/diagrams\/[^/]+/, '/diagrams/' + data.slug) : location.href;
     } catch (e) {
       console.error(e);
-      toast('Erro ao renomear: ' + e.message, true);
+      toast('Error renaming: ' + e.message, true);
     }
   }
 
@@ -95,14 +95,14 @@
   });
 
   $('btn-delete').addEventListener('click', async () => {
-    if (!confirm('Excluir "' + nameInput.value + '"?')) return;
+    if (!confirm('Delete "' + nameInput.value + '"?')) return;
     try {
       await api('DELETE', deleteUrl);
-      toast('Excluído.');
+      toast('Deleted.');
       location.href = indexUrl;
     } catch (e) {
       console.error(e);
-      toast('Erro ao excluir: ' + e.message, true);
+      toast('Error deleting: ' + e.message, true);
     }
   });
 

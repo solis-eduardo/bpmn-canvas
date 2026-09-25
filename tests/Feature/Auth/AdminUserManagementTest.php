@@ -15,14 +15,14 @@ class AdminUserManagementTest extends TestCase
         $admin = User::factory()->create(['is_admin' => true]);
 
         $response = $this->actingAs($admin)->post('/admin/users', [
-            'name' => 'Nova Pessoa',
-            'email' => 'nova@example.com',
-            'password' => 'senha-inicial',
+            'name' => 'New Person',
+            'email' => 'new@example.com',
+            'password' => 'initial-password',
         ]);
 
         $response->assertRedirect();
         $this->assertDatabaseHas('users', [
-            'email' => 'nova@example.com',
+            'email' => 'new@example.com',
             'is_admin' => false,
         ]);
     }
@@ -32,21 +32,21 @@ class AdminUserManagementTest extends TestCase
         $user = User::factory()->create(['is_admin' => false]);
 
         $response = $this->actingAs($user)->post('/admin/users', [
-            'name' => 'Nova Pessoa',
-            'email' => 'nova@example.com',
-            'password' => 'senha-inicial',
+            'name' => 'New Person',
+            'email' => 'new@example.com',
+            'password' => 'initial-password',
         ]);
 
         $response->assertForbidden();
-        $this->assertDatabaseMissing('users', ['email' => 'nova@example.com']);
+        $this->assertDatabaseMissing('users', ['email' => 'new@example.com']);
     }
 
     public function test_guest_cannot_create_a_user(): void
     {
         $response = $this->post('/admin/users', [
-            'name' => 'Nova Pessoa',
-            'email' => 'nova@example.com',
-            'password' => 'senha-inicial',
+            'name' => 'New Person',
+            'email' => 'new@example.com',
+            'password' => 'initial-password',
         ]);
 
         $response->assertRedirect('/login');

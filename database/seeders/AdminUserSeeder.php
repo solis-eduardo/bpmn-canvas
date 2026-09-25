@@ -27,7 +27,7 @@ class AdminUserSeeder extends Seeder
         $user->save();
 
         if ($isNew && ! config('bpmn.admin_password')) {
-            $this->command?->warn("ADMIN_EMAIL/ADMIN_PASSWORD não definidos — Administrador criado com e-mail {$email} e senha gerada: {$password}");
+            $this->command?->warn("ADMIN_EMAIL/ADMIN_PASSWORD not set — Administrator created with email {$email} and generated password: {$password}");
         }
     }
 }
