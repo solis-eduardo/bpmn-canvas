@@ -42,6 +42,23 @@ class DiagramTest extends TestCase
         Storage::disk('diagrams')->assertExists($diagram->disk_path);
     }
 
+    public function test_creating_a_diagram_under_a_non_english_locale_localizes_the_start_event_label(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->withSession(['locale' => 'pt_BR'])
+            ->post('/diagrams', ['title' => 'Processo de Compra']);
+
+        $response->assertRedirect();
+
+        $diagram = Diagram::where('slug', 'processo-de-compra')->firstOrFail();
+        $content = Storage::disk('diagrams')->get($diagram->disk_path);
+
+        $this->assertStringContainsString('<bpmn:startEvent id="StartEvent_1" name="Início" />', $content);
+        $this->assertStringNotContainsString('name="Start"', $content);
+    }
+
     public function test_guest_cannot_create_a_diagram(): void
     {
         $response = $this->post('/diagrams', ['title' => 'No Login']);
@@ -81,7 +98,7 @@ class DiagramTest extends TestCase
         $response = $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/content');
 
         $response->assertOk();
-        $response->assertJson(['content' => Diagram::EMPTY_BPMN]);
+        $response->assertJson(['content' => Diagram::emptyBpmn()]);
     }
 
     public function test_saving_a_diagram_overwrites_the_content_on_disk(): void
@@ -293,5 +310,68 @@ class DiagramTest extends TestCase
         $response->assertServerError();
         $this->assertDatabaseCount('diagrams', 1);
         $this->assertDatabaseHas('diagrams', ['id' => $diagram->id]);
+    }
+
+    public function test_new_diagram_starts_with_its_creator_as_both_author_and_diagram_owner(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post('/diagrams', ['title' => 'Fresh Diagram'])->assertRedirect();
+
+        $diagram = Diagram::where('title', 'Fresh Diagram')->firstOrFail();
+        $this->assertSame($user->id, $diagram->author_id);
+        $this->assertSame($user->id, $diagram->owner_id);
+    }
+
+    public function test_forking_a_diagram_makes_the_forker_both_author_and_diagram_owner_of_the_fork(): void
+    {
+        $forker = User::factory()->create();
+        $diagram = Diagram::factory()->for($forker, 'author')->create();
+
+        $response = $this->actingAs($forker)->post('/diagrams/'.$diagram->slug.'/fork');
+        $response->assertRedirect();
+
+        $forked = Diagram::where('forked_from_id', $diagram->id)->firstOrFail();
+        $this->assertSame($forker->id, $forked->author_id);
+        $this->assertSame($forker->id, $forked->owner_id);
+    }
+
+    public function test_existing_diagrams_are_backfilled_with_the_author_as_diagram_owner(): void
+    {
+        $author = User::factory()->create();
+        $diagram = Diagram::factory()->for($author, 'author')->create();
+
+        $this->assertSame($author->id, $diagram->fresh()->owner_id);
+    }
+
+    public function test_only_the_diagram_owner_can_delete_a_diagram_when_it_differs_from_the_author(): void
+    {
+        $author = User::factory()->create();
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($author, 'author')->for($owner, 'owner')->create();
+
+        $this->actingAs($author)->delete('/diagrams/'.$diagram->slug)->assertForbidden();
+        $this->assertDatabaseHas('diagrams', ['id' => $diagram->id]);
+
+        $this->actingAs($owner)->delete('/diagrams/'.$diagram->slug)->assertOk();
+        $this->assertDatabaseMissing('diagrams', ['id' => $diagram->id]);
+    }
+
+    public function test_the_diagram_owner_can_edit_even_when_not_the_author(): void
+    {
+        $author = User::factory()->create();
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($author, 'author')->for($owner, 'owner')->create();
+
+        $this->actingAs($owner)->getJson('/diagrams/'.$diagram->slug.'/content')->assertOk();
+    }
+
+    public function test_the_author_alone_can_no_longer_open_the_editor_once_ownership_diverges(): void
+    {
+        $author = User::factory()->create();
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($author, 'author')->for($owner, 'owner')->create();
+
+        $this->actingAs($author)->getJson('/diagrams/'.$diagram->slug.'/content')->assertForbidden();
     }
 }

@@ -26,6 +26,12 @@ class DiagramFactory extends Factory
             'title' => $title,
             'slug' => $slug,
             'author_id' => User::factory(),
+            // Diagram Owner starts as the Author (CONTEXT.md, "Diagram
+            // Owner"). Left unset here and defaulted in afterMaking()
+            // below, so it tracks whatever author_id ends up being
+            // (including a ->for($user, 'author') override) unless the
+            // test explicitly diverges it via ->for($user, 'owner') or
+            // ->state(['owner_id' => ...]).
             'disk_path' => $slug.'/diagram.bpmn',
         ];
     }
@@ -37,11 +43,14 @@ class DiagramFactory extends Factory
             // overrides 'slug' directly (definition() can't know about that
             // override yet): disk_path must always point at the Diagram's
             // own directory, the same invariant application code keeps.
+            // Diagram Owner starts as the Author (CONTEXT.md, "Diagram
+            // Owner") unless a test explicitly diverges it.
             ->afterMaking(function (Diagram $diagram) {
                 $diagram->disk_path = $diagram->slug.'/diagram.bpmn';
+                $diagram->owner_id ??= $diagram->author_id;
             })
             ->afterCreating(function (Diagram $diagram) {
-                Storage::disk('diagrams')->put($diagram->disk_path, Diagram::EMPTY_BPMN);
+                Storage::disk('diagrams')->put($diagram->disk_path, Diagram::emptyBpmn());
             });
     }
 }
