@@ -17,14 +17,19 @@ class Diagram extends Model
     /** @use HasFactory<DiagramFactory> */
     use HasFactory;
 
-    public const EMPTY_BPMN = <<<'BPMN'
+    /**
+     * Template for a newly created Diagram's seed BPMN XML. The start
+     * event's label is filled in per the current locale by emptyBpmn()
+     * (see "messages.start_event_label"), instead of being fixed here.
+     */
+    private const EMPTY_BPMN_TEMPLATE = <<<'BPMN'
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
                   xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI"
                   xmlns:dc="http://www.omg.org/spec/DD/20100524/DC"
                   id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
   <bpmn:process id="Process_1" isExecutable="false">
-    <bpmn:startEvent id="StartEvent_1" name="Start" />
+    <bpmn:startEvent id="StartEvent_1" name="%s" />
   </bpmn:process>
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Process_1">
@@ -35,6 +40,17 @@ class Diagram extends Model
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
 BPMN;
+
+    /**
+     * Seed BPMN XML for a newly created Diagram, with the start event's
+     * label localized to the current locale.
+     */
+    public static function emptyBpmn(): string
+    {
+        $label = htmlspecialchars(__('messages.start_event_label'), ENT_QUOTES | ENT_XML1, 'UTF-8');
+
+        return sprintf(self::EMPTY_BPMN_TEMPLATE, $label);
+    }
 
     /**
      * @return array<string, string>

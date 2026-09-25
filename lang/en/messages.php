@@ -15,6 +15,7 @@ return [
 
     // Diagram list
     'diagram_name' => 'Diagram name',
+    'start_event_label' => 'Start',
     'create_diagram' => 'Create diagram',
     'no_diagrams_yet' => 'No diagrams created yet.',
     'author_label' => '(author: :name)',
