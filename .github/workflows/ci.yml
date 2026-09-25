@@ -5,65 +5,60 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
+  changes:
+    name: Detect changed paths
+    runs-on: ubuntu-24.04
+    outputs:
+      php: ${{ steps.filter.outputs.php }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            php:
+              - '**/*.php'
+              - '**/*.blade.php'
+              - 'composer.json'
+              - 'composer.lock'
+              - 'phpstan.neon'
+              - 'phpmd.xml'
+              - 'package.json'
+              - 'package-lock.json'
+              - 'vite.config.*'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/**'
+
   pint:
     name: Pint (code style)
+    needs: changes
+    if: needs.changes.outputs.php == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          coverage: none
-
-      - name: Get Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Composer dependencies
-        # Not ramsey/composer-install: its own action.yml pins an old
-        # actions/cache commit that still targets the deprecated Node 20
-        # runtime. actions/cache@v6 is current and avoids that warning.
-        uses: actions/cache@v6
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
-
-      - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: ./.github/actions/setup-php-composer
 
       - name: Run Pint
         run: vendor/bin/pint --test
 
   tests:
     name: PHPUnit
+    needs: changes
+    if: needs.changes.outputs.php == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      - uses: ./.github/actions/setup-php-composer
         with:
-          php-version: '8.4'
           extensions: pdo_sqlite
-          coverage: none
-
-      - name: Get Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Composer dependencies
-        uses: actions/cache@v6
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
-
-      - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
 
       - name: Setup Node
         uses: actions/setup-node@v5
@@ -93,35 +88,21 @@ jobs:
 
   phpstan:
     name: PHPStan (static analysis)
+    needs: changes
+    if: needs.changes.outputs.php == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          coverage: none
-
-      - name: Get Composer cache directory
-        id: composer-cache
-        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
-
-      - name: Cache Composer dependencies
-        uses: actions/cache@v6
-        with:
-          path: ${{ steps.composer-cache.outputs.dir }}
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
-
-      - name: Install Composer dependencies
-        run: composer install --no-interaction --prefer-dist --no-progress
+      - uses: ./.github/actions/setup-php-composer
 
       - name: Run PHPStan
         run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
 
   phpmd:
     name: PHPMD (static analysis)
+    needs: changes
+    if: needs.changes.outputs.php == 'true'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
