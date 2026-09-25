@@ -13,16 +13,20 @@ See `CONTEXT.md` for the full domain glossary (Diagram, Author, Collaborator, Sh
 
 ## Bringing up the environment
 
+Requires only Docker and Docker Compose — no local PHP, Composer or Node install.
+
 ```bash
 cp .env.example .env
-php artisan key:generate          # or set APP_KEY manually
+echo "APP_KEY=base64:$(openssl rand -base64 32)" >> .env
 # set DB_PASSWORD and, at minimum, ADMIN_EMAIL/ADMIN_PASSWORD in .env
 docker compose up -d --build
 ```
 
 On first boot, the `app` container runs the migrations and seeds an initial Administrator from `ADMIN_EMAIL`/`ADMIN_PASSWORD`/`ADMIN_NAME` (if not set, it uses a default email derived from `APP_URL` and generates a random password, shown once in the container log — `docker compose logs app`). That Administrator can then create the other accounts manually through the app.
 
-Visit `http://localhost/login`.
+Visit `http://localhost/login` (or `http://localhost:$APP_PORT/login` if you changed `APP_PORT` in `.env`, e.g. because port 80 is already taken).
+
+> No `openssl` available (e.g. Windows without WSL)? Any Laravel `APP_KEY` works — generate one with `docker run --rm php:8.4-cli php -r "echo 'base64:'.base64_encode(random_bytes(32)), PHP_EOL;"` and paste it into `.env` instead.
 
 ## Authentication
 
@@ -51,10 +55,11 @@ See `.env.example` for the full list. Highlights:
 | `KEYCLOAK_*` | Optional SSO integration (leave blank to use local login only) |
 | `BPMN_JS_VERSION` | Version of bpmn-js vendored in the build (no CDN at runtime) |
 | `BPMN_JS_DIFFER_VERSION` | Version of bpmn-js-differ vendored in the build, used to diff Versions on the canvas (no CDN at runtime) |
+| `APP_PORT` | Host port `web` publishes (default `80`) |
 
 ## Production
 
-- Use HTTPS — put it behind a reverse proxy (the `web` service is already set up for this, see the external `nginx-network` network in `docker-compose.yml`).
+- Use HTTPS. By default `web` publishes directly on `APP_PORT`; if this host already runs a shared reverse proxy on an external `nginx-network`, bring the app up with the extra overlay instead: `docker network create nginx-network` (once, if it doesn't exist) then `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`.
 - `storage/app/diagrams` is bind-mounted to `./diagrams` on the host — include it in your backups.
 - Set `APP_ENV=production` and `APP_DEBUG=false` in your production `.env`.
 
@@ -71,6 +76,7 @@ routes/web.php
 resources/views/
 public/assets/              # editor.js/viewer, adapted from the original nginx+WebDAV stack
 docker-compose.yml          # app (PHP-FPM) + web (nginx) + db (Postgres)
+docker-compose.prod.yml     # optional overlay: attaches web to a shared reverse-proxy network
 Dockerfile                  # multi-stage: vendored bpmn-js + composer + app + web
 CONTEXT.md                  # domain glossary
 docs/GLOSSARY.md            # PT-BR -> English naming thesaurus
@@ -104,16 +110,20 @@ Veja `CONTEXT.md` para o glossário completo do domínio (Diagrama, Autor, Colab
 
 ## Subindo o ambiente
 
+Só precisa de Docker e Docker Compose — sem PHP, Composer ou Node instalados localmente.
+
 ```bash
 cp .env.example .env
-php artisan key:generate          # ou defina APP_KEY manualmente
+echo "APP_KEY=base64:$(openssl rand -base64 32)" >> .env
 # defina DB_PASSWORD e, no mínimo, ADMIN_EMAIL/ADMIN_PASSWORD no .env
 docker compose up -d --build
 ```
 
 No primeiro boot, o container `app` roda as migrations e semeia um Administrador inicial a partir de `ADMIN_EMAIL`/`ADMIN_PASSWORD`/`ADMIN_NAME` (se não definidos, usa um e-mail default derivado de `APP_URL` e gera uma senha aleatória, exibida uma única vez no log do container — `docker compose logs app`). Esse Administrador consegue criar as demais contas manualmente pela aplicação.
 
-Acesse `http://localhost/login`.
+Acesse `http://localhost/login` (ou `http://localhost:$APP_PORT/login` se você mudou `APP_PORT` no `.env`, por exemplo porque a porta 80 já está em uso).
+
+> Sem `openssl` disponível (ex.: Windows sem WSL)? Qualquer `APP_KEY` válido do Laravel funciona — gere um com `docker run --rm php:8.4-cli php -r "echo 'base64:'.base64_encode(random_bytes(32)), PHP_EOL;"` e cole no `.env`.
 
 ## Autenticação
 
@@ -142,10 +152,11 @@ Ver `.env.example` para a lista completa. Destaques:
 | `KEYCLOAK_*` | Integração SSO opcional (deixe em branco para usar só login local) |
 | `BPMN_JS_VERSION` | Versão do bpmn-js vendorizada no build (sem CDN em runtime) |
 | `BPMN_JS_DIFFER_VERSION` | Versão do bpmn-js-differ vendorizada no build, usada para comparar Versões no canvas (sem CDN em runtime) |
+| `APP_PORT` | Porta do host publicada pelo `web` (default `80`) |
 
 ## Produção
 
-- Use HTTPS — coloque atrás de um reverse proxy (o serviço `web` já está preparado para isso, ver rede externa `nginx-network` no `docker-compose.yml`).
+- Use HTTPS. Por padrão o `web` publica direto na `APP_PORT`; se este host já roda um reverse proxy compartilhado em uma rede externa `nginx-network`, suba a aplicação com o overlay extra: `docker network create nginx-network` (uma vez, se ainda não existir) e depois `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`.
 - `storage/app/diagrams` é bind-mounted em `./diagrams` no host — inclua no seu backup.
 - Ajuste `APP_ENV=production` e `APP_DEBUG=false` no `.env` de produção.
 
@@ -162,6 +173,7 @@ routes/web.php
 resources/views/
 public/assets/              # editor.js/viewer, adaptados do stack original nginx+WebDAV
 docker-compose.yml          # app (PHP-FPM) + web (nginx) + db (Postgres)
+docker-compose.prod.yml     # overlay opcional: liga o web a uma rede de reverse proxy compartilhada
 Dockerfile                  # multi-stage: bpmn-js vendorizado + composer + app + web
 CONTEXT.md                  # glossário do domínio
 docs/GLOSSARY.md            # tesauro de nomenclatura PT-BR -> inglês
