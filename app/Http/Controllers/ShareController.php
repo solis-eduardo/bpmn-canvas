@@ -7,8 +7,8 @@ use App\Models\Share;
 use App\Repositories\VersionRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
-use RuntimeException;
 
 class ShareController extends Controller
 {
@@ -24,8 +24,10 @@ class ShareController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
+        $versionsById = $this->versionsById($diagram, $versions, $shares->contains(fn (Share $s) => $s->isPinned()));
+
         return response()->json([
-            'shares' => $shares->map(fn (Share $s) => $this->present($s, $diagram, $versions)),
+            'shares' => $shares->map(fn (Share $s) => $this->present($s, $versionsById)),
         ]);
     }
 
@@ -44,14 +46,12 @@ class ShareController extends Controller
         $days = $data['days'] ?? 7;
         $pinnedVersionId = $data['pinned_version_id'] ?? null;
 
-        if ($pinnedVersionId !== null) {
-            try {
-                $versions->get($diagram, $pinnedVersionId);
-            } catch (RuntimeException) {
-                throw ValidationException::withMessages([
-                    'pinned_version_id' => 'The selected version does not exist.',
-                ]);
-            }
+        $versionsById = $this->versionsById($diagram, $versions, $pinnedVersionId !== null);
+
+        if ($pinnedVersionId !== null && ! $versionsById->has($pinnedVersionId)) {
+            throw ValidationException::withMessages([
+                'pinned_version_id' => 'The selected version does not exist.',
+            ]);
         }
 
         $share = Share::create([
@@ -62,7 +62,7 @@ class ShareController extends Controller
             'pinned_version_id' => $pinnedVersionId,
         ]);
 
-        return response()->json($this->present($share, $diagram, $versions), 201);
+        return response()->json($this->present($share, $versionsById), 201);
     }
 
     public function destroy(Share $share): JsonResponse
@@ -75,16 +75,28 @@ class ShareController extends Controller
     }
 
     /**
+     * The Diagram's Version history, keyed by Version id, fetched at most
+     * once per request regardless of how many Shares need it — avoids a
+     * `git log` shell-out (via VersionRepository::list()) per Share when
+     * presenting a list, since every pinned Share on the same Diagram would
+     * otherwise trigger its own, identical lookup.
+     */
+    private function versionsById(Diagram $diagram, VersionRepository $versions, bool $needed): Collection
+    {
+        return $needed ? collect($versions->list($diagram))->keyBy('id') : collect();
+    }
+
+    /**
      * @return array<string, mixed>
      */
-    private function present(Share $share, Diagram $diagram, VersionRepository $versions): array
+    private function present(Share $share, Collection $versionsById): array
     {
         $data = [
             'id' => $share->id,
             'url' => $share->showUrl(),
             'expires_at' => $share->expires_at->toIso8601String(),
             'allow_download' => $share->allow_download,
-            'pinned_version' => $this->presentPinnedVersion($share, $diagram, $versions),
+            'pinned_version' => $this->presentPinnedVersion($share, $versionsById),
         ];
 
         if ($downloadUrl = $share->downloadUrl()) {
@@ -102,18 +114,21 @@ class ShareController extends Controller
      *
      * @return array<string, mixed>|null
      */
-    private function presentPinnedVersion(Share $share, Diagram $diagram, VersionRepository $versions): ?array
+    private function presentPinnedVersion(Share $share, Collection $versionsById): ?array
     {
         if (! $share->isPinned()) {
             return null;
         }
 
-        $version = collect($versions->list($diagram))->firstWhere('id', $share->pinned_version_id);
+        // Guaranteed present: a Share can only be pinned to a Version id
+        // that store() already validated against this same Diagram's
+        // history, and Version history is append-only.
+        $version = $versionsById->get($share->pinned_version_id);
 
         return [
             'id' => $share->pinned_version_id,
-            'number' => $version['number'] ?? null,
-            'name' => $version['name'] ?? null,
+            'number' => $version['number'],
+            'name' => $version['name'],
         ];
     }
 }

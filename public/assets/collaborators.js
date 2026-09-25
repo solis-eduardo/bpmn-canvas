@@ -222,11 +222,7 @@
     if (!canManageShares || !sharePinVersion || !versionsUrl) return;
 
     try {
-      const res = await fetch(versionsUrl, {
-        credentials: 'same-origin',
-        headers: { Accept: 'application/json' },
-      });
-      const data = await res.json();
+      const data = await requestJson(versionsUrl);
       const days = (data && data.versions) || [];
 
       while (sharePinVersion.options.length > 1) {
@@ -244,6 +240,17 @@
     } catch (e) {
       console.error(e);
     }
+  }
+
+  // Appends a status badge (e.g. download allowed/pin state) to `info`,
+  // styled by whether the condition is "on" — shared by the download and
+  // pin badges in renderShares(), which otherwise only differ in condition
+  // and label.
+  function addBadge(info, isOn, onLabel, offLabel) {
+    const badge = document.createElement('span');
+    badge.className = 'badge ' + (isOn ? 'badge-approved' : 'badge-muted');
+    badge.textContent = isOn ? onLabel : offLabel;
+    info.appendChild(badge);
   }
 
   function formatExpiry(isoString) {
@@ -289,19 +296,21 @@
       expiry.textContent = formatExpiry(share.expires_at);
       info.appendChild(expiry);
 
-      const download = document.createElement('span');
-      download.className = 'badge ' + (share.allow_download ? 'badge-approved' : 'badge-muted');
-      download.textContent = share.allow_download
-        ? (body.dataset.downloadAllowedLabel || 'Download allowed')
-        : (body.dataset.downloadNotAllowedLabel || 'Download not allowed');
-      info.appendChild(download);
+      addBadge(
+        info,
+        share.allow_download,
+        body.dataset.downloadAllowedLabel || 'Download allowed',
+        body.dataset.downloadNotAllowedLabel || 'Download not allowed',
+      );
 
-      const pin = document.createElement('span');
-      pin.className = 'badge ' + (share.pinned_version ? 'badge-approved' : 'badge-muted');
-      pin.textContent = share.pinned_version
-        ? (body.dataset.pinnedToVersionTemplate || 'Pinned to VERSION_NAME').replace('VERSION_NAME', share.pinned_version.name)
-        : (body.dataset.followLatestVersionLabel || 'Follow latest version');
-      info.appendChild(pin);
+      addBadge(
+        info,
+        !!share.pinned_version,
+        share.pinned_version
+          ? (body.dataset.pinnedToVersionTemplate || 'Pinned to VERSION_NAME').replace('VERSION_NAME', share.pinned_version.name)
+          : '',
+        body.dataset.followLatestVersionLabel || 'Follow latest version',
+      );
 
       li.appendChild(info);
 

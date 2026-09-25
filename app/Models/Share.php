@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use App\Repositories\VersionRepository;
 use Database\Factories\ShareFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
 #[Fillable(['diagram_id', 'expires_at', 'allow_download', 'revoked_at', 'created_by', 'pinned_version_id'])]
@@ -49,6 +51,22 @@ class Share extends Model
     public function isPinned(): bool
     {
         return $this->pinned_version_id !== null;
+    }
+
+    /**
+     * The Diagram content this Share serves: the pinned Version's content
+     * when pinned, otherwise whatever is currently on disk (the latest
+     * Version) — reuses VersionRepository::get(), the same access path
+     * DiagramController's Version content endpoint already uses, instead of
+     * duplicating Version-reading logic in each caller.
+     */
+    public function content(VersionRepository $versions): string
+    {
+        if ($this->isPinned()) {
+            return $versions->get($this->diagram, $this->pinned_version_id);
+        }
+
+        return Storage::disk('diagrams')->get($this->diagram->disk_path);
     }
 
     public function showUrl(): string
