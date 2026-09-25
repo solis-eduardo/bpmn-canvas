@@ -44,9 +44,7 @@ class DiagramCollaboratorController extends Controller
             'email' => ['required_without:user_id', 'email'],
         ]);
 
-        $target = isset($data['user_id'])
-            ? User::findOrFail($data['user_id'])
-            : User::where('email', $data['email'])->firstOrFail();
+        $target = $this->resolveUserFrom($data);
 
         $collaborator = $grant($diagram, $request->user(), $target);
 
