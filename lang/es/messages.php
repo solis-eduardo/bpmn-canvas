@@ -40,6 +40,8 @@ return [
     'diff_removed' => 'Eliminado',
     'diff_changed' => 'Modificado',
     'diff_removed_elements' => 'Elementos eliminados (no están en el canvas actual)',
+    'select_two_versions_hint' => 'Selecciona dos versiones abajo para compararlas entre sí.',
+    'compare_selected' => 'Comparar seleccionadas',
 
     // Locked diagram
     'being_edited' => 'En edición',

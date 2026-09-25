@@ -31,6 +31,7 @@
     data-unlock-url="{{ route('diagrams.unlock', $diagram->slug) }}"
     data-versions-url="{{ route('diagrams.versions', $diagram->slug) }}"
     data-version-content-url-template="{{ route('diagrams.versions.content', [$diagram->slug, 'VERSION_ID']) }}"
+    data-version-compare-url="{{ route('diagrams.versions.compare', $diagram->slug) }}"
 >
     <div class="app" id="app">
         <header>
@@ -52,7 +53,12 @@
                 <span>{{ __('messages.versions') }}</span>
                 <button type="button" id="btn-history-close" aria-label="Close">✕</button>
             </div>
+            <p class="version-hint">{{ __('messages.select_two_versions_hint') }}</p>
             <ul id="version-list"></ul>
+            <div class="version-compare-bar">
+                <span id="version-compare-count">0/2</span>
+                <button type="button" id="btn-compare-selected" disabled>{{ __('messages.compare_selected') }}</button>
+            </div>
         </aside>
         <main>
             <div id="canvas"></div>
