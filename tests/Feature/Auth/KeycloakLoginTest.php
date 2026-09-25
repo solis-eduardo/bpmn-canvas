@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Socialite\Contracts\Provider as SocialiteProvider;
 use Laravel\Socialite\Facades\Socialite;
+use Laravel\Socialite\Two\InvalidStateException;
 use Laravel\Socialite\Two\User as SocialiteUser;
 use Mockery;
 use Tests\TestCase;
@@ -49,7 +50,7 @@ class KeycloakLoginTest extends TestCase
     {
         $provider = Mockery::mock(SocialiteProvider::class);
         $provider->shouldReceive('user')->andThrow(
-            new \Laravel\Socialite\Two\InvalidStateException
+            new InvalidStateException
         );
 
         Socialite::shouldReceive('driver')->with('keycloak')->andReturn($provider);
