@@ -163,6 +163,7 @@ class AdminUserManagementTest extends TestCase
     public function test_keycloak_admin_role_cannot_be_revoked(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
+        $local_admin = User::factory()->create(['is_admin' => true, 'keycloak_id' => null]);
         $keycloak_admin = User::factory()->create([
             'is_admin' => true,
             'keycloak_id' => 'keycloak-123',
@@ -172,6 +173,10 @@ class AdminUserManagementTest extends TestCase
 
         $response->assertOk();
         $content = $response->getContent();
-        $this->assertStringContainsString('role_from_keycloak', $content);
+
+        // Verify that local admin has revoke button
+        $this->assertStringContainsString('revoke_admin', $content);
+        // Verify that Keycloak role indicator is shown
+        $this->assertStringContainsString('from Keycloak', $content);
     }
 }
