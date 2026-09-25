@@ -11,7 +11,9 @@ use App\Http\Controllers\ShareController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return auth()->check()
+        ? redirect()->route('diagrams.index')
+        : redirect()->route('login');
 });
 
 Route::post('/locale/{locale}', [LocaleController::class, 'update'])->name('locale.update');
@@ -29,8 +31,6 @@ Route::middleware('signed')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::view('/home', 'home')->name('home');
-
     Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');
     Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
 

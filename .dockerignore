@@ -3,6 +3,7 @@
 legacy
 diagrams
 node_modules
+public/build
 vendor
 storage/framework/cache/*
 storage/framework/sessions/*

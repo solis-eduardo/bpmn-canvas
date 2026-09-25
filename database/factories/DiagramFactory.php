@@ -41,7 +41,7 @@ class DiagramFactory extends Factory
         return $this->afterMaking(function (Diagram $diagram) {
             $diagram->owner_id ??= $diagram->author_id;
         })->afterCreating(function (Diagram $diagram) {
-            Storage::disk('diagrams')->put($diagram->disk_path, Diagram::EMPTY_BPMN);
+            Storage::disk('diagrams')->put($diagram->disk_path, Diagram::emptyBpmn());
         });
     }
 }
