@@ -93,6 +93,37 @@ main { position: relative; min-height: 0; }
   color: var(--muted); font-size: 16px; text-align: center; padding: 24px;
 }
 
+/* Version history & comparison (ticket 35) */
+aside li .version-actions { display: flex; gap: 6px; margin-top: 2px; }
+aside li .version-actions button { padding: 2px 8px; font-size: 12px; }
+aside li.comparing { background: var(--selected); }
+
+.diff-banner {
+  position: absolute; left: 16px; top: 16px; z-index: 15;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+  padding: 8px 12px; box-shadow: 0 6px 18px rgba(0,0,0,.12); max-width: calc(100% - 32px);
+}
+.diff-banner .legend { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+.diff-banner .swatch { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+.diff-banner .swatch.added { background: #52c41a; }
+.diff-banner .swatch.removed { background: #f5222d; }
+.diff-banner .swatch.changed { background: #faad14; }
+
+.diff-removed-panel {
+  position: absolute; right: 16px; top: 16px; z-index: 15; width: 240px; max-height: 60%;
+  overflow-y: auto; background: var(--panel); border: 1px solid var(--border); border-radius: 6px;
+  box-shadow: 0 6px 18px rgba(0,0,0,.12);
+}
+.diff-removed-panel .head { padding: 8px 12px; font-weight: 600; font-size: 12px; border-bottom: 1px solid var(--border); }
+.diff-removed-panel ul { list-style: none; margin: 0; padding: 4px 0; }
+.diff-removed-panel li { padding: 4px 12px; font-size: 12px; display: flex; gap: 6px; align-items: baseline; }
+.diff-removed-panel li .type { color: var(--muted); }
+
+/* Element markers applied via bpmn-js canvas.addMarker() */
+.djs-element.diff-added .djs-visual > :first-child { stroke: #52c41a !important; fill: #52c41a !important; fill-opacity: .15; }
+.djs-element.diff-changed .djs-visual > :first-child { stroke: #faad14 !important; fill: #faad14 !important; fill-opacity: .15; }
+
 @media (max-width: 800px) {
   .app.with-sidebar { grid-template-columns: 1fr; grid-template-rows: auto 180px 1fr; }
   aside { border-right: 0; border-bottom: 1px solid var(--border); }

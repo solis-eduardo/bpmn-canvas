@@ -32,6 +32,15 @@ return [
     'fit_to_screen' => 'Fit to screen',
     'lock_not_held' => "You don't hold the lock on this diagram.",
 
+    // Version history & comparison
+    'history' => 'History',
+    'versions' => 'Versions',
+    'exit_comparison' => 'Exit comparison',
+    'diff_added' => 'Added',
+    'diff_removed' => 'Removed',
+    'diff_changed' => 'Changed',
+    'diff_removed_elements' => 'Removed elements (not on the current canvas)',
+
     // Locked diagram
     'being_edited' => 'Being edited',
     'currently_being_edited_by' => "This diagram is currently being edited by :name. You can't open the Editor until the Lock is released.",

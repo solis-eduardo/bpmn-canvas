@@ -125,6 +125,30 @@ class DiagramController extends Controller
         return response()->json(['versions' => $grouped]);
     }
 
+    /**
+     * BPMN content of a single Version, used to compare it against another
+     * source (e.g. the current content) on the canvas. Deliberately generic
+     * — it doesn't assume "old vs current": it just returns one Version's
+     * content, so it works for comparing any two Versions too.
+     */
+    public function versionContent(string $slug, string $version, VersionRepository $versions): JsonResponse
+    {
+        [$diagram] = $this->resolve($slug);
+
+        $this->authorize('update', $diagram);
+
+        try {
+            $content = $versions->get($diagram, $version);
+        } catch (\RuntimeException $e) {
+            abort(404);
+        }
+
+        return response()->json([
+            'id' => $version,
+            'content' => $content,
+        ]);
+    }
+
     public function restoreVersion(Request $request, string $slug, string $version, VersionRepository $versions): JsonResponse
     {
         [$diagram] = $this->resolve($slug);
