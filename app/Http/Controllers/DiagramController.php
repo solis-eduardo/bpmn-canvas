@@ -119,15 +119,29 @@ class DiagramController extends Controller
         ]);
     }
 
+    /**
+     * Sends a heartbeat for the current lock holder. Also reports, on the
+     * same response, whether someone requested the Lock since the last
+     * heartbeat — the Editor piggybacks its "someone wants the Lock" notice
+     * on this existing poll rather than opening a second one (issue #9).
+     * The pending request is read *before* {@see Diagram::heartbeat()}
+     * clears it (a heartbeat counts as the holder responding).
+     */
     public function heartbeat(Request $request, string $slug): JsonResponse
     {
         [$diagram] = $this->resolve($slug);
+
+        $diagram->loadMissing('lockRequestedBy');
+        $lockRequestedByName = $diagram->lockRequestedBy?->name;
 
         if (! $diagram->heartbeat($request->user())) {
             return response()->json(['message' => __('messages.lock_not_held')], 403);
         }
 
-        return response()->json(['heartbeat' => true]);
+        return response()->json([
+            'heartbeat' => true,
+            'lock_requested_by' => $lockRequestedByName,
+        ]);
     }
 
     public function unlock(Request $request, string $slug, ReleaseLock $releaseLock): JsonResponse
