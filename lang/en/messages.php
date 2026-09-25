@@ -21,6 +21,7 @@ return [
     'no_diagrams_yet' => 'No diagrams created yet.',
     'author_label' => '(author: :name)',
     'diagram_owner_label' => '(owner: :name)',
+    'last_modified_label' => 'Last modified :time',
     'being_edited_by' => '— being edited by :name',
 
     // Editor
@@ -32,6 +33,9 @@ return [
     'zoom_out' => 'Zoom out',
     'fit_to_screen' => 'Fit to screen',
     'lock_not_held' => "You don't hold the lock on this diagram.",
+    'back_to_diagrams' => 'Back to Diagrams',
+    'version_history' => 'Version history',
+    'collaborators' => 'Collaborators',
 
     // Version history & comparison
     'history' => 'History',
