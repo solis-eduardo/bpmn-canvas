@@ -227,10 +227,18 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
     const [firstId, secondId] = selectedIds;
 
     try {
-      const res = await fetch(
+      const fetchPromise = fetch(
         versionCompareUrl + '?from=' + encodeURIComponent(firstId) + '&to=' + encodeURIComponent(secondId),
         { credentials: 'same-origin', headers: { Accept: 'application/json' } }
       );
+
+      // Kicked off alongside the fetch above (rather than after it
+      // resolves) since it's independent of the fetched versions: it just
+      // reads whatever the canvas shows right now. Skipped entirely when a
+      // snapshot is already held from a previous, still-active comparison.
+      const snapshotPromise = canvasSnapshot !== null ? null : modeler.saveXML({ format: true });
+
+      const res = await fetchPromise;
 
       if (!res.ok) throw new Error('HTTP ' + res.status);
 
@@ -238,10 +246,10 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
 
       const result = await compareBpmnXml(older.content, newer.content);
 
-      // Snapshot whatever the canvas shows right now (the live diagram, or
-      // the result of a previous comparison) so it can be restored exactly
-      // once the User exits this comparison.
-      const snapshot = canvasSnapshot !== null ? canvasSnapshot : (await modeler.saveXML({ format: true })).xml;
+      // Snapshot whatever the canvas showed before this comparison (the
+      // live diagram, or the result of a previous comparison) so it can be
+      // restored exactly once the User exits this comparison.
+      const snapshot = canvasSnapshot !== null ? canvasSnapshot : (await snapshotPromise).xml;
 
       exitComparison();
 

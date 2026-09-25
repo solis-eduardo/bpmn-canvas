@@ -183,25 +183,21 @@ class DiagramController extends Controller
             : [$toMeta, $fromMeta];
 
         try {
-            $olderContent = $versions->get($diagram, $olderMeta['id']);
-            $newerContent = $versions->get($diagram, $newerMeta['id']);
+            $content = $versions->getMany($diagram, [$olderMeta['id'], $newerMeta['id']]);
         } catch (RuntimeException $e) {
             abort(404);
         }
 
+        $describe = fn (array $meta): array => [
+            'id' => $meta['id'],
+            'number' => $meta['number'],
+            'name' => $meta['name'],
+            'content' => $content[$meta['id']],
+        ];
+
         return response()->json([
-            'older' => [
-                'id' => $olderMeta['id'],
-                'number' => $olderMeta['number'],
-                'name' => $olderMeta['name'],
-                'content' => $olderContent,
-            ],
-            'newer' => [
-                'id' => $newerMeta['id'],
-                'number' => $newerMeta['number'],
-                'name' => $newerMeta['name'],
-                'content' => $newerContent,
-            ],
+            'older' => $describe($olderMeta),
+            'newer' => $describe($newerMeta),
         ]);
     }
 
