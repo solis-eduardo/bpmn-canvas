@@ -38,6 +38,23 @@ class DiagramTest extends TestCase
         Storage::disk('diagrams')->assertExists($diagram->disk_path);
     }
 
+    public function test_creating_a_diagram_under_a_non_english_locale_localizes_the_start_event_label(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)
+            ->withSession(['locale' => 'pt_BR'])
+            ->post('/diagrams', ['title' => 'Processo de Compra']);
+
+        $response->assertRedirect();
+
+        $diagram = Diagram::where('slug', 'processo-de-compra')->firstOrFail();
+        $content = Storage::disk('diagrams')->get($diagram->disk_path);
+
+        $this->assertStringContainsString('<bpmn:startEvent id="StartEvent_1" name="Início" />', $content);
+        $this->assertStringNotContainsString('name="Start"', $content);
+    }
+
     public function test_guest_cannot_create_a_diagram(): void
     {
         $response = $this->post('/diagrams', ['title' => 'No Login']);
@@ -77,7 +94,7 @@ class DiagramTest extends TestCase
         $response = $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/content');
 
         $response->assertOk();
-        $response->assertJson(['content' => Diagram::EMPTY_BPMN]);
+        $response->assertJson(['content' => Diagram::emptyBpmn()]);
     }
 
     public function test_saving_a_diagram_overwrites_the_content_on_disk(): void

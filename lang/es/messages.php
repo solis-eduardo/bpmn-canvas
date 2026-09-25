@@ -7,16 +7,15 @@ return [
     'log_out' => 'Cerrar sesión',
     'email' => 'Correo electrónico',
     'password' => 'Contraseña',
-    'hello_user' => 'Hola, :name.',
     'invalid_credentials' => 'Credenciales inválidas.',
     'keycloak_login_failed' => 'No se pudo iniciar sesión con Keycloak. Inténtalo de nuevo.',
 
     // Navigation
-    'home' => 'Inicio',
     'diagrams' => 'Diagramas',
 
     // Diagram list
     'diagram_name' => 'Nombre del diagrama',
+    'start_event_label' => 'Inicio',
     'create_diagram' => 'Crear diagrama',
     'no_diagrams_yet' => 'Todavía no se ha creado ningún diagrama.',
     'author_label' => '(autor: :name)',
