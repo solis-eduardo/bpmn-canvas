@@ -33,7 +33,7 @@ class DiagramFactory extends Factory
     public function configure(): static
     {
         return $this->afterCreating(function (Diagram $diagram) {
-            Storage::disk('diagrams')->put($diagram->disk_path, Diagram::EMPTY_BPMN);
+            Storage::disk('diagrams')->put($diagram->disk_path, Diagram::emptyBpmn());
         });
     }
 }
