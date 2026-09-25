@@ -11,11 +11,12 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialiteUserContract;
 use Laravel\Socialite\Facades\Socialite;
+use Symfony\Component\HttpFoundation\RedirectResponse as BaseRedirectResponse;
 use Throwable;
 
 class KeycloakLoginController extends Controller
 {
-    public function redirect(): RedirectResponse
+    public function redirect(): BaseRedirectResponse
     {
         return Socialite::driver('keycloak')->redirect();
     }
