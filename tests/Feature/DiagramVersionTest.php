@@ -157,6 +157,163 @@ class DiagramVersionTest extends TestCase
         }
     }
 
+    public function test_versions_are_numbered_sequentially_in_chronological_order(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+
+        $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
+            'content' => '<bpmn:definitions>second</bpmn:definitions>',
+        ])->assertOk();
+
+        $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
+            'content' => '<bpmn:definitions>third</bpmn:definitions>',
+        ])->assertOk();
+
+        $items = collect(
+            $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
+        )->flatMap(fn ($day) => $day['items']);
+
+        // Newest first in the response; oldest (factory-created) Version is
+        // number 1, chronologically, the most recent is number 3.
+        $this->assertSame([3, 2, 1], $items->pluck('number')->all());
+        $this->assertSame(['Version 3', 'Version 2', 'Version 1'], $items->pluck('name')->all());
+        $this->assertSame([false, false, false], $items->pluck('renamed')->all());
+    }
+
+    public function test_restoring_produces_the_next_version_number(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+
+        $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
+            'content' => '<bpmn:definitions>second</bpmn:definitions>',
+        ])->assertOk();
+
+        $history = $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions');
+        $items = collect($history)->flatMap(fn ($day) => $day['items']);
+        $oldestVersionId = $items->last()['id'];
+
+        $this->actingAs($user)->postJson(
+            '/diagrams/'.$diagram->slug.'/versions/'.$oldestVersionId.'/restore'
+        )->assertOk();
+
+        $historyAfter = $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions');
+        $itemsAfter = collect($historyAfter)->flatMap(fn ($day) => $day['items']);
+
+        $this->assertSame(3, $itemsAfter->first()['number']);
+        $this->assertSame('Version 3', $itemsAfter->first()['name']);
+    }
+
+    public function test_forking_starts_version_numbering_at_one(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+
+        $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
+            'content' => '<bpmn:definitions>second</bpmn:definitions>',
+        ])->assertOk();
+
+        $this->actingAs($user)->postJson('/diagrams/'.$diagram->slug.'/fork')->assertRedirect();
+
+        $forked = Diagram::where('forked_from_id', $diagram->id)->firstOrFail();
+
+        $items = collect(
+            $this->actingAs($user)->getJson('/diagrams/'.$forked->slug.'/versions')->json('versions')
+        )->flatMap(fn ($day) => $day['items']);
+
+        $this->assertSame([1], $items->pluck('number')->all());
+        $this->assertSame(['Version 1'], $items->pluck('name')->all());
+    }
+
+    public function test_a_user_who_can_edit_the_diagram_can_rename_a_version(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+
+        $items = collect(
+            $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
+        )->flatMap(fn ($day) => $day['items']);
+        $versionId = $items->first()['id'];
+
+        $response = $this->actingAs($user)->putJson(
+            '/diagrams/'.$diagram->slug.'/versions/'.$versionId.'/rename',
+            ['name' => 'Approved by the board']
+        );
+
+        $response->assertOk();
+        $response->assertJson([
+            'id' => $versionId,
+            'name' => 'Approved by the board',
+            'renamed' => true,
+        ]);
+
+        $itemsAfter = collect(
+            $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
+        )->flatMap(fn ($day) => $day['items']);
+        $renamedItem = $itemsAfter->firstWhere('id', $versionId);
+
+        $this->assertSame('Approved by the board', $renamedItem['name']);
+        $this->assertTrue($renamedItem['renamed']);
+    }
+
+    public function test_version_names_need_not_be_unique(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+
+        $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
+            'content' => '<bpmn:definitions>second</bpmn:definitions>',
+        ])->assertOk();
+
+        $items = collect(
+            $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
+        )->flatMap(fn ($day) => $day['items']);
+
+        foreach ($items->pluck('id') as $versionId) {
+            $this->actingAs($user)->putJson(
+                '/diagrams/'.$diagram->slug.'/versions/'.$versionId.'/rename',
+                ['name' => 'Milestone']
+            )->assertOk();
+        }
+
+        $itemsAfter = collect(
+            $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
+        )->flatMap(fn ($day) => $day['items']);
+
+        $this->assertSame(['Milestone', 'Milestone'], $itemsAfter->pluck('name')->all());
+    }
+
+    public function test_a_user_without_permission_cannot_rename_a_version(): void
+    {
+        $author = User::factory()->create();
+        $outsider = User::factory()->create();
+        $diagram = Diagram::factory()->for($author, 'author')->create();
+
+        $items = collect(
+            $this->actingAs($author)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
+        )->flatMap(fn ($day) => $day['items']);
+        $versionId = $items->first()['id'];
+
+        $this->actingAs($outsider)->putJson(
+            '/diagrams/'.$diagram->slug.'/versions/'.$versionId.'/rename',
+            ['name' => 'Sneaky rename']
+        )->assertForbidden();
+    }
+
+    public function test_renaming_a_nonexistent_version_returns_not_found_and_stores_nothing(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+
+        $this->actingAs($user)->putJson(
+            '/diagrams/'.$diagram->slug.'/versions/'.str_repeat('a', 40).'/rename',
+            ['name' => 'Ghost version']
+        )->assertNotFound();
+
+        $this->assertDatabaseCount('diagram_version_names', 0);
+    }
+
     public function test_no_api_response_exposes_git_vocabulary(): void
     {
         $user = User::factory()->create();

@@ -53,6 +53,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/diagrams/{slug}/versions', [DiagramController::class, 'versions'])->name('diagrams.versions');
     Route::post('/diagrams/{slug}/versions/{version}/restore', [DiagramController::class, 'restoreVersion'])->name('diagrams.versions.restore');
+    Route::put('/diagrams/{slug}/versions/{version}/rename', [DiagramController::class, 'renameVersion'])->name('diagrams.versions.rename');
     Route::get('/diagrams/{slug}', [DiagramController::class, 'show'])->name('diagrams.show');
 
     Route::get('/diagrams/{slug}/shares', [ShareController::class, 'index'])->name('shares.index');
