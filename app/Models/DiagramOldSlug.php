@@ -20,6 +20,7 @@ class DiagramOldSlug extends Model
         ];
     }
 
+    /** @return BelongsTo<Diagram, $this> */
     public function diagram(): BelongsTo
     {
         return $this->belongsTo(Diagram::class);
