@@ -98,6 +98,12 @@ aside li .version-actions { display: flex; gap: 6px; margin-top: 2px; }
 aside li .version-actions button { padding: 2px 8px; font-size: 12px; }
 aside li.comparing { background: var(--selected); }
 
+/* Compare any two Versions (ticket 36) */
+aside li .version-row { display: flex; align-items: center; gap: 8px; }
+aside li .version-row input[type=checkbox] { flex: none; margin: 0; }
+.version-panel-footer { padding: 8px 12px; border-top: 1px solid var(--border); }
+.version-panel-footer button { width: 100%; }
+
 .diff-banner {
   position: absolute; left: 16px; top: 16px; z-index: 15;
   display: flex; align-items: center; gap: 10px; flex-wrap: wrap;

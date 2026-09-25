@@ -88,6 +88,10 @@ return [
     'restore_version_confirm' => 'Restore this version? This creates a new version on top of the history.',
     'version_restored' => 'Version restored.',
     'version_restore_failed' => 'Could not restore this version.',
+    'select_to_compare' => 'Select to compare',
+    'compare_selected' => 'Compare selected',
+    'compare_pair_confirm' => 'Comparing these versions replaces the canvas with one of them, discarding any unsaved changes. Continue?',
+    'compare_pair_failed' => 'Could not compare these versions.',
 
     // Locked diagram
     'being_edited' => 'Being edited',

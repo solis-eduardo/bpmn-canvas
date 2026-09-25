@@ -18,8 +18,10 @@
 
   // Exposed so the version-comparison module (loaded separately, see
   // versions.js/diff.js) can reuse this same live Modeler/canvas instead of
-  // creating a second one.
-  window.BpmnEditor = { modeler, contentUrl, versionsUrl: body.dataset.versionsUrl };
+  // creating a second one. isDirty lets it warn before comparing two
+  // arbitrary Versions (ticket 36), which temporarily replaces whatever is
+  // on the canvas with one of the two Versions being compared.
+  window.BpmnEditor = { modeler, contentUrl, versionsUrl: body.dataset.versionsUrl, isDirty: () => dirty };
 
   let dirty = false;
 

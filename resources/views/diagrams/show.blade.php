@@ -78,6 +78,10 @@
         data-version-restored-notice="{{ __('messages.version_restored') }}"
         data-version-restore-failed-notice="{{ __('messages.version_restore_failed') }}"
         data-restore-label="{{ __('messages.restore') }}"
+        data-select-to-compare-label="{{ __('messages.select_to_compare') }}"
+        data-compare-selected-label="{{ __('messages.compare_selected') }}"
+        data-compare-pair-confirm="{{ __('messages.compare_pair_confirm') }}"
+        data-compare-pair-failed-notice="{{ __('messages.compare_pair_failed') }}"
         @can('manageCollaborators', $diagram)
             data-collaborators-url="{{ route('diagrams.collaborators.index', $diagram->slug) }}"
             data-collaborator-url-template="{{ route('diagrams.collaborators.update', [$diagram->slug, 'USER_ID']) }}"
@@ -139,6 +143,11 @@
                     <button type="button" id="btn-history-close" aria-label="Close">✕</button>
                 </div>
                 <ul id="version-list"></ul>
+                {{-- Compare any two Versions (ticket 36): shown once exactly two
+                     checkboxes below are selected — see versions.js. --}}
+                <div class="version-panel-footer" id="version-compare-footer" hidden>
+                    <button type="button" id="btn-compare-selected">{{ __('messages.compare_selected') }}</button>
+                </div>
             </aside>
             @can('manageCollaborators', $diagram)
                 <aside id="collaborators-panel" hidden>
