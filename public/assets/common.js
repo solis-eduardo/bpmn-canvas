@@ -1,4 +1,4 @@
-/* Utilitários compartilhados entre editor e viewer */
+/* Utilities shared between the editor and the viewer */
 (function () {
   function toast(msg, isError) {
     let el = document.querySelector('.toast');
@@ -24,7 +24,7 @@
   }
 
   function baseName(name) {
-    return (name || 'diagrama.bpmn').replace(/\.bpmn$/i, '');
+    return (name || 'diagram.bpmn').replace(/\.bpmn$/i, '');
   }
 
   async function exportBpmn(bpmnJS, name) {

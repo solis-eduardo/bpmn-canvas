@@ -10,8 +10,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
-// keycloak_id só é atribuído internamente pelo fluxo OAuth (KeycloakLoginController),
-// nunca a partir de um payload de request de usuário — nenhuma rota o expõe.
+// keycloak_id is only ever assigned internally by the OAuth flow (KeycloakLoginController),
+// never from a user request payload — no route exposes it.
 #[Fillable(['name', 'email', 'password', 'keycloak_id'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable

@@ -1,0 +1,101 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Actions\Diagrams\GrantOrRequestCollaborator;
+use App\Models\Diagram;
+use App\Models\DiagramCollaborator;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class DiagramCollaboratorController extends Controller
+{
+    /**
+     * Author (or Administrator) lists a Diagram's Collaborators/requests.
+     */
+    public function index(Request $request, string $slug): JsonResponse
+    {
+        $diagram = $this->resolveDiagram($slug);
+
+        $this->authorize('manageCollaborators', $diagram);
+
+        $collaborators = $diagram->collaborators()->with('user')->get()->map(fn (DiagramCollaborator $collaborator) => [
+            'user_id' => $collaborator->user_id,
+            'name' => $collaborator->user->name,
+            'email' => $collaborator->user->email,
+            'status' => $collaborator->status,
+        ]);
+
+        return response()->json($collaborators);
+    }
+
+    /**
+     * Direct invite by the Author/Administrator (immediate access, status
+     * "approved") or request by the User themselves (status "requested") —
+     * see GrantOrRequestCollaborator for the full rule.
+     */
+    public function store(Request $request, string $slug, GrantOrRequestCollaborator $grant): JsonResponse
+    {
+        $diagram = $this->resolveDiagram($slug);
+
+        $data = $request->validate([
+            'user_id' => ['required_without:email', 'integer', 'exists:users,id'],
+            'email' => ['required_without:user_id', 'email'],
+        ]);
+
+        $target = isset($data['user_id'])
+            ? User::findOrFail($data['user_id'])
+            : User::where('email', $data['email'])->firstOrFail();
+
+        $collaborator = $grant($diagram, $request->user(), $target);
+
+        return response()->json([
+            'user_id' => $collaborator->user_id,
+            'status' => $collaborator->status,
+        ], 201);
+    }
+
+    /**
+     * Author or Administrator approves a pending request.
+     */
+    public function update(Request $request, string $slug, User $user): JsonResponse
+    {
+        $diagram = $this->resolveDiagram($slug);
+
+        $this->authorize('manageCollaborators', $diagram);
+
+        $collaborator = DiagramCollaborator::where('diagram_id', $diagram->id)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        $collaborator->update(['status' => DiagramCollaborator::STATUS_APPROVED]);
+
+        return response()->json([
+            'user_id' => $collaborator->user_id,
+            'status' => $collaborator->status,
+        ]);
+    }
+
+    /**
+     * Author or Administrator declines a pending request or removes an
+     * already-approved Collaborator — in both cases, the row is deleted.
+     */
+    public function destroy(Request $request, string $slug, User $user): JsonResponse
+    {
+        $diagram = $this->resolveDiagram($slug);
+
+        $this->authorize('manageCollaborators', $diagram);
+
+        DiagramCollaborator::where('diagram_id', $diagram->id)
+            ->where('user_id', $user->id)
+            ->delete();
+
+        return response()->json(['deleted' => true]);
+    }
+
+    private function resolveDiagram(string $slug): Diagram
+    {
+        return Diagram::where('slug', $slug)->firstOrFail();
+    }
+}

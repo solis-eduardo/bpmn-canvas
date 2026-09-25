@@ -3,15 +3,18 @@
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\KeycloakLoginController;
 use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\CompartilhamentoController;
-use App\Http\Controllers\CompartilhamentoPublicoController;
-use App\Http\Controllers\DiagramaColaboradorController;
-use App\Http\Controllers\DiagramaController;
+use App\Http\Controllers\DiagramCollaboratorController;
+use App\Http\Controllers\DiagramController;
+use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\PublicShareController;
+use App\Http\Controllers\ShareController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('welcome');
 });
+
+Route::post('/locale/{locale}', [LocaleController::class, 'update'])->name('locale.update');
 
 Route::get('/login', [LoginController::class, 'create'])->middleware('guest')->name('login');
 Route::post('/login', [LoginController::class, 'store'])->middleware(['guest', 'throttle:5,1']);
@@ -21,8 +24,8 @@ Route::get('/login/keycloak', [KeycloakLoginController::class, 'redirect'])->nam
 Route::get('/login/keycloak/callback', [KeycloakLoginController::class, 'callback'])->name('login.keycloak.callback');
 
 Route::middleware('signed')->group(function () {
-    Route::get('/compartilhamentos/{compartilhamento}', [CompartilhamentoPublicoController::class, 'show'])->name('compartilhamentos.show');
-    Route::get('/compartilhamentos/{compartilhamento}/download/{formato}', [CompartilhamentoPublicoController::class, 'download'])->name('compartilhamentos.download');
+    Route::get('/shares/{share}', [PublicShareController::class, 'show'])->name('shares.show');
+    Route::get('/shares/{share}/download/{format}', [PublicShareController::class, 'download'])->name('shares.download');
 });
 
 Route::middleware('auth')->group(function () {
@@ -31,28 +34,28 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');
     Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
 
-    Route::get('/diagramas', [DiagramaController::class, 'index'])->name('diagramas.index');
-    Route::post('/diagramas', [DiagramaController::class, 'store'])->name('diagramas.store');
-    Route::get('/diagramas/{slug}/conteudo', [DiagramaController::class, 'content'])->name('diagramas.content');
-    Route::put('/diagramas/{slug}/conteudo', [DiagramaController::class, 'save'])->name('diagramas.save');
-    Route::put('/diagramas/{slug}', [DiagramaController::class, 'rename'])->name('diagramas.rename');
-    Route::delete('/diagramas/{slug}', [DiagramaController::class, 'destroy'])->name('diagramas.destroy');
+    Route::get('/diagrams', [DiagramController::class, 'index'])->name('diagrams.index');
+    Route::post('/diagrams', [DiagramController::class, 'store'])->name('diagrams.store');
+    Route::get('/diagrams/{slug}/content', [DiagramController::class, 'content'])->name('diagrams.content');
+    Route::put('/diagrams/{slug}/content', [DiagramController::class, 'save'])->name('diagrams.save');
+    Route::put('/diagrams/{slug}', [DiagramController::class, 'rename'])->name('diagrams.rename');
+    Route::delete('/diagrams/{slug}', [DiagramController::class, 'destroy'])->name('diagrams.destroy');
 
-    Route::get('/diagramas/{slug}/colaboradores', [DiagramaColaboradorController::class, 'index'])->name('diagramas.colaboradores.index');
-    Route::post('/diagramas/{slug}/colaboradores', [DiagramaColaboradorController::class, 'store'])->name('diagramas.colaboradores.store');
-    Route::put('/diagramas/{slug}/colaboradores/{user}', [DiagramaColaboradorController::class, 'update'])->name('diagramas.colaboradores.update');
-    Route::delete('/diagramas/{slug}/colaboradores/{user}', [DiagramaColaboradorController::class, 'destroy'])->name('diagramas.colaboradores.destroy');
+    Route::get('/diagrams/{slug}/collaborators', [DiagramCollaboratorController::class, 'index'])->name('diagrams.collaborators.index');
+    Route::post('/diagrams/{slug}/collaborators', [DiagramCollaboratorController::class, 'store'])->name('diagrams.collaborators.store');
+    Route::put('/diagrams/{slug}/collaborators/{user}', [DiagramCollaboratorController::class, 'update'])->name('diagrams.collaborators.update');
+    Route::delete('/diagrams/{slug}/collaborators/{user}', [DiagramCollaboratorController::class, 'destroy'])->name('diagrams.collaborators.destroy');
 
-    Route::post('/diagramas/{slug}/heartbeat', [DiagramaController::class, 'heartbeat'])->name('diagramas.heartbeat');
-    Route::post('/diagramas/{slug}/trava/solicitar', [DiagramaController::class, 'solicitarTrava'])->name('diagramas.trava.solicitar');
-    Route::delete('/diagramas/{slug}/lock', [DiagramaController::class, 'unlock'])->name('diagramas.unlock');
-    Route::post('/diagramas/{slug}/fork', [DiagramaController::class, 'fork'])->name('diagramas.fork');
+    Route::post('/diagrams/{slug}/heartbeat', [DiagramController::class, 'heartbeat'])->name('diagrams.heartbeat');
+    Route::post('/diagrams/{slug}/lock/request', [DiagramController::class, 'requestLock'])->name('diagrams.lock.request');
+    Route::delete('/diagrams/{slug}/lock', [DiagramController::class, 'unlock'])->name('diagrams.unlock');
+    Route::post('/diagrams/{slug}/fork', [DiagramController::class, 'fork'])->name('diagrams.fork');
 
-    Route::get('/diagramas/{slug}/versoes', [DiagramaController::class, 'versoes'])->name('diagramas.versoes');
-    Route::post('/diagramas/{slug}/versoes/{versao}/restaurar', [DiagramaController::class, 'restaurarVersao'])->name('diagramas.versoes.restaurar');
-    Route::get('/diagramas/{slug}', [DiagramaController::class, 'show'])->name('diagramas.show');
+    Route::get('/diagrams/{slug}/versions', [DiagramController::class, 'versions'])->name('diagrams.versions');
+    Route::post('/diagrams/{slug}/versions/{version}/restore', [DiagramController::class, 'restoreVersion'])->name('diagrams.versions.restore');
+    Route::get('/diagrams/{slug}', [DiagramController::class, 'show'])->name('diagrams.show');
 
-    Route::get('/diagramas/{slug}/compartilhamentos', [CompartilhamentoController::class, 'index'])->name('compartilhamentos.index');
-    Route::post('/diagramas/{slug}/compartilhamentos', [CompartilhamentoController::class, 'store'])->name('compartilhamentos.store');
-    Route::delete('/compartilhamentos/{compartilhamento}', [CompartilhamentoController::class, 'destroy'])->name('compartilhamentos.destroy');
+    Route::get('/diagrams/{slug}/shares', [ShareController::class, 'index'])->name('shares.index');
+    Route::post('/diagrams/{slug}/shares', [ShareController::class, 'store'])->name('shares.store');
+    Route::delete('/shares/{share}', [ShareController::class, 'destroy'])->name('shares.destroy');
 });

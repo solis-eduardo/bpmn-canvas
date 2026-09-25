@@ -9,7 +9,7 @@ services:
     restart: unless-stopped
     env_file: .env
     volumes:
-      # Os .bpmn ficam nesta pasta do host (fácil de versionar em Git / fazer backup)
+      # The .bpmn files live in this host folder (easy to version with Git / back up)
       - ./diagrams:/var/www/html/storage/app/diagrams
       - app-storage:/var/www/html/storage/framework
     depends_on:
@@ -44,7 +44,7 @@ services:
     environment:
       POSTGRES_DB: ${DB_DATABASE:-bpmn}
       POSTGRES_USER: ${DB_USERNAME:-bpmn}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?defina DB_PASSWORD no .env}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:

@@ -123,7 +123,7 @@ class KeycloakLoginTest extends TestCase
     {
         $this->mockSocialiteUser($this->fakeSocialiteUser(
             'keycloak-sub-5',
-            'Elisa Sem Admin',
+            'Elisa No Admin',
             'elisa@example.com',
             ['some-other-role']
         ));

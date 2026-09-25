@@ -1,4 +1,4 @@
-# Diagramas .bpmn ficam só no host / volume, não versionados no repo
+# .bpmn diagram files live only on the host / volume, not versioned in the repo
 diagrams/*.bpmn
 
 # Laravel
@@ -34,5 +34,5 @@ Homestead.json
 Homestead.yaml
 Thumbs.db
 
-# SQLite local (não usamos em produção, mas pode surgir em dev)
+# Local SQLite (not used in production, but may show up in dev)
 /database/database.sqlite

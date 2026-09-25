@@ -27,7 +27,7 @@ class KeycloakLoginController extends Controller
         } catch (Throwable $e) {
             report($e);
 
-            return redirect('/login')->with('error', 'Não foi possível entrar com o Keycloak. Tente novamente.');
+            return redirect('/login')->with('error', __('messages.keycloak_login_failed'));
         }
 
         $user = $this->resolveUser($socialiteUser);
@@ -55,9 +55,9 @@ class KeycloakLoginController extends Controller
             return $user;
         }
 
-        // Uma conta local pré-existente com o mesmo e-mail é vinculada à identidade
-        // Keycloak (mesma pessoa) em vez de gerar uma conta duplicada, o que também
-        // colidiria com a constraint unique de `email`.
+        // A pre-existing local account with the same email is linked to the Keycloak
+        // identity (same person) instead of creating a duplicate account, which would
+        // also collide with the unique constraint on `email`.
         $user = User::whereNull('keycloak_id')
             ->where('email', $socialiteUser->getEmail())
             ->first();
@@ -94,10 +94,10 @@ class KeycloakLoginController extends Controller
     }
 
     /**
-     * Decodifica o payload de um JWT sem verificar a assinatura.
+     * Decodes a JWT's payload without verifying the signature.
      *
-     * O access_token vem direto do Keycloak via troca server-to-server
-     * (Socialite), então a origem já é confiável neste ponto.
+     * The access_token comes straight from Keycloak via a server-to-server
+     * exchange (Socialite), so the source is already trusted at this point.
      *
      * @return array<string, mixed>
      */

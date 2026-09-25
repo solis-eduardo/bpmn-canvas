@@ -20,12 +20,12 @@ class LoginTest extends TestCase
     public function test_user_can_log_in_with_correct_credentials_and_reach_a_protected_route(): void
     {
         $user = User::factory()->create([
-            'password' => 'senha-correta',
+            'password' => 'correct-password',
         ]);
 
         $response = $this->post('/login', [
             'email' => $user->email,
-            'password' => 'senha-correta',
+            'password' => 'correct-password',
         ]);
 
         $response->assertRedirect('/home');
@@ -37,12 +37,12 @@ class LoginTest extends TestCase
     public function test_user_cannot_log_in_with_incorrect_password(): void
     {
         $user = User::factory()->create([
-            'password' => 'senha-correta',
+            'password' => 'correct-password',
         ]);
 
         $response = $this->post('/login', [
             'email' => $user->email,
-            'password' => 'senha-errada',
+            'password' => 'wrong-password',
         ]);
 
         $response->assertSessionHasErrors('email');
@@ -51,13 +51,13 @@ class LoginTest extends TestCase
 
     public function test_login_attempts_are_rate_limited(): void
     {
-        $user = User::factory()->create(['password' => 'senha-correta']);
+        $user = User::factory()->create(['password' => 'correct-password']);
 
         for ($i = 0; $i < 5; $i++) {
-            $this->post('/login', ['email' => $user->email, 'password' => 'senha-errada']);
+            $this->post('/login', ['email' => $user->email, 'password' => 'wrong-password']);
         }
 
-        $response = $this->post('/login', ['email' => $user->email, 'password' => 'senha-correta']);
+        $response = $this->post('/login', ['email' => $user->email, 'password' => 'correct-password']);
 
         $response->assertStatus(429);
     }
