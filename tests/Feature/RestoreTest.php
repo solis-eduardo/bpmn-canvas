@@ -3,32 +3,45 @@
 namespace Tests\Feature;
 
 use App\Models\Diagram;
+use App\Models\DiagramCollaborator;
 use App\Models\Share;
 use App\Models\User;
+use App\Repositories\VersionRepository;
 use App\Services\Backup\DatabaseDumper;
 use App\Services\Backup\DatabaseRestorer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
-use Symfony\Component\Process\Process;
 use Tests\TestCase;
 
 /**
- * Console-seam tests: exercise the `restore` command through the Artisan interface
- * and assert that the restored state matches the original through HTTP endpoints.
+ * Console-seam test for the restore side of ticket 05: `backup:run` produces
+ * a real artifact, application state is then mutated, `backup:restore`
+ * brings it back, and the original state is asserted through the same HTTP
+ * endpoints a User/operator would use — not by inspecting the database or
+ * disk directly.
  *
- * The test flow:
- * 1. Create diagrams with versions and shares
- * 2. Backup the state
- * 3. Clear everything (simulate disaster recovery)
- * 4. Restore from the backup
- * 5. Assert that Diagrams, Versions, and Shares all work as expected
+ * As in BackupTest, the only boundary swapped out is the database
+ * dump/restore itself (no Postgres server in the test environment, see
+ * phpunit.xml forcing sqlite): the fake below round-trips a fixed set of
+ * application tables through the artifact, standing in for `pg_dump`
+ * /`pg_restore`. The command, RestoreRepository, the Diagrams-disk copy, and
+ * every HTTP endpoint asserted on are all real.
  */
 class RestoreTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const FAKE_DUMP_CONTENTS = '-- fake pg_dump output --';
+    /**
+     * @var array<int, string>
+     */
+    public const TABLES_IN_DEPENDENCY_ORDER = [
+        'users',
+        'diagrams',
+        'diagram_collaborators',
+        'diagram_version_names',
+        'shares',
+    ];
 
     protected function setUp(): void
     {
@@ -37,140 +50,155 @@ class RestoreTest extends TestCase
         Storage::fake('diagrams');
         Storage::fake('backups');
 
-        $fakeDumpContents = self::FAKE_DUMP_CONTENTS;
-
-        $this->app->bind(DatabaseDumper::class, fn () => new class($fakeDumpContents) implements DatabaseDumper
+        $fake = new class implements DatabaseDumper, DatabaseRestorer
         {
-            public function __construct(private string $contents) {}
-
             public function dump(string $destination): string
             {
-                file_put_contents($destination, $this->contents);
+                $snapshot = [];
+
+                foreach (RestoreTest::TABLES_IN_DEPENDENCY_ORDER as $table) {
+                    $snapshot[$table] = DB::table($table)->get()->map(fn ($row) => (array) $row)->all();
+                }
+
+                file_put_contents($destination, json_encode($snapshot));
 
                 return $destination;
             }
-        });
 
-        $this->app->bind(DatabaseRestorer::class, fn () => new class implements DatabaseRestorer
-        {
             public function restore(string $source): void
             {
-                // No-op for tests: the database is managed by RefreshDatabase trait
+                $snapshot = json_decode(file_get_contents($source), true);
+
+                foreach (array_reverse(RestoreTest::TABLES_IN_DEPENDENCY_ORDER) as $table) {
+                    DB::table($table)->delete();
+                }
+
+                foreach (RestoreTest::TABLES_IN_DEPENDENCY_ORDER as $table) {
+                    foreach ($snapshot[$table] ?? [] as $row) {
+                        DB::table($table)->insert($row);
+                    }
+                }
             }
-        });
+        };
+
+        $this->app->bind(DatabaseDumper::class, fn () => $fake);
+        $this->app->bind(DatabaseRestorer::class, fn () => $fake);
+    }
+
+    public function test_restore_brings_back_diagrams_versions_collaborators_and_shares_through_the_http_endpoints(): void
+    {
+        $owner = User::factory()->create();
+        $collaborator = User::factory()->create();
+
+        $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
+
+        app(VersionRepository::class)->save($diagram, $owner, '<bpmn:definitions>original</bpmn:definitions>');
+
+        DiagramCollaborator::create([
+            'diagram_id' => $diagram->id,
+            'user_id' => $collaborator->id,
+            'status' => DiagramCollaborator::STATUS_APPROVED,
+        ]);
+
+        $share = Share::factory()->for($diagram)->for($owner, 'author')->create([
+            'allow_download' => true,
+        ]);
+
+        $originalVersions = app(VersionRepository::class)->list($diagram);
+        $this->assertCount(2, $originalVersions);
+        $oldestVersionId = $originalVersions[1]['id'];
+
+        $downloadUrl = $share->downloadUrl();
+
+        // --- backup ---
+        $this->artisan('backup:run')->assertSuccessful();
+
+        $artifact = collect(Storage::disk('backups')->files())
+            ->first(fn ($file) => str_ends_with($file, '.tar.gz'));
+        $this->assertNotNull($artifact, 'Expected a backup artifact to have been produced.');
+
+        // --- mutate everything the restore is supposed to bring back ---
+        app(VersionRepository::class)->save($diagram, $owner, '<bpmn:definitions>mutated after backup</bpmn:definitions>');
+
+        DiagramCollaborator::where('diagram_id', $diagram->id)
+            ->where('user_id', $collaborator->id)
+            ->delete();
+
+        $share->update(['revoked_at' => now()]);
+
+        $this->assertNotSame(
+            '<bpmn:definitions>original</bpmn:definitions>',
+            Storage::disk('diagrams')->get($diagram->disk_path),
+        );
+
+        // --- restore ---
+        $this->artisan('backup:restore', ['artifact' => $artifact, '--force' => true])
+            ->assertSuccessful();
+
+        // --- assert original state is back, through the HTTP endpoints ---
+        $this->actingAs($owner);
+
+        $this->getJson(route('diagrams.content', $diagram->slug))
+            ->assertOk()
+            ->assertJson(['content' => '<bpmn:definitions>original</bpmn:definitions>']);
+
+        $versionsResponse = $this->getJson(route('diagrams.versions', $diagram->slug))->assertOk();
+        $restoredVersionCount = collect($versionsResponse->json('versions'))->sum(fn ($day) => count($day['items']));
+        $this->assertSame(2, $restoredVersionCount, 'Version history must match what it was at backup time.');
+
+        $this->getJson(route('diagrams.collaborators.index', $diagram->slug))
+            ->assertOk()
+            ->assertJsonFragment(['user_id' => $collaborator->id, 'status' => DiagramCollaborator::STATUS_APPROVED]);
+
+        $this->get($downloadUrl)
+            ->assertOk()
+            ->assertSee('<bpmn:definitions>original</bpmn:definitions>', false);
+
+        // Restoring an old Version through the normal HTTP endpoint still
+        // works against the restored Version repository (its .git history
+        // survived the backup/restore round trip intact).
+        $this->postJson(route('diagrams.versions.restore', [$diagram->slug, $oldestVersionId]))
+            ->assertOk()
+            ->assertJson(['restored' => true]);
     }
 
     public function test_restore_command_requires_explicit_confirmation(): void
     {
-        $this->artisan('backup:run')->assertSuccessful();
-        $artifact = $this->onlyArtifactFilename();
+        Storage::disk('backups')->put('backup-2026-01-01_000000-abcd1234.tar.gz', 'not a real archive');
 
-        $this->artisan('restore:run', ['artifact' => $artifact])
-            ->expectsConfirmation('This will overwrite all diagrams and the database. Continue?', 'no')
+        $this->artisan('backup:restore', ['artifact' => 'backup-2026-01-01_000000-abcd1234.tar.gz'])
+            ->expectsConfirmation(
+                'This will OVERWRITE the current database and Diagrams directory with the contents of '
+                    .'"backup-2026-01-01_000000-abcd1234.tar.gz". This cannot be undone. Continue?',
+                'no',
+            )
             ->assertFailed();
     }
 
     public function test_restore_command_fails_if_artifact_does_not_exist(): void
     {
-        $this->artisan('restore:run', ['artifact' => 'nonexistent-artifact.tar.gz'])
-            ->expectsConfirmation('This will overwrite all diagrams and the database. Continue?', 'yes')
+        $this->artisan('backup:restore', ['artifact' => 'does-not-exist.tar.gz', '--force' => true])
             ->assertFailed();
     }
 
     public function test_restore_command_fails_if_artifact_has_invalid_manifest(): void
     {
-        // Create an artifact without proper manifest.json
-        $disk = Storage::disk('backups');
-        $disk->makeDirectory('');
+        // A real .tar.gz, so extraction succeeds and validateManifest() is
+        // actually exercised — it's missing manifest.json entirely.
+        $sourceDir = sys_get_temp_dir().'/restore-test-'.uniqid();
+        mkdir($sourceDir.'/diagrams', 0755, true);
+        file_put_contents($sourceDir.'/database.dump', 'fake dump');
+        $archivePath = $sourceDir.'.tar.gz';
+        exec(sprintf('tar -czf %s -C %s .', escapeshellarg($archivePath), escapeshellarg($sourceDir)));
 
-        $stagingDir = $disk->path('.staging-'.(string) Str::uuid());
-        mkdir($stagingDir, 0755, true);
-        mkdir($stagingDir.'/diagrams', 0755, true);
+        Storage::disk('backups')->put(
+            'backup-2026-01-01_000000-abcd1234.tar.gz',
+            file_get_contents($archivePath),
+        );
 
-        // Missing manifest.json
-        $artifact = 'backup-2026-01-01_120000-12345678.tar.gz';
-        $partialPath = $disk->path($artifact.'.part');
-
-        $process = new Process(['tar', '-czf', $partialPath, '-C', $stagingDir, '.']);
-        $process->mustRun();
-
-        rename($partialPath, $disk->path($artifact));
-        exec('rm -rf '.escapeshellarg($stagingDir));
-
-        $this->artisan('restore:run', ['artifact' => $artifact])
-            ->expectsConfirmation('This will overwrite all diagrams and the database. Continue?', 'yes')
-            ->assertFailed();
-    }
-
-    public function test_full_restore_workflow_recovers_diagrams_and_metadata(): void
-    {
-        $author = User::factory()->create();
-
-        // Step 1: Create initial state with diagram, versions, and share
-        $diagram1 = Diagram::factory()->for($author, 'author')->create(['title' => 'Process One']);
-        Storage::disk('diagrams')->put($diagram1->disk_path, '<bpmn:definitions>original</bpmn:definitions>');
-
-        // Create a public share
-        $this->actingAs($author)->postJson("/diagrams/{$diagram1->slug}/shares", [
-            'days' => 30,
-            'allow_download' => false,
-        ])->assertCreated();
-
-        $share = Share::first();
-        $this->assertNotNull($share);
-
-        // Step 2: Create backup
-        $this->artisan('backup:run')->assertSuccessful();
-        $artifactName = $this->onlyArtifactFilename();
-
-        // Verify artifact exists and has correct structure
-        $extractedPath = $this->extract($artifactName);
-        $this->assertFileExists($extractedPath.'/diagrams/'.$diagram1->slug.'/'.$diagram1->disk_filename);
-        $this->assertFileExists($extractedPath.'/manifest.json');
-
-        // Step 3: Simulate disaster - clear diagram files and metadata
-        Share::truncate();
-        Diagram::truncate();
-        Storage::disk('diagrams')->deleteDirectory('');
-
-        // Verify everything is gone
-        $this->assertDatabaseCount('diagrams', 0);
-        $this->assertDatabaseCount('shares', 0);
-        $this->assertFalse(Storage::disk('diagrams')->exists($diagram1->disk_path));
-
-        // Step 4: Restore from backup
-        $this->artisan('restore:run', ['artifact' => $artifactName])
-            ->expectsConfirmation('This will overwrite all diagrams and the database. Continue?', 'yes')
-            ->assertSuccessful();
-
-        // Step 5: Verify restored state
-        // Check diagram file is restored on disk (the filesystem is what actually gets restored)
-        $this->assertTrue(Storage::disk('diagrams')->exists($diagram1->disk_path));
-        $restoredContent = Storage::disk('diagrams')->get($diagram1->disk_path);
-        $this->assertStringContainsString('bpmn:definitions', $restoredContent);
-        $this->assertStringContainsString('original', $restoredContent);
-    }
-
-    private function onlyArtifactFilename(): string
-    {
-        $artifacts = collect(Storage::disk('backups')->files())
-            ->filter(fn ($file) => str_ends_with($file, '.tar.gz'));
-
-        $this->assertCount(1, $artifacts, 'Expected exactly one backup artifact.');
-
-        return $artifacts->first();
-    }
-
-    private function extract(string $artifact): string
-    {
-        $destination = Storage::disk('backups')->path('.extracted-'.(string) Str::uuid());
-        mkdir($destination, 0755, true);
-
-        $process = new Process([
-            'tar', '-xzf', Storage::disk('backups')->path($artifact), '-C', $destination,
-        ]);
-        $process->mustRun();
-
-        return $destination;
+        $this->artisan('backup:restore', [
+            'artifact' => 'backup-2026-01-01_000000-abcd1234.tar.gz',
+            '--force' => true,
+        ])->assertFailed();
     }
 }

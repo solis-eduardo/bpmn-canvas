@@ -9,10 +9,14 @@ return [
     'password' => 'Password',
     'invalid_credentials' => 'Invalid credentials.',
     'keycloak_login_failed' => 'Could not log in with Keycloak. Please try again.',
+    'log_in_locally' => 'Log in with email and password',
+    'log_in_with_keycloak' => 'Log in with Keycloak',
+    'or' => 'or',
 
     // Navigation
     'diagrams' => 'Diagrams',
     'workspaces' => 'Workspaces',
+    'users' => 'Users',
 
     // Diagram list
     'diagram_name' => 'Diagram name',
@@ -21,6 +25,7 @@ return [
     'no_diagrams_yet' => 'No diagrams created yet.',
     'author_label' => '(author: :name)',
     'diagram_owner_label' => '(owner: :name)',
+    'last_modified_label' => 'Last modified :time',
     'being_edited_by' => '— being edited by :name',
 
     // Editor
@@ -32,6 +37,45 @@ return [
     'zoom_out' => 'Zoom out',
     'fit_to_screen' => 'Fit to screen',
     'lock_not_held' => "You don't hold the lock on this diagram.",
+    'back_to_diagrams' => 'Back to Diagrams',
+    'version_history' => 'Version history',
+    'collaborators' => 'Collaborators',
+
+    // Collaborators & Shares panel
+    'collaborators_and_shares' => 'Collaborators & Shares',
+    'invite_by_email' => 'Invite by email',
+    'invite' => 'Invite',
+    'approve' => 'Approve',
+    'refuse' => 'Refuse',
+    'remove' => 'Remove',
+    'status_pending' => 'Pending',
+    'status_approved' => 'Approved',
+    'no_collaborators_yet' => 'No collaborators yet.',
+    'collaborator_invited' => 'Collaborator invited.',
+    'collaborator_invite_failed' => 'Could not invite this collaborator.',
+    'collaborator_approved' => 'Collaborator approved.',
+    'collaborator_approve_failed' => 'Could not approve this collaborator.',
+    'collaborator_removed' => 'Collaborator removed.',
+    'collaborator_remove_failed' => 'Could not remove this collaborator.',
+    'remove_collaborator_confirm' => 'Remove this collaborator?',
+    'refuse_request_confirm' => 'Refuse this request?',
+    'shares' => 'Shares',
+    'create_share' => 'Create share link',
+    'expires_in_days' => 'Expires in (days)',
+    'allow_download' => 'Allow download',
+    'copy_link' => 'Copy link',
+    'link_copied' => 'Link copied to clipboard.',
+    'link_copy_failed' => 'Could not copy the link.',
+    'revoke' => 'Revoke',
+    'revoke_share_confirm' => 'Revoke this share? The link will stop working immediately.',
+    'no_shares_yet' => 'No active shares yet.',
+    'share_created' => 'Share link created.',
+    'share_create_failed' => 'Could not create the share link.',
+    'share_revoked' => 'Share revoked.',
+    'share_revoke_failed' => 'Could not revoke this share.',
+    'expires_label' => 'Expires :time',
+    'download_allowed' => 'Download allowed',
+    'download_not_allowed' => 'Download not allowed',
 
     // Version history & comparison
     'history' => 'History',
@@ -41,11 +85,34 @@ return [
     'diff_removed' => 'Removed',
     'diff_changed' => 'Changed',
     'diff_removed_elements' => 'Removed elements (not on the current canvas)',
+    'restore' => 'Restore',
+    'restore_version_confirm' => 'Restore this version? This creates a new version on top of the history.',
+    'version_restored' => 'Version restored.',
+    'version_restore_failed' => 'Could not restore this version.',
 
     // Locked diagram
     'being_edited' => 'Being edited',
     'currently_being_edited_by' => "This diagram is currently being edited by :name. You can't open the Editor until the Lock is released.",
     'create_a_copy_to_continue' => 'Create a copy (Fork) to continue now',
+    'locked_since' => 'Locked :time',
+    'request_the_lock' => 'Request the Lock',
+    'lock_transfers_in' => 'Lock transfers in :seconds s…',
+    'lock_requested_by_notice' => ':name has requested the Lock on this diagram.',
+
+    // User management
+    'users_heading' => 'Users',
+    'name' => 'Name',
+    'login_method' => 'Login method',
+    'login_method_local' => 'Local',
+    'login_method_keycloak' => 'Keycloak',
+    'administrator_status' => 'Administrator',
+    'administrator_via_keycloak' => 'Administrator (via Keycloak)',
+    'not_administrator' => 'Not an administrator',
+    'grant_administrator' => 'Grant Administrator',
+    'revoke_administrator' => 'Revoke Administrator',
+    'not_revocable_via_keycloak' => "Granted by Keycloak — can't be revoked here.",
+    'create_local_account' => 'Create local account',
+    'no_users_yet' => 'No users yet.',
 
     // Public share viewer
     'download' => 'Download',
@@ -69,5 +136,10 @@ return [
     'no_members_yet' => 'No Members yet.',
     'rename' => 'Rename',
     'cannot_remove_workspace_owner' => "The Workspace Owner can't be removed as a Member.",
+    // Notifications
+    'notifications' => 'Notifications',
+    'no_notifications_yet' => 'No notifications yet.',
+    'mark_all_as_read' => 'Mark all as read',
+    'notification_requested_access' => ':name requested access to :diagram',
 
 ];
