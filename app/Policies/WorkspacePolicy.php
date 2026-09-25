@@ -11,7 +11,7 @@ class WorkspacePolicy
      * Create a Workspace: any authenticated User (CONTEXT.md, "Workspace" —
      * "Any User can create a Workspace").
      */
-    public function create(User $user): bool
+    public function create(): bool
     {
         return true;
     }

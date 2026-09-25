@@ -38,7 +38,7 @@ class WorkspaceMemberController extends Controller
      * leave without transferring ownership first"), that requires
      * transferring ownership, which isn't part of this issue.
      */
-    public function destroy(Request $request, Workspace $workspace, User $user): RedirectResponse
+    public function destroy(Workspace $workspace, User $user): RedirectResponse
     {
         $this->authorize('manageMembers', $workspace);
 

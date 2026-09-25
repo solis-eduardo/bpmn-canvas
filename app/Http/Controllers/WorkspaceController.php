@@ -43,7 +43,7 @@ class WorkspaceController extends Controller
         return redirect()->route('workspaces.show', $workspace);
     }
 
-    public function show(Request $request, Workspace $workspace): View
+    public function show(Workspace $workspace): View
     {
         $workspace->load(['owner', 'members']);
 
