@@ -28,20 +28,14 @@
         <form method="POST" action="{{ route('workspaces.update', $workspace) }}" class="mt-6 flex flex-wrap items-center gap-3">
             @csrf
             @method('PUT')
-            <input
+            <x-text-input
                 type="text"
                 name="name"
                 value="{{ $workspace->name }}"
                 aria-label="{{ __('messages.workspace_name') }}"
                 required
-                class="min-w-[240px] flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-            <button
-                type="submit"
-                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-            >
-                {{ __('messages.rename') }}
-            </button>
+            />
+            <x-button>{{ __('messages.rename') }}</x-button>
         </form>
     @endif
 
@@ -50,19 +44,13 @@
     @if ($canManage)
         <form method="POST" action="{{ route('workspaces.members.store', $workspace) }}" class="mt-3 flex flex-wrap items-center gap-3">
             @csrf
-            <input
+            <x-text-input
                 type="email"
                 name="email"
                 placeholder="{{ __('messages.member_email') }}"
                 required
-                class="min-w-[240px] flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-            <button
-                type="submit"
-                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-            >
-                {{ __('messages.add_member') }}
-            </button>
+            />
+            <x-button>{{ __('messages.add_member') }}</x-button>
         </form>
     @endif
 

@@ -60,10 +60,16 @@ class Workspace extends Model
 
     /**
      * True if $user is a Member of this Workspace (which includes the
-     * Workspace Owner — see ADR-0009).
+     * Workspace Owner — see ADR-0009). Checks the already-loaded `members`
+     * relation when available, so callers that eager-load it (e.g.
+     * WorkspaceController::show()) don't pay for a second query here.
      */
     public function hasMember(User $user): bool
     {
+        if ($this->relationLoaded('members')) {
+            return $this->members->contains('id', $user->id);
+        }
+
         return $this->memberships()->where('user_id', $user->id)->exists();
     }
 

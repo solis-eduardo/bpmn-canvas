@@ -5,19 +5,13 @@
 
     <form method="POST" action="{{ route('workspaces.store') }}" class="mt-6 flex flex-wrap items-center gap-3">
         @csrf
-        <input
+        <x-text-input
             type="text"
             name="name"
             placeholder="{{ __('messages.workspace_name') }}"
             required
-            class="min-w-[240px] flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
-        <button
-            type="submit"
-            class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-        >
-            {{ __('messages.create_workspace') }}
-        </button>
+        />
+        <x-button>{{ __('messages.create_workspace') }}</x-button>
     </form>
 
     <ul class="mt-8 divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white shadow-sm">
