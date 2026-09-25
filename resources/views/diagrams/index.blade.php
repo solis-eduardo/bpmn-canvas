@@ -1,6 +1,13 @@
 <x-layouts.app :title="__('messages.diagrams')">
     <div class="flex items-center justify-between gap-4">
         <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.diagrams') }}</h1>
+
+        <form method="POST" action="{{ route('logout') }}">
+            @csrf
+            <button type="submit" class="text-sm font-medium text-gray-500 hover:text-gray-700">
+                {{ __('messages.log_out') }}
+            </button>
+        </form>
     </div>
 
     <form method="POST" action="{{ route('diagrams.store') }}" class="mt-6 flex flex-wrap items-center gap-3">
