@@ -10,6 +10,7 @@
   const indexUrl = body.dataset.indexUrl;
   const heartbeatUrl = body.dataset.heartbeatUrl;
   const unlockUrl = body.dataset.unlockUrl;
+  const lockRequestedByNoticeTemplate = body.dataset.lockRequestedByNotice;
 
   const modeler = new BpmnJS({ container: '#canvas' });
   const $ = id => document.getElementById(id);
@@ -114,8 +115,30 @@
   modeler.on('commandStack.changed', () => setDirty(true));
   window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 
+  const lockRequestBanner = $('lock-request-banner');
+
+  // The Lock holder's only signal that someone else wants the Lock is this
+  // same heartbeat poll (see DiagramController::heartbeat) — no separate
+  // poll loop is started just for this (issue #9).
+  function showLockRequestedNotice(requestedByName) {
+    if (!lockRequestBanner) return;
+
+    if (!requestedByName) {
+      lockRequestBanner.hidden = true;
+      lockRequestBanner.textContent = '';
+      return;
+    }
+
+    lockRequestBanner.textContent = (lockRequestedByNoticeTemplate || ':name')
+      .replace(':name', requestedByName);
+    lockRequestBanner.hidden = false;
+  }
+
   const heartbeatInterval = setInterval(() => {
-    api('POST', heartbeatUrl).catch(e => console.error(e));
+    api('POST', heartbeatUrl)
+      .then(res => res.json())
+      .then(data => showLockRequestedNotice(data.lock_requested_by))
+      .catch(e => console.error(e));
   }, 30000);
 
   function releaseLock() {

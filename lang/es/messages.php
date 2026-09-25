@@ -9,6 +9,9 @@ return [
     'password' => 'Contraseña',
     'invalid_credentials' => 'Credenciales inválidas.',
     'keycloak_login_failed' => 'No se pudo iniciar sesión con Keycloak. Inténtalo de nuevo.',
+    'log_in_locally' => 'Iniciar sesión con correo y contraseña',
+    'log_in_with_keycloak' => 'Iniciar sesión con Keycloak',
+    'or' => 'o',
 
     // Navigation
     'diagrams' => 'Diagramas',
@@ -50,6 +53,10 @@ return [
     'being_edited' => 'En edición',
     'currently_being_edited_by' => 'Este diagrama está siendo editado por :name en este momento. No puedes abrir el Editor hasta que se libere el Bloqueo.',
     'create_a_copy_to_continue' => 'Crear una copia (Fork) para continuar ahora',
+    'locked_since' => 'Bloqueado :time',
+    'request_the_lock' => 'Solicitar el Bloqueo',
+    'lock_transfers_in' => 'El Bloqueo se transfiere en :seconds s…',
+    'lock_requested_by_notice' => ':name ha solicitado el Bloqueo de este diagrama.',
 
     // Gestión de usuarios
     'users_heading' => 'Usuarios',
