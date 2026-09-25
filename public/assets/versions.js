@@ -8,9 +8,12 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
 
 (async function () {
   const body = document.getElementById('editor');
-  const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-  const versionsUrl = body.dataset.versionsUrl;
   const versionContentUrlTemplate = body.dataset.versionContentUrlTemplate;
+
+  // editor.js runs as a classic (non-module) script earlier in the document
+  // and sets this synchronously when it creates the Modeler; module scripts
+  // are deferred, so by the time this runs it is always already set.
+  const { modeler, versionsUrl } = window.BpmnEditor || {};
 
   const $ = id => document.getElementById(id);
   const app = $('app');
@@ -20,11 +23,6 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
   const diffBannerLabel = $('diff-banner-label');
   const removedPanel = $('diff-removed-panel');
   const removedList = $('diff-removed-list');
-
-  // editor.js runs as a classic (non-module) script earlier in the document
-  // and sets this synchronously when it creates the Modeler; module scripts
-  // are deferred, so by the time this runs it is always already set.
-  const { modeler } = window.BpmnEditor || {};
 
   let clearHighlight = null;
   let comparingId = null;
@@ -113,15 +111,17 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
     if (!modeler) return;
 
     try {
-      const res = await fetch(versionContentUrl(version.id), {
-        credentials: 'same-origin',
-        headers: { Accept: 'application/json' },
-      });
+      const [res, { xml: currentXml }] = await Promise.all([
+        fetch(versionContentUrl(version.id), {
+          credentials: 'same-origin',
+          headers: { Accept: 'application/json' },
+        }),
+        modeler.saveXML({ format: true }),
+      ]);
 
       if (!res.ok) throw new Error('HTTP ' + res.status);
 
       const { content: oldXml } = await res.json();
-      const { xml: currentXml } = await modeler.saveXML({ format: true });
 
       const result = await compareBpmnXml(oldXml, currentXml);
 
