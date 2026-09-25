@@ -24,11 +24,13 @@ class Share extends Model
         ];
     }
 
+    /** @return BelongsTo<Diagram, $this> */
     public function diagram(): BelongsTo
     {
         return $this->belongsTo(Diagram::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');

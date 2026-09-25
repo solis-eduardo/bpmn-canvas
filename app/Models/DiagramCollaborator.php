@@ -17,11 +17,13 @@ class DiagramCollaborator extends Model
 
     public const UPDATED_AT = null;
 
+    /** @return BelongsTo<Diagram, $this> */
     public function diagram(): BelongsTo
     {
         return $this->belongsTo(Diagram::class);
     }
 
+    /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
