@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Diagrams\ReleaseLock;
 use App\Actions\Diagrams\RequestLock;
+use App\Actions\Diagrams\TransferOwnership;
 use App\Models\Diagram;
 use App\Models\DiagramOldSlug;
 use App\Repositories\DiagramRepository;
@@ -116,6 +117,32 @@ class DiagramController extends Controller
         return response()->json([
             'slug' => $diagram->slug,
             'title' => $diagram->title,
+        ]);
+    }
+
+    /**
+     * Transfers the Diagram Owner role to another User: current Diagram
+     * Owner or Administrator only (CONTEXT.md, "Diagram Owner"; ADR-0006;
+     * issue #14). No acceptance step — takes effect immediately.
+     */
+    public function transferOwnership(Request $request, string $slug, TransferOwnership $transfer): JsonResponse
+    {
+        [$diagram] = $this->resolve($slug);
+
+        $this->authorize('transferOwnership', $diagram);
+
+        $data = $request->validate([
+            'user_id' => ['required_without:email', 'integer', 'exists:users,id'],
+            'email' => ['required_without:user_id', 'email'],
+            'give_up_access' => ['sometimes', 'boolean'],
+        ]);
+
+        $newOwner = $this->resolveUserFrom($data);
+
+        $transfer($diagram, $newOwner, (bool) ($data['give_up_access'] ?? false));
+
+        return response()->json([
+            'owner_id' => $newOwner->id,
         ]);
     }
 
