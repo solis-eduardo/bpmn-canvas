@@ -174,8 +174,8 @@ class AdminUserManagementTest extends TestCase
         $response->assertOk();
         $content = $response->getContent();
 
-        // Verify that local admin has revoke button
-        $this->assertStringContainsString('revoke_admin', $content);
+        // Verify that local admin has revoke button (check for rendered text)
+        $this->assertStringContainsString('Revoke Admin', $content);
         // Verify that Keycloak role indicator is shown
         $this->assertStringContainsString('from Keycloak', $content);
     }
