@@ -122,4 +122,10 @@ return [
     'invalid_link' => 'Enlace no válido',
     'invalid_share_link' => 'Este enlace de compartición ha expirado o fue revocado por el Autor. Pide un nuevo enlace a quien compartió este Diagrama contigo.',
 
+    // Notifications
+    'notifications' => 'Notificaciones',
+    'no_notifications_yet' => 'Todavía no hay notificaciones.',
+    'mark_all_as_read' => 'Marcar todas como leídas',
+    'notification_requested_access' => ':name solicitó acceso a :diagram',
+
 ];
