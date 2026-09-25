@@ -36,6 +36,7 @@
 
                 <div class="flex items-center gap-3 text-sm text-gray-500">
                     <span>{{ __('messages.author_label', ['name' => $diagram->author->name]) }}</span>
+                    <span>{{ __('messages.diagram_owner_label', ['name' => $diagram->owner->name]) }}</span>
                     @if ($diagram->hasActiveLock())
                         <span class="text-amber-600">{{ __('messages.being_edited_by', ['name' => $diagram->lockedBy->name]) }}</span>
                     @endif
