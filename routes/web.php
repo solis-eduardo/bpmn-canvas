@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/diagrams/{slug}/fork', [DiagramController::class, 'fork'])->name('diagrams.fork');
 
     Route::get('/diagrams/{slug}/versions', [VersionController::class, 'versions'])->name('diagrams.versions');
+    Route::get('/diagrams/{slug}/versions/compare', [VersionController::class, 'compareVersions'])->name('diagrams.versions.compare');
     Route::get('/diagrams/{slug}/versions/{version}/content', [VersionController::class, 'versionContent'])->name('diagrams.versions.content');
     Route::post('/diagrams/{slug}/versions/{version}/restore', [VersionController::class, 'restoreVersion'])->name('diagrams.versions.restore');
     Route::put('/diagrams/{slug}/versions/{version}/rename', [VersionController::class, 'renameVersion'])->name('diagrams.versions.rename');
