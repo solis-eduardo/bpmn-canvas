@@ -6,6 +6,7 @@ use App\Models\Diagram;
 use App\Models\DiagramOldSlug;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 
 /**
  * Keeps the Diagram's database row and its `.bpmn` file on disk consistent
@@ -113,7 +114,7 @@ class DiagramRepository
     private function assertDiskSucceeded(bool $succeeded, string $message): void
     {
         if (! $succeeded) {
-            throw new \RuntimeException($message);
+            throw new RuntimeException($message);
         }
     }
 }

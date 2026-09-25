@@ -13,6 +13,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use RuntimeException;
 
 class DiagramController extends Controller
 {
@@ -126,7 +127,7 @@ class DiagramController extends Controller
 
         try {
             $versions->restore($diagram, $version, $request->user());
-        } catch (\RuntimeException $e) {
+        } catch (RuntimeException $e) {
             abort(404);
         }
 
@@ -203,7 +204,7 @@ class DiagramController extends Controller
         $content = Storage::disk('diagrams')->get($diagram->disk_path);
 
         if (! is_string($content)) {
-            throw new \RuntimeException("Could not read the Diagram's content to fork it: {$diagram->disk_path}");
+            throw new RuntimeException("Could not read the Diagram's content to fork it: {$diagram->disk_path}");
         }
 
         $newSlug = Diagram::uniqueSlug($diagram->title);
