@@ -54,12 +54,19 @@
         data-delete-url="{{ route('diagrams.destroy', $diagram->slug) }}"
         data-index-url="{{ route('diagrams.index') }}"
         data-heartbeat-url="{{ route('diagrams.heartbeat', $diagram->slug) }}"
+        data-lock-requested-by-notice="{{ __('messages.lock_requested_by_notice', ['name' => ':name']) }}"
         data-unlock-url="{{ route('diagrams.unlock', $diagram->slug) }}"
         data-versions-url="{{ route('diagrams.versions', $diagram->slug) }}"
         data-version-content-url-template="{{ route('diagrams.versions.content', [$diagram->slug, 'VERSION_ID']) }}"
         class="h-full"
     >
         <div class="app" id="app">
+            <div
+                id="lock-request-banner"
+                class="lock-request-banner"
+                role="status"
+                hidden
+            ></div>
             <header>
                 <span class="brand">{{ __('messages.bpmn_editor') }}</span>
                 <span class="credit">
