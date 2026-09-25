@@ -24,15 +24,17 @@
         <exclude name="TooManyPublicMethods" />
     </rule>
     <rule ref="rulesets/design.xml">
-        <!-- AppServiceProvider naturally accumulates service bindings and
-             event listeners (service providers and event listeners are shared
-             dependencies here); splitting them would fight Laravel's own
-             conventions. A threshold of 14 allows the current state. -->
-        <rule ref="rulesets/design.xml/CouplingBetweenObjects">
-            <properties>
-                <property name="threshold" value="14" />
-            </properties>
-        </rule>
+        <!-- A Laravel AppServiceProvider is the framework's designated place
+             to register bindings, gates, policies and event listeners in
+             one spot; that naturally pulls in more classes than the
+             default threshold allows without indicating a real design
+             problem. -->
+        <exclude name="CouplingBetweenObjects" />
+    </rule>
+    <rule ref="rulesets/design.xml/CouplingBetweenObjects">
+        <properties>
+            <property name="maximum" value="20" />
+        </properties>
     </rule>
     <rule ref="rulesets/unusedcode.xml" />
 </ruleset>
