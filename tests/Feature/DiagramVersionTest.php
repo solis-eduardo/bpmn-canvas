@@ -157,6 +157,18 @@ class DiagramVersionTest extends TestCase
         }
     }
 
+    /**
+     * Fetches the Version history for $diagram, acting as $user, and
+     * flattens it into a single list of items (the endpoint groups items by
+     * day, which most callers here don't care about).
+     */
+    private function versionItems(User $user, Diagram $diagram): \Illuminate\Support\Collection
+    {
+        return collect(
+            $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
+        )->flatMap(fn ($day) => $day['items']);
+    }
+
     public function test_versions_are_numbered_sequentially_in_chronological_order(): void
     {
         $user = User::factory()->create();
@@ -170,9 +182,7 @@ class DiagramVersionTest extends TestCase
             'content' => '<bpmn:definitions>third</bpmn:definitions>',
         ])->assertOk();
 
-        $items = collect(
-            $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
-        )->flatMap(fn ($day) => $day['items']);
+        $items = $this->versionItems($user, $diagram);
 
         // Newest first in the response; oldest (factory-created) Version is
         // number 1, chronologically, the most recent is number 3.
@@ -190,16 +200,13 @@ class DiagramVersionTest extends TestCase
             'content' => '<bpmn:definitions>second</bpmn:definitions>',
         ])->assertOk();
 
-        $history = $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions');
-        $items = collect($history)->flatMap(fn ($day) => $day['items']);
-        $oldestVersionId = $items->last()['id'];
+        $oldestVersionId = $this->versionItems($user, $diagram)->last()['id'];
 
         $this->actingAs($user)->postJson(
             '/diagrams/'.$diagram->slug.'/versions/'.$oldestVersionId.'/restore'
         )->assertOk();
 
-        $historyAfter = $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions');
-        $itemsAfter = collect($historyAfter)->flatMap(fn ($day) => $day['items']);
+        $itemsAfter = $this->versionItems($user, $diagram);
 
         $this->assertSame(3, $itemsAfter->first()['number']);
         $this->assertSame('Version 3', $itemsAfter->first()['name']);
@@ -218,9 +225,7 @@ class DiagramVersionTest extends TestCase
 
         $forked = Diagram::where('forked_from_id', $diagram->id)->firstOrFail();
 
-        $items = collect(
-            $this->actingAs($user)->getJson('/diagrams/'.$forked->slug.'/versions')->json('versions')
-        )->flatMap(fn ($day) => $day['items']);
+        $items = $this->versionItems($user, $forked);
 
         $this->assertSame([1], $items->pluck('number')->all());
         $this->assertSame(['Version 1'], $items->pluck('name')->all());
@@ -231,10 +236,7 @@ class DiagramVersionTest extends TestCase
         $user = User::factory()->create();
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
-        $items = collect(
-            $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
-        )->flatMap(fn ($day) => $day['items']);
-        $versionId = $items->first()['id'];
+        $versionId = $this->versionItems($user, $diagram)->first()['id'];
 
         $response = $this->actingAs($user)->putJson(
             '/diagrams/'.$diagram->slug.'/versions/'.$versionId.'/rename',
@@ -248,10 +250,7 @@ class DiagramVersionTest extends TestCase
             'renamed' => true,
         ]);
 
-        $itemsAfter = collect(
-            $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
-        )->flatMap(fn ($day) => $day['items']);
-        $renamedItem = $itemsAfter->firstWhere('id', $versionId);
+        $renamedItem = $this->versionItems($user, $diagram)->firstWhere('id', $versionId);
 
         $this->assertSame('Approved by the board', $renamedItem['name']);
         $this->assertTrue($renamedItem['renamed']);
@@ -266,9 +265,7 @@ class DiagramVersionTest extends TestCase
             'content' => '<bpmn:definitions>second</bpmn:definitions>',
         ])->assertOk();
 
-        $items = collect(
-            $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
-        )->flatMap(fn ($day) => $day['items']);
+        $items = $this->versionItems($user, $diagram);
 
         foreach ($items->pluck('id') as $versionId) {
             $this->actingAs($user)->putJson(
@@ -277,9 +274,7 @@ class DiagramVersionTest extends TestCase
             )->assertOk();
         }
 
-        $itemsAfter = collect(
-            $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
-        )->flatMap(fn ($day) => $day['items']);
+        $itemsAfter = $this->versionItems($user, $diagram);
 
         $this->assertSame(['Milestone', 'Milestone'], $itemsAfter->pluck('name')->all());
     }
@@ -290,10 +285,7 @@ class DiagramVersionTest extends TestCase
         $outsider = User::factory()->create();
         $diagram = Diagram::factory()->for($author, 'author')->create();
 
-        $items = collect(
-            $this->actingAs($author)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
-        )->flatMap(fn ($day) => $day['items']);
-        $versionId = $items->first()['id'];
+        $versionId = $this->versionItems($author, $diagram)->first()['id'];
 
         $this->actingAs($outsider)->putJson(
             '/diagrams/'.$diagram->slug.'/versions/'.$versionId.'/rename',
