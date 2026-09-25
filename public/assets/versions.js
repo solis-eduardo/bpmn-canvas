@@ -20,11 +20,17 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
   const body = document.getElementById('editor');
   const versionContentUrlTemplate = body.dataset.versionContentUrlTemplate;
   const versionCompareUrl = body.dataset.versionCompareUrl;
+  const versionRestoreUrlTemplate = body.dataset.versionRestoreUrlTemplate;
+  const restoreConfirmMessage = body.dataset.restoreVersionConfirm;
+  const versionRestoredNotice = body.dataset.versionRestoredNotice;
+  const versionRestoreFailedNotice = body.dataset.versionRestoreFailedNotice;
+  const restoreLabel = body.dataset.restoreLabel || 'Restore';
+  const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
   // editor.js runs as a classic (non-module) script earlier in the document
   // and sets this synchronously when it creates the Modeler; module scripts
   // are deferred, so by the time this runs it is always already set.
-  const { modeler, versionsUrl } = window.BpmnEditor || {};
+  const { modeler, versionsUrl, contentUrl } = window.BpmnEditor || {};
 
   const $ = id => document.getElementById(id);
   const app = $('app');
@@ -53,10 +59,19 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
     return versionContentUrlTemplate.replace('VERSION_ID', encodeURIComponent(id));
   }
 
+  function versionRestoreUrl(id) {
+    return versionRestoreUrlTemplate.replace('VERSION_ID', encodeURIComponent(id));
+  }
+
   function formatVersion(version) {
     const date = new Date(version.saved_at);
 
-    return date.toLocaleString(document.documentElement.lang || undefined, {
+    // document.documentElement.lang carries Laravel's locale code (e.g.
+    // "pt_BR"), not a valid BCP-47 language tag (needs "pt-BR") —
+    // Date#toLocaleString throws a RangeError otherwise.
+    const locale = (document.documentElement.lang || '').replace('_', '-') || undefined;
+
+    return date.toLocaleString(locale, {
       dateStyle: 'medium',
       timeStyle: 'short',
     });
@@ -140,6 +155,12 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
         compareBtn.textContent = 'Compare with current';
         compareBtn.addEventListener('click', () => compareWithCurrent(version));
         actions.appendChild(compareBtn);
+
+        const restoreBtn = document.createElement('button');
+        restoreBtn.type = 'button';
+        restoreBtn.textContent = restoreLabel;
+        restoreBtn.addEventListener('click', () => restoreVersion(version));
+        actions.appendChild(restoreBtn);
 
         li.appendChild(actions);
         list.appendChild(li);
@@ -323,7 +344,57 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
     }
   }
 
-  $('btn-history').addEventListener('click', () => togglePanel(panel.hidden));
+  /**
+   * Reloads the live canvas from the Diagram's current content (the
+   * restored Version's content, now saved to disk by restoreVersion on the
+   * server — see VersionController::restoreVersion). Reuses the same
+   * Modeler exposed by editor.js rather than navigating away, so the Lock
+   * heartbeat/dirty-guard state in that module is left untouched.
+   */
+  async function reloadCanvas() {
+    if (!modeler || !contentUrl) return;
+
+    const res = await fetch(contentUrl, {
+      credentials: 'same-origin',
+      headers: { Accept: 'application/json' },
+    });
+    const data = await res.json();
+    const { warnings } = await modeler.importXML(data.content);
+    if (warnings && warnings.length) console.warn('Import warnings:', warnings);
+    modeler.get('canvas').zoom('fit-viewport', 'auto');
+  }
+
+  async function restoreVersion(version) {
+    const confirmMessage = restoreConfirmMessage || 'Restore this version? This creates a new version on top of the history.';
+    if (!confirm(confirmMessage)) return;
+
+    try {
+      const res = await fetch(versionRestoreUrl(version.id), {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          Accept: 'application/json',
+          'X-CSRF-TOKEN': csrfToken,
+        },
+      });
+
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+
+      exitComparison();
+      await reloadCanvas();
+      // Re-fetch the history so the new Version created by the restore
+      // shows up at the top of the list (versions are returned newest
+      // first — see VersionController::versions).
+      await loadVersions();
+
+      window.BpmnCommon.toast(versionRestoredNotice || 'Version restored.');
+    } catch (e) {
+      console.error(e);
+      window.BpmnCommon.toast(versionRestoreFailedNotice || 'Could not restore this version.', true);
+    }
+  }
+
+  $('btn-version-history-entry').addEventListener('click', () => togglePanel(panel.hidden));
   $('btn-history-close').addEventListener('click', () => togglePanel(false));
   $('btn-diff-exit').addEventListener('click', exitComparison);
   btnCompareSelected.addEventListener('click', compareSelectedVersions);

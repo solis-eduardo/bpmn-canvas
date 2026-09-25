@@ -6,8 +6,10 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DiagramCollaboratorController;
 use App\Http\Controllers\DiagramController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PublicShareController;
 use App\Http\Controllers\ShareController;
+use App\Http\Controllers\VersionController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -31,8 +33,14 @@ Route::middleware('signed')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/admin/users', [UserController::class, 'index'])->name('admin.users.index');
     Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');
     Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
+
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
+    Route::get('/notifications/{notification}/read', [NotificationController::class, 'read'])->name('notifications.read');
+    Route::post('/notifications/read-all', [NotificationController::class, 'readAll'])->name('notifications.read-all');
 
     Route::get('/diagrams', [DiagramController::class, 'index'])->name('diagrams.index');
     Route::post('/diagrams', [DiagramController::class, 'store'])->name('diagrams.store');
@@ -51,11 +59,11 @@ Route::middleware('auth')->group(function () {
     Route::delete('/diagrams/{slug}/lock', [DiagramController::class, 'unlock'])->name('diagrams.unlock');
     Route::post('/diagrams/{slug}/fork', [DiagramController::class, 'fork'])->name('diagrams.fork');
 
-    Route::get('/diagrams/{slug}/versions', [DiagramController::class, 'versions'])->name('diagrams.versions');
-    Route::get('/diagrams/{slug}/versions/compare', [DiagramController::class, 'compareVersions'])->name('diagrams.versions.compare');
-    Route::get('/diagrams/{slug}/versions/{version}/content', [DiagramController::class, 'versionContent'])->name('diagrams.versions.content');
-    Route::post('/diagrams/{slug}/versions/{version}/restore', [DiagramController::class, 'restoreVersion'])->name('diagrams.versions.restore');
-    Route::put('/diagrams/{slug}/versions/{version}/rename', [DiagramController::class, 'renameVersion'])->name('diagrams.versions.rename');
+    Route::get('/diagrams/{slug}/versions', [VersionController::class, 'versions'])->name('diagrams.versions');
+    Route::get('/diagrams/{slug}/versions/compare', [VersionController::class, 'compareVersions'])->name('diagrams.versions.compare');
+    Route::get('/diagrams/{slug}/versions/{version}/content', [VersionController::class, 'versionContent'])->name('diagrams.versions.content');
+    Route::post('/diagrams/{slug}/versions/{version}/restore', [VersionController::class, 'restoreVersion'])->name('diagrams.versions.restore');
+    Route::put('/diagrams/{slug}/versions/{version}/rename', [VersionController::class, 'renameVersion'])->name('diagrams.versions.rename');
     Route::get('/diagrams/{slug}', [DiagramController::class, 'show'])->name('diagrams.show');
 
     Route::get('/diagrams/{slug}/shares', [ShareController::class, 'index'])->name('shares.index');
