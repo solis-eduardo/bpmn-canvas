@@ -18,7 +18,7 @@ class DiagramController extends Controller
 {
     public function index(): View
     {
-        $diagrams = Diagram::with(['author', 'lockedBy'])->orderBy('title')->get();
+        $diagrams = Diagram::with(['author', 'owner', 'lockedBy'])->orderBy('title')->get();
 
         return view('diagrams.index', compact('diagrams'));
     }
@@ -35,6 +35,7 @@ class DiagramController extends Controller
             'title' => $data['title'],
             'slug' => $slug,
             'author_id' => $request->user()->id,
+            'owner_id' => $request->user()->id,
             'disk_path' => $slug.'/diagram.bpmn',
         ], Diagram::EMPTY_BPMN);
 
@@ -201,6 +202,7 @@ class DiagramController extends Controller
             'title' => $diagram->title,
             'slug' => $newSlug,
             'author_id' => $request->user()->id,
+            'owner_id' => $request->user()->id,
             'disk_path' => $newSlug.'/diagram.bpmn',
             'forked_from_id' => $diagram->id,
         ], Storage::disk('diagrams')->get($diagram->disk_path));
@@ -211,6 +213,8 @@ class DiagramController extends Controller
     public function destroy(string $slug, DiagramRepository $diagrams): JsonResponse
     {
         [$diagram] = $this->resolve($slug);
+
+        $this->authorize('delete', $diagram);
 
         $diagrams->remove($diagram);
 

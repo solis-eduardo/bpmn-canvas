@@ -310,4 +310,39 @@ class ShareTest extends TestCase
         $this->actingAs($admin)->deleteJson("/shares/{$share->id}")
             ->assertForbidden();
     }
+
+    public function test_only_the_diagram_owner_manages_shares_when_it_differs_from_the_author(): void
+    {
+        $author = User::factory()->create();
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($author, 'author')->for($owner, 'owner')->create();
+
+        $this->actingAs($author)->postJson("/diagrams/{$diagram->slug}/shares")
+            ->assertForbidden();
+        $this->assertDatabaseCount('shares', 0);
+
+        $response = $this->actingAs($owner)->postJson("/diagrams/{$diagram->slug}/shares");
+        $response->assertCreated();
+
+        $share = Share::first();
+
+        $this->actingAs($author)->deleteJson("/shares/{$share->id}")
+            ->assertForbidden();
+        $this->assertNull($share->fresh()->revoked_at);
+
+        $this->actingAs($owner)->deleteJson("/shares/{$share->id}")
+            ->assertOk();
+        $this->assertNotNull($share->fresh()->revoked_at);
+    }
+
+    public function test_an_admin_cannot_manage_shares_even_when_owner_and_author_differ(): void
+    {
+        $author = User::factory()->create();
+        $owner = User::factory()->create();
+        $admin = User::factory()->create(['is_admin' => true]);
+        $diagram = Diagram::factory()->for($author, 'author')->for($owner, 'owner')->create();
+
+        $this->actingAs($admin)->postJson("/diagrams/{$diagram->slug}/shares")
+            ->assertForbidden();
+    }
 }

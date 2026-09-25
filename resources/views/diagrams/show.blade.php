@@ -25,6 +25,10 @@
     <div class="app">
         <header>
             <span class="brand">{{ __('messages.bpmn_editor') }}</span>
+            <span class="credit">
+                {{ __('messages.author_label', ['name' => $diagram->author->name]) }}
+                {{ __('messages.diagram_owner_label', ['name' => $diagram->owner->name]) }}
+            </span>
             <span class="spacer"></span>
             @include('partials.language-switcher')
             <input type="text" id="name" value="{{ $diagram->title }}" autocomplete="off" spellcheck="false">

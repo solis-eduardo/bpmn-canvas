@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
-#[Fillable(['slug', 'title', 'author_id', 'disk_path', 'forked_from_id'])]
+#[Fillable(['slug', 'title', 'author_id', 'owner_id', 'disk_path', 'forked_from_id'])]
 class Diagram extends Model
 {
     /** @use HasFactory<DiagramFactory> */
@@ -51,6 +51,30 @@ BPMN;
     public function author(): BelongsTo
     {
         return $this->belongsTo(User::class, 'author_id');
+    }
+
+    /**
+     * The Diagram Owner (CONTEXT.md, "Diagram Owner"; ADR-0006): the User
+     * currently responsible for this Diagram. Starts as the Author but,
+     * unlike authorship, is transferable (see issue #14). Every permission
+     * check that used to gate on "is the Author" now gates on
+     * {@see isOwnedBy()} instead.
+     */
+    public function owner(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'owner_id');
+    }
+
+    /**
+     * True if $user is this Diagram's current Diagram Owner. The single
+     * helper every permission check ("delete", "manageCollaborators",
+     * "manageShares", editing) should use instead of comparing author_id
+     * directly — keeps future tickets (ownership transfer, etc.) from
+     * having to touch each call site again.
+     */
+    public function isOwnedBy(User $user): bool
+    {
+        return (int) $this->owner_id === $user->id;
     }
 
     public function forkedFrom(): BelongsTo
