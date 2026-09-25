@@ -59,6 +59,58 @@ class VersionController extends Controller
         ]);
     }
 
+    /**
+     * BPMN content of any two Versions, resolved in one request (ticket 36 —
+     * extends the "old vs current" comparison from ticket 35 to any pair of
+     * Versions). Reuses VersionRepository::list()/get() exactly like
+     * versionContent() above; the only new behavior is figuring out which of
+     * the two is chronologically older by Version number, so the canvas
+     * always diffs "older -> newer" no matter which order the User picked
+     * them in.
+     */
+    public function compareVersions(Request $request, string $slug, VersionRepository $versions): JsonResponse
+    {
+        [$diagram] = $this->resolve($slug);
+
+        $this->authorize('update', $diagram);
+
+        $data = $request->validate([
+            'from' => ['required', 'string'],
+            'to' => ['required', 'string'],
+        ]);
+
+        $history = collect($versions->list($diagram))->keyBy('id');
+
+        $fromMeta = $history->get($data['from']);
+        $toMeta = $history->get($data['to']);
+
+        if (! $fromMeta || ! $toMeta) {
+            abort(404);
+        }
+
+        [$olderMeta, $newerMeta] = $fromMeta['number'] <= $toMeta['number']
+            ? [$fromMeta, $toMeta]
+            : [$toMeta, $fromMeta];
+
+        try {
+            $content = $versions->getMany($diagram, [$olderMeta['id'], $newerMeta['id']]);
+        } catch (RuntimeException $e) {
+            abort(404);
+        }
+
+        $describe = fn (array $meta): array => [
+            'id' => $meta['id'],
+            'number' => $meta['number'],
+            'name' => $meta['name'],
+            'content' => $content[$meta['id']],
+        ];
+
+        return response()->json([
+            'older' => $describe($olderMeta),
+            'newer' => $describe($newerMeta),
+        ]);
+    }
+
     public function restoreVersion(Request $request, string $slug, string $version, VersionRepository $versions): JsonResponse
     {
         [$diagram] = $this->resolve($slug);

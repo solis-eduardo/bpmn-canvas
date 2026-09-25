@@ -85,6 +85,8 @@ return [
     'diff_removed' => 'Removido',
     'diff_changed' => 'Alterado',
     'diff_removed_elements' => 'Elementos removidos (não estão no canvas atual)',
+    'select_two_versions_hint' => 'Selecione duas versões abaixo para compará-las entre si.',
+    'compare_selected' => 'Comparar selecionadas',
     'restore' => 'Restaurar',
     'restore_version_confirm' => 'Restaurar esta versão? Isso cria uma nova versão em cima do histórico.',
     'version_restored' => 'Versão restaurada.',

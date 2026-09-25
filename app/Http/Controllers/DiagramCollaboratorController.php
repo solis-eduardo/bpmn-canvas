@@ -40,9 +40,12 @@ class DiagramCollaboratorController extends Controller
     {
         $diagram = $this->resolveDiagram($slug);
 
-        $data = $request->validate(User::idOrEmailRules());
+        $data = $request->validate([
+            'user_id' => ['required_without:email', 'integer', 'exists:users,id'],
+            'email' => ['required_without:user_id', 'email'],
+        ]);
 
-        $target = User::findByIdOrEmail($data);
+        $target = $this->resolveUserFrom($data);
 
         $collaborator = $grant($diagram, $request->user(), $target);
 
