@@ -15,6 +15,11 @@
   const $ = id => document.getElementById(id);
   const nameInput = $('name');
 
+  // Exposed so the version-comparison module (loaded separately, see
+  // versions.js/diff.js) can reuse this same live Modeler/canvas instead of
+  // creating a second one.
+  window.BpmnEditor = { modeler, contentUrl, versionsUrl: body.dataset.versionsUrl };
+
   let dirty = false;
 
   setupZoom(modeler);
