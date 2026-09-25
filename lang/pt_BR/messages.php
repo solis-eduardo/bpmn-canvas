@@ -48,6 +48,10 @@ return [
     'diff_removed' => 'Removido',
     'diff_changed' => 'Alterado',
     'diff_removed_elements' => 'Elementos removidos (não estão no canvas atual)',
+    'restore' => 'Restaurar',
+    'restore_version_confirm' => 'Restaurar esta versão? Isso cria uma nova versão em cima do histórico.',
+    'version_restored' => 'Versão restaurada.',
+    'version_restore_failed' => 'Não foi possível restaurar esta versão.',
 
     // Locked diagram
     'being_edited' => 'Em edição',

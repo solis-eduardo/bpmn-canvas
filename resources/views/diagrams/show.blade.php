@@ -24,14 +24,19 @@
                 &larr; {{ __('messages.back_to_diagrams') }}
             </a>
 
-            {{-- Reserved entry point for the Version history panel (see #10). --}}
-            <div
+            {{-- Entry point for the Version history panel (see #10). --}}
+            <button
+                type="button"
                 id="btn-version-history-entry"
                 data-slot="version-history-entry"
-                class="h-8 w-8"
-                aria-hidden="true"
+                class="flex h-8 w-8 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 title="{{ __('messages.version_history') }}"
-            ></div>
+                aria-label="{{ __('messages.version_history') }}"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 1 1-9-9 9 9 0 0 1 9 9Z" />
+                </svg>
+            </button>
 
             {{-- Reserved entry point for Collaborators / Shares (see #11). --}}
             <div
@@ -58,6 +63,11 @@
         data-unlock-url="{{ route('diagrams.unlock', $diagram->slug) }}"
         data-versions-url="{{ route('diagrams.versions', $diagram->slug) }}"
         data-version-content-url-template="{{ route('diagrams.versions.content', [$diagram->slug, 'VERSION_ID']) }}"
+        data-version-restore-url-template="{{ route('diagrams.versions.restore', [$diagram->slug, 'VERSION_ID']) }}"
+        data-restore-version-confirm="{{ __('messages.restore_version_confirm') }}"
+        data-version-restored-notice="{{ __('messages.version_restored') }}"
+        data-version-restore-failed-notice="{{ __('messages.version_restore_failed') }}"
+        data-restore-label="{{ __('messages.restore') }}"
         class="h-full"
     >
         <div class="app" id="app">
@@ -76,7 +86,6 @@
                 <span class="spacer"></span>
                 <input type="text" id="name" value="{{ $diagram->title }}" autocomplete="off" spellcheck="false">
                 <span class="dirty" id="dirty" title="{{ __('messages.unsaved_changes') }}">●</span>
-                <button type="button" id="btn-history">{{ __('messages.history') }}</button>
                 <button type="button" class="primary" id="btn-save" title="Ctrl+S">{{ __('messages.save') }}</button>
                 <button type="button" class="danger" id="btn-delete">{{ __('messages.delete') }}</button>
             </header>
