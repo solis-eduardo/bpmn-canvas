@@ -42,7 +42,7 @@ Two login methods coexist — the User chooses which to use, and one doesn't rep
 3. **Renaming** updates the Slug; the previous Slug keeps working (redirects to the current one), even after several renames.
 4. **Collaborators**: as Author, invite another User directly (immediate access) or approve an access request; an Administrator can also grant access on any Diagram.
 5. **Sharing**: generates a signed public link, expiring in days (default 7, max 60) with an option to allow download (disabled by default). Revocable at any time; a Diagram can have several active Shares at once. Whoever receives the link can view it without an account.
-6. **Versions**: every save generates a Version, listed grouped by day; restoring an old Version creates a new Version on top of the history, without deleting anything.
+6. **Versions**: every save generates a Version, listed grouped by day; restoring an old Version creates a new Version on top of the history, without deleting anything. Anyone who can edit the Diagram can also compare an old Version against the current content directly on the canvas — added, removed and changed elements are highlighted.
 
 ## Main environment variables
 
@@ -54,6 +54,7 @@ See `.env.example` for the full list. Highlights:
 | `ADMIN_NAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD` | Administrator seeded on first deploy |
 | `KEYCLOAK_*` | Optional SSO integration (leave blank to use local login only) |
 | `BPMN_JS_VERSION` | Version of bpmn-js vendored in the build (no CDN at runtime) |
+| `BPMN_JS_DIFFER_VERSION` | Version of bpmn-js-differ vendored in the build, used to diff Versions on the canvas (no CDN at runtime) |
 | `APP_PORT` | Host port `web` publishes (default `80`) |
 
 ## Production
@@ -138,7 +139,7 @@ Duas formas de login coexistem — o Usuário escolhe qual usar, uma não substi
 3. **Renomear** atualiza o Slug; o Slug anterior continua funcionando (redireciona para o atual), mesmo após várias renomeações.
 4. **Colaboradores**: como Autor, convide outro Usuário diretamente (acesso imediato) ou aprove uma solicitação de acesso; um Administrador também pode conceder acesso em qualquer Diagrama.
 5. **Compartilhar**: gera um link público assinado, com expiração em dias (padrão 7, máximo 60) e uma opção de permitir download (desabilitada por padrão). Revogável a qualquer momento; um Diagrama pode ter vários links de Compartilhamento ativos simultaneamente. Quem recebe o link visualiza sem precisar de conta.
-6. **Versões**: cada save gera uma Versão, listada agrupada por dia; restaurar uma Versão antiga cria uma nova Versão no topo do histórico, sem apagar nada.
+6. **Versões**: cada save gera uma Versão, listada agrupada por dia; restaurar uma Versão antiga cria uma nova Versão no topo do histórico, sem apagar nada. Quem pode editar o Diagrama também pode comparar uma Versão antiga com o conteúdo atual diretamente no canvas — elementos adicionados, removidos e alterados são destacados.
 
 ## Variáveis de ambiente principais
 
@@ -150,6 +151,7 @@ Ver `.env.example` para a lista completa. Destaques:
 | `ADMIN_NAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD` | Administrador semeado no primeiro deploy |
 | `KEYCLOAK_*` | Integração SSO opcional (deixe em branco para usar só login local) |
 | `BPMN_JS_VERSION` | Versão do bpmn-js vendorizada no build (sem CDN em runtime) |
+| `BPMN_JS_DIFFER_VERSION` | Versão do bpmn-js-differ vendorizada no build, usada para comparar Versões no canvas (sem CDN em runtime) |
 | `APP_PORT` | Porta do host publicada pelo `web` (default `80`) |
 
 ## Produção

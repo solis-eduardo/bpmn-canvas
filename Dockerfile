@@ -1,11 +1,14 @@
 # syntax=docker/dockerfile:1
 
-# --- Stage 1: download bpmn-js (served locally, no CDN) ---
+# --- Stage 1: download bpmn-js + the BPMN diff library (served locally, no CDN) ---
 FROM node:22-alpine AS vendor
 ARG BPMN_JS_VERSION=18.30.0
+ARG BPMN_JS_DIFFER_VERSION=3.2.0
 WORKDIR /build
 RUN --mount=type=cache,target=/root/.npm \
-    npm install --no-audit --no-fund --omit=dev --save-exact bpmn-js@${BPMN_JS_VERSION}
+    npm install --no-audit --no-fund --omit=dev --save-exact \
+        bpmn-js@${BPMN_JS_VERSION} \
+        bpmn-js-differ@${BPMN_JS_DIFFER_VERSION}
 
 # --- Stage 2: Tailwind/Vite assets (built at image build time, no CDN at runtime) ---
 FROM node:22-alpine AS vite-build
@@ -58,6 +61,17 @@ FROM nginx:stable-alpine AS web
 COPY --from=vendor /build/node_modules/bpmn-js/dist/assets/                                 /var/www/html/public/vendor/bpmn-js/assets/
 COPY --from=vendor /build/node_modules/bpmn-js/dist/bpmn-modeler.production.min.js          /var/www/html/public/vendor/bpmn-js/
 COPY --from=vendor /build/node_modules/bpmn-js/dist/bpmn-navigated-viewer.production.min.js /var/www/html/public/vendor/bpmn-js/
+
+# bpmn-js-differ ships as an ES module (no CDN, no bundler in this project —
+# see ADR-0007): its only non-relative import ("min-dash") is resolved via a
+# browser import map declared in the editor view, pointing at min-dash's own
+# vendored ES module build. min-dash's package.json has no separate
+# "*.esm.js" entry — its "main"/"exports" file (dist/index.js) is itself a
+# native ES module (the package sets "type": "module"), so that's the file
+# to vendor, renamed only for clarity alongside bpmn-js-differ's own
+# index.esm.js.
+COPY --from=vendor /build/node_modules/bpmn-js-differ/dist/index.esm.js     /var/www/html/public/vendor/bpmn-js-differ/index.esm.js
+COPY --from=vendor /build/node_modules/min-dash/dist/index.js               /var/www/html/public/vendor/bpmn-js-differ/min-dash.esm.js
 COPY docker/web/default.conf /etc/nginx/conf.d/default.conf
 COPY public/ /var/www/html/public/
 COPY --from=vite-build /build/public/build/ /var/www/html/public/build/
