@@ -15,6 +15,15 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      # Speaks FastCGI to php-fpm directly and re-runs the Laravel `/up`
+      # route, which only answers 200 once PHP-FPM is serving requests and
+      # the database connection succeeds (see docker/app/healthcheck.sh).
+      test: ["CMD", "/usr/local/bin/healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     networks:
       - default
 
@@ -57,7 +66,8 @@ services:
     ports:
       - "${APP_PORT:-80}:80"
     depends_on:
-      - app
+      app:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/up"]
       interval: 30s

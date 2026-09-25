@@ -104,6 +104,26 @@ class ShareTest extends TestCase
         $this->assertDatabaseCount('shares', 0);
     }
 
+    public function test_share_link_is_https_when_request_is_forwarded_as_https(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author);
+
+        $response = $this->actingAs($author)
+            ->withHeaders(['X-Forwarded-Proto' => 'https'])
+            ->postJson("/diagrams/{$diagram->slug}/shares", []);
+
+        $response->assertCreated();
+
+        $url = $response->json('url');
+        $this->assertStringStartsWith('https://', $url);
+
+        // The signature must still validate for the https URL actually handed
+        // to the client (not just for a locally-rebuilt http:// one).
+        $visit = $this->withHeaders(['X-Forwarded-Proto' => 'https'])->get($url);
+        $visit->assertOk();
+    }
+
     public function test_non_author_cannot_create_share(): void
     {
         $author = User::factory()->create();
@@ -308,6 +328,41 @@ class ShareTest extends TestCase
         $share = Share::factory()->for($diagram)->for($author, 'author')->create();
 
         $this->actingAs($admin)->deleteJson("/shares/{$share->id}")
+            ->assertForbidden();
+    }
+
+    public function test_only_the_diagram_owner_manages_shares_when_it_differs_from_the_author(): void
+    {
+        $author = User::factory()->create();
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($author, 'author')->for($owner, 'owner')->create();
+
+        $this->actingAs($author)->postJson("/diagrams/{$diagram->slug}/shares")
+            ->assertForbidden();
+        $this->assertDatabaseCount('shares', 0);
+
+        $response = $this->actingAs($owner)->postJson("/diagrams/{$diagram->slug}/shares");
+        $response->assertCreated();
+
+        $share = Share::first();
+
+        $this->actingAs($author)->deleteJson("/shares/{$share->id}")
+            ->assertForbidden();
+        $this->assertNull($share->fresh()->revoked_at);
+
+        $this->actingAs($owner)->deleteJson("/shares/{$share->id}")
+            ->assertOk();
+        $this->assertNotNull($share->fresh()->revoked_at);
+    }
+
+    public function test_an_admin_cannot_manage_shares_even_when_owner_and_author_differ(): void
+    {
+        $author = User::factory()->create();
+        $owner = User::factory()->create();
+        $admin = User::factory()->create(['is_admin' => true]);
+        $diagram = Diagram::factory()->for($author, 'author')->for($owner, 'owner')->create();
+
+        $this->actingAs($admin)->postJson("/diagrams/{$diagram->slug}/shares")
             ->assertForbidden();
     }
 }

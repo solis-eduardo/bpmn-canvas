@@ -11,7 +11,9 @@ use App\Http\Controllers\ShareController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    return view('welcome');
+    return auth()->check()
+        ? redirect()->route('diagrams.index')
+        : redirect()->route('login');
 });
 
 Route::post('/locale/{locale}', [LocaleController::class, 'update'])->name('locale.update');
@@ -29,8 +31,6 @@ Route::middleware('signed')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::view('/home', 'home')->name('home');
-
     Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');
     Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
 
@@ -52,7 +52,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/diagrams/{slug}/fork', [DiagramController::class, 'fork'])->name('diagrams.fork');
 
     Route::get('/diagrams/{slug}/versions', [DiagramController::class, 'versions'])->name('diagrams.versions');
+    Route::get('/diagrams/{slug}/versions/{version}/content', [DiagramController::class, 'versionContent'])->name('diagrams.versions.content');
     Route::post('/diagrams/{slug}/versions/{version}/restore', [DiagramController::class, 'restoreVersion'])->name('diagrams.versions.restore');
+    Route::put('/diagrams/{slug}/versions/{version}/rename', [DiagramController::class, 'renameVersion'])->name('diagrams.versions.rename');
     Route::get('/diagrams/{slug}', [DiagramController::class, 'show'])->name('diagrams.show');
 
     Route::get('/diagrams/{slug}/shares', [ShareController::class, 'index'])->name('shares.index');

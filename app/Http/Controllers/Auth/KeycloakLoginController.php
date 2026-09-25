@@ -42,7 +42,7 @@ class KeycloakLoginController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended('/home');
+        return redirect()->intended(route('diagrams.index'));
     }
 
     private function resolveUser(SocialiteUserContract $socialiteUser): User

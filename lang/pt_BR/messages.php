@@ -7,19 +7,19 @@ return [
     'log_out' => 'Sair',
     'email' => 'E-mail',
     'password' => 'Senha',
-    'hello_user' => 'Olá, :name.',
     'invalid_credentials' => 'Credenciais inválidas.',
     'keycloak_login_failed' => 'Não foi possível entrar com o Keycloak. Tente novamente.',
 
     // Navigation
-    'home' => 'Início',
     'diagrams' => 'Diagramas',
 
     // Diagram list
     'diagram_name' => 'Nome do diagrama',
+    'start_event_label' => 'Início',
     'create_diagram' => 'Criar diagrama',
     'no_diagrams_yet' => 'Nenhum diagrama criado ainda.',
     'author_label' => '(autor: :name)',
+    'diagram_owner_label' => '(dono: :name)',
     'being_edited_by' => '— em edição por :name',
 
     // Editor
@@ -31,6 +31,15 @@ return [
     'zoom_out' => 'Afastar',
     'fit_to_screen' => 'Ajustar à tela',
     'lock_not_held' => 'Você não detém a trava deste diagrama.',
+
+    // Histórico de versões e comparação
+    'history' => 'Histórico',
+    'versions' => 'Versões',
+    'exit_comparison' => 'Sair da comparação',
+    'diff_added' => 'Adicionado',
+    'diff_removed' => 'Removido',
+    'diff_changed' => 'Alterado',
+    'diff_removed_elements' => 'Elementos removidos (não estão no canvas atual)',
 
     // Locked diagram
     'being_edited' => 'Em edição',

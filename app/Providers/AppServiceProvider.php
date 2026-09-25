@@ -2,11 +2,13 @@
 
 namespace App\Providers;
 
+use App\Listeners\CheckDatabaseHealth;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Policies\DiagramPolicy;
 use App\Services\Backup\DatabaseDumper;
 use App\Services\Backup\PgDumpDatabaseDumper;
+use Illuminate\Foundation\Events\DiagnosingHealth;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -33,5 +35,6 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(Diagram::class, DiagramPolicy::class);
 
         Event::listen(SocialiteWasCalled::class, [KeycloakExtendSocialite::class, 'handle']);
+        Event::listen(DiagnosingHealth::class, CheckDatabaseHealth::class);
     }
 }

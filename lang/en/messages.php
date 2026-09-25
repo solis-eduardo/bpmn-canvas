@@ -7,19 +7,19 @@ return [
     'log_out' => 'Log out',
     'email' => 'Email',
     'password' => 'Password',
-    'hello_user' => 'Hello, :name.',
     'invalid_credentials' => 'Invalid credentials.',
     'keycloak_login_failed' => 'Could not log in with Keycloak. Please try again.',
 
     // Navigation
-    'home' => 'Home',
     'diagrams' => 'Diagrams',
 
     // Diagram list
     'diagram_name' => 'Diagram name',
+    'start_event_label' => 'Start',
     'create_diagram' => 'Create diagram',
     'no_diagrams_yet' => 'No diagrams created yet.',
     'author_label' => '(author: :name)',
+    'diagram_owner_label' => '(owner: :name)',
     'being_edited_by' => '— being edited by :name',
 
     // Editor
@@ -31,6 +31,15 @@ return [
     'zoom_out' => 'Zoom out',
     'fit_to_screen' => 'Fit to screen',
     'lock_not_held' => "You don't hold the lock on this diagram.",
+
+    // Version history & comparison
+    'history' => 'History',
+    'versions' => 'Versions',
+    'exit_comparison' => 'Exit comparison',
+    'diff_added' => 'Added',
+    'diff_removed' => 'Removed',
+    'diff_changed' => 'Changed',
+    'diff_removed_elements' => 'Removed elements (not on the current canvas)',
 
     // Locked diagram
     'being_edited' => 'Being edited',
