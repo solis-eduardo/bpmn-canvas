@@ -11,7 +11,9 @@ return [
     'keycloak_login_failed' => 'Could not log in with Keycloak. Please try again.',
 
     // Navigation
+    'home' => 'Home',
     'diagrams' => 'Diagrams',
+    'admin_users' => 'User Management',
 
     // Diagram list
     'diagram_name' => 'Diagram name',
@@ -54,5 +56,22 @@ return [
     'loading' => 'Loading…',
     'invalid_link' => 'Invalid link',
     'invalid_share_link' => 'This share link has expired or was revoked by the Author. Ask whoever shared this Diagram with you for a new link.',
+
+    // User management
+    'create_local_account' => 'Create Local Account',
+    'create_account' => 'Create Account',
+    'name' => 'Name',
+    'login_method' => 'Login Method',
+    'administrator' => 'Administrator',
+    'actions' => 'Actions',
+    'keycloak_sso' => 'Keycloak SSO',
+    'local' => 'Local',
+    'yes' => 'Yes',
+    'no' => 'No',
+    'from_keycloak' => 'from Keycloak',
+    'role_from_keycloak' => 'Role granted via Keycloak',
+    'grant_admin' => 'Grant Admin',
+    'revoke_admin' => 'Revoke Admin',
+    'no_users_yet' => 'No users yet.',
 
 ];

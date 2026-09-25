@@ -90,4 +90,88 @@ class AdminUserManagementTest extends TestCase
         $response->assertForbidden();
         $this->assertFalse($target->fresh()->is_admin);
     }
+
+    public function test_admin_can_access_user_management_screen(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $response = $this->actingAs($admin)->get('/admin/users');
+
+        $response->assertOk();
+        $response->assertViewIs('admin.users.index');
+    }
+
+    public function test_non_admin_cannot_access_user_management_screen(): void
+    {
+        $user = User::factory()->create(['is_admin' => false]);
+
+        $response = $this->actingAs($user)->get('/admin/users');
+
+        $response->assertForbidden();
+    }
+
+    public function test_guest_cannot_access_user_management_screen(): void
+    {
+        $response = $this->get('/admin/users');
+
+        $response->assertRedirect('/login');
+    }
+
+    public function test_user_management_screen_displays_all_users(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $user1 = User::factory()->create(['is_admin' => false]);
+        $user2 = User::factory()->create(['is_admin' => true]);
+
+        $response = $this->actingAs($admin)->get('/admin/users');
+
+        $response->assertOk();
+        $response->assertViewHas('users');
+        $users = $response->viewData('users');
+        $this->assertCount(3, $users);
+        $this->assertTrue($users->contains($admin));
+        $this->assertTrue($users->contains($user1));
+        $this->assertTrue($users->contains($user2));
+    }
+
+    public function test_user_management_screen_displays_login_method(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $local_user = User::factory()->create(['keycloak_id' => null]);
+        $keycloak_user = User::factory()->create(['keycloak_id' => 'keycloak-123']);
+
+        $response = $this->actingAs($admin)->get('/admin/users');
+
+        $response->assertOk();
+        $this->assertStringContainsString('Local', $response->getContent());
+        $this->assertStringContainsString('Keycloak SSO', $response->getContent());
+    }
+
+    public function test_user_management_screen_shows_admin_status(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $admin_user = User::factory()->create(['is_admin' => true]);
+        $regular_user = User::factory()->create(['is_admin' => false]);
+
+        $response = $this->actingAs($admin)->get('/admin/users');
+
+        $response->assertOk();
+        $this->assertCount(1, $response->viewData('users')->where('is_admin', false));
+        $this->assertCount(2, $response->viewData('users')->where('is_admin', true));
+    }
+
+    public function test_keycloak_admin_role_cannot_be_revoked(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $keycloak_admin = User::factory()->create([
+            'is_admin' => true,
+            'keycloak_id' => 'keycloak-123',
+        ]);
+
+        $response = $this->actingAs($admin)->get('/admin/users');
+
+        $response->assertOk();
+        $content = $response->getContent();
+        $this->assertStringContainsString('role_from_keycloak', $content);
+    }
 }
