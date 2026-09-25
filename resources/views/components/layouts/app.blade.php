@@ -43,9 +43,12 @@
                      and the reserved Version history / Collaborators entry points). --}}
                 {{ $headerActions ?? '' }}
 
-                {{-- Reserved space for the notification bell (see roadmap). --}}
                 <div class="flex items-center gap-3">
-                    <div class="h-8 w-8" data-slot="notification-bell" aria-hidden="true"></div>
+                    @auth
+                        @include('partials.notification-bell')
+                    @else
+                        <div class="h-8 w-8" data-slot="notification-bell" aria-hidden="true"></div>
+                    @endauth
 
                     @include('partials.language-switcher')
                 </div>
@@ -56,5 +59,9 @@
             {{ $slot }}
         </main>
     </div>
+
+    @auth
+        <script type="module" src="{{ asset('assets/notifications.js') }}"></script>
+    @endauth
 </body>
 </html>

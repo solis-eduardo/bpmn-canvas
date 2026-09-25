@@ -342,4 +342,10 @@
 
   loadCollaborators();
   loadShares();
+
+  // Deep link from the notification bell (issue #15): clicking a
+  // "requested access" notification lands here with ?open-panel=collaborators.
+  if (new URLSearchParams(window.location.search).get('open-panel') === 'collaborators') {
+    togglePanel(true);
+  }
 })();
