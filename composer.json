@@ -1,9 +1,9 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/laravel",
+    "name": "bpmn-studio/bpmn-studio",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "description": "Self-hosted BPMN 2.0 process modeling tool with Keycloak auth, collaboration, and Git-backed versioning.",
+    "keywords": ["laravel", "bpmn", "diagram-editor"],
     "license": "MIT",
     "require": {
         "php": "^8.3",
