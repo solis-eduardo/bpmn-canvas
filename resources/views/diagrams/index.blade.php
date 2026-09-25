@@ -85,5 +85,4 @@
                 </div>
             @endforelse
         </div>
-    </div>
 </x-layouts.app>
