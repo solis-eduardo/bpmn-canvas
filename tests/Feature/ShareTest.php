@@ -104,6 +104,26 @@ class ShareTest extends TestCase
         $this->assertDatabaseCount('shares', 0);
     }
 
+    public function test_share_link_is_https_when_request_is_forwarded_as_https(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author);
+
+        $response = $this->actingAs($author)
+            ->withHeaders(['X-Forwarded-Proto' => 'https'])
+            ->postJson("/diagrams/{$diagram->slug}/shares", []);
+
+        $response->assertCreated();
+
+        $url = $response->json('url');
+        $this->assertStringStartsWith('https://', $url);
+
+        // The signature must still validate for the https URL actually handed
+        // to the client (not just for a locally-rebuilt http:// one).
+        $visit = $this->withHeaders(['X-Forwarded-Proto' => 'https'])->get($url);
+        $visit->assertOk();
+    }
+
     public function test_non_author_cannot_create_share(): void
     {
         $author = User::factory()->create();
