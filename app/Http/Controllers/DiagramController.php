@@ -115,6 +115,9 @@ class DiagramController extends Controller
                     'id' => $version['id'],
                     'saved_at' => $version['saved_at']->toIso8601String(),
                     'author' => $version['author'],
+                    'number' => $version['number'],
+                    'name' => $version['name'],
+                    'renamed' => $version['renamed'],
                 ])->values(),
             ])
             ->values();
@@ -135,6 +138,37 @@ class DiagramController extends Controller
         }
 
         return response()->json(['restored' => true]);
+    }
+
+    /**
+     * Gives a Version a custom name to mark a milestone. Anyone who can edit
+     * the Diagram can rename a Version — same permission as saving/restoring
+     * (CONTEXT.md, "Version").
+     */
+    public function renameVersion(Request $request, string $slug, string $version, VersionRepository $versions): JsonResponse
+    {
+        [$diagram] = $this->resolve($slug);
+
+        $this->authorize('update', $diagram);
+
+        $data = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+        ]);
+
+        try {
+            $versions->rename($diagram, $version, $data['name']);
+        } catch (RuntimeException $e) {
+            abort(404);
+        }
+
+        $renamed = collect($versions->list($diagram))->firstWhere('id', $version);
+
+        return response()->json([
+            'id' => $version,
+            'number' => $renamed['number'] ?? null,
+            'name' => $data['name'],
+            'renamed' => true,
+        ]);
     }
 
     public function rename(Request $request, string $slug, DiagramRepository $diagrams): JsonResponse
@@ -193,7 +227,7 @@ class DiagramController extends Controller
         return response()->json($requestLock($diagram, $request->user()));
     }
 
-    public function fork(Request $request, string $slug, DiagramRepository $diagrams): RedirectResponse
+    public function fork(Request $request, string $slug, DiagramRepository $diagrams, VersionRepository $versions): RedirectResponse
     {
         [$diagram] = $this->resolve($slug);
 
@@ -220,6 +254,11 @@ class DiagramController extends Controller
             'disk_path' => $newSlug.'/diagram.bpmn',
             'forked_from_id' => $diagram->id,
         ], $content);
+
+        // A Fork has its own, independent Version history, starting again at
+        // Version 1 (CONTEXT.md, "Version") — its own Git repository, never
+        // sharing history with the origin Diagram's.
+        $versions->initialize($forked, $request->user());
 
         return redirect()->route('diagrams.show', $forked->slug);
     }

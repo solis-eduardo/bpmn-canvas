@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\Diagram;
+use App\Models\DiagramVersionName;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -114,7 +115,15 @@ class VersionRepository
      * responsibility of the caller (controller/view) — each item here
      * already carries the full date for that.
      *
-     * @return array<int, array{id: string, saved_at: Carbon, author: string}>
+     * Every Version is numbered sequentially within the Diagram, 1 being the
+     * oldest (chronological order) — this makes numbering retroactive by
+     * construction: it's derived from position in the Git history, not
+     * stored anywhere. `name` is the custom name if the Version was renamed
+     * (see rename()), otherwise the default "Version N"; `renamed` tells
+     * these two cases apart, e.g. to highlight renamed Versions in the
+     * history.
+     *
+     * @return array<int, array{id: string, saved_at: Carbon, author: string, number: int, name: string, renamed: bool}>
      */
     public function list(Diagram $diagram): array
     {
@@ -137,15 +146,54 @@ class VersionRepository
             return [];
         }
 
-        return array_map(function (string $line) {
+        $lines = explode("\n", $output);
+        $total = count($lines);
+
+        $customNames = DiagramVersionName::where('diagram_id', $diagram->id)
+            ->pluck('name', 'version_id');
+
+        return array_map(function (string $line, int $index) use ($total, $customNames) {
             [$id, $date, $author] = explode("\t", $line);
+
+            // $index 0 is the newest (git log's default order), so the
+            // oldest (chronologically first, index $total - 1) is number 1.
+            $number = $total - $index;
+            $customName = $customNames->get($id);
 
             return [
                 'id' => $id,
                 'saved_at' => Carbon::parse($date),
                 'author' => $author,
+                'number' => $number,
+                'name' => $customName ?? self::defaultName($number),
+                'renamed' => $customName !== null,
             ];
-        }, explode("\n", $output));
+        }, $lines, array_keys($lines));
+    }
+
+    /**
+     * Gives a Version a custom name to mark a milestone. Names needn't be
+     * unique (CONTEXT.md, "Version") — the number still identifies the
+     * Version. No Git tags are used to store it (ADR-0004): a dedicated
+     * table keeps the name reachable/queryable outside of `git`.
+     */
+    public function rename(Diagram $diagram, string $version, string $name): void
+    {
+        // Confirms the Version actually exists in this Diagram's history
+        // before naming it — same check restore() gets for free via get(),
+        // otherwise a bogus/nonexistent id would silently succeed and leave
+        // an orphaned, unreachable row behind.
+        $this->get($diagram, $version);
+
+        DiagramVersionName::updateOrCreate(
+            ['diagram_id' => $diagram->id, 'version_id' => $version],
+            ['name' => $name],
+        );
+    }
+
+    public static function defaultName(int $number): string
+    {
+        return "Version {$number}";
     }
 
     /**
