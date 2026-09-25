@@ -56,12 +56,15 @@ Route::middleware('auth')->group(function () {
     Route::put('/diagrams/{slug}/collaborators/{user}', [DiagramCollaboratorController::class, 'update'])->name('diagrams.collaborators.update');
     Route::delete('/diagrams/{slug}/collaborators/{user}', [DiagramCollaboratorController::class, 'destroy'])->name('diagrams.collaborators.destroy');
 
+    Route::put('/diagrams/{slug}/owner', [DiagramController::class, 'transferOwnership'])->name('diagrams.owner.transfer');
+
     Route::post('/diagrams/{slug}/heartbeat', [DiagramController::class, 'heartbeat'])->name('diagrams.heartbeat');
     Route::post('/diagrams/{slug}/lock/request', [DiagramController::class, 'requestLock'])->name('diagrams.lock.request');
     Route::delete('/diagrams/{slug}/lock', [DiagramController::class, 'unlock'])->name('diagrams.unlock');
     Route::post('/diagrams/{slug}/fork', [DiagramController::class, 'fork'])->name('diagrams.fork');
 
     Route::get('/diagrams/{slug}/versions', [VersionController::class, 'versions'])->name('diagrams.versions');
+    Route::get('/diagrams/{slug}/versions/compare', [VersionController::class, 'compareVersions'])->name('diagrams.versions.compare');
     Route::get('/diagrams/{slug}/versions/{version}/content', [VersionController::class, 'versionContent'])->name('diagrams.versions.content');
     Route::post('/diagrams/{slug}/versions/{version}/restore', [VersionController::class, 'restoreVersion'])->name('diagrams.versions.restore');
     Route::put('/diagrams/{slug}/versions/{version}/rename', [VersionController::class, 'renameVersion'])->name('diagrams.versions.rename');

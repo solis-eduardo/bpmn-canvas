@@ -18,9 +18,12 @@ class WorkspaceMemberController extends Controller
     {
         $this->authorize('manageMembers', $workspace);
 
-        $data = $request->validate(User::idOrEmailRules());
+        $data = $request->validate([
+            'user_id' => ['required_without:email', 'integer', 'exists:users,id'],
+            'email' => ['required_without:user_id', 'email'],
+        ]);
 
-        $workspace->addMember(User::findByIdOrEmail($data));
+        $workspace->addMember($this->resolveUserFrom($data));
 
         return redirect()->route('workspaces.index');
     }

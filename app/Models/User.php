@@ -47,35 +47,6 @@ class User extends Authenticatable
     }
 
     /**
-     * Validation rules for identifying a target User by either "user_id" or
-     * "email" — the shared "invite/add by id-or-email" shape used by both
-     * DiagramCollaboratorController::store and WorkspaceMemberController::store.
-     *
-     * @return array<string, array<int, string>>
-     */
-    public static function idOrEmailRules(): array
-    {
-        return [
-            'user_id' => ['required_without:email', 'integer', 'exists:users,id'],
-            'email' => ['required_without:user_id', 'email'],
-        ];
-    }
-
-    /**
-     * Resolves the User identified by validated data shaped by
-     * {@see idOrEmailRules()}. Throws a 404 (ModelNotFoundException) if
-     * neither identifies an existing User.
-     *
-     * @param  array{user_id?: int, email?: string}  $data
-     */
-    public static function findByIdOrEmail(array $data): self
-    {
-        return isset($data['user_id'])
-            ? self::findOrFail($data['user_id'])
-            : self::where('email', $data['email'])->firstOrFail();
-    }
-
-    /**
      * Whether this User's current Administrator status can be revoked from the
      * User management screen. Per ADR 0005, a role granted via the Keycloak
      * claim is displayed but only a manual origin can be turned off here.
