@@ -1,5 +1,6 @@
-# .bpmn diagram files live only on the host / volume, not versioned in the repo
-diagrams/*.bpmn
+# Diagram files live only on the host / volume, not versioned in the repo
+diagrams/*
+!diagrams/.gitkeep
 
 # Laravel
 *.log

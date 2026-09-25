@@ -1,26 +1,27 @@
-# Issue tracker: Local Markdown
+# Issue tracker: GitHub Issues
 
-Issues and specs for this repo live as markdown files in `.scratch/`.
+Implementation issues for this repo are tracked as GitHub Issues on `solis-eduardo/bpmn-canvas`, not as markdown files.
+
+Specs and planning docs still live under `.scratch/<feature-slug>/spec.md` — only the ticket breakdown moved to GitHub.
 
 ## Conventions
 
-- One feature per directory: `.scratch/<feature-slug>/`
-- The spec is `.scratch/<feature-slug>/spec.md`
-- Implementation issues are one file per ticket at `.scratch/<feature-slug>/issues/<NN>-<slug>.md`, numbered from `01`, never a single combined tickets file
-- Triage state is recorded as a `Status:` line near the top of each issue file (see `triage-labels.md` for the role strings)
-- Comments and conversation history append to the bottom of the file under a `## Comments` heading
+- One feature per directory for specs: `.scratch/<feature-slug>/spec.md`
+- Implementation issues are GitHub Issues, one per ticket, titled `<feature-slug>: <ticket title>`
+- Triage state is the GitHub Issue's open/closed status plus labels (see the repo's label list for the role strings)
+- Comments and conversation history are GitHub Issue comments
 
 ## When a skill says "publish to the issue tracker"
 
-Create a new file under `.scratch/<feature-slug>/` (creating the directory if needed).
+Create a GitHub Issue with `gh issue create` (title + body from the ticket). If the feature doesn't have a spec yet, still create/update `.scratch/<feature-slug>/spec.md` first.
 
 ## When a skill says "fetch the relevant ticket"
 
-Read the file at the referenced path. The user will normally pass the path or the issue number directly.
+Fetch the issue with `gh issue view <number>`. The user will normally pass the issue number or URL directly.
 
 ## Wayfinding operations
 
-Used by `/wayfinder`. The **map** is a file with one **child** file per ticket.
+Used by `/wayfinder`. This is ephemeral research scaffolding for exploring a question, kept local — it does not move to GitHub Issues. The **map** is a file with one **child** file per ticket.
 
 - **Map**: `.scratch/<effort>/map.md` (the Notes / Decisions-so-far / Fog body).
 - **Child ticket**: `.scratch/<effort>/issues/NN-<slug>.md`, numbered from `01`, with the question in the body. A `Type:` line records the ticket type (`research`/`prototype`/`grilling`/`task`); a `Status:` line records `claimed`/`resolved`.

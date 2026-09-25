@@ -74,7 +74,7 @@ Dockerfile                  # multi-stage: vendored bpmn-js + composer + app + w
 CONTEXT.md                  # domain glossary
 docs/GLOSSARY.md            # PT-BR -> English naming thesaurus
 docs/adr/                   # architectural decisions
-.scratch/bpmn-studio-laravel/  # implementation spec and tickets (kept in Portuguese)
+.scratch/bpmn-studio-laravel/  # implementation spec and closed tickets (kept in Portuguese; open tickets are GitHub Issues)
 ```
 
 ## bpmn-js license
@@ -164,7 +164,7 @@ Dockerfile                  # multi-stage: bpmn-js vendorizado + composer + app 
 CONTEXT.md                  # glossário do domínio
 docs/GLOSSARY.md            # tesauro de nomenclatura PT-BR -> inglês
 docs/adr/                   # decisões arquiteturais
-.scratch/bpmn-studio-laravel/  # spec e tickets de implementação (mantido em português)
+.scratch/bpmn-studio-laravel/  # spec e tickets fechados (mantido em português; tickets abertos são GitHub Issues)
 ```
 
 ## Licença do bpmn-js

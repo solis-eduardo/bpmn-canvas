@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-Issues live as markdown files under `.scratch/<feature-slug>/` in this repo. See `docs/agents/issue-tracker.md`.
+Issues live as GitHub Issues on `solis-eduardo/bpmn-canvas`. Specs still live under `.scratch/<feature-slug>/`. See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 
