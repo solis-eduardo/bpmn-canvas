@@ -7,6 +7,7 @@ use App\Support\ProcessRunner;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 /**
  * Produces and prunes backup artifacts. No archive-format, staging-path, or
@@ -162,7 +163,7 @@ class BackupRepository
     private function makeDirectory(string $path): void
     {
         if (! is_dir($path) && ! mkdir($path, 0755, true) && ! is_dir($path)) {
-            throw new \RuntimeException("Could not create backup staging directory: {$path}");
+            throw new RuntimeException("Could not create backup staging directory: {$path}");
         }
     }
 
