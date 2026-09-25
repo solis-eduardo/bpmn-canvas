@@ -2,6 +2,11 @@
 diagrams/*
 !diagrams/.gitkeep
 
+# Backup artifacts (backup:run's default destination) likewise live only on
+# the host / volume, not versioned in the repo
+backups/*
+!backups/.gitkeep
+
 # Laravel
 *.log
 .DS_Store

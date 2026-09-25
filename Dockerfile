@@ -22,7 +22,7 @@ FROM php:8.4-fpm-alpine AS app
 # headers go into a virtual group removed at the end of the layer.
 RUN --mount=type=cache,target=/var/cache/apk,sharing=locked \
     apk add --update --virtual .build-deps $PHPIZE_DEPS libpq-dev \
-    && apk add --update libpq git \
+    && apk add --update libpq git postgresql16-client \
     && docker-php-ext-install -j$(nproc) pdo pdo_pgsql opcache \
     && apk del .build-deps \
     && git config --system --add safe.directory '*'
@@ -32,11 +32,12 @@ COPY --from=composer-deps /build/vendor ./vendor
 COPY . .
 COPY --from=composer-deps /usr/bin/composer /usr/bin/composer
 RUN composer dump-autoload --no-dev --optimize \
-    && mkdir -p storage/app/diagrams \
+    && mkdir -p storage/app/diagrams storage/app/backup \
     && chown -R www-data:www-data storage bootstrap/cache
 
 COPY docker/app/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
+COPY docker/scheduler/entrypoint.sh /entrypoint-scheduler.sh
+RUN chmod +x /entrypoint.sh /entrypoint-scheduler.sh
 
 VOLUME ["/var/www/html/storage/app/diagrams"]
 ENTRYPOINT ["/entrypoint.sh"]
