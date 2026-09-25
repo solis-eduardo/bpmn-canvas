@@ -40,6 +40,8 @@ return [
     'diff_removed' => 'Removed',
     'diff_changed' => 'Changed',
     'diff_removed_elements' => 'Removed elements (not on the current canvas)',
+    'select_two_versions_hint' => 'Select two versions below to compare them with each other.',
+    'compare_selected' => 'Compare selected',
 
     // Locked diagram
     'being_edited' => 'Being edited',
