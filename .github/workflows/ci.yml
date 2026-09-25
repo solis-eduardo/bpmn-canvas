@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  pint:
+    name: Pint (code style)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer dependencies
+        # Not ramsey/composer-install: its own action.yml pins an old
+        # actions/cache commit that still targets the deprecated Node 20
+        # runtime. actions/cache@v4 is current and avoids that warning.
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Run Pint
+        run: vendor/bin/pint --test
+
+  tests:
+    name: PHPUnit
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: pdo_sqlite
+          coverage: none
+
+      - name: Get Composer cache directory
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --no-progress
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+
+      - name: Install npm dependencies
+        # `npm ci` requires a committed package-lock.json, which not every
+        # branch has yet (only PRs that touched the front-end build added
+        # one); `npm install` works either way.
+        run: npm install
+
+      - name: Build front-end assets
+        # Several views render through the shared layout's @vite directive
+        # (see resources/views/components/layouts/app.blade.php); without a
+        # built manifest those views 500 out from under the test suite.
+        run: npm run build
+
+      - name: Copy environment file
+        run: cp .env.example .env
+
+      - name: Generate application key
+        run: php artisan key:generate
+
+      - name: Run test suite
+        run: php artisan test
+
+  phpmd:
+    name: PHPMD (static analysis)
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          coverage: none
+
+      - name: Download PHPMD
+        # Run as a standalone .phar rather than a Composer dev-dependency:
+        # phpmd/phpmd's own dependency tree (pdepend, an old symfony/*) does
+        # not resolve cleanly against this Laravel app's Symfony 8-based
+        # dependencies, so it's kept fully isolated from composer.json/lock.
+        run: |
+          curl -sSL -o phpmd.phar https://github.com/phpmd/phpmd/releases/latest/download/phpmd.phar
+          chmod +x phpmd.phar
+
+      - name: Run PHPMD
+        run: php phpmd.phar app,database,routes text phpmd.xml
