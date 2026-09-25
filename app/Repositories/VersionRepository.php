@@ -214,6 +214,48 @@ class VersionRepository
     }
 
     /**
+     * Content of the Diagram at several Versions, keyed by id. Each Version
+     * is an independent `git show` subprocess, so they're started
+     * concurrently and only then waited on — used by compareVersions() to
+     * resolve both sides of a comparison in one request without paying for
+     * two sequential subprocess round trips.
+     *
+     * @param  array<int, string>  $versionIds
+     * @return array<string, string>
+     */
+    public function getMany(Diagram $diagram, array $versionIds): array
+    {
+        foreach ($versionIds as $version) {
+            $this->validateIdentifier($version);
+        }
+
+        $directory = $this->directory($diagram);
+        $file = $this->file($diagram);
+
+        $processes = [];
+
+        foreach ($versionIds as $version) {
+            $process = $this->git(['git', 'show', $version.':'.$file], $directory);
+            $process->start();
+            $processes[$version] = $process;
+        }
+
+        $content = [];
+
+        foreach ($processes as $version => $process) {
+            $process->wait();
+
+            if (! $process->isSuccessful()) {
+                throw new RuntimeException('Version not found.', previous: new ProcessFailedException($process));
+            }
+
+            $content[$version] = $process->getOutput();
+        }
+
+        return $content;
+    }
+
+    /**
      * Restores the content of an old Version: reads that content, writes it
      * as the file's current content, and creates a new Version on top of
      * the history (revert-style). Never deletes intermediate Versions.

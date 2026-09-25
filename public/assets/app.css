@@ -93,10 +93,18 @@ main { position: relative; min-height: 0; }
   color: var(--muted); font-size: 16px; text-align: center; padding: 24px;
 }
 
-/* Version history & comparison (ticket 35) */
+/* Version history & comparison (ticket 35, extended to any two Versions by ticket 36) */
+.version-hint { margin: 0; padding: 8px 12px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--bg); }
+aside li .version-row { display: flex; align-items: center; gap: 8px; }
+aside li .version-row input[type=checkbox] { flex-shrink: 0; }
 aside li .version-actions { display: flex; gap: 6px; margin-top: 2px; }
 aside li .version-actions button { padding: 2px 8px; font-size: 12px; }
 aside li.comparing { background: var(--selected); }
+.version-compare-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 8px 12px; border-top: 1px solid var(--border);
+}
+.version-compare-bar span { font-size: 12px; color: var(--muted); }
 
 .diff-banner {
   position: absolute; left: 16px; top: 16px; z-index: 15;
