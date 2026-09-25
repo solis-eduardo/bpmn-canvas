@@ -29,6 +29,12 @@
                     >
                         {{ __('messages.diagrams') }}
                     </a>
+                    <a
+                        href="{{ route('workspaces.index') }}"
+                        class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('workspaces.*') ? 'bg-gray-100 text-gray-900' : '' }}"
+                    >
+                        {{ __('messages.workspaces') }}
+                    </a>
                 </nav>
 
                 {{-- Reserved space for the notification bell (see roadmap). --}}
