@@ -19,8 +19,8 @@ class WorkspaceController extends Controller
         $user = $request->user();
 
         $workspaces = $user->is_admin
-            ? Workspace::with('owner')->orderBy('name')->get()
-            : $user->workspaces()->with('owner')->orderBy('name')->get();
+            ? Workspace::with(['owner', 'members.user'])->orderBy('name')->get()
+            : $user->workspaces()->with(['owner', 'members.user'])->orderBy('name')->get();
 
         return view('workspaces.index', compact('workspaces'));
     }
