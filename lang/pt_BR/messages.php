@@ -9,6 +9,9 @@ return [
     'password' => 'Senha',
     'invalid_credentials' => 'Credenciais inválidas.',
     'keycloak_login_failed' => 'Não foi possível entrar com o Keycloak. Tente novamente.',
+    'log_in_locally' => 'Entrar com e-mail e senha',
+    'log_in_with_keycloak' => 'Entrar com Keycloak',
+    'or' => 'ou',
 
     // Navigation
     'diagrams' => 'Diagramas',
@@ -50,6 +53,10 @@ return [
     'being_edited' => 'Em edição',
     'currently_being_edited_by' => 'Este diagrama está sendo editado por :name no momento. Você não pode abrir o Editor até que a Trava seja liberada.',
     'create_a_copy_to_continue' => 'Criar uma cópia (Fork) para continuar agora',
+    'locked_since' => 'Travado :time',
+    'request_the_lock' => 'Solicitar a Trava',
+    'lock_transfers_in' => 'A Trava é transferida em :seconds s…',
+    'lock_requested_by_notice' => ':name solicitou a Trava deste diagrama.',
 
     // Gestão de usuários
     'users_heading' => 'Usuários',

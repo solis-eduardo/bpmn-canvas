@@ -9,6 +9,9 @@ return [
     'password' => 'Password',
     'invalid_credentials' => 'Invalid credentials.',
     'keycloak_login_failed' => 'Could not log in with Keycloak. Please try again.',
+    'log_in_locally' => 'Log in with email and password',
+    'log_in_with_keycloak' => 'Log in with Keycloak',
+    'or' => 'or',
 
     // Navigation
     'diagrams' => 'Diagrams',
@@ -50,6 +53,10 @@ return [
     'being_edited' => 'Being edited',
     'currently_being_edited_by' => "This diagram is currently being edited by :name. You can't open the Editor until the Lock is released.",
     'create_a_copy_to_continue' => 'Create a copy (Fork) to continue now',
+    'locked_since' => 'Locked :time',
+    'request_the_lock' => 'Request the Lock',
+    'lock_transfers_in' => 'Lock transfers in :seconds s…',
+    'lock_requested_by_notice' => ':name has requested the Lock on this diagram.',
 
     // User management
     'users_heading' => 'Users',
