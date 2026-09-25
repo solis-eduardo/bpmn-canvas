@@ -36,7 +36,7 @@ class DiagramController extends Controller
             'slug' => $slug,
             'author_id' => $request->user()->id,
             'disk_path' => $slug.'/diagram.bpmn',
-        ], Diagram::EMPTY_BPMN);
+        ], Diagram::emptyBpmn());
 
         $versions->initialize($diagram, $request->user());
 
