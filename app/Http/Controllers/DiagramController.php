@@ -7,7 +7,6 @@ use App\Actions\Diagrams\RequestLock;
 use App\Actions\Diagrams\TransferOwnership;
 use App\Models\Diagram;
 use App\Models\DiagramOldSlug;
-use App\Models\User;
 use App\Repositories\DiagramRepository;
 use App\Repositories\VersionRepository;
 use Illuminate\Http\JsonResponse;
@@ -232,9 +231,7 @@ class DiagramController extends Controller
             'give_up_access' => ['sometimes', 'boolean'],
         ]);
 
-        $newOwner = isset($data['user_id'])
-            ? User::findOrFail($data['user_id'])
-            : User::where('email', $data['email'])->firstOrFail();
+        $newOwner = $this->resolveUserFrom($data);
 
         $transfer($diagram, $newOwner, (bool) ($data['give_up_access'] ?? false));
 
