@@ -67,6 +67,8 @@ class DiagramController extends Controller
             $diagram->acquireLock($user);
         }
 
+        $diagram->loadMissing(['author', 'owner']);
+
         return view('diagrams.show', compact('diagram'));
     }
 
