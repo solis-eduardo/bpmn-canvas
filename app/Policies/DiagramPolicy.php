@@ -54,6 +54,17 @@ class DiagramPolicy
         return $diagram->isOwnedBy($user);
     }
 
+    /**
+     * Transfer the Diagram Owner role to another User: current Diagram
+     * Owner or Administrator (CONTEXT.md, "Diagram Owner"; ADR-0006; issue
+     * #14). Same rule as manageCollaborators, kept as its own ability since
+     * the two are conceptually distinct and may diverge later.
+     */
+    public function transferOwnership(User $user, Diagram $diagram): bool
+    {
+        return $diagram->isOwnedBy($user) || $user->is_admin;
+    }
+
     private function canEdit(User $user, Diagram $diagram): bool
     {
         if ($diagram->isOwnedBy($user)) {
