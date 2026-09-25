@@ -2,8 +2,7 @@
 
 namespace App\Services\Backup;
 
-use Symfony\Component\Process\Exception\ProcessFailedException;
-use Symfony\Component\Process\Process;
+use App\Support\ProcessRunner;
 
 /**
  * Dumps the `pgsql` connection with `pg_dump`, in its custom archive format
@@ -16,7 +15,7 @@ class PgDumpDatabaseDumper implements DatabaseDumper
     {
         $connection = config('database.connections.pgsql');
 
-        $process = new Process([
+        ProcessRunner::run([
             'pg_dump',
             '--host', $connection['host'],
             '--port', (string) $connection['port'],
@@ -28,13 +27,6 @@ class PgDumpDatabaseDumper implements DatabaseDumper
         ], env: [
             'PGPASSWORD' => $connection['password'],
         ]);
-
-        $process->setTimeout(null);
-        $process->run();
-
-        if (! $process->isSuccessful()) {
-            throw new ProcessFailedException($process);
-        }
 
         return $destination;
     }

@@ -3,11 +3,10 @@
 namespace App\Repositories;
 
 use App\Services\Backup\DatabaseDumper;
+use App\Support\ProcessRunner;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
-use Symfony\Component\Process\Exception\ProcessFailedException;
-use Symfony\Component\Process\Process;
 
 /**
  * Produces and prunes backup artifacts. No archive-format, staging-path, or
@@ -131,12 +130,12 @@ class BackupRepository
         // — in particular each Diagram's `.git` Version repository (see
         // VersionRepository / ADR-0004), which a backup that drops history
         // would defeat the point of.
-        $this->runProcess(['cp', '-a', rtrim($diagramsRoot, '/').'/.', $destination]);
+        ProcessRunner::run(['cp', '-a', rtrim($diagramsRoot, '/').'/.', $destination]);
     }
 
     private function archive(string $stagingDir, string $destinationPath): void
     {
-        $this->runProcess(['tar', '-czf', $destinationPath, '-C', $stagingDir, '.']);
+        ProcessRunner::run(['tar', '-czf', $destinationPath, '-C', $stagingDir, '.']);
     }
 
     private function writeManifest(string $destination): void
@@ -170,21 +169,7 @@ class BackupRepository
     private function removeDirectory(string $path): void
     {
         if (is_dir($path)) {
-            $this->runProcess(['rm', '-rf', $path]);
-        }
-    }
-
-    /**
-     * @param  array<int, string>  $command
-     */
-    private function runProcess(array $command): void
-    {
-        $process = new Process($command);
-        $process->setTimeout(null);
-        $process->run();
-
-        if (! $process->isSuccessful()) {
-            throw new ProcessFailedException($process);
+            ProcessRunner::run(['rm', '-rf', $path]);
         }
     }
 }
