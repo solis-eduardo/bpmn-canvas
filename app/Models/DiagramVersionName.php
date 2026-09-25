@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 #[Fillable(['diagram_id', 'version_id', 'name'])]
 class DiagramVersionName extends Model
 {
+    /** @return BelongsTo<Diagram, $this> */
     public function diagram(): BelongsTo
     {
         return $this->belongsTo(Diagram::class);
