@@ -16,8 +16,8 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; background: var(--bg); }
 
-.app { display: grid; height: 100vh; grid-template-rows: auto 1fr; }
-.app.with-sidebar { grid-template-columns: 260px 1fr; }
+.app { display: grid; height: 100%; grid-template-rows: auto 1fr; }
+.app.with-sidebar { grid-template-columns: 300px 1fr; }
 .app.with-sidebar header { grid-column: 1 / -1; }
 
 header {
@@ -129,3 +129,41 @@ aside li.comparing { background: var(--selected); }
   aside { border-right: 0; border-bottom: 1px solid var(--border); }
   input[type=text] { min-width: 140px; }
 }
+
+/* Collaborators & Shares panel (issue #11). */
+#collaborators-panel .collab-body { overflow-y: auto; flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 20px; }
+.collab-section h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.collab-section form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
+.collab-section form input[type=email],
+.collab-section form input[type=number] { width: 100%; min-width: 0; }
+.collab-section form label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.collab-section form label.checkbox { flex-direction: row; }
+.collab-section ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.collab-section ul .empty { padding: 8px 0; color: var(--muted); font-size: 13px; }
+.collab-row, .share-row {
+  border: 1px solid var(--border); border-radius: 6px; padding: 8px;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.collab-info, .share-info { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.collab-name { font-weight: 600; overflow-wrap: anywhere; }
+.collab-actions, .share-actions { display: flex; gap: 6px; }
+.collab-actions button, .share-actions button { padding: 2px 8px; font-size: 12px; }
+.badge {
+  display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px;
+  font-weight: 600; background: var(--bg); color: var(--muted); border: 1px solid var(--border);
+}
+.badge-approved { background: #e6f4ea; color: #1e7e34; border-color: #b7e1c1; }
+.badge-requested { background: #fff7e6; color: #874d00; border-color: #ffd591; }
+.badge-muted { background: var(--bg); color: var(--muted); }
+
+/* Pending Lock request notice, shown to the Lock holder in the Editor
+   (issue #9). Fixed rather than a grid child of .app so showing/hiding it
+   never reflows the header/canvas grid. */
+.lock-request-banner {
+  position: fixed; left: 0; right: 0; top: 0; z-index: 50;
+  background: #fff7e6; border-bottom: 1px solid #ffd591; color: #874d00;
+  padding: 8px 12px; font-size: 13px; text-align: center;
+}
+
+/* Blocked screen: request-Lock countdown (issue #9). */
+#lock-countdown { color: var(--muted); font-size: 13px; }

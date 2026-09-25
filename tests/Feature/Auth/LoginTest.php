@@ -79,4 +79,46 @@ class LoginTest extends TestCase
             ->get(route('diagrams.index'))
             ->assertSee(route('logout'), false);
     }
+
+    public function test_login_screen_shows_keycloak_option_when_configured(): void
+    {
+        config([
+            'services.keycloak.client_id' => 'client-id',
+            'services.keycloak.client_secret' => 'client-secret',
+            'services.keycloak.base_url' => 'https://keycloak.example.test',
+        ]);
+
+        $response = $this->get('/login');
+
+        $response->assertOk();
+        $response->assertSee(route('login.keycloak'), false);
+    }
+
+    public function test_login_screen_hides_keycloak_option_when_not_configured(): void
+    {
+        config([
+            'services.keycloak.client_id' => null,
+            'services.keycloak.client_secret' => null,
+            'services.keycloak.base_url' => null,
+        ]);
+
+        $response = $this->get('/login');
+
+        $response->assertOk();
+        $response->assertDontSee(route('login.keycloak'), false);
+    }
+
+    public function test_login_screen_hides_keycloak_option_when_only_partially_configured(): void
+    {
+        config([
+            'services.keycloak.client_id' => 'client-id',
+            'services.keycloak.client_secret' => null,
+            'services.keycloak.base_url' => 'https://keycloak.example.test',
+        ]);
+
+        $response = $this->get('/login');
+
+        $response->assertOk();
+        $response->assertDontSee(route('login.keycloak'), false);
+    }
 }
