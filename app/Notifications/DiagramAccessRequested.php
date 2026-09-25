@@ -22,7 +22,12 @@ class DiagramAccessRequested extends Notification
     ) {}
 
     /**
+     * $notifiable is required by Notification's abstract signature even
+     * though this channel list doesn't vary per notifiable.
+     *
      * @return array<int, string>
+     *
+     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
      */
     public function via(object $notifiable): array
     {
@@ -30,7 +35,12 @@ class DiagramAccessRequested extends Notification
     }
 
     /**
+     * $notifiable is required by the database channel's expected signature
+     * even though the payload doesn't vary per notifiable.
+     *
      * @return array<string, mixed>
+     *
+     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
      */
     public function toArray(object $notifiable): array
     {
