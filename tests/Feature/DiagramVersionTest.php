@@ -6,6 +6,7 @@ use App\Models\Diagram;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -162,7 +163,7 @@ class DiagramVersionTest extends TestCase
      * flattens it into a single list of items (the endpoint groups items by
      * day, which most callers here don't care about).
      */
-    private function versionItems(User $user, Diagram $diagram): \Illuminate\Support\Collection
+    private function versionItems(User $user, Diagram $diagram): Collection
     {
         return collect(
             $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
