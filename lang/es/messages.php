@@ -7,12 +7,10 @@ return [
     'log_out' => 'Cerrar sesión',
     'email' => 'Correo electrónico',
     'password' => 'Contraseña',
-    'hello_user' => 'Hola, :name.',
     'invalid_credentials' => 'Credenciales inválidas.',
     'keycloak_login_failed' => 'No se pudo iniciar sesión con Keycloak. Inténtalo de nuevo.',
 
     // Navigation
-    'home' => 'Inicio',
     'diagrams' => 'Diagramas',
 
     // Diagram list
