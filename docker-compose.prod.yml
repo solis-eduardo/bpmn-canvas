@@ -1,0 +1,19 @@
+# Optional overlay for hosts that already run a shared reverse proxy
+# (e.g. another nginx/Traefik container terminating HTTPS for several apps).
+#
+# Usage:
+#   docker network create nginx-network   # once per host, if it doesn't exist yet
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+#
+# This attaches `web` to that external network so the reverse proxy can reach
+# it by container name. Drop the `ports` mapping from the base file yourself
+# (or set APP_PORT to a loopback-only value) if `web` shouldn't also be
+# reachable directly on the host.
+services:
+  web:
+    networks:
+      - nginx-network
+
+networks:
+  nginx-network:
+    external: true
