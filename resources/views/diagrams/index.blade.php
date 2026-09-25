@@ -7,7 +7,10 @@
 <body>
     @include('partials.language-switcher')
 
-    <p><a href="{{ url('/home') }}">{{ __('messages.home') }}</a></p>
+    <form method="POST" action="{{ route('logout') }}">
+        @csrf
+        <button type="submit">{{ __('messages.log_out') }}</button>
+    </form>
 
     <h1>{{ __('messages.diagrams') }}</h1>
 

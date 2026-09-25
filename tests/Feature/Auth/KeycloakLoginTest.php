@@ -61,16 +61,16 @@ class KeycloakLoginTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_user_can_log_in_via_keycloak_and_reach_a_protected_route(): void
+    public function test_user_can_log_in_via_keycloak_and_reach_the_diagram_list(): void
     {
         $this->mockSocialiteUser($this->fakeSocialiteUser('keycloak-sub-1', 'Ana Silva', 'ana@example.com'));
 
         $response = $this->get('/login/keycloak/callback');
 
-        $response->assertRedirect('/home');
+        $response->assertRedirect(route('diagrams.index'));
         $this->assertAuthenticated();
 
-        $this->get('/home')->assertOk();
+        $this->get(route('diagrams.index'))->assertOk();
     }
 
     public function test_first_login_with_unknown_keycloak_id_provisions_a_new_account(): void
