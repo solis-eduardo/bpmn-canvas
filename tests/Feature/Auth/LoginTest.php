@@ -12,12 +12,12 @@ class LoginTest extends TestCase
 
     public function test_guest_is_redirected_to_login_from_a_protected_route(): void
     {
-        $response = $this->get('/home');
+        $response = $this->get('/diagrams');
 
         $response->assertRedirect('/login');
     }
 
-    public function test_user_can_log_in_with_correct_credentials_and_reach_a_protected_route(): void
+    public function test_user_can_log_in_with_correct_credentials_and_reach_the_diagram_list(): void
     {
         $user = User::factory()->create([
             'password' => 'correct-password',
@@ -28,10 +28,10 @@ class LoginTest extends TestCase
             'password' => 'correct-password',
         ]);
 
-        $response->assertRedirect('/home');
+        $response->assertRedirect(route('diagrams.index'));
         $this->assertAuthenticatedAs($user);
 
-        $this->get('/home')->assertOk();
+        $this->get(route('diagrams.index'))->assertOk();
     }
 
     public function test_user_cannot_log_in_with_incorrect_password(): void
@@ -69,5 +69,14 @@ class LoginTest extends TestCase
         $this->actingAs($user)->post('/logout')->assertRedirect('/login');
 
         $this->assertGuest();
+    }
+
+    public function test_diagram_list_exposes_a_way_to_log_out(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('diagrams.index'))
+            ->assertSee(route('logout'), false);
     }
 }
