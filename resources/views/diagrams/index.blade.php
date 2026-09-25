@@ -34,9 +34,12 @@
                     {{ $diagram->title }}
                 </a>
 
-                <div class="flex items-center gap-3 text-sm text-gray-500">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500">
                     <span>{{ __('messages.author_label', ['name' => $diagram->author->name]) }}</span>
                     <span>{{ __('messages.diagram_owner_label', ['name' => $diagram->owner->name]) }}</span>
+                    <span title="{{ $diagram->updated_at }}">
+                        {{ __('messages.last_modified_label', ['time' => $diagram->updated_at->diffForHumans()]) }}
+                    </span>
                     @if ($diagram->hasActiveLock())
                         <span class="text-amber-600">{{ __('messages.being_edited_by', ['name' => $diagram->lockedBy->name]) }}</span>
                     @endif
