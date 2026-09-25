@@ -6,6 +6,7 @@ use App\Actions\Diagrams\GrantOrRequestCollaborator;
 use App\Models\Diagram;
 use App\Models\DiagramCollaborator;
 use App\Models\User;
+use App\Notifications\DiagramAccessRequested;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -47,6 +48,14 @@ class DiagramCollaboratorController extends Controller
         $target = $this->resolveUserFrom($data);
 
         $collaborator = $grant($diagram, $request->user(), $target);
+
+        // A self-request (never a direct invite — those land as "approved")
+        // notifies the Diagram Owner. GrantOrRequestCollaborator only
+        // allows a self-request when the requester isn't already able to
+        // manage Collaborators, so the Owner is never notifying themselves.
+        if ($collaborator->status === DiagramCollaborator::STATUS_REQUESTED) {
+            $diagram->owner->notify(new DiagramAccessRequested($diagram, $target));
+        }
 
         return response()->json([
             'user_id' => $collaborator->user_id,

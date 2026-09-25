@@ -9,9 +9,13 @@ return [
     'password' => 'Contraseña',
     'invalid_credentials' => 'Credenciales inválidas.',
     'keycloak_login_failed' => 'No se pudo iniciar sesión con Keycloak. Inténtalo de nuevo.',
+    'log_in_locally' => 'Iniciar sesión con correo y contraseña',
+    'log_in_with_keycloak' => 'Iniciar sesión con Keycloak',
+    'or' => 'o',
 
     // Navigation
     'diagrams' => 'Diagramas',
+    'users' => 'Usuarios',
 
     // Diagram list
     'diagram_name' => 'Nombre del diagrama',
@@ -20,6 +24,7 @@ return [
     'no_diagrams_yet' => 'Todavía no se ha creado ningún diagrama.',
     'author_label' => '(autor: :name)',
     'diagram_owner_label' => '(propietario: :name)',
+    'last_modified_label' => 'Última modificación :time',
     'being_edited_by' => '— en edición por :name',
 
     // Editor
@@ -31,6 +36,45 @@ return [
     'zoom_out' => 'Alejar',
     'fit_to_screen' => 'Ajustar a la pantalla',
     'lock_not_held' => 'No tienes el bloqueo de este diagrama.',
+    'back_to_diagrams' => 'Volver a Diagramas',
+    'version_history' => 'Historial de versiones',
+    'collaborators' => 'Colaboradores',
+
+    // Panel de Colaboradores y Comparticiones
+    'collaborators_and_shares' => 'Colaboradores y Comparticiones',
+    'invite_by_email' => 'Invitar por correo',
+    'invite' => 'Invitar',
+    'approve' => 'Aprobar',
+    'refuse' => 'Rechazar',
+    'remove' => 'Eliminar',
+    'status_pending' => 'Pendiente',
+    'status_approved' => 'Aprobado',
+    'no_collaborators_yet' => 'Todavía no hay colaboradores.',
+    'collaborator_invited' => 'Colaborador invitado.',
+    'collaborator_invite_failed' => 'No se pudo invitar a este colaborador.',
+    'collaborator_approved' => 'Colaborador aprobado.',
+    'collaborator_approve_failed' => 'No se pudo aprobar a este colaborador.',
+    'collaborator_removed' => 'Colaborador eliminado.',
+    'collaborator_remove_failed' => 'No se pudo eliminar a este colaborador.',
+    'remove_collaborator_confirm' => '¿Eliminar a este colaborador?',
+    'refuse_request_confirm' => '¿Rechazar esta solicitud?',
+    'shares' => 'Comparticiones',
+    'create_share' => 'Crear enlace de compartición',
+    'expires_in_days' => 'Expira en (días)',
+    'allow_download' => 'Permitir descarga',
+    'copy_link' => 'Copiar enlace',
+    'link_copied' => 'Enlace copiado al portapapeles.',
+    'link_copy_failed' => 'No se pudo copiar el enlace.',
+    'revoke' => 'Revocar',
+    'revoke_share_confirm' => '¿Revocar esta compartición? El enlace dejará de funcionar de inmediato.',
+    'no_shares_yet' => 'Todavía no hay comparticiones activas.',
+    'share_created' => 'Enlace de compartición creado.',
+    'share_create_failed' => 'No se pudo crear el enlace de compartición.',
+    'share_revoked' => 'Compartición revocada.',
+    'share_revoke_failed' => 'No se pudo revocar esta compartición.',
+    'expires_label' => 'Expira :time',
+    'download_allowed' => 'Descarga permitida',
+    'download_not_allowed' => 'Descarga no permitida',
 
     // Historial de versiones y comparación
     'history' => 'Historial',
@@ -40,11 +84,34 @@ return [
     'diff_removed' => 'Eliminado',
     'diff_changed' => 'Modificado',
     'diff_removed_elements' => 'Elementos eliminados (no están en el canvas actual)',
+    'restore' => 'Restaurar',
+    'restore_version_confirm' => '¿Restaurar esta versión? Esto crea una nueva versión encima del historial.',
+    'version_restored' => 'Versión restaurada.',
+    'version_restore_failed' => 'No se pudo restaurar esta versión.',
 
     // Locked diagram
     'being_edited' => 'En edición',
     'currently_being_edited_by' => 'Este diagrama está siendo editado por :name en este momento. No puedes abrir el Editor hasta que se libere el Bloqueo.',
     'create_a_copy_to_continue' => 'Crear una copia (Fork) para continuar ahora',
+    'locked_since' => 'Bloqueado :time',
+    'request_the_lock' => 'Solicitar el Bloqueo',
+    'lock_transfers_in' => 'El Bloqueo se transfiere en :seconds s…',
+    'lock_requested_by_notice' => ':name ha solicitado el Bloqueo de este diagrama.',
+
+    // Gestión de usuarios
+    'users_heading' => 'Usuarios',
+    'name' => 'Nombre',
+    'login_method' => 'Método de inicio de sesión',
+    'login_method_local' => 'Local',
+    'login_method_keycloak' => 'Keycloak',
+    'administrator_status' => 'Administrador',
+    'administrator_via_keycloak' => 'Administrador (vía Keycloak)',
+    'not_administrator' => 'No es administrador',
+    'grant_administrator' => 'Conceder Administrador',
+    'revoke_administrator' => 'Revocar Administrador',
+    'not_revocable_via_keycloak' => 'Concedido por Keycloak — no se puede revocar aquí.',
+    'create_local_account' => 'Crear cuenta local',
+    'no_users_yet' => 'Todavía no hay usuarios.',
 
     // Public share viewer
     'download' => 'Descargar',
@@ -54,5 +121,11 @@ return [
     'loading' => 'Cargando…',
     'invalid_link' => 'Enlace no válido',
     'invalid_share_link' => 'Este enlace de compartición ha expirado o fue revocado por el Autor. Pide un nuevo enlace a quien compartió este Diagrama contigo.',
+
+    // Notifications
+    'notifications' => 'Notificaciones',
+    'no_notifications_yet' => 'Todavía no hay notificaciones.',
+    'mark_all_as_read' => 'Marcar todas como leídas',
+    'notification_requested_access' => ':name solicitó acceso a :diagram',
 
 ];

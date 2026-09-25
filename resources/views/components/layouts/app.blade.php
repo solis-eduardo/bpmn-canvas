@@ -9,8 +9,8 @@
     {{ $head ?? '' }}
 </head>
 <body class="h-full font-sans text-gray-900 antialiased">
-    <div class="min-h-full">
-        <header class="border-b border-gray-200 bg-white">
+    <div class="{{ ($fluid ?? false) ? 'flex h-screen flex-col overflow-hidden' : 'min-h-full' }}">
+        <header class="shrink-0 border-b border-gray-200 bg-white">
             <div class="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
                 <a href="{{ url('/home') }}" class="text-lg font-semibold text-gray-900">
                     {{ config('app.name') }}
@@ -29,20 +29,39 @@
                     >
                         {{ __('messages.diagrams') }}
                     </a>
+                    @if (auth()->check() && auth()->user()->is_admin)
+                        <a
+                            href="{{ route('admin.users.index') }}"
+                            class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('admin.users.*') ? 'bg-gray-100 text-gray-900' : '' }}"
+                        >
+                            {{ __('messages.users') }}
+                        </a>
+                    @endif
                 </nav>
 
-                {{-- Reserved space for the notification bell (see roadmap). --}}
+                {{-- Page-specific header controls (e.g. the Editor's back-to-list link
+                     and the reserved Version history / Collaborators entry points). --}}
+                {{ $headerActions ?? '' }}
+
                 <div class="flex items-center gap-3">
-                    <div class="h-8 w-8" data-slot="notification-bell" aria-hidden="true"></div>
+                    @auth
+                        @include('partials.notification-bell')
+                    @else
+                        <div class="h-8 w-8" data-slot="notification-bell" aria-hidden="true"></div>
+                    @endauth
 
                     @include('partials.language-switcher')
                 </div>
             </div>
         </header>
 
-        <main class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+        <main class="{{ ($fluid ?? false) ? 'min-h-0 flex-1 overflow-hidden' : 'mx-auto max-w-6xl px-4 py-8 sm:px-6' }}">
             {{ $slot }}
         </main>
     </div>
+
+    @auth
+        <script type="module" src="{{ asset('assets/notifications.js') }}"></script>
+    @endauth
 </body>
 </html>
