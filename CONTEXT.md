@@ -1,51 +1,68 @@
 # BPMN Studio
 
-Ferramenta interna de modelagem de processos BPMN 2.0, self-hosted, com autenticação via Keycloak, autoria/colaboração por usuário e compartilhamento público via links assinados com expiração.
+Internal, self-hosted BPMN 2.0 process modeling tool, with Keycloak authentication, per-user authorship/collaboration, and public sharing via signed, expiring links.
 
 ## Language
 
-**Diagrama**:
-Um processo BPMN 2.0 modelado no Editor. Persistido como arquivo `.bpmn` (XML) em disco (`disk_path`), com um registro correspondente no banco (`slug`, `title`, `author_id`, timestamps). Tem exatamente um Usuário como Autor e zero ou mais Colaboradores.
-_Avoid_: Fluxo (colide com "Fluxo de Sequência", elemento nativo do BPMN), processo, arquivo
+**Diagram**:
+A BPMN 2.0 process modeled in the Editor. Persisted as a `.bpmn` file (XML) on disk (`disk_path`), with a corresponding database record (`slug`, `title`, `author_id`, timestamps). Has exactly one Author, exactly one Diagram Owner, zero or more Collaborators, and belongs to at most one Workspace.
+_Avoid_: Flow (collides with "Sequence Flow", a native BPMN element), process, file
 
 **Slug**:
-Identificador legível e único do Diagrama, usado na URL do Editor e como base do nome do arquivo físico. É mutável: ao renomear, o arquivo físico é renomeado junto. O Slug anterior fica reservado permanentemente e passa a redirecionar para o Diagrama atual — nunca é reaproveitado por outro Diagrama. Se a criação de um novo Diagrama colidir com um Slug reservado, um sufixo alfanumérico aleatório é anexado automaticamente (a criação nunca é bloqueada por isso).
-_Avoid_: Nome do arquivo, ID
+Readable, unique identifier for a Diagram, used in the Editor's URL and as the base of the physical file name. It's mutable: renaming also renames the physical file. The previous Slug stays permanently reserved and redirects to the current Diagram — it's never reused by another Diagram. If creating a new Diagram collides with a reserved Slug, a random alphanumeric suffix is appended automatically (creation is never blocked by this).
+_Avoid_: File name, ID
 
-**Autor**:
-O Usuário dono de um Diagrama — quem o criou. Único que pode excluir o Diagrama, convidar/remover Colaboradores e criar/revogar Compartilhamentos.
-_Avoid_: Owner, criador (usar Autor para bater com o glossário)
+**Author**:
+The User who created a Diagram. Fixed forever — authorship is never transferred. By default the Author is also the Diagram Owner, but the two can diverge. Being the Author grants no powers by itself — it's credit only.
+_Avoid_: creator, Owner (always qualify: Diagram Owner or Workspace Owner)
 
-**Colaborador**:
-Usuário com permissão de editar um Diagrama do qual não é Autor. Permissão binária (não há distinção de papel entre Colaboradores). Concedida de duas formas: o Autor convida o Usuário diretamente, ou o Usuário solicita acesso e o Autor aprova; um Administrador também pode conceder diretamente, sem passar pelo Autor.
-_Avoid_: Editor (papel, não confundir com a interface Editor)
+**Diagram Owner**:
+The User currently responsible for a Diagram: the only one who can delete it, invite/remove Collaborators, create/revoke Shares, and put it into a Workspace (one they're a Member of) or take it out of one. Starts as the Author and, unlike authorship, can be transferred to another User by the current Diagram Owner or an Administrator — no acceptance needed; the recipient is notified and needn't be a Member of the Diagram's Workspace. On transfer, the previous Diagram Owner becomes a Collaborator, unless they choose to give up access.
+_Avoid_: Owner (unqualified), Author (the Author is fixed; the Diagram Owner can change)
 
-**Administrador**:
-Usuário com privilégio de conceder Colaborador em qualquer Diagrama independentemente do Autor, e de criar contas manualmente. O papel pode vir de duas origens que coexistem: setado manualmente por outro Administrador, ou concedido automaticamente pela role/claim correspondente no token do Keycloak (ver Usuário). Uma vez concedido, não é revogado pela ausência da claim — só uma origem manual desliga.
+**Collaborator**:
+A User with direct permission to edit a Diagram they're not the Diagram Owner of. Binary permission (there's no role distinction among Collaborators). Granted two ways: the Diagram Owner invites the User directly, or the User requests access and the Diagram Owner approves it; an Administrator can also grant it directly, without going through the Diagram Owner. A Diagram hidden inside a Workspace can't be found to request access — only invitation reaches it.
+_Avoid_: Editor (a role, not to be confused with the Editor interface)
 
-**Compartilhamento**:
-Link público, assinado e com expiração (`expires_at`) definida em dias pelo Autor (padrão 7, máximo 60), que dá acesso de leitura a um Diagrama sem exigir login. Tem uma permissão de download (`allow_download`, desabilitada por padrão) e pode ser revogado antes de expirar (`revoked_at`). Um Diagrama pode ter múltiplos Compartilhamentos ativos simultaneamente, cada um com sua própria expiração/permissão. Somente o Autor cria e revoga Compartilhamentos.
-_Avoid_: Token de compartilhamento, link público (usar "Compartilhamento" para a entidade; a URL em si pode ser chamada de "link de compartilhamento")
+**Administrator**:
+A User with the privilege to grant Collaborator access on any Diagram regardless of its Diagram Owner, transfer any Diagram's ownership, to create accounts manually, and to manage any Workspace (including transferring Workspace ownership). Sees every Diagram, including those hidden inside Workspaces they're not a Member of. The role can come from two coexisting sources: set manually by another Administrator, or granted automatically by the corresponding role/claim in the Keycloak token (see User). Once granted, it isn't revoked by the claim's absence — only a manual origin turns it off.
+
+**Share**:
+A public, signed link with an expiration (`expires_at`) set in days (default 7, max 60), granting read access to a Diagram without requiring login. A Share either follows the Diagram's latest Version or is pinned to one specific Version. Has a download permission (`allow_download`, disabled by default) and can be revoked before it expires (`revoked_at`). A Diagram can have multiple active Shares simultaneously, each with its own expiration/permission. Only the Diagram Owner creates and revokes Shares. A Share keeps working when its Diagram is hidden inside a Workspace — visibility in the Diagram list doesn't affect Shares.
+_Avoid_: Share token, public link (use "Share" for the entity; the URL itself can be called a "share link")
 
 **Editor**:
-Interface autenticada de criação/edição de um Diagrama (bpmn-js Modeler). Acessível pelo Autor e por Colaboradores.
+Authenticated interface for creating/editing a Diagram (bpmn-js Modeler). Accessible by the Diagram Owner, Collaborators, and Members of the Diagram's Workspace.
 
-**Visualizador Público**:
-Interface de leitura somente-leitura de um Diagrama por qualquer pessoa com um link de Compartilhamento válido (não expirado, não revogado), sem autenticação. Exporta PNG/SVG/BPMN apenas se o Compartilhamento permitir download (`allow_download`).
-_Avoid_: Viewer (sem qualificar "público")
+**Public Viewer**:
+Read-only interface for viewing a Diagram by anyone with a valid Share link (not expired, not revoked), without authentication. Exports PNG/SVG/BPMN only if the Share allows download (`allow_download`).
+_Avoid_: Viewer (without qualifying "public")
 
-**Trava de Edição**:
-Estado de um Diagrama enquanto está sendo editado por um Autor ou Colaborador, que impede que outra pessoa abra o Editor simultaneamente. Aparece indicada na listagem de Diagramas (somente indicação, sem bloquear a listagem em si). Liberada explicitamente ao sair do Editor, ou por timeout de inatividade. Quem tenta abrir o Editor de um Diagrama travado é bloqueado, vê quem detém a Trava, e recebe a sugestão de criar uma cópia (Fork). Quem tenta editar pode solicitar a Trava (via polling): se o detentor não responder em 30 segundos, a Trava é transferida automaticamente para quem solicitou. Um Administrador também pode forçar a liberação a qualquer momento, como via alternativa ao mecanismo dos 30 segundos.
+**Editing Lock**:
+State of a Diagram while it's being edited by someone who can edit it, which prevents anyone else from opening the Editor at the same time. Shown as an indicator in the Diagram listing (indication only, doesn't block the listing itself). Released explicitly on leaving the Editor, or by inactivity timeout. Anyone who tries to open the Editor of a locked Diagram is blocked, sees who holds the Lock, and is offered the option to create a copy (Fork). Anyone trying to edit can request the Lock (via polling): if the holder doesn't respond within 30 seconds, the Lock is automatically transferred to whoever requested it. An Administrator can also force a release at any time, as an alternative to the 30-second mechanism.
 
 **Fork**:
-Diagrama novo e independente criado a partir do conteúdo de outro no momento em que alguém esbarra em uma Trava de Edição. Tem Slug próprio e o Autor passa a ser quem forkou; a origem pode ser guardada como metadado informativo, sem vínculo funcional (não há merge entre Fork e original).
+A new, independent Diagram created from another one's content at the moment someone runs into an Editing Lock. Has its own Slug, and the Author and Diagram Owner become whoever forked it; whoever forks chooses which Workspace (among those they're a Member of) the Fork is created in, or none; the origin can be kept as informational metadata, with no functional link (there's no merge between a Fork and the original).
 
-**Versão**:
-Registro histórico do conteúdo de um Diagrama em um momento salvo. Cada save gera uma Versão internamente (via Git), retendo tudo; a agregação por dia é apenas uma forma de exibição do histórico ao Usuário, sem expor a mecânica Git. Restaurar uma Versão antiga cria uma nova Versão no topo do histórico com aquele conteúdo (estilo "revert") — nunca descarta as Versões intermediárias.
+**Version**:
+Historical record of a Diagram's content at a saved moment. Each save generates a Version internally (via Git), retaining everything; day-based grouping is just a display concern for showing history to the User, without exposing the Git mechanics. Restoring an old Version creates a new Version on top of the history (revert-style) — it never discards intermediate Versions. Every Version has a name; by default it's "Version N", N being sequential within the Diagram, and anyone who can edit the Diagram can rename it to mark a milestone (e.g. "Approved by the board"). Names needn't be unique; the number still identifies the Version. Restoring creates Version N+1; a Fork starts again at Version 1.
+_Avoid_: commit, revision, tag, label, milestone (a named Version is still just a Version)
 
-**Usuário**:
-Conta autenticada no sistema. Duas formas de login coexistem, e o Usuário escolhe qual usar — não é uma migração de uma para outra: login local (conta provisionada manualmente por um Administrador) e login via Keycloak SSO (OpenID Connect), com provisionamento just-in-time no primeiro acesso. Uma conta local e uma identidade Keycloak com o mesmo e-mail são vinculadas automaticamente à mesma conta, nunca duplicadas. Substitui o login único compartilhado (Basic Auth) do stack legado.
+**User**:
+An authenticated account in the system. Two login methods coexist, and the User chooses which to use — it's not a migration from one to the other: local login (an account provisioned manually by an Administrator) and Keycloak SSO login (OpenID Connect), with just-in-time provisioning on first access. A local account and a Keycloak identity with the same email are automatically linked to the same account, never duplicated. Replaces the legacy stack's single shared login (Basic Auth).
 
-**Ambiente de Trabalho** _(futuro, não implementado nesta fase)_:
-Contexto de agrupamento de Usuários e Diagramas planejado para uma fase futura. Diagramas de um Ambiente seriam automaticamente visíveis/editáveis (nível Colaborador) por todos os membros, sem passar pelo fluxo de Colaborador. Nesta fase, cada Usuário é implicitamente seu próprio Ambiente, sem nenhum compartilhamento automático.
-</content>
+**Workspace**:
+A group of Users (its Members) that holds Diagrams. Any User can create a Workspace and becomes its Workspace Owner. A Diagram belongs to at most one Workspace; while it does, every Member can edit it as if they were a Collaborator, and it is hidden from Users who are neither Members nor have direct access to it (Diagram Owner, Collaborator) — a Collaborator keeps seeing the Diagram even without being a Member. A Diagram outside any Workspace stays visible to every User.
+_Avoid_: group, team, environment, folder
+
+**Member**:
+A User who belongs to a Workspace. Membership grants Collaborator-level editing on the Workspace's Diagrams, but a Member is not a Collaborator: leaving the Workspace removes that access, unless the User is also a Collaborator of the Diagram directly. Members are added by the Workspace Owner or, when an Administrator links the Workspace to a Keycloak group, mirrored from that group (manually added Members are never removed by the mirror).
+_Avoid_: Workspace Collaborator
+
+**Workspace Owner**:
+The single User who manages a Workspace: adds and removes Members, renames and deletes it, and can take any Diagram out of it (only a Diagram Owner puts a Diagram in). Starts as the creator; the Workspace Owner or an Administrator can transfer it to another User, with no acceptance needed (the recipient is notified). Can't leave the Workspace without transferring it first. A Workspace can't be deleted while it still holds Diagrams.
+_Avoid_: Owner (unqualified), Workspace admin, manager (reserve "Administrator" for the system-wide role)
+
+**Tag**:
+A global, free-text marker applied to Diagrams to organize and filter the Diagram list. Anyone who can edit a Diagram (Diagram Owner, Collaborator, Member) can apply or remove its Tags. Unrelated to the Git mechanics behind Versions, which stay invisible.
+_Avoid_: label, category, folder
