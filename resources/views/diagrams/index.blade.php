@@ -22,6 +22,7 @@
             <li>
                 <a href="{{ route('diagrams.show', $diagram->slug) }}">{{ $diagram->title }}</a>
                 {{ __('messages.author_label', ['name' => $diagram->author->name]) }}
+                {{ __('messages.diagram_owner_label', ['name' => $diagram->owner->name]) }}
                 @if ($diagram->hasActiveLock())
                     {{ __('messages.being_edited_by', ['name' => $diagram->lockedBy->name]) }}
                 @endif

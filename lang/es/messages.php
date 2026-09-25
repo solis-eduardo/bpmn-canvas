@@ -20,6 +20,7 @@ return [
     'create_diagram' => 'Crear diagrama',
     'no_diagrams_yet' => 'Todavía no se ha creado ningún diagrama.',
     'author_label' => '(autor: :name)',
+    'diagram_owner_label' => '(propietario: :name)',
     'being_edited_by' => '— en edición por :name',
 
     // Editor

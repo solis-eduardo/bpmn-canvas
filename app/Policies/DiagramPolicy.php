@@ -9,7 +9,8 @@ use App\Models\User;
 class DiagramPolicy
 {
     /**
-     * Open the Editor to edit a Diagram: Author or approved Collaborator.
+     * Open the Editor to edit a Diagram: Diagram Owner or approved
+     * Collaborator.
      */
     public function view(User $user, Diagram $diagram): bool
     {
@@ -17,7 +18,7 @@ class DiagramPolicy
     }
 
     /**
-     * Save a Diagram's content: Author or approved Collaborator.
+     * Save a Diagram's content: Diagram Owner or approved Collaborator.
      */
     public function update(User $user, Diagram $diagram): bool
     {
@@ -25,28 +26,37 @@ class DiagramPolicy
     }
 
     /**
-     * Manage a Diagram's Collaborators (invite/approve/remove): Author or
-     * Administrator (spec.md, "Collaboration" section).
+     * Delete a Diagram: Diagram Owner only (ADR-0006 — this power moved off
+     * the Author, which stays credit only).
      */
-    public function manageCollaborators(User $user, Diagram $diagram): bool
+    public function delete(User $user, Diagram $diagram): bool
     {
-        return $user->id === $diagram->author_id || $user->is_admin;
+        return $diagram->isOwnedBy($user);
     }
 
     /**
-     * Manage a Diagram's Shares (create/revoke): Author only, no exception
-     * for Administrator — "Only the Author creates and revokes Shares"
-     * (CONTEXT.md). Deliberately stricter than manageCollaborators; don't
-     * unify the two.
+     * Manage a Diagram's Collaborators (invite/approve/remove): Diagram
+     * Owner or Administrator (CONTEXT.md, "Collaborator"; ADR-0006).
+     */
+    public function manageCollaborators(User $user, Diagram $diagram): bool
+    {
+        return $diagram->isOwnedBy($user) || $user->is_admin;
+    }
+
+    /**
+     * Manage a Diagram's Shares (create/revoke): Diagram Owner only, no
+     * exception for Administrator — "Only the Diagram Owner creates and
+     * revokes Shares" (CONTEXT.md, "Share"; ADR-0006). Deliberately
+     * stricter than manageCollaborators; don't unify the two.
      */
     public function manageShares(User $user, Diagram $diagram): bool
     {
-        return $user->id === $diagram->author_id;
+        return $diagram->isOwnedBy($user);
     }
 
     private function canEdit(User $user, Diagram $diagram): bool
     {
-        if ($user->id === $diagram->author_id) {
+        if ($diagram->isOwnedBy($user)) {
             return true;
         }
 
