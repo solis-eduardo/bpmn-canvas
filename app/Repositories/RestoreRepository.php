@@ -67,7 +67,7 @@ class RestoreRepository
      */
     private function extract(string $artifactPath, string $destination): void
     {
-        $process = ProcessRunner::run([
+        ProcessRunner::run([
             'tar', '-xzf', $artifactPath, '-C', $destination,
         ]);
     }
