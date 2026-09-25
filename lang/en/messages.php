@@ -122,4 +122,10 @@ return [
     'invalid_link' => 'Invalid link',
     'invalid_share_link' => 'This share link has expired or was revoked by the Author. Ask whoever shared this Diagram with you for a new link.',
 
+    // Notifications
+    'notifications' => 'Notifications',
+    'no_notifications_yet' => 'No notifications yet.',
+    'mark_all_as_read' => 'Mark all as read',
+    'notification_requested_access' => ':name requested access to :diagram',
+
 ];
