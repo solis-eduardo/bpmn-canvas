@@ -399,4 +399,189 @@ class ShareTest extends TestCase
         $this->actingAs($admin)->postJson("/diagrams/{$diagram->slug}/shares")
             ->assertForbidden();
     }
+
+    /**
+     * @return array<int, array{id: string, number: int}>
+     */
+    private function versionsOf(User $user, Diagram $diagram): array
+    {
+        return collect(
+            $this->actingAs($user)->getJson("/diagrams/{$diagram->slug}/versions")->json('versions')
+        )->flatMap(fn (array $day) => $day['items'])->values()->all();
+    }
+
+    public function test_share_created_without_a_version_follows_the_latest_version_by_default(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author, '<bpmn>initial</bpmn>');
+
+        $response = $this->actingAs($author)->postJson("/diagrams/{$diagram->slug}/shares", []);
+
+        $response->assertCreated();
+        $response->assertJsonPath('pinned_version', null);
+        $this->assertNull(Share::first()->pinned_version_id);
+    }
+
+    public function test_share_can_be_created_pinned_to_a_chosen_version(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author, '<bpmn>version one</bpmn>');
+
+        $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
+            'content' => '<bpmn>version two</bpmn>',
+        ])->assertOk();
+
+        $versions = $this->versionsOf($author, $diagram);
+        $oldestVersion = collect($versions)->last();
+
+        $response = $this->actingAs($author)->postJson("/diagrams/{$diagram->slug}/shares", [
+            'pinned_version_id' => $oldestVersion['id'],
+        ]);
+
+        $response->assertCreated();
+        $response->assertJsonPath('pinned_version.id', $oldestVersion['id']);
+        $response->assertJsonPath('pinned_version.number', $oldestVersion['number']);
+
+        $share = Share::first();
+        $this->assertSame($oldestVersion['id'], $share->pinned_version_id);
+        $this->assertTrue($share->isPinned());
+    }
+
+    public function test_creating_a_share_pinned_to_an_unknown_version_is_rejected(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author);
+
+        $response = $this->actingAs($author)->postJson("/diagrams/{$diagram->slug}/shares", [
+            'pinned_version_id' => 'deadbeef',
+        ]);
+
+        $response->assertStatus(422);
+        $this->assertDatabaseCount('shares', 0);
+    }
+
+    public function test_pinned_share_keeps_serving_old_content_after_new_saves(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author);
+
+        // Save "old content" as its own Version, and capture the id the
+        // Share will be pinned to.
+        $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
+            'content' => '<bpmn>old content</bpmn>',
+        ])->assertOk();
+        $pinnedVersion = collect($this->versionsOf($author, $diagram))->first();
+
+        $share = Share::factory()->for($diagram)->for($author, 'author')->create([
+            'pinned_version_id' => $pinnedVersion['id'],
+        ]);
+
+        // A new save happens after the Share was pinned.
+        $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
+            'content' => '<bpmn>new content</bpmn>',
+        ])->assertOk();
+
+        $response = $this->get($share->showUrl());
+
+        $response->assertOk();
+        $response->assertSee('old content', false);
+        $response->assertDontSee('new content', false);
+    }
+
+    public function test_latest_share_serves_new_content_after_new_saves(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author);
+
+        $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
+            'content' => '<bpmn>old content</bpmn>',
+        ])->assertOk();
+
+        $share = Share::factory()->for($diagram)->for($author, 'author')->create();
+
+        $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
+            'content' => '<bpmn>new content</bpmn>',
+        ])->assertOk();
+
+        $response = $this->get($share->showUrl());
+
+        $response->assertOk();
+        $response->assertSee('new content', false);
+        $response->assertDontSee('old content', false);
+    }
+
+    public function test_pinned_share_download_serves_old_content_after_new_saves(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author);
+
+        $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
+            'content' => '<bpmn>old download content</bpmn>',
+        ])->assertOk();
+        $pinnedVersion = collect($this->versionsOf($author, $diagram))->first();
+
+        $share = Share::factory()->for($diagram)->for($author, 'author')->create([
+            'allow_download' => true,
+            'pinned_version_id' => $pinnedVersion['id'],
+        ]);
+
+        $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
+            'content' => '<bpmn>new download content</bpmn>',
+        ])->assertOk();
+
+        $response = $this->get($share->downloadUrl());
+
+        $response->assertOk();
+        $response->assertSee('old download content', false);
+        $response->assertDontSee('new download content', false);
+    }
+
+    public function test_shares_list_shows_which_version_a_share_is_pinned_to(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author);
+
+        $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
+            'content' => '<bpmn>content</bpmn>',
+        ])->assertOk();
+        $pinnedVersion = collect($this->versionsOf($author, $diagram))->first();
+
+        Share::factory()->for($diagram)->for($author, 'author')->create([
+            'pinned_version_id' => $pinnedVersion['id'],
+        ]);
+        Share::factory()->for($diagram)->for($author, 'author')->create();
+
+        $response = $this->actingAs($author)->getJson("/diagrams/{$diagram->slug}/shares");
+
+        $response->assertOk();
+        $shares = collect($response->json('shares'));
+
+        $pinned = $shares->firstWhere('pinned_version.id', $pinnedVersion['id']);
+        $this->assertNotNull($pinned);
+        $this->assertSame($pinnedVersion['number'], $pinned['pinned_version']['number']);
+
+        $latest = $shares->firstWhere('pinned_version', null);
+        $this->assertNotNull($latest);
+    }
+
+    public function test_no_share_api_response_exposes_git_vocabulary(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author);
+
+        $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
+            'content' => '<bpmn>content</bpmn>',
+        ])->assertOk();
+        $pinnedVersion = collect($this->versionsOf($author, $diagram))->first();
+
+        $response = $this->actingAs($author)->postJson("/diagrams/{$diagram->slug}/shares", [
+            'pinned_version_id' => $pinnedVersion['id'],
+        ]);
+
+        $response->assertCreated();
+
+        $body = $response->getContent();
+        $this->assertStringNotContainsStringIgnoringCase('commit', $body);
+        $this->assertStringNotContainsStringIgnoringCase('branch', $body);
+    }
 }
