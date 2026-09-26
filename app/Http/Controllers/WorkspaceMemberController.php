@@ -13,6 +13,9 @@ class WorkspaceMemberController extends Controller
      * Adds a Member to a Workspace: Workspace Owner or Administrator only
      * (CONTEXT.md, "Member"). "Members are added by the Workspace Owner" —
      * no invitation/acceptance flow, unlike a Diagram's Collaborator.
+     *
+     * Returns silently regardless of whether the email matches an existing User
+     * (avoiding email enumeration).
      */
     public function store(Request $request, Workspace $workspace): RedirectResponse
     {
@@ -23,7 +26,13 @@ class WorkspaceMemberController extends Controller
             'email' => ['required_without:user_id', 'email'],
         ]);
 
-        $workspace->addMember($this->resolveUserFrom($data));
+        $member = $this->resolveUserFrom($data);
+
+        // Only add the member if the User exists; silently do nothing if
+        // the email doesn't match (avoiding email enumeration).
+        if ($member) {
+            $workspace->addMember($member);
+        }
 
         return redirect()->route('workspaces.index');
     }

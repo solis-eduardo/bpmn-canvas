@@ -124,6 +124,10 @@ class DiagramController extends Controller
      * Transfers the Diagram Owner role to another User: current Diagram
      * Owner or Administrator only (CONTEXT.md, "Diagram Owner"; ADR-0006;
      * issue #14). No acceptance step — takes effect immediately.
+     *
+     * When targeting by email, returns a generic success response regardless
+     * of whether the email matches an existing User, to avoid email enumeration.
+     * When targeting by user_id, returns the usual detailed response.
      */
     public function transferOwnership(Request $request, string $slug, TransferOwnership $transfer): JsonResponse
     {
@@ -138,6 +142,25 @@ class DiagramController extends Controller
         ]);
 
         $newOwner = $this->resolveUserFrom($data);
+
+        // When email is used, return a generic success response regardless of
+        // whether the user exists (preventing email enumeration). When user_id
+        // is used, return the detailed response since user_id lookup can't be
+        // probed (validation ensures the ID must exist).
+        if (isset($data['email'])) {
+            // If user exists by email, still perform the action
+            if ($newOwner) {
+                $transfer($diagram, $newOwner, (bool) ($data['give_up_access'] ?? false));
+            }
+            // Return the same response regardless of whether the user exists
+            return response()->json(['success' => true]);
+        }
+
+        // If user_id was provided but owner not found (shouldn't happen due
+        // to validation, but handle it gracefully)
+        if (!$newOwner) {
+            return response()->json(['success' => true]);
+        }
 
         $transfer($diagram, $newOwner, (bool) ($data['give_up_access'] ?? false));
 

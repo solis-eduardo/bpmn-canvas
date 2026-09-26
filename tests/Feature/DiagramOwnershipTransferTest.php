@@ -200,4 +200,27 @@ class DiagramOwnershipTransferTest extends TestCase
             'user_id' => $newOwner->id,
         ]);
     }
+
+    public function test_transferring_by_email_returns_identical_response_for_existing_and_non_existing_email(): void
+    {
+        $owner = User::factory()->create();
+        $existingUser = User::factory()->create();
+        $diagram1 = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
+        $diagram2 = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
+
+        $responseWithExistingEmail = $this->actingAs($owner)->putJson("/diagrams/{$diagram1->slug}/owner", [
+            'email' => $existingUser->email,
+        ]);
+
+        $responseWithNonExistingEmail = $this->actingAs($owner)->putJson("/diagrams/{$diagram2->slug}/owner", [
+            'email' => 'nonexistent@example.com',
+        ]);
+
+        // Both responses should have identical status and structure
+        $this->assertSame($responseWithExistingEmail->status(), $responseWithNonExistingEmail->status());
+        $this->assertSame($responseWithExistingEmail->status(), 200);
+
+        // Both should have the same JSON structure (generic success response)
+        $this->assertSame($responseWithExistingEmail->json(), $responseWithNonExistingEmail->json());
+    }
 }

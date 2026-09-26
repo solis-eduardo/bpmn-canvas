@@ -12,12 +12,17 @@ abstract class Controller
     /**
      * Resolves a target User from validated request data containing either
      * a `user_id` or an `email` (see the `required_without` validation rule
-     * used alongside this everywhere it's called).
+     * used alongside this everywhere it's called). Returns null if the email
+     * is provided but no matching User exists (avoids email enumeration).
+     *
+     * @return User|null
      */
-    protected function resolveUserFrom(array $data): User
+    protected function resolveUserFrom(array $data): ?User
     {
-        return isset($data['user_id'])
-            ? User::findOrFail($data['user_id'])
-            : User::where('email', $data['email'])->firstOrFail();
+        if (isset($data['user_id'])) {
+            return User::findOrFail($data['user_id']);
+        }
+
+        return User::where('email', $data['email'])->first();
     }
 }

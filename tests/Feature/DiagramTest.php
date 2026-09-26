@@ -105,6 +105,11 @@ class DiagramTest extends TestCase
 
     public function test_user_can_fetch_the_current_content_of_a_diagram(): void
     {
+        // Ensure the locale is set to 'en' before creating the diagram so the
+        // factory-generated BPMN content uses the English label. This test must
+        // pass regardless of what locale other tests may have set previously.
+        $this->app->setLocale('en');
+
         $user = User::factory()->create();
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
