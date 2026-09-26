@@ -19,6 +19,14 @@ Create a GitHub Issue with `gh issue create` (title + body from the ticket). If 
 
 Fetch the issue with `gh issue view <number>`. The user will normally pass the issue number or URL directly.
 
+## Claiming an issue before implementing
+
+Parallel sessions (human or agent) can pick up the same open issue at the same time — an issue's open/closed state and the PR list don't show an in-flight claim from another session started the same day. Before starting implementation (or dispatching an agent to do so):
+
+1. Check the issue for an existing assignee or a recent "starting implementation" comment. If present, treat it as claimed — skip it or confirm with the user before proceeding.
+2. Once clear, claim it: `gh issue edit <number> --add-assignee @me`, then post a comment announcing work is starting (e.g. "Starting implementation").
+3. Do this *before* the implementation work begins, not after it finishes — the reservation is only useful if another session can see it in time.
+
 ## Wayfinding operations
 
 Used by `/wayfinder`. This is ephemeral research scaffolding for exploring a question, kept local — it does not move to GitHub Issues. The **map** is a file with one **child** file per ticket.
