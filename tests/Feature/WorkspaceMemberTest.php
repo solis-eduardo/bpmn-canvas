@@ -6,10 +6,12 @@ use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+use Tests\Traits\TestsEmailEnumerationPrevention;
 
 class WorkspaceMemberTest extends TestCase
 {
     use RefreshDatabase;
+    use TestsEmailEnumerationPrevention;
 
     public function test_workspace_owner_can_add_a_member(): void
     {
@@ -146,11 +148,6 @@ class WorkspaceMemberTest extends TestCase
             'email' => 'nonexistent@example.com',
         ]);
 
-        // Both responses should have identical status and redirect to the same place
-        $this->assertSame($responseWithExistingEmail->status(), $responseWithNonExistingEmail->status());
-        $this->assertSame($responseWithExistingEmail->status(), 302);
-
-        // Both should redirect to the same location
-        $this->assertSame($responseWithExistingEmail->headers->get('Location'), $responseWithNonExistingEmail->headers->get('Location'));
+        $this->assertEmailEnumerationPreventedWithRedirect($responseWithExistingEmail, $responseWithNonExistingEmail);
     }
 }

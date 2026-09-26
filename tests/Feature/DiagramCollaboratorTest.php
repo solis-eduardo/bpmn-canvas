@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
+use Tests\Traits\TestsEmailEnumerationPrevention;
 
 /**
  * Managing Collaborators (invite/approve/remove) is Diagram Owner or
@@ -18,6 +19,7 @@ use Tests\TestCase;
 class DiagramCollaboratorTest extends TestCase
 {
     use RefreshDatabase;
+    use TestsEmailEnumerationPrevention;
 
     protected function setUp(): void
     {
@@ -132,11 +134,6 @@ class DiagramCollaboratorTest extends TestCase
             'email' => 'nonexistent@example.com',
         ]);
 
-        // Both responses should have identical status and structure
-        $this->assertSame($responseWithExistingEmail->status(), $responseWithNonExistingEmail->status());
-        $this->assertSame($responseWithExistingEmail->status(), 201);
-
-        // Both should have the same JSON structure (generic success response)
-        $this->assertSame($responseWithExistingEmail->json(), $responseWithNonExistingEmail->json());
+        $this->assertEmailEnumerationPrevented($responseWithExistingEmail, $responseWithNonExistingEmail, 201);
     }
 }

@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
+use Tests\Traits\TestsEmailEnumerationPrevention;
 
 /**
  * Transferring the Diagram Owner role (CONTEXT.md, "Diagram Owner";
@@ -19,6 +20,7 @@ use Tests\TestCase;
 class DiagramOwnershipTransferTest extends TestCase
 {
     use RefreshDatabase;
+    use TestsEmailEnumerationPrevention;
 
     protected function setUp(): void
     {
@@ -216,11 +218,6 @@ class DiagramOwnershipTransferTest extends TestCase
             'email' => 'nonexistent@example.com',
         ]);
 
-        // Both responses should have identical status and structure
-        $this->assertSame($responseWithExistingEmail->status(), $responseWithNonExistingEmail->status());
-        $this->assertSame($responseWithExistingEmail->status(), 200);
-
-        // Both should have the same JSON structure (generic success response)
-        $this->assertSame($responseWithExistingEmail->json(), $responseWithNonExistingEmail->json());
+        $this->assertEmailEnumerationPrevented($responseWithExistingEmail, $responseWithNonExistingEmail, 200);
     }
 }

@@ -156,12 +156,6 @@ class DiagramController extends Controller
             return response()->json(['success' => true]);
         }
 
-        // If user_id was provided but owner not found (shouldn't happen due
-        // to validation, but handle it gracefully)
-        if (!$newOwner) {
-            return response()->json(['success' => true]);
-        }
-
         $transfer($diagram, $newOwner, (bool) ($data['give_up_access'] ?? false));
 
         return response()->json([

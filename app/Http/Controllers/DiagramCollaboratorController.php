@@ -68,12 +68,6 @@ class DiagramCollaboratorController extends Controller
             return response()->json(['success' => true], 201);
         }
 
-        // If user_id was provided but target not found (shouldn't happen due
-        // to validation, but handle it gracefully)
-        if (!$target) {
-            return response()->json(['success' => true], 201);
-        }
-
         $collaborator = $grant($diagram, $request->user(), $target);
 
         // A self-request (never a direct invite — those land as "approved")
