@@ -16,8 +16,10 @@ use Illuminate\Support\Carbon;
  * The lead time is configurable (config/shares.php, default 2 days). A
  * Share is only ever warned about once: `expiry_warned_at` (set here) is
  * the idempotence guard, and revoked or already-expired Shares are never
- * candidates (Share::isDueForExpiryWarning() — the same rule isValid()
- * uses).
+ * candidates. The one rule for "is this Share due for a warning" lives in
+ * Share::isDueForExpiryWarning() — the query below only narrows on the
+ * cheap, indexed nullity columns to keep the row set small, it isn't a
+ * second copy of that rule.
  */
 class WarnExpiringShares extends Command
 {
@@ -32,23 +34,27 @@ class WarnExpiringShares extends Command
         $candidates = Share::query()
             ->whereNull('revoked_at')
             ->whereNull('expiry_warned_at')
-            ->where('expires_at', '>', Carbon::now())
-            ->where('expires_at', '<=', $leadTimeCutoff)
             ->with('diagram.owner')
-            ->get();
+            ->get()
+            ->filter(fn (Share $share) => $share->isDueForExpiryWarning($leadTimeCutoff));
 
         $warned = 0;
 
         foreach ($candidates as $share) {
-            if (! $share->isDueForExpiryWarning($leadTimeCutoff)) {
-                continue;
+            try {
+                $share->diagram->owner->notify(new ShareExpiringSoon($share));
+                $share->update(['expiry_warned_at' => Carbon::now()]);
+
+                $warned++;
+                $this->info("Warned Share #{$share->id} (Diagram '{$share->diagram->slug}') expiring at {$share->expires_at}.");
+            } catch (\Throwable $e) {
+                // One bad Share (e.g. a lookup failure while resolving its
+                // Diagram/Owner) shouldn't abort the whole run and leave
+                // every other candidate unprocessed — it's simply retried
+                // on the next scheduled run, since expiry_warned_at was
+                // never set for it.
+                $this->error("Failed to warn about Share #{$share->id}: {$e->getMessage()}");
             }
-
-            $share->diagram->owner->notify(new ShareExpiringSoon($share));
-            $share->update(['expiry_warned_at' => Carbon::now()]);
-
-            $warned++;
-            $this->info("Warned Share #{$share->id} (Diagram '{$share->diagram->slug}') expiring at {$share->expires_at}.");
         }
 
         if ($warned === 0) {
