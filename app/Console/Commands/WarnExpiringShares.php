@@ -38,14 +38,13 @@ class WarnExpiringShares extends Command
             ->get()
             ->filter(fn (Share $share) => $share->isDueForExpiryWarning($leadTimeCutoff));
 
-        $warned = 0;
+        $warnedIds = [];
 
         foreach ($candidates as $share) {
             try {
                 $share->diagram->owner->notify(new ShareExpiringSoon($share));
-                $share->update(['expiry_warned_at' => Carbon::now()]);
 
-                $warned++;
+                $warnedIds[] = $share->id;
                 $this->info("Warned Share #{$share->id} (Diagram '{$share->diagram->slug}') expiring at {$share->expires_at}.");
             } catch (\Throwable $e) {
                 // One bad Share (e.g. a lookup failure while resolving its
@@ -57,8 +56,12 @@ class WarnExpiringShares extends Command
             }
         }
 
-        if ($warned === 0) {
+        if ($warnedIds === []) {
             $this->info('No Shares due for an expiry warning.');
+        } else {
+            // One UPDATE for every Share warned this run instead of one
+            // per Share.
+            Share::whereIn('id', $warnedIds)->update(['expiry_warned_at' => Carbon::now()]);
         }
 
         return self::SUCCESS;
