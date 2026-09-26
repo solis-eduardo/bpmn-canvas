@@ -130,4 +130,27 @@ class WorkspaceMemberTest extends TestCase
         $response->assertStatus(422);
         $this->assertTrue($workspace->fresh()->hasMember($owner));
     }
+
+    public function test_adding_by_email_returns_identical_response_for_existing_and_non_existing_email(): void
+    {
+        $owner = User::factory()->create();
+        $existingUser = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $workspace->addMember($owner);
+
+        $responseWithExistingEmail = $this->actingAs($owner)->post("/workspaces/{$workspace->id}/members", [
+            'email' => $existingUser->email,
+        ]);
+
+        $responseWithNonExistingEmail = $this->actingAs($owner)->post("/workspaces/{$workspace->id}/members", [
+            'email' => 'nonexistent@example.com',
+        ]);
+
+        // Both responses should have identical status and redirect to the same place
+        $this->assertSame($responseWithExistingEmail->status(), $responseWithNonExistingEmail->status());
+        $this->assertSame($responseWithExistingEmail->status(), 302);
+
+        // Both should redirect to the same location
+        $this->assertSame($responseWithExistingEmail->headers->get('Location'), $responseWithNonExistingEmail->headers->get('Location'));
+    }
 }

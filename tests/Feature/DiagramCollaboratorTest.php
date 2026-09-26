@@ -117,4 +117,26 @@ class DiagramCollaboratorTest extends TestCase
             ->assertOk();
         $this->assertDatabaseMissing('diagram_collaborators', ['user_id' => $collaborator->id]);
     }
+
+    public function test_inviting_by_email_returns_identical_response_for_existing_and_non_existing_email(): void
+    {
+        $owner = User::factory()->create();
+        $existingUser = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
+
+        $responseWithExistingEmail = $this->actingAs($owner)->postJson("/diagrams/{$diagram->slug}/collaborators", [
+            'email' => $existingUser->email,
+        ]);
+
+        $responseWithNonExistingEmail = $this->actingAs($owner)->postJson("/diagrams/{$diagram->slug}/collaborators", [
+            'email' => 'nonexistent@example.com',
+        ]);
+
+        // Both responses should have identical status and structure
+        $this->assertSame($responseWithExistingEmail->status(), $responseWithNonExistingEmail->status());
+        $this->assertSame($responseWithExistingEmail->status(), 201);
+
+        // Both should have the same JSON structure (generic success response)
+        $this->assertSame($responseWithExistingEmail->json(), $responseWithNonExistingEmail->json());
+    }
 }

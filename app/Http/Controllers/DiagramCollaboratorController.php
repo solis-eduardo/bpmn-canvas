@@ -35,6 +35,10 @@ class DiagramCollaboratorController extends Controller
      * Direct invite by the Author/Administrator (immediate access, status
      * "approved") or request by the User themselves (status "requested") —
      * see GrantOrRequestCollaborator for the full rule.
+     *
+     * When targeting by email, returns a generic success response regardless
+     * of whether the email matches an existing User, to avoid email enumeration.
+     * When targeting by user_id, returns the usual detailed response.
      */
     public function store(Request $request, string $slug, GrantOrRequestCollaborator $grant): JsonResponse
     {
@@ -46,6 +50,29 @@ class DiagramCollaboratorController extends Controller
         ]);
 
         $target = $this->resolveUserFrom($data);
+
+        // When email is used, return a generic success response regardless of
+        // whether the user exists (preventing email enumeration). When user_id
+        // is used, return the detailed response since user_id lookup can't be
+        // probed (validation ensures the ID must exist).
+        if (isset($data['email'])) {
+            // If user exists by email, still perform the action
+            if ($target) {
+                $collaborator = $grant($diagram, $request->user(), $target);
+                // Notify on self-request
+                if ($collaborator->status === DiagramCollaborator::STATUS_REQUESTED) {
+                    $diagram->owner->notify(new DiagramAccessRequested($diagram, $target));
+                }
+            }
+            // Return the same response regardless of whether the user exists
+            return response()->json(['success' => true], 201);
+        }
+
+        // If user_id was provided but target not found (shouldn't happen due
+        // to validation, but handle it gracefully)
+        if (!$target) {
+            return response()->json(['success' => true], 201);
+        }
 
         $collaborator = $grant($diagram, $request->user(), $target);
 
