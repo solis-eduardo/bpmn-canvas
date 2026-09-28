@@ -146,5 +146,7 @@ return [
     'no_notifications_yet' => 'Nenhuma notificação ainda.',
     'mark_all_as_read' => 'Marcar todas como lidas',
     'notification_requested_access' => ':name solicitou acesso a :diagram',
+    'view_all_notifications' => 'Ver todas',
+    'notification_history_heading' => 'Notificações',
 
 ];
