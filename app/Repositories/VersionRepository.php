@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\Diagram;
 use App\Models\DiagramVersionName;
 use App\Models\User;
+use App\Support\BpmnSearchableText;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -66,7 +67,30 @@ class VersionRepository
             Storage::disk('diagrams')->put($diagram->disk_path, $content);
         }
 
-        return $this->commit($diagram, $author, $message ?? self::MESSAGE_DEFAULT, $directory, $file, $allowEmpty);
+        $versionId = $this->commit($diagram, $author, $message ?? self::MESSAGE_DEFAULT, $directory, $file, $allowEmpty);
+
+        // After the Version is safely committed, not before: reindexing
+        // ahead of a commit that then throws would leave searchable_text
+        // describing content that was never actually saved as a Version.
+        $this->reindexSearchableText($diagram);
+
+        return $versionId;
+    }
+
+    /**
+     * Keeps Diagram::searchable_text (issue #41) in sync with the content
+     * currently on disk — covers every path through save(): explicit saves,
+     * restores (which call save() with the restored content), and
+     * initialize() (which re-commits whatever's already on disk for a
+     * brand-new or forked Diagram).
+     */
+    private function reindexSearchableText(Diagram $diagram): void
+    {
+        $content = Storage::disk('diagrams')->get($diagram->disk_path);
+
+        $diagram->forceFill([
+            'searchable_text' => is_string($content) ? BpmnSearchableText::extract($content) : '',
+        ])->save();
     }
 
     private function commit(Diagram $diagram, User $author, string $message, string $directory, string $file, bool $allowEmpty = false): ?string

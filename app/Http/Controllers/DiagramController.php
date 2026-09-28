@@ -11,6 +11,7 @@ use App\Models\DiagramOldSlug;
 use App\Models\Workspace;
 use App\Repositories\DiagramRepository;
 use App\Repositories\VersionRepository;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,10 +26,16 @@ class DiagramController extends Controller
      * issue #28): every Diagram outside a Workspace, plus hidden ones the
      * User can see (Diagram Owner, approved Collaborator, or Member of its
      * Workspace). An Administrator sees every Diagram.
+     *
+     * Accepts an optional "q" search term matching title, Slug (issue #38),
+     * or the BPMN content's task/event/gateway/lane/pool names (issue #41)
+     * — always composed with the visibility rule above, so search never
+     * surfaces a hidden Diagram.
      */
     public function index(Request $request): View
     {
         $user = $request->user();
+        $search = trim((string) $request->query('q', ''));
 
         $diagrams = Diagram::with(['author', 'owner', 'lockedBy'])
             ->when(! $user->is_admin, fn ($query) => $query->where(function ($query) use ($user) {
@@ -39,10 +46,32 @@ class DiagramController extends Controller
                         ->where('status', DiagramCollaborator::STATUS_APPROVED))
                     ->orWhereHas('workspace.members', fn ($members) => $members->where('user_id', $user->id));
             }))
+            ->when($search !== '', fn ($query) => $this->applySearch($query, $search))
             ->orderBy('title')
             ->get();
 
-        return view('diagrams.index', compact('diagrams'));
+        return view('diagrams.index', compact('diagrams', 'search'));
+    }
+
+    /**
+     * Matches $search, case-insensitively, against title, Slug, or the
+     * BPMN content's searchable text (see BpmnSearchableText). '%' and '_'
+     * in the User's input are literal characters here, not LIKE wildcards
+     * — escaped before being wrapped in the pattern, and matched back with
+     * an explicit ESCAPE clause (portable across Postgres and sqlite, the
+     * driver the test suite is forced onto by phpunit.xml).
+     */
+    private function applySearch(Builder $query, string $search): Builder
+    {
+        $escaped = strtr($search, ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']);
+        $term = '%'.mb_strtolower($escaped).'%';
+        $likeEscaped = "LIKE ? ESCAPE '".'\\'."'";
+
+        return $query->where(function ($query) use ($term, $likeEscaped) {
+            $query->whereRaw("LOWER(title) {$likeEscaped}", [$term])
+                ->orWhereRaw("LOWER(slug) {$likeEscaped}", [$term])
+                ->orWhereRaw("LOWER(coalesce(searchable_text, '')) {$likeEscaped}", [$term]);
+        });
     }
 
     public function store(Request $request, DiagramRepository $diagrams, VersionRepository $versions): RedirectResponse

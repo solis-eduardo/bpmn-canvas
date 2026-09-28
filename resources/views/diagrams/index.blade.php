@@ -27,6 +27,16 @@
         </button>
     </form>
 
+    <form method="GET" action="{{ route('diagrams.index') }}" class="mt-4">
+        <input
+            type="search"
+            name="q"
+            value="{{ $search }}"
+            placeholder="{{ __('messages.search_diagrams_placeholder') }}"
+            class="w-full max-w-sm rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+    </form>
+
     <ul class="mt-8 divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white shadow-sm">
         @forelse ($diagrams as $diagram)
             <li class="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
@@ -46,7 +56,9 @@
                 </div>
             </li>
         @empty
-            <li class="px-4 py-6 text-center text-sm text-gray-500">{{ __('messages.no_diagrams_yet') }}</li>
+            <li class="px-4 py-6 text-center text-sm text-gray-500">
+                {{ $search !== '' ? __('messages.no_diagrams_match_search') : __('messages.no_diagrams_yet') }}
+            </li>
         @endforelse
     </ul>
 </x-layouts.app>
