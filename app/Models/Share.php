@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
 
-#[Fillable(['diagram_id', 'expires_at', 'allow_download', 'revoked_at', 'created_by', 'pinned_version_id'])]
+#[Fillable(['diagram_id', 'expires_at', 'allow_download', 'revoked_at', 'created_by', 'pinned_version_id', 'expiry_warned_at'])]
 class Share extends Model
 {
     /** @use HasFactory<ShareFactory> */
@@ -23,6 +23,7 @@ class Share extends Model
             'expires_at' => 'datetime',
             'revoked_at' => 'datetime',
             'allow_download' => 'boolean',
+            'expiry_warned_at' => 'datetime',
         ];
     }
 
@@ -41,6 +42,20 @@ class Share extends Model
     public function isValid(): bool
     {
         return $this->revoked_at === null && $this->expires_at->isFuture();
+    }
+
+    /**
+     * True while this Share is still active (not revoked, not expired), its
+     * expiration falls inside the given lead time, and it hasn't already
+     * been warned about — the query `ShareExpiryWarning` scans with, kept
+     * here so the "due for a warning" rule lives next to `isValid()`
+     * instead of being reimplemented as a raw query in the command.
+     */
+    public function isDueForExpiryWarning(\DateTimeInterface $leadTimeCutoff): bool
+    {
+        return $this->isValid()
+            && $this->expiry_warned_at === null
+            && $this->expires_at->lessThanOrEqualTo($leadTimeCutoff);
     }
 
     /**

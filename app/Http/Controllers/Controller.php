@@ -14,8 +14,6 @@ abstract class Controller
      * a `user_id` or an `email` (see the `required_without` validation rule
      * used alongside this everywhere it's called). Returns null if the email
      * is provided but no matching User exists (avoids email enumeration).
-     *
-     * @return User|null
      */
     protected function resolveUserFrom(array $data): ?User
     {

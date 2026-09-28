@@ -64,6 +64,7 @@ class DiagramCollaboratorController extends Controller
                     $diagram->owner->notify(new DiagramAccessRequested($diagram, $target));
                 }
             }
+
             // Return the same response regardless of whether the user exists
             return response()->json(['success' => true], 201);
         }
