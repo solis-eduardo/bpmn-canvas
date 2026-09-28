@@ -141,6 +141,12 @@ return [
     'no_members_yet' => 'Nenhum Membro ainda.',
     'rename' => 'Renomear',
     'cannot_remove_workspace_owner' => 'O dono do workspace não pode ser removido como Membro.',
+    'transfer_ownership' => 'Transferir propriedade',
+    'new_owner_email' => 'E-mail do novo dono',
+    'delete_workspace' => 'Excluir',
+    'leave_workspace' => 'Sair',
+    'cannot_delete_workspace_with_diagrams' => 'Este Workspace não pode ser excluído enquanto ainda tiver Diagramas.',
+    'workspace_owner_must_transfer_before_leaving' => 'O dono do workspace não pode sair sem transferir a propriedade antes.',
     // Notifications
     'notifications' => 'Notificações',
     'no_notifications_yet' => 'Nenhuma notificação ainda.',

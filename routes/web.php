@@ -77,7 +77,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/workspaces', [WorkspaceController::class, 'index'])->name('workspaces.index');
     Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');
     Route::put('/workspaces/{workspace}', [WorkspaceController::class, 'update'])->name('workspaces.update');
+    Route::put('/workspaces/{workspace}/owner', [WorkspaceController::class, 'transferOwnership'])->name('workspaces.owner.transfer');
+    Route::delete('/workspaces/{workspace}', [WorkspaceController::class, 'destroy'])->name('workspaces.destroy');
 
     Route::post('/workspaces/{workspace}/members', [WorkspaceMemberController::class, 'store'])->name('workspaces.members.store');
     Route::delete('/workspaces/{workspace}/members/{user}', [WorkspaceMemberController::class, 'destroy'])->name('workspaces.members.destroy');
+    Route::delete('/workspaces/{workspace}/leave', [WorkspaceMemberController::class, 'leave'])->name('workspaces.leave');
 });

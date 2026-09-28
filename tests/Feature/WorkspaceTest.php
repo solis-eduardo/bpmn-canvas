@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Diagram;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class WorkspaceTest extends TestCase
@@ -54,6 +56,19 @@ class WorkspaceTest extends TestCase
         $response->assertOk();
         $response->assertSee($mine->name);
         $response->assertDontSee($notMine->name);
+    }
+
+    public function test_administrator_viewing_a_workspace_they_are_not_a_member_of_is_not_offered_a_leave_button(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $owner = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $workspace->addMember($owner);
+
+        $response = $this->actingAs($admin)->get('/workspaces');
+
+        $response->assertOk();
+        $response->assertDontSee(__('messages.leave_workspace'));
     }
 
     public function test_administrator_sees_every_workspace(): void
@@ -127,5 +142,75 @@ class WorkspaceTest extends TestCase
         ]);
 
         $response->assertForbidden();
+    }
+
+    public function test_workspace_owner_can_delete_an_empty_workspace(): void
+    {
+        $owner = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $workspace->addMember($owner);
+
+        $response = $this->actingAs($owner)->delete("/workspaces/{$workspace->id}");
+
+        $response->assertRedirect();
+        $this->assertDatabaseMissing('workspaces', ['id' => $workspace->id]);
+    }
+
+    public function test_administrator_can_delete_any_empty_workspace(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $owner = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $workspace->addMember($owner);
+
+        $response = $this->actingAs($admin)->delete("/workspaces/{$workspace->id}");
+
+        $response->assertRedirect();
+        $this->assertDatabaseMissing('workspaces', ['id' => $workspace->id]);
+    }
+
+    public function test_plain_member_cannot_delete_the_workspace(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $workspace->addMember($owner);
+        $workspace->addMember($member);
+
+        $response = $this->actingAs($member)->delete("/workspaces/{$workspace->id}");
+
+        $response->assertForbidden();
+        $this->assertDatabaseHas('workspaces', ['id' => $workspace->id]);
+    }
+
+    public function test_deleting_a_workspace_that_holds_diagrams_is_refused(): void
+    {
+        Storage::fake('diagrams');
+
+        $owner = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $workspace->addMember($owner);
+        Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create(['workspace_id' => $workspace->id]);
+
+        $response = $this->actingAs($owner)->delete("/workspaces/{$workspace->id}");
+
+        $response->assertStatus(422);
+        $this->assertDatabaseHas('workspaces', ['id' => $workspace->id]);
+    }
+
+    public function test_deleting_a_workspace_is_allowed_once_its_diagrams_are_gone(): void
+    {
+        Storage::fake('diagrams');
+
+        $owner = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $workspace->addMember($owner);
+        $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create(['workspace_id' => $workspace->id]);
+        $diagram->update(['workspace_id' => null]);
+
+        $response = $this->actingAs($owner)->delete("/workspaces/{$workspace->id}");
+
+        $response->assertRedirect();
+        $this->assertDatabaseMissing('workspaces', ['id' => $workspace->id]);
     }
 }

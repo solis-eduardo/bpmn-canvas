@@ -21,10 +21,7 @@ class WorkspaceMemberController extends Controller
     {
         $this->authorize('manageMembers', $workspace);
 
-        $data = $request->validate([
-            'user_id' => ['required_without:email', 'integer', 'exists:users,id'],
-            'email' => ['required_without:user_id', 'email'],
-        ]);
+        $data = $request->validate($this->userIdentifierRules());
 
         $member = $this->resolveUserFrom($data);
 
@@ -49,6 +46,26 @@ class WorkspaceMemberController extends Controller
 
         if ($workspace->isOwnedBy($user)) {
             abort(422, __('messages.cannot_remove_workspace_owner'));
+        }
+
+        $workspace->removeMember($user);
+
+        return redirect()->route('workspaces.index');
+    }
+
+    /**
+     * The current User leaves a Workspace (removes themselves as a
+     * Member). Self-service — no manageMembers authorization needed. The
+     * Workspace Owner is refused: they must transfer ownership first
+     * (CONTEXT.md, "Workspace Owner"; ADR-0006; issue #29), or the
+     * Workspace would end up without one.
+     */
+    public function leave(Request $request, Workspace $workspace): RedirectResponse
+    {
+        $user = $request->user();
+
+        if ($workspace->isOwnedBy($user)) {
+            abort(422, __('messages.workspace_owner_must_transfer_before_leaving'));
         }
 
         $workspace->removeMember($user);
