@@ -59,15 +59,6 @@
     }
   }
 
-  function messageFor(notification) {
-    const template = root.dataset.requestedAccessLabel || ':name requested access to :diagram';
-    const data = notification.data || {};
-
-    return template
-      .replace(':name', data.requester_name || '')
-      .replace(':diagram', data.diagram_title || '');
-  }
-
   function renderList(notifications) {
     list.innerHTML = '';
 
@@ -86,7 +77,7 @@
       link.href = notification.url;
       link.className = 'block px-3 py-2 text-sm hover:bg-gray-50 '
         + (notification.read ? 'text-gray-500' : 'font-medium text-gray-900');
-      link.textContent = messageFor(notification);
+      link.textContent = notification.message;
 
       li.appendChild(link);
       list.appendChild(li);

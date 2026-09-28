@@ -3,17 +3,21 @@
 namespace App\Http\Controllers;
 
 use App\Models\Diagram;
+use App\Notifications\DiagramAccessRequested;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\View\View;
 
 /**
  * The bell (shared layout, every screen): unread count polling, a short
  * list of recent notifications for the dropdown, and the two "mark as
- * read" actions (issue #15). Every action here is scoped to the
- * authenticated User's own notifications — {@see resolveOwn()} is the only
- * place a notification is looked up, so nobody can read or dismiss
+ * read" actions (issue #15) — plus the full history screen (issue #16)
+ * reached from the bell's "view all" link. Every action here is scoped to
+ * the authenticated User's own notifications — {@see resolveOwn()} is the
+ * only place a notification is looked up, so nobody can read or dismiss
  * somebody else's.
  */
 class NotificationController extends Controller
@@ -29,20 +33,32 @@ class NotificationController extends Controller
     }
 
     /**
-     * Recent notifications for the bell's dropdown, newest first.
+     * Recent notifications for the bell's dropdown, newest first. Shares
+     * {@see present()} with {@see history()} so both surfaces build the
+     * "message for a notification" text the same way, in one place.
      */
     public function index(Request $request): JsonResponse
     {
         $notifications = $request->user()->notifications()->latest()->limit(20)->get()
-            ->map(fn (DatabaseNotification $notification) => [
-                'id' => $notification->id,
-                'read' => $notification->read_at !== null,
-                'created_at' => $notification->created_at,
-                'data' => $notification->data,
-                'url' => route('notifications.read', $notification->id),
-            ]);
+            ->map(fn (DatabaseNotification $notification) => $this->present($notification));
 
         return response()->json($notifications);
+    }
+
+    /**
+     * The full history screen reached from the bell: every notification
+     * the User has ever received, newest first, paginated, marking which
+     * are unread. Each entry links to {@see read()} — the same target-link
+     * the bell's dropdown uses — so clicking it marks it read and jumps to
+     * the relevant screen.
+     */
+    public function history(Request $request): View
+    {
+        $notifications = $request->user()->notifications()->latest()
+            ->paginate(20)
+            ->through(fn (DatabaseNotification $notification) => $this->present($notification));
+
+        return view('notifications.history', compact('notifications'));
     }
 
     /**
@@ -77,5 +93,35 @@ class NotificationController extends Controller
     private function resolveOwn(Request $request, string $id): DatabaseNotification
     {
         return $request->user()->notifications()->where('id', $id)->firstOrFail();
+    }
+
+    /**
+     * @return array{id: string, message: string, read: bool, created_at: ?Carbon, url: string}
+     */
+    private function present(DatabaseNotification $notification): array
+    {
+        return [
+            'id' => $notification->id,
+            'message' => $this->message($notification),
+            'read' => $notification->read_at !== null,
+            'created_at' => $notification->created_at,
+            'url' => route('notifications.read', $notification->id),
+        ];
+    }
+
+    /**
+     * Human-readable text for a notification, keyed by its type — the one
+     * place that maps a notification's data to what the User reads, shared
+     * by both the bell's dropdown and the history screen.
+     */
+    private function message(DatabaseNotification $notification): string
+    {
+        return match ($notification->type) {
+            DiagramAccessRequested::class => __('messages.notification_requested_access', [
+                'name' => $notification->data['requester_name'] ?? '',
+                'diagram' => $notification->data['diagram_title'] ?? '',
+            ]),
+            default => '',
+        };
     }
 }
