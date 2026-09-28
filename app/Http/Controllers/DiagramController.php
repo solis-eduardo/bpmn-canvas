@@ -152,6 +152,7 @@ class DiagramController extends Controller
             if ($newOwner) {
                 $transfer($diagram, $newOwner, (bool) ($data['give_up_access'] ?? false));
             }
+
             // Return the same response regardless of whether the user exists
             return response()->json(['success' => true]);
         }

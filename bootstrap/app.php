@@ -43,6 +43,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // away from :00 to dodge the crowd of jobs everyone else also
         // schedules on the hour.
         $schedule->command('backup:run')->dailyAt('02:15')->onOneServer();
+        // Offset from :00, same reasoning as backup:run above — avoids the
+        // crowd of jobs everyone else schedules on the hour.
+        $schedule->command('shares:warn-expiring')->hourlyAt(45)->onOneServer();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
