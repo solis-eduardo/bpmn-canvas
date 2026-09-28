@@ -10,7 +10,6 @@
     data-read-all-url="{{ route('notifications.read-all') }}"
     data-empty-notice="{{ __('messages.no_notifications_yet') }}"
     data-mark-all-read-label="{{ __('messages.mark_all_as_read') }}"
-    data-requested-access-label="{{ __('messages.notification_requested_access') }}"
 >
     <button
         type="button"
@@ -42,5 +41,11 @@
             </button>
         </div>
         <ul id="notification-list" class="max-h-96 divide-y divide-gray-100 overflow-y-auto"></ul>
+
+        <div class="border-t border-gray-100 px-3 pt-2 text-center">
+            <a href="{{ route('notifications.history') }}" id="link-notification-history" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">
+                {{ __('messages.view_all_notifications') }}
+            </a>
+        </div>
     </div>
 </div>

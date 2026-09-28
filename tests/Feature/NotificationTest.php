@@ -170,4 +170,85 @@ class NotificationTest extends TestCase
             ->assertOk()
             ->assertJsonCount(0);
     }
+
+    public function test_history_screen_lists_the_users_notifications_newest_first_marking_read_state(): void
+    {
+        [$owner, $diagram] = $this->ownerWithDiagram();
+        $requesterOne = User::factory()->create();
+        $requesterTwo = User::factory()->create();
+
+        $this->requestAccess($requesterOne, $diagram);
+        $this->requestAccess($requesterTwo, $diagram);
+
+        $notifications = $owner->fresh()->notifications;
+        $older = $notifications->last();
+        $newer = $notifications->first();
+        $older->markAsRead();
+
+        $response = $this->actingAs($owner)->get('/notifications/history');
+
+        $response->assertOk();
+        $response->assertViewIs('notifications.history');
+
+        $items = $response->viewData('notifications')->items();
+
+        $this->assertSame($newer->id, $items[0]['id']);
+        $this->assertSame($older->id, $items[1]['id']);
+        $this->assertFalse($items[0]['read']);
+        $this->assertTrue($items[1]['read']);
+        $this->assertSame(route('notifications.read', $newer->id), $items[0]['url']);
+    }
+
+    public function test_history_screen_is_paginated(): void
+    {
+        [$owner, $diagram] = $this->ownerWithDiagram();
+        $requester = User::factory()->create();
+
+        collect(range(1, 25))->each(
+            fn () => $owner->notify(new DiagramAccessRequested($diagram, $requester))
+        );
+
+        $response = $this->actingAs($owner)->get('/notifications/history');
+
+        $paginator = $response->viewData('notifications');
+
+        $this->assertCount(20, $paginator->items());
+        $this->assertSame(25, $paginator->total());
+        $this->assertTrue($paginator->hasMorePages());
+    }
+
+    public function test_history_screen_only_shows_the_authenticated_users_own_notifications(): void
+    {
+        [$owner, $diagram] = $this->ownerWithDiagram();
+        $requester = User::factory()->create();
+        $stranger = User::factory()->create();
+
+        $this->requestAccess($requester, $diagram);
+
+        $ownerItems = $this->actingAs($owner)->get('/notifications/history')
+            ->viewData('notifications')->items();
+        $this->assertCount(1, $ownerItems);
+
+        $strangerItems = $this->actingAs($stranger)->get('/notifications/history')
+            ->viewData('notifications')->items();
+        $this->assertCount(0, $strangerItems);
+    }
+
+    /**
+     * @return array{0: User, 1: Diagram}
+     */
+    private function ownerWithDiagram(): array
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'owner')->for($owner, 'author')->create();
+
+        return [$owner, $diagram];
+    }
+
+    private function requestAccess(User $requester, Diagram $diagram): void
+    {
+        $this->actingAs($requester)->postJson("/diagrams/{$diagram->slug}/collaborators", [
+            'user_id' => $requester->id,
+        ]);
+    }
 }
