@@ -147,6 +147,7 @@ return [
     'leave_workspace' => 'Salir',
     'cannot_delete_workspace_with_diagrams' => 'Este Espacio de trabajo no puede eliminarse mientras aún contenga Diagramas.',
     'workspace_owner_must_transfer_before_leaving' => 'El Propietario del espacio de trabajo no puede salir sin transferir la propiedad antes.',
+    'must_be_workspace_member' => 'El Propietario del Diagrama debe ser Miembro del espacio de trabajo destino.',
     // Notifications
     'notifications' => 'Notificaciones',
     'no_notifications_yet' => 'Todavía no hay notificaciones.',

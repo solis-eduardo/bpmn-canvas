@@ -59,6 +59,9 @@ Route::middleware('auth')->group(function () {
 
     Route::put('/diagrams/{slug}/owner', [DiagramController::class, 'transferOwnership'])->name('diagrams.owner.transfer');
 
+    Route::put('/diagrams/{slug}/workspace', [DiagramController::class, 'putInWorkspace'])->name('diagrams.workspace.store');
+    Route::delete('/diagrams/{slug}/workspace', [DiagramController::class, 'removeFromWorkspace'])->name('diagrams.workspace.destroy');
+
     Route::post('/diagrams/{slug}/heartbeat', [DiagramController::class, 'heartbeat'])->name('diagrams.heartbeat');
     Route::post('/diagrams/{slug}/lock/request', [DiagramController::class, 'requestLock'])->name('diagrams.lock.request');
     Route::delete('/diagrams/{slug}/lock', [DiagramController::class, 'unlock'])->name('diagrams.unlock');

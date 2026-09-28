@@ -96,10 +96,8 @@ BPMN;
     }
 
     /**
-     * The Workspace this Diagram is currently placed in, if any (CONTEXT.md,
-     * "Workspace"). Only the column exists so far — putting a Diagram in or
-     * taking it out, and the resulting visibility/edit changes, are issue
-     * #27.
+     * The Workspace this Diagram belongs to, if any (CONTEXT.md,
+     * "Workspace"). A Diagram belongs to at most one.
      */
     /** @return BelongsTo<Workspace, $this> */
     public function workspace(): BelongsTo
@@ -111,6 +109,48 @@ BPMN;
     public function forkedFrom(): BelongsTo
     {
         return $this->belongsTo(Diagram::class, 'forked_from_id');
+    }
+
+    /**
+     * True if $user can edit this Diagram: Diagram Owner, an approved
+     * Collaborator, or (CONTEXT.md, "Member"; issue #27) a Member of the
+     * Diagram's Workspace, checked live so removal from the Workspace takes
+     * effect immediately. The single helper behind both the "view" (open
+     * the Editor) and "update" (save) abilities in DiagramPolicy.
+     */
+    public function isEditableBy(User $user): bool
+    {
+        if ($this->isOwnedBy($user)) {
+            return true;
+        }
+
+        if (DiagramCollaborator::where('diagram_id', $this->id)
+            ->where('user_id', $user->id)
+            ->where('status', DiagramCollaborator::STATUS_APPROVED)
+            ->exists()) {
+            return true;
+        }
+
+        return $this->workspace_id !== null && ($this->workspace?->hasMember($user) ?? false);
+    }
+
+    /**
+     * True if $user can see this Diagram exists at all (CONTEXT.md,
+     * "Workspace"; issue #28): a Diagram outside any Workspace is visible
+     * to everyone, an Administrator sees every Diagram, and a hidden
+     * Diagram (inside a Workspace) is visible only to whoever can edit it.
+     */
+    public function isVisibleTo(User $user): bool
+    {
+        if ($user->is_admin) {
+            return true;
+        }
+
+        if ($this->workspace_id === null) {
+            return true;
+        }
+
+        return $this->isEditableBy($user);
     }
 
     /**

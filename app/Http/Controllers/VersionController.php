@@ -165,15 +165,27 @@ class VersionController extends Controller
         $diagram = Diagram::where('slug', $slug)->first();
 
         if ($diagram) {
-            return [$diagram, false];
+            return [$this->ensureVisible($diagram), false];
         }
 
         $old = DiagramOldSlug::with('diagram')->where('old_slug', $slug)->first();
 
         if ($old && $old->diagram) {
-            return [$old->diagram, true];
+            return [$this->ensureVisible($old->diagram), true];
         }
 
         abort(404);
+    }
+
+    /**
+     * A hidden Diagram (inside a Workspace the User can't see into) answers
+     * 404 to direct URL access — never 403, so its existence doesn't leak
+     * (CONTEXT.md, "Workspace"; issue #28).
+     */
+    private function ensureVisible(Diagram $diagram): Diagram
+    {
+        abort_unless($diagram->isVisibleTo(auth()->user()), 404);
+
+        return $diagram;
     }
 }

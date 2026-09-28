@@ -123,8 +123,18 @@ class DiagramCollaboratorController extends Controller
         return response()->json(['deleted' => true]);
     }
 
+    /**
+     * A hidden Diagram (inside a Workspace the User can't see into) can't be
+     * found to request access — 404, never 403 (CONTEXT.md, "Collaborator",
+     * "Workspace"; issue #28). An invitation from the Diagram Owner or an
+     * Administrator still reaches it, since both can already see it.
+     */
     private function resolveDiagram(string $slug): Diagram
     {
-        return Diagram::where('slug', $slug)->firstOrFail();
+        $diagram = Diagram::where('slug', $slug)->firstOrFail();
+
+        abort_unless($diagram->isVisibleTo(auth()->user()), 404);
+
+        return $diagram;
     }
 }
