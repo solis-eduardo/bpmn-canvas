@@ -3,26 +3,29 @@
 namespace App\Policies;
 
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\User;
 
 class DiagramPolicy
 {
     /**
-     * Open the Editor to edit a Diagram: Diagram Owner or approved
-     * Collaborator.
+     * Open the Editor to edit a Diagram, fetch its content, fork it, or
+     * request the Lock: Diagram Owner, approved Collaborator, or Member of
+     * the Diagram's Workspace (issue #27) — plus an Administrator, who
+     * "sees and opens" every Diagram (issue #28) even without edit rights.
      */
     public function view(User $user, Diagram $diagram): bool
     {
-        return $this->canEdit($user, $diagram);
+        return $diagram->isEditableBy($user) || $user->is_admin;
     }
 
     /**
-     * Save a Diagram's content: Diagram Owner or approved Collaborator.
+     * Save a Diagram's content: Diagram Owner, approved Collaborator, or
+     * Member of the Diagram's Workspace (issue #27). Deliberately no
+     * Administrator bypass — "sees and opens" doesn't mean "can edit".
      */
     public function update(User $user, Diagram $diagram): bool
     {
-        return $this->canEdit($user, $diagram);
+        return $diagram->isEditableBy($user);
     }
 
     /**
@@ -65,15 +68,28 @@ class DiagramPolicy
         return $diagram->isOwnedBy($user) || $user->is_admin;
     }
 
-    private function canEdit(User $user, Diagram $diagram): bool
+    /**
+     * Put a Diagram into a Workspace: Diagram Owner only, and only into a
+     * Workspace they're a Member of (CONTEXT.md, "Diagram Owner"; issue
+     * #27). The Member-of-target-Workspace check happens in the controller,
+     * since it needs the target Workspace, not just the Diagram.
+     */
+    public function putInWorkspace(User $user, Diagram $diagram): bool
     {
-        if ($diagram->isOwnedBy($user)) {
+        return $diagram->isOwnedBy($user);
+    }
+
+    /**
+     * Take a Diagram out of its Workspace: Diagram Owner or the Workspace's
+     * own Owner (CONTEXT.md, "Workspace Owner"; issue #27), or an
+     * Administrator, who "can manage any Workspace".
+     */
+    public function removeFromWorkspace(User $user, Diagram $diagram): bool
+    {
+        if ($diagram->isOwnedBy($user) || $user->is_admin) {
             return true;
         }
 
-        return DiagramCollaborator::where('diagram_id', $diagram->id)
-            ->where('user_id', $user->id)
-            ->where('status', DiagramCollaborator::STATUS_APPROVED)
-            ->exists();
+        return $diagram->workspace !== null && $diagram->workspace->isOwnedBy($user);
     }
 }

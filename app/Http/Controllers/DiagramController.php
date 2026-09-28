@@ -6,7 +6,9 @@ use App\Actions\Diagrams\ReleaseLock;
 use App\Actions\Diagrams\RequestLock;
 use App\Actions\Diagrams\TransferOwnership;
 use App\Models\Diagram;
+use App\Models\DiagramCollaborator;
 use App\Models\DiagramOldSlug;
+use App\Models\Workspace;
 use App\Repositories\DiagramRepository;
 use App\Repositories\VersionRepository;
 use Illuminate\Http\JsonResponse;
@@ -18,9 +20,27 @@ use RuntimeException;
 
 class DiagramController extends Controller
 {
-    public function index(): View
+    /**
+     * Lists Diagrams visible to the current User (CONTEXT.md, "Workspace";
+     * issue #28): every Diagram outside a Workspace, plus hidden ones the
+     * User can see (Diagram Owner, approved Collaborator, or Member of its
+     * Workspace). An Administrator sees every Diagram.
+     */
+    public function index(Request $request): View
     {
-        $diagrams = Diagram::with(['author', 'owner', 'lockedBy'])->orderBy('title')->get();
+        $user = $request->user();
+
+        $diagrams = Diagram::with(['author', 'owner', 'lockedBy'])
+            ->when(! $user->is_admin, fn ($query) => $query->where(function ($query) use ($user) {
+                $query->whereNull('workspace_id')
+                    ->orWhere('owner_id', $user->id)
+                    ->orWhereHas('collaborators', fn ($collaborators) => $collaborators
+                        ->where('user_id', $user->id)
+                        ->where('status', DiagramCollaborator::STATUS_APPROVED))
+                    ->orWhereHas('workspace.members', fn ($members) => $members->where('user_id', $user->id));
+            }))
+            ->orderBy('title')
+            ->get();
 
         return view('diagrams.index', compact('diagrams'));
     }
@@ -58,15 +78,21 @@ class DiagramController extends Controller
 
         $user = $request->user();
 
-        if ($diagram->isLockedByOther($user)) {
-            return view('diagrams.locked', [
-                'diagram' => $diagram,
-                'lockedBy' => $diagram->lockedBy,
-            ]);
-        }
+        // The Editing Lock only concerns actual editors (Diagram Owner,
+        // Collaborator, Member) — an Administrator who can merely "see and
+        // open" the Diagram (DiagramPolicy::view()'s admin bypass) but
+        // can't save must never acquire, hold, or be blocked by it.
+        if ($diagram->isEditableBy($user)) {
+            if ($diagram->isLockedByOther($user)) {
+                return view('diagrams.locked', [
+                    'diagram' => $diagram,
+                    'lockedBy' => $diagram->lockedBy,
+                ]);
+            }
 
-        if (! $diagram->heartbeat($user)) {
-            $diagram->acquireLock($user);
+            if (! $diagram->heartbeat($user)) {
+                $diagram->acquireLock($user);
+            }
         }
 
         $diagram->loadMissing(['author', 'owner']);
@@ -211,7 +237,11 @@ class DiagramController extends Controller
     {
         [$diagram] = $this->resolve($slug);
 
-        $this->authorize('view', $diagram);
+        // 'update', not 'view': requesting/transferring the Lock is only
+        // meaningful for an actual editor. DiagramPolicy::view()'s admin
+        // bypass ("sees and opens") must never let an Administrator who
+        // can't save force the Lock away from the real editor.
+        $this->authorize('update', $diagram);
 
         return response()->json($requestLock($diagram, $request->user()));
     }
@@ -252,6 +282,46 @@ class DiagramController extends Controller
         return redirect()->route('diagrams.show', $forked->slug);
     }
 
+    /**
+     * Puts the Diagram into a Workspace the Diagram Owner is a Member of
+     * (CONTEXT.md, "Diagram Owner"; issue #27). Moving it from one
+     * Workspace to another is just re-targeting the same column — a
+     * Diagram belongs to at most one Workspace by construction.
+     */
+    public function putInWorkspace(Request $request, string $slug): JsonResponse
+    {
+        [$diagram] = $this->resolve($slug);
+
+        $this->authorize('putInWorkspace', $diagram);
+
+        $data = $request->validate([
+            'workspace_id' => ['required', 'integer', 'exists:workspaces,id'],
+        ]);
+
+        $workspace = Workspace::findOrFail($data['workspace_id']);
+
+        abort_unless($workspace->hasMember($request->user()), 422, __('messages.must_be_workspace_member'));
+
+        $diagram->update(['workspace_id' => $workspace->id]);
+
+        return response()->json(['workspace_id' => $workspace->id]);
+    }
+
+    /**
+     * Takes the Diagram out of its Workspace: Diagram Owner or Workspace
+     * Owner (CONTEXT.md, "Workspace Owner"; issue #27).
+     */
+    public function removeFromWorkspace(string $slug): JsonResponse
+    {
+        [$diagram] = $this->resolve($slug);
+
+        $this->authorize('removeFromWorkspace', $diagram);
+
+        $diagram->update(['workspace_id' => null]);
+
+        return response()->json(['workspace_id' => null]);
+    }
+
     public function destroy(string $slug, DiagramRepository $diagrams): JsonResponse
     {
         [$diagram] = $this->resolve($slug);
@@ -271,15 +341,27 @@ class DiagramController extends Controller
         $diagram = Diagram::where('slug', $slug)->first();
 
         if ($diagram) {
-            return [$diagram, false];
+            return [$this->ensureVisible($diagram), false];
         }
 
         $old = DiagramOldSlug::with('diagram')->where('old_slug', $slug)->first();
 
         if ($old && $old->diagram) {
-            return [$old->diagram, true];
+            return [$this->ensureVisible($old->diagram), true];
         }
 
         abort(404);
+    }
+
+    /**
+     * A hidden Diagram (inside a Workspace the User can't see into) answers
+     * 404 to direct URL access — never 403, so its existence doesn't leak
+     * (CONTEXT.md, "Workspace"; issue #28).
+     */
+    private function ensureVisible(Diagram $diagram): Diagram
+    {
+        abort_unless($diagram->isVisibleTo(auth()->user()), 404);
+
+        return $diagram;
     }
 }

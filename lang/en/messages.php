@@ -147,6 +147,7 @@ return [
     'leave_workspace' => 'Leave',
     'cannot_delete_workspace_with_diagrams' => "This Workspace can't be deleted while it still holds Diagrams.",
     'workspace_owner_must_transfer_before_leaving' => "The Workspace Owner can't leave without transferring ownership first.",
+    'must_be_workspace_member' => 'The Diagram Owner must be a Member of the target Workspace.',
     // Notifications
     'notifications' => 'Notifications',
     'no_notifications_yet' => 'No notifications yet.',
