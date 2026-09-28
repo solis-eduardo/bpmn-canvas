@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 
-#[Fillable(['slug', 'title', 'author_id', 'owner_id', 'disk_path', 'forked_from_id'])]
+#[Fillable(['slug', 'title', 'author_id', 'owner_id', 'workspace_id', 'disk_path', 'forked_from_id'])]
 class Diagram extends Model
 {
     /** @use HasFactory<DiagramFactory> */
@@ -93,6 +93,18 @@ BPMN;
     public function isOwnedBy(User $user): bool
     {
         return (int) $this->owner_id === $user->id;
+    }
+
+    /**
+     * The Workspace this Diagram is currently placed in, if any (CONTEXT.md,
+     * "Workspace"). Only the column exists so far — putting a Diagram in or
+     * taking it out, and the resulting visibility/edit changes, are issue
+     * #27.
+     */
+    /** @return BelongsTo<Workspace, $this> */
+    public function workspace(): BelongsTo
+    {
+        return $this->belongsTo(Workspace::class);
     }
 
     /** @return BelongsTo<Diagram, $this> */
