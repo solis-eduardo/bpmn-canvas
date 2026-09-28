@@ -23,6 +23,8 @@ return [
     'start_event_label' => 'Início',
     'create_diagram' => 'Criar diagrama',
     'no_diagrams_yet' => 'Nenhum diagrama criado ainda.',
+    'search_diagrams_placeholder' => 'Buscar por título ou Slug…',
+    'no_diagrams_match_search' => 'Nenhum diagrama corresponde à sua busca.',
     'author_label' => '(autor: :name)',
     'diagram_owner_label' => '(dono: :name)',
     'last_modified_label' => 'Última modificação :time',
