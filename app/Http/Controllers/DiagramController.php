@@ -25,10 +25,16 @@ class DiagramController extends Controller
      * issue #28): every Diagram outside a Workspace, plus hidden ones the
      * User can see (Diagram Owner, approved Collaborator, or Member of its
      * Workspace). An Administrator sees every Diagram.
+     *
+     * Accepts an optional "q" search term matching title, Slug (issue #38),
+     * or the BPMN content's task/event/gateway/lane/pool names (issue #41)
+     * — always composed with the visibility rule above, so search never
+     * surfaces a hidden Diagram.
      */
     public function index(Request $request): View
     {
         $user = $request->user();
+        $search = trim((string) $request->query('q', ''));
 
         $diagrams = Diagram::with(['author', 'owner', 'lockedBy'])
             ->when(! $user->is_admin, fn ($query) => $query->where(function ($query) use ($user) {
@@ -39,10 +45,11 @@ class DiagramController extends Controller
                         ->where('status', DiagramCollaborator::STATUS_APPROVED))
                     ->orWhereHas('workspace.members', fn ($members) => $members->where('user_id', $user->id));
             }))
+            ->when($search !== '', fn ($query) => $query->search($search))
             ->orderBy('title')
             ->get();
 
-        return view('diagrams.index', compact('diagrams'));
+        return view('diagrams.index', compact('diagrams', 'search'));
     }
 
     public function store(Request $request, DiagramRepository $diagrams, VersionRepository $versions): RedirectResponse

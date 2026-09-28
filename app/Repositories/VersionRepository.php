@@ -5,7 +5,9 @@ namespace App\Repositories;
 use App\Models\Diagram;
 use App\Models\DiagramVersionName;
 use App\Models\User;
+use App\Support\BpmnSearchableText;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Symfony\Component\Process\Exception\ProcessFailedException;
@@ -66,7 +68,38 @@ class VersionRepository
             Storage::disk('diagrams')->put($diagram->disk_path, $content);
         }
 
-        return $this->commit($diagram, $author, $message ?? self::MESSAGE_DEFAULT, $directory, $file, $allowEmpty);
+        $versionId = $this->commit($diagram, $author, $message ?? self::MESSAGE_DEFAULT, $directory, $file, $allowEmpty);
+
+        // After the Version is safely committed, not before: reindexing
+        // ahead of a commit that then throws would leave searchable_text
+        // describing content that was never actually saved as a Version.
+        $this->reindexSearchableText($diagram, $content);
+
+        return $versionId;
+    }
+
+    /**
+     * Keeps Diagram::searchable_text (issue #41) in sync with the content
+     * currently on disk — covers every path through save(): explicit saves,
+     * restores (which call save() with the restored content), and
+     * initialize() (which re-commits whatever's already on disk for a
+     * brand-new or forked Diagram). $content is reused when the caller
+     * already has it (avoids re-reading the file this same call just
+     * wrote); only re-read from disk when save() was called without new
+     * content (nothing was just written).
+     *
+     * A plain query builder update — not $diagram->save() — so this
+     * doesn't touch updated_at ("last modified" in the Diagram list is
+     * about the Diagram's own content, not this derived index) or fire
+     * model events for a column nothing else observes.
+     */
+    private function reindexSearchableText(Diagram $diagram, ?string $content): void
+    {
+        $content ??= Storage::disk('diagrams')->get($diagram->disk_path);
+
+        DB::table('diagrams')->where('id', $diagram->id)->update([
+            'searchable_text' => is_string($content) ? BpmnSearchableText::extract($content) : '',
+        ]);
     }
 
     private function commit(Diagram $diagram, User $author, string $message, string $directory, string $file, bool $allowEmpty = false): ?string
