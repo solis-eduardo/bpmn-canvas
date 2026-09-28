@@ -15,10 +15,11 @@ use Illuminate\Support\Facades\Storage;
  *
  * On Postgres, an expression GIN index backs full-text search over that
  * column (no external search engine — the roadmap spec is explicit about
- * that). Skipped on other drivers: the test suite is forced onto sqlite
- * (phpunit.xml), which has no to_tsvector()/GIN support, so
- * DiagramController::index() falls back to a portable LIKE match there —
- * same content contract, just without Postgres's ranking/index.
+ * that), queried via to_tsvector()/plainto_tsquery() in
+ * Diagram::scopeSearch(). Skipped on other drivers: the test suite is
+ * forced onto sqlite (phpunit.xml), which has no to_tsvector()/GIN support,
+ * so scopeSearch() falls back to a portable LIKE match there — same
+ * content contract, just without Postgres's index.
  */
 return new class extends Migration
 {

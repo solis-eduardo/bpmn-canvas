@@ -5,10 +5,12 @@ namespace App\Models;
 use App\Support\Slugger;
 use Database\Factories\DiagramFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 #[Fillable(['slug', 'title', 'author_id', 'owner_id', 'workspace_id', 'disk_path', 'forked_from_id'])]
@@ -359,5 +361,50 @@ BPMN;
         }
 
         return DiagramOldSlug::where('old_slug', $slug)->exists();
+    }
+
+    /**
+     * Matches $search, case-insensitively, against title, Slug (issue #38),
+     * or the BPMN content's searchable text (issue #41; see
+     * BpmnSearchableText). '%' and '_' in the User's input are literal
+     * characters here, not LIKE wildcards — escaped before being wrapped in
+     * the pattern.
+     *
+     * On Postgres, title/Slug go through ILIKE (locale-aware casing, so
+     * accented letters fold correctly — unlike a hand-rolled LOWER()
+     * comparison) and the content clause queries through the GIN expression
+     * index the migration builds (to_tsvector/plainto_tsquery), instead of
+     * leaving that index unused. Every other driver — in practice only
+     * sqlite, which the test suite is forced onto by phpunit.xml — falls
+     * back to a portable LOWER()+LIKE match; LOWER() there only folds
+     * ASCII case, a known sqlite limitation that never reaches production.
+     */
+    public function scopeSearch(Builder $query, string $search): Builder
+    {
+        $escaped = strtr($search, ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']);
+        $pattern = '%'.$escaped.'%';
+        $escapeClause = "ESCAPE '\\'";
+
+        return $query->where(function (Builder $query) use ($search, $escaped, $pattern, $escapeClause) {
+            $isPostgres = DB::getDriverName() === 'pgsql';
+            $term = $isPostgres ? $pattern : '%'.mb_strtolower($escaped).'%';
+            $operator = $isPostgres ? 'ILIKE' : 'LIKE';
+            $wrap = $isPostgres ? fn (string $column) => $column : fn (string $column) => "LOWER({$column})";
+
+            foreach (['title', 'slug'] as $column) {
+                $query->orWhereRaw("{$wrap($column)} {$operator} ? {$escapeClause}", [$term]);
+            }
+
+            if ($isPostgres) {
+                $query->orWhereRaw(
+                    "to_tsvector('simple', coalesce(searchable_text, '')) @@ plainto_tsquery('simple', ?)",
+                    [$search]
+                );
+
+                return;
+            }
+
+            $query->orWhereRaw("LOWER(coalesce(searchable_text, '')) LIKE ? {$escapeClause}", [$term]);
+        });
     }
 }
