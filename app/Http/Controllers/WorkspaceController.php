@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\Workspaces\TransferOwnership;
 use App\Models\Workspace;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -57,6 +58,48 @@ class WorkspaceController extends Controller
         ]);
 
         $workspace->update(['name' => $data['name']]);
+
+        return redirect()->route('workspaces.index');
+    }
+
+    /**
+     * Transfers the Workspace Owner role to another User: current Workspace
+     * Owner or Administrator only (CONTEXT.md, "Workspace Owner"; ADR-0006;
+     * issue #29). No acceptance step — takes effect immediately, and the
+     * recipient becomes a Member too if they weren't one already.
+     *
+     * Returns silently regardless of whether the email matches an existing
+     * User (avoiding email enumeration), same as WorkspaceMemberController.
+     */
+    public function transferOwnership(Request $request, Workspace $workspace, TransferOwnership $transfer): RedirectResponse
+    {
+        $this->authorize('transferOwnership', $workspace);
+
+        $data = $request->validate($this->userIdentifierRules());
+
+        $newOwner = $this->resolveUserFrom($data);
+
+        if ($newOwner) {
+            $transfer($workspace, $newOwner);
+        }
+
+        return redirect()->route('workspaces.index');
+    }
+
+    /**
+     * Deletes a Workspace: Workspace Owner or Administrator only. Refused
+     * while the Workspace still holds Diagrams (CONTEXT.md, "Workspace
+     * Owner") — allowed once it's empty.
+     */
+    public function destroy(Workspace $workspace): RedirectResponse
+    {
+        $this->authorize('delete', $workspace);
+
+        if ($workspace->hasDiagrams()) {
+            abort(422, __('messages.cannot_delete_workspace_with_diagrams'));
+        }
+
+        $workspace->delete();
 
         return redirect()->route('workspaces.index');
     }

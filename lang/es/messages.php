@@ -141,6 +141,12 @@ return [
     'no_members_yet' => 'Todavía no hay Miembros.',
     'rename' => 'Renombrar',
     'cannot_remove_workspace_owner' => 'El Propietario del espacio de trabajo no puede ser quitado como Miembro.',
+    'transfer_ownership' => 'Transferir propiedad',
+    'new_owner_email' => 'Correo del nuevo propietario',
+    'delete_workspace' => 'Eliminar',
+    'leave_workspace' => 'Salir',
+    'cannot_delete_workspace_with_diagrams' => 'Este Espacio de trabajo no puede eliminarse mientras aún contenga Diagramas.',
+    'workspace_owner_must_transfer_before_leaving' => 'El Propietario del espacio de trabajo no puede salir sin transferir la propiedad antes.',
     // Notifications
     'notifications' => 'Notificaciones',
     'no_notifications_yet' => 'Todavía no hay notificaciones.',

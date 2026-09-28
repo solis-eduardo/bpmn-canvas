@@ -37,6 +37,25 @@ class Workspace extends Model
     }
 
     /**
+     * Diagrams currently placed in this Workspace (see issue #27; only the
+     * column exists so far — put-in/take-out isn't implemented yet).
+     */
+    /** @return HasMany<Diagram, $this> */
+    public function diagrams(): HasMany
+    {
+        return $this->hasMany(Diagram::class);
+    }
+
+    /**
+     * True if this Workspace still holds at least one Diagram. A Workspace
+     * can't be deleted while this is true (CONTEXT.md, "Workspace Owner").
+     */
+    public function hasDiagrams(): bool
+    {
+        return $this->diagrams()->exists();
+    }
+
+    /**
      * True if $user is this Workspace's current Workspace Owner.
      */
     public function isOwnedBy(User $user): bool

@@ -38,22 +38,57 @@
                         <p class="text-sm text-gray-600">{{ __('messages.workspace_owner_label', ['name' => $workspace->owner->name]) }}</p>
                     </div>
 
-                    @if ($canManage)
-                        <form method="POST" action="{{ route('workspaces.update', $workspace) }}" class="flex items-center gap-2">
-                            @csrf
-                            @method('PUT')
-                            <input
-                                type="text"
-                                name="name"
-                                value="{{ $workspace->name }}"
-                                required
-                                class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            >
-                            <button type="submit" class="text-sm font-medium text-blue-600 hover:text-blue-700">
-                                {{ __('messages.rename') }}
-                            </button>
-                        </form>
-                    @endif
+                    <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        @if ($canManage)
+                            <form method="POST" action="{{ route('workspaces.update', $workspace) }}" class="flex items-center gap-2">
+                                @csrf
+                                @method('PUT')
+                                <input
+                                    type="text"
+                                    name="name"
+                                    value="{{ $workspace->name }}"
+                                    required
+                                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                >
+                                <button type="submit" class="text-sm font-medium text-blue-600 hover:text-blue-700">
+                                    {{ __('messages.rename') }}
+                                </button>
+                            </form>
+
+                            <form method="POST" action="{{ route('workspaces.owner.transfer', $workspace) }}" class="flex items-center gap-2">
+                                @csrf
+                                @method('PUT')
+                                <input
+                                    type="email"
+                                    name="email"
+                                    placeholder="{{ __('messages.new_owner_email') }}"
+                                    required
+                                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                >
+                                <button type="submit" class="text-sm font-medium text-blue-600 hover:text-blue-700">
+                                    {{ __('messages.transfer_ownership') }}
+                                </button>
+                            </form>
+
+                            <form method="POST" action="{{ route('workspaces.destroy', $workspace) }}">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-sm font-medium text-red-600 hover:text-red-700">
+                                    {{ __('messages.delete_workspace') }}
+                                </button>
+                            </form>
+                        @endif
+
+                        @if ($workspace->hasMember(auth()->user()) && ! $workspace->isOwnedBy(auth()->user()))
+                            <form method="POST" action="{{ route('workspaces.leave', $workspace) }}">
+                                @csrf
+                                @method('DELETE')
+                                <button type="submit" class="text-sm font-medium text-red-600 hover:text-red-700">
+                                    {{ __('messages.leave_workspace') }}
+                                </button>
+                            </form>
+                        @endif
+                    </div>
                 </div>
 
                 <div class="px-4 py-4 sm:px-6">

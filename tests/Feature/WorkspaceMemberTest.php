@@ -133,6 +133,49 @@ class WorkspaceMemberTest extends TestCase
         $this->assertTrue($workspace->fresh()->hasMember($owner));
     }
 
+    public function test_a_plain_member_can_leave_the_workspace(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $workspace->addMember($owner);
+        $workspace->addMember($member);
+
+        $response = $this->actingAs($member)->delete("/workspaces/{$workspace->id}/leave");
+
+        $response->assertRedirect();
+        $this->assertFalse($workspace->fresh()->hasMember($member));
+    }
+
+    public function test_the_workspace_owner_is_refused_when_trying_to_leave_without_transferring_first(): void
+    {
+        $owner = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $workspace->addMember($owner);
+
+        $response = $this->actingAs($owner)->delete("/workspaces/{$workspace->id}/leave");
+
+        $response->assertStatus(422);
+        $this->assertTrue($workspace->fresh()->hasMember($owner));
+    }
+
+    public function test_the_former_owner_can_leave_after_transferring_ownership(): void
+    {
+        $owner = User::factory()->create();
+        $newOwner = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $workspace->addMember($owner);
+
+        $this->actingAs($owner)->put("/workspaces/{$workspace->id}/owner", [
+            'user_id' => $newOwner->id,
+        ]);
+
+        $response = $this->actingAs($owner)->delete("/workspaces/{$workspace->id}/leave");
+
+        $response->assertRedirect();
+        $this->assertFalse($workspace->fresh()->hasMember($owner));
+    }
+
     public function test_adding_by_email_returns_identical_response_for_existing_and_non_existing_email(): void
     {
         $owner = User::factory()->create();

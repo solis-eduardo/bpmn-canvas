@@ -141,6 +141,12 @@ return [
     'no_members_yet' => 'No Members yet.',
     'rename' => 'Rename',
     'cannot_remove_workspace_owner' => "The Workspace Owner can't be removed as a Member.",
+    'transfer_ownership' => 'Transfer ownership',
+    'new_owner_email' => 'New owner email',
+    'delete_workspace' => 'Delete',
+    'leave_workspace' => 'Leave',
+    'cannot_delete_workspace_with_diagrams' => "This Workspace can't be deleted while it still holds Diagrams.",
+    'workspace_owner_must_transfer_before_leaving' => "The Workspace Owner can't leave without transferring ownership first.",
     // Notifications
     'notifications' => 'Notifications',
     'no_notifications_yet' => 'No notifications yet.',
