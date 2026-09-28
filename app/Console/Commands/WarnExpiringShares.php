@@ -29,14 +29,16 @@ class WarnExpiringShares extends Command
 
     public function handle(): int
     {
-        $leadTimeCutoff = Carbon::now()->addDays((int) config('shares.expiry_warning_lead_days'));
+        $now = Carbon::now();
+        $leadTimeCutoff = $now->clone()->addDays(config('shares.expiry_warning_lead_days'));
 
         $candidates = Share::query()
             ->whereNull('revoked_at')
             ->whereNull('expiry_warned_at')
+            ->where('expires_at', '>', $now)
+            ->where('expires_at', '<=', $leadTimeCutoff)
             ->with('diagram.owner')
-            ->get()
-            ->filter(fn (Share $share) => $share->isDueForExpiryWarning($leadTimeCutoff));
+            ->get();
 
         $warnedIds = [];
 
@@ -64,7 +66,7 @@ class WarnExpiringShares extends Command
 
         // One UPDATE for every Share warned this run instead of one
         // per Share.
-        Share::whereIn('id', $warnedIds)->update(['expiry_warned_at' => Carbon::now()]);
+        Share::whereIn('id', $warnedIds)->update(['expiry_warned_at' => $now]);
 
         return self::SUCCESS;
     }
