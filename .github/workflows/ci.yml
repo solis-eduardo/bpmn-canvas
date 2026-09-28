@@ -13,6 +13,8 @@ jobs:
   changes:
     name: Detect changed paths
     runs-on: ubuntu-24.04
+    permissions:
+      pull-requests: read
     outputs:
       php: ${{ steps.filter.outputs.php }}
     steps:
