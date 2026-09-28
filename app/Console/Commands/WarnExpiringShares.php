@@ -56,13 +56,15 @@ class WarnExpiringShares extends Command
             }
         }
 
-        if ($warnedIds !== []) {
-            // One UPDATE for every Share warned this run instead of one
-            // per Share.
-            Share::whereIn('id', $warnedIds)->update(['expiry_warned_at' => Carbon::now()]);
-        } else {
+        if ($warnedIds === []) {
             $this->info('No Shares due for an expiry warning.');
+
+            return self::SUCCESS;
         }
+
+        // One UPDATE for every Share warned this run instead of one
+        // per Share.
+        Share::whereIn('id', $warnedIds)->update(['expiry_warned_at' => Carbon::now()]);
 
         return self::SUCCESS;
     }
