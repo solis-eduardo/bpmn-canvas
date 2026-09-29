@@ -27,7 +27,7 @@
         </button>
     </form>
 
-    <form method="GET" action="{{ route('diagrams.index') }}" class="mt-4">
+    <form method="GET" action="{{ route('diagrams.index') }}" class="mt-4 flex flex-wrap items-center gap-4">
         <input
             type="search"
             name="q"
@@ -35,6 +35,32 @@
             placeholder="{{ __('messages.search_diagrams_placeholder') }}"
             class="w-full max-w-sm rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
+
+        @foreach (['owner' => 'filter_owner', 'collaborator' => 'filter_collaborator', 'locked' => 'filter_locked', 'recent' => 'filter_recent'] as $filterKey => $filterLabel)
+            <label class="flex items-center gap-1.5 text-sm text-gray-700">
+                <input type="checkbox" name="{{ $filterKey }}" value="1" @checked($filters[$filterKey])>
+                {{ __('messages.'.$filterLabel) }}
+            </label>
+        @endforeach
+
+        <label class="flex items-center gap-1.5 text-sm text-gray-700">
+            {{ __('messages.sort_by') }}
+            <select name="sort" class="rounded-md border border-gray-300 px-2 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <option value="title" @selected($sort === 'title')>{{ __('messages.sort_title') }}</option>
+                <option value="updated_at" @selected($sort === 'updated_at')>{{ __('messages.sort_last_modified') }}</option>
+            </select>
+        </label>
+        <select name="direction" class="rounded-md border border-gray-300 px-2 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+            <option value="asc" @selected($direction === 'asc')>{{ __('messages.sort_ascending') }}</option>
+            <option value="desc" @selected($direction === 'desc')>{{ __('messages.sort_descending') }}</option>
+        </select>
+
+        <button
+            type="submit"
+            class="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+        >
+            {{ __('messages.apply_filters') }}
+        </button>
     </form>
 
     <ul class="mt-8 divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -57,8 +83,12 @@
             </li>
         @empty
             <li class="px-4 py-6 text-center text-sm text-gray-500">
-                {{ $search !== '' ? __('messages.no_diagrams_match_search') : __('messages.no_diagrams_yet') }}
+                {{ ($search !== '' || in_array(true, $filters, true)) ? __('messages.no_diagrams_match_search') : __('messages.no_diagrams_yet') }}
             </li>
         @endforelse
     </ul>
+
+    <div class="mt-4">
+        {{ $diagrams->links() }}
+    </div>
 </x-layouts.app>
