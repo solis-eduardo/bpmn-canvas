@@ -19,6 +19,7 @@ use Illuminate\Support\Str;
 class Diagram extends Model
 {
     use FiltersDiagramList;
+
     /** @use HasFactory<DiagramFactory> */
     use HasFactory;
 
