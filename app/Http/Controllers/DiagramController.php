@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Diagrams\ReleaseLock;
 use App\Actions\Diagrams\RequestLock;
 use App\Actions\Diagrams\TransferOwnership;
+use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Diagram;
 use App\Models\DiagramOldSlug;
 use App\Models\Workspace;
@@ -19,6 +20,8 @@ use RuntimeException;
 
 class DiagramController extends Controller
 {
+    use ResolvesVisibleDiagram;
+
     /**
      * Number of Diagrams shown per page in the list (issue #39).
      */
@@ -48,8 +51,9 @@ class DiagramController extends Controller
      * Also accepts, all combinable with each other and with search (issue
      * #39): "owner"/"collaborator"/"locked"/"recent" boolean filters ("I'm
      * the Diagram Owner", "I'm a Collaborator", "locked right now",
-     * "recently modified"), a "sort" column ("title" or "updated_at") with
-     * a "direction" ("asc"/"desc"), and server-side pagination via "page".
+     * "recently modified"), a "tag" name filter (issue #40), a "sort" column
+     * ("title" or "updated_at") with a "direction" ("asc"/"desc"), and
+     * server-side pagination via "page".
      *
      * Filters, search, and sorting are always composed with the visibility
      * rule above, so none of them ever surfaces a hidden Diagram.
@@ -58,6 +62,7 @@ class DiagramController extends Controller
     {
         $user = $request->user();
         $search = trim((string) $request->query('q', ''));
+        $tag = trim((string) $request->query('tag', ''));
 
         $filters = [
             'owner' => $request->boolean('owner'),
@@ -71,7 +76,7 @@ class DiagramController extends Controller
         $requestedDirection = $request->query('direction');
         $direction = in_array($requestedDirection, ['asc', 'desc'], true) ? $requestedDirection : self::SORT_COLUMNS[$sort];
 
-        $diagrams = Diagram::with(['author', 'owner', 'lockedBy'])
+        $diagrams = Diagram::with(['author', 'owner', 'lockedBy', 'tags', 'workspace'])
             ->when(! $user->is_admin, fn ($query) => $query->where(function ($query) use ($user) {
                 $query->whereNull('workspace_id')
                     ->orWhere(fn ($query) => $query->ownedBy($user))
@@ -96,12 +101,13 @@ class DiagramController extends Controller
             }))
             ->when($filters['locked'], fn ($query) => $query->lockedNow())
             ->when($filters['recent'], fn ($query) => $query->recentlyModified())
+            ->when($tag !== '', fn ($query) => $query->taggedWith($tag))
             ->orderBy($sort, $direction)
             ->orderBy('id')
             ->paginate(self::DIAGRAMS_PER_PAGE)
             ->appends($request->query());
 
-        return view('diagrams.index', compact('diagrams', 'search', 'filters', 'sort', 'direction'));
+        return view('diagrams.index', compact('diagrams', 'search', 'tag', 'filters', 'sort', 'direction'));
     }
 
     public function store(Request $request, DiagramRepository $diagrams, VersionRepository $versions): RedirectResponse
@@ -400,27 +406,15 @@ class DiagramController extends Controller
         $diagram = Diagram::where('slug', $slug)->first();
 
         if ($diagram) {
-            return [$this->ensureVisible($diagram), false];
+            return [$this->assertVisible($diagram), false];
         }
 
         $old = DiagramOldSlug::with('diagram')->where('old_slug', $slug)->first();
 
         if ($old && $old->diagram) {
-            return [$this->ensureVisible($old->diagram), true];
+            return [$this->assertVisible($old->diagram), true];
         }
 
         abort(404);
-    }
-
-    /**
-     * A hidden Diagram (inside a Workspace the User can't see into) answers
-     * 404 to direct URL access — never 403, so its existence doesn't leak
-     * (CONTEXT.md, "Workspace"; issue #28).
-     */
-    private function ensureVisible(Diagram $diagram): Diagram
-    {
-        abort_unless($diagram->isVisibleTo(auth()->user()), 404);
-
-        return $diagram;
     }
 }

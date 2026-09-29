@@ -5,6 +5,7 @@ use App\Http\Controllers\Auth\KeycloakLoginController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DiagramCollaboratorController;
 use App\Http\Controllers\DiagramController;
+use App\Http\Controllers\DiagramTagController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PublicShareController;
@@ -56,6 +57,9 @@ Route::middleware('auth')->group(function () {
     Route::post('/diagrams/{slug}/collaborators', [DiagramCollaboratorController::class, 'store'])->name('diagrams.collaborators.store');
     Route::put('/diagrams/{slug}/collaborators/{user}', [DiagramCollaboratorController::class, 'update'])->name('diagrams.collaborators.update');
     Route::delete('/diagrams/{slug}/collaborators/{user}', [DiagramCollaboratorController::class, 'destroy'])->name('diagrams.collaborators.destroy');
+
+    Route::post('/diagrams/{slug}/tags', [DiagramTagController::class, 'store'])->name('diagrams.tags.store');
+    Route::delete('/diagrams/{slug}/tags/{tag}', [DiagramTagController::class, 'destroy'])->name('diagrams.tags.destroy');
 
     Route::put('/diagrams/{slug}/owner', [DiagramController::class, 'transferOwnership'])->name('diagrams.owner.transfer');
 

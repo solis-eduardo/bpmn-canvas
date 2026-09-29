@@ -43,6 +43,14 @@
             </label>
         @endforeach
 
+        <input
+            type="text"
+            name="tag"
+            value="{{ $tag }}"
+            placeholder="{{ __('messages.filter_by_tag_placeholder') }}"
+            class="w-40 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+
         <label class="flex items-center gap-1.5 text-sm text-gray-700">
             {{ __('messages.sort_by') }}
             <select name="sort" class="rounded-md border border-gray-300 px-2 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
@@ -80,10 +88,40 @@
                         <span class="text-amber-600">{{ __('messages.being_edited_by', ['name' => $diagram->lockedBy->name]) }}</span>
                     @endif
                 </div>
+
+                <div class="flex w-full flex-wrap items-center gap-1.5">
+                    @php($canManageTags = auth()->user()->can('manageTags', $diagram))
+
+                    @foreach ($diagram->tags as $diagramTag)
+                        <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
+                            {{ $diagramTag->name }}
+                            @if ($canManageTags)
+                                <form method="POST" action="{{ route('diagrams.tags.destroy', [$diagram->slug, $diagramTag->id]) }}">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-gray-400 hover:text-red-600" aria-label="{{ __('messages.remove_tag') }}">&times;</button>
+                                </form>
+                            @endif
+                        </span>
+                    @endforeach
+
+                    @if ($canManageTags)
+                        <form method="POST" action="{{ route('diagrams.tags.store', $diagram->slug) }}" class="flex items-center gap-1">
+                            @csrf
+                            <input
+                                type="text"
+                                name="name"
+                                placeholder="{{ __('messages.add_tag_placeholder') }}"
+                                class="w-28 rounded border border-gray-300 px-1.5 py-0.5 text-xs shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            >
+                            <button type="submit" class="text-xs font-medium text-blue-600 hover:underline">{{ __('messages.add_tag') }}</button>
+                        </form>
+                    @endif
+                </div>
             </li>
         @empty
             <li class="px-4 py-6 text-center text-sm text-gray-500">
-                {{ ($search !== '' || in_array(true, $filters, true)) ? __('messages.no_diagrams_match_search') : __('messages.no_diagrams_yet') }}
+                {{ ($search !== '' || $tag !== '' || in_array(true, $filters, true)) ? __('messages.no_diagrams_match_search') : __('messages.no_diagrams_yet') }}
             </li>
         @endforelse
     </ul>
