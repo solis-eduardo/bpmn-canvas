@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\FiltersDiagramList;
 use App\Support\Slugger;
 use Database\Factories\DiagramFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -16,6 +17,8 @@ use Illuminate\Support\Str;
 #[Fillable(['slug', 'title', 'author_id', 'owner_id', 'workspace_id', 'disk_path', 'forked_from_id'])]
 class Diagram extends Model
 {
+    use FiltersDiagramList;
+
     /** @use HasFactory<DiagramFactory> */
     use HasFactory;
 
@@ -183,7 +186,8 @@ BPMN;
     /**
      * True if the Diagram is locked and the heartbeat (or, absent a
      * heartbeat, the moment the lock was acquired) is still within the
-     * inactivity timeout.
+     * inactivity timeout. Keep in sync with the query-level equivalent,
+     * scopeLockedNow() below.
      */
     public function hasActiveLock(): bool
     {

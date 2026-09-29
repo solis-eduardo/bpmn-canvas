@@ -6,7 +6,6 @@ use App\Actions\Diagrams\ReleaseLock;
 use App\Actions\Diagrams\RequestLock;
 use App\Actions\Diagrams\TransferOwnership;
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\DiagramOldSlug;
 use App\Models\Workspace;
 use App\Repositories\DiagramRepository;
@@ -21,35 +20,88 @@ use RuntimeException;
 class DiagramController extends Controller
 {
     /**
+     * Number of Diagrams shown per page in the list (issue #39).
+     */
+    private const DIAGRAMS_PER_PAGE = 20;
+
+    /**
+     * Sortable columns for the Diagram list (issue #39), mapped from the
+     * "sort" query param to the actual column, with each one's default
+     * direction when no explicit "direction" is given.
+     *
+     * @var array<string, string>
+     */
+    private const SORT_COLUMNS = [
+        'title' => 'asc',
+        'updated_at' => 'desc',
+    ];
+
+    /**
      * Lists Diagrams visible to the current User (CONTEXT.md, "Workspace";
      * issue #28): every Diagram outside a Workspace, plus hidden ones the
      * User can see (Diagram Owner, approved Collaborator, or Member of its
      * Workspace). An Administrator sees every Diagram.
      *
      * Accepts an optional "q" search term matching title, Slug (issue #38),
-     * or the BPMN content's task/event/gateway/lane/pool names (issue #41)
-     * — always composed with the visibility rule above, so search never
-     * surfaces a hidden Diagram.
+     * or the BPMN content's task/event/gateway/lane/pool names (issue #41).
+     *
+     * Also accepts, all combinable with each other and with search (issue
+     * #39): "owner"/"collaborator"/"locked"/"recent" boolean filters ("I'm
+     * the Diagram Owner", "I'm a Collaborator", "locked right now",
+     * "recently modified"), a "sort" column ("title" or "updated_at") with
+     * a "direction" ("asc"/"desc"), and server-side pagination via "page".
+     *
+     * Filters, search, and sorting are always composed with the visibility
+     * rule above, so none of them ever surfaces a hidden Diagram.
      */
     public function index(Request $request): View
     {
         $user = $request->user();
         $search = trim((string) $request->query('q', ''));
 
+        $filters = [
+            'owner' => $request->boolean('owner'),
+            'collaborator' => $request->boolean('collaborator'),
+            'locked' => $request->boolean('locked'),
+            'recent' => $request->boolean('recent'),
+        ];
+
+        $requestedSort = (string) $request->query('sort', 'title');
+        $sort = array_key_exists($requestedSort, self::SORT_COLUMNS) ? $requestedSort : 'title';
+        $requestedDirection = $request->query('direction');
+        $direction = in_array($requestedDirection, ['asc', 'desc'], true) ? $requestedDirection : self::SORT_COLUMNS[$sort];
+
         $diagrams = Diagram::with(['author', 'owner', 'lockedBy'])
             ->when(! $user->is_admin, fn ($query) => $query->where(function ($query) use ($user) {
                 $query->whereNull('workspace_id')
-                    ->orWhere('owner_id', $user->id)
-                    ->orWhereHas('collaborators', fn ($collaborators) => $collaborators
-                        ->where('user_id', $user->id)
-                        ->where('status', DiagramCollaborator::STATUS_APPROVED))
+                    ->orWhere(fn ($query) => $query->ownedBy($user))
+                    ->orWhere(fn ($query) => $query->collaboratedBy($user))
                     ->orWhereHas('workspace.members', fn ($members) => $members->where('user_id', $user->id));
             }))
             ->when($search !== '', fn ($query) => $query->search($search))
-            ->orderBy('title')
-            ->get();
+            // "I'm the Diagram Owner" and "I'm a Collaborator" describe the
+            // same thing — the User's relation to the Diagram — so checking
+            // both is a union (any Diagram matching either), not an
+            // intersection (a Diagram is never both at once). "locked" and
+            // "recent" are independent constraints that narrow further, so
+            // they stay as separate AND'ed when() calls below.
+            ->when($filters['owner'] || $filters['collaborator'], fn ($query) => $query->where(function ($query) use ($user, $filters) {
+                if ($filters['owner']) {
+                    $query->orWhere(fn ($query) => $query->ownedBy($user));
+                }
 
-        return view('diagrams.index', compact('diagrams', 'search'));
+                if ($filters['collaborator']) {
+                    $query->orWhere(fn ($query) => $query->collaboratedBy($user));
+                }
+            }))
+            ->when($filters['locked'], fn ($query) => $query->lockedNow())
+            ->when($filters['recent'], fn ($query) => $query->recentlyModified())
+            ->orderBy($sort, $direction)
+            ->orderBy('id')
+            ->paginate(self::DIAGRAMS_PER_PAGE)
+            ->appends($request->query());
+
+        return view('diagrams.index', compact('diagrams', 'search', 'filters', 'sort', 'direction'));
     }
 
     public function store(Request $request, DiagramRepository $diagrams, VersionRepository $versions): RedirectResponse
