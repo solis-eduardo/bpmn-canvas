@@ -29,6 +29,16 @@ return [
     'diagram_owner_label' => '(owner: :name)',
     'last_modified_label' => 'Last modified :time',
     'being_edited_by' => '— being edited by :name',
+    'filter_owner' => "I'm the Diagram Owner",
+    'filter_collaborator' => "I'm a Collaborator",
+    'filter_locked' => 'Locked right now',
+    'filter_recent' => 'Recently modified',
+    'sort_by' => 'Sort by',
+    'sort_title' => 'Title',
+    'sort_last_modified' => 'Last modified',
+    'sort_ascending' => 'Ascending',
+    'sort_descending' => 'Descending',
+    'apply_filters' => 'Apply',
 
     // Editor
     'bpmn_editor' => 'BPMN Editor',
