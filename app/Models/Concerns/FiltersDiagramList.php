@@ -56,4 +56,12 @@ trait FiltersDiagramList
     {
         return $query->where('updated_at', '>=', now()->subDays($days));
     }
+
+    /**
+     * Filters to Diagrams carrying the given Tag name (issue #40).
+     */
+    public function scopeTaggedWith(Builder $query, string $tagName): Builder
+    {
+        return $query->whereHas('tags', fn ($tags) => $tags->where('name', $tagName));
+    }
 }

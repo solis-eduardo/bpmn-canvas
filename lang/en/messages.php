@@ -39,6 +39,10 @@ return [
     'sort_ascending' => 'Ascending',
     'sort_descending' => 'Descending',
     'apply_filters' => 'Apply',
+    'filter_by_tag_placeholder' => 'Filter by Tag…',
+    'add_tag_placeholder' => 'Add Tag…',
+    'add_tag' => 'Add',
+    'remove_tag' => 'Remove Tag',
 
     // Editor
     'bpmn_editor' => 'BPMN Editor',
