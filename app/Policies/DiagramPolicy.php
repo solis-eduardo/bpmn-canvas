@@ -58,6 +58,17 @@ class DiagramPolicy
     }
 
     /**
+     * Apply or remove a Diagram's Tags: same eligibility as editing it —
+     * Diagram Owner, approved Collaborator, or Member of its Workspace
+     * (CONTEXT.md, "Tag"; issue #40). Unlike manageCollaborators/
+     * manageShares, this is deliberately not Owner-only.
+     */
+    public function manageTags(User $user, Diagram $diagram): bool
+    {
+        return $diagram->isEditableBy($user);
+    }
+
+    /**
      * Transfer the Diagram Owner role to another User: current Diagram
      * Owner or Administrator (CONTEXT.md, "Diagram Owner"; ADR-0006; issue
      * #14). Same rule as manageCollaborators, kept as its own ability since

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\FiltersDiagramList;
+use App\Models\Concerns\HasTags;
 use App\Support\Slugger;
 use Database\Factories\DiagramFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -18,9 +19,10 @@ use Illuminate\Support\Str;
 class Diagram extends Model
 {
     use FiltersDiagramList;
-
     /** @use HasFactory<DiagramFactory> */
     use HasFactory;
+
+    use HasTags;
 
     /**
      * Template for a newly created Diagram's seed BPMN XML. The start
