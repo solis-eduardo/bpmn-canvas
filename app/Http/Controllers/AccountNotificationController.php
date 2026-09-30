@@ -17,12 +17,12 @@ class AccountNotificationController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
-        $data = $request->validate([
+        $request->validate([
             'email_notifications_enabled' => ['sometimes', 'boolean'],
         ]);
 
         $request->user()->update([
-            'email_notifications_enabled' => (bool) ($data['email_notifications_enabled'] ?? false),
+            'email_notifications_enabled' => $request->boolean('email_notifications_enabled'),
         ]);
 
         return redirect()->route('account.notifications.edit')
