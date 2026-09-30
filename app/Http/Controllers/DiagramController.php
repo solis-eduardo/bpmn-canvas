@@ -79,10 +79,7 @@ class DiagramController extends Controller
 
         $workspaces = $user->is_admin
             ? Workspace::orderBy('name')->get()
-            : Workspace::where(function ($query) use ($user) {
-                $query->where('owner_id', $user->id)
-                    ->orWhereHas('members', fn ($members) => $members->where('user_id', $user->id));
-            })->orderBy('name')->get();
+            : $user->workspaces()->orderBy('name')->get();
 
         $diagrams = Diagram::with(['author', 'owner', 'lockedBy', 'tags', 'workspace'])
             ->when(! $user->is_admin, fn ($query) => $query->where(function ($query) use ($user) {
@@ -92,7 +89,7 @@ class DiagramController extends Controller
                     ->orWhereHas('workspace.members', fn ($members) => $members->where('user_id', $user->id));
             }))
             ->when($workspaceFilter === 'none', fn ($query) => $query->whereNull('workspace_id'))
-            ->when(is_numeric($workspaceFilter) && (int) $workspaceFilter > 0, fn ($query) => $query->where('workspace_id', (int) $workspaceFilter))
+            ->when(ctype_digit($workspaceFilter) && (int) $workspaceFilter > 0, fn ($query) => $query->where('workspace_id', (int) $workspaceFilter))
             ->when($search !== '', fn ($query) => $query->search($search))
             // "I'm the Diagram Owner" and "I'm a Collaborator" describe the
             // same thing — the User's relation to the Diagram — so checking
