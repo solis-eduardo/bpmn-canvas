@@ -77,7 +77,7 @@ class DiagramController extends Controller
         $requestedSort = (string) $request->query('sort', 'title');
         $sort = array_key_exists($requestedSort, self::SORT_COLUMNS) ? $requestedSort : 'title';
         $requestedDirection = $request->query('direction');
-        $direction = in_array($requestedDirection, ['asc', 'desc'], true) ? $requestedDirection : self::SORT_COLUMNS[$sort        ];
+        $direction = in_array($requestedDirection, ['asc', 'desc'], true) ? $requestedDirection : self::SORT_COLUMNS[$sort];
 
         $diagrams = Diagram::with(['author', 'owner', 'lockedBy', 'tags', 'workspace'])
             ->when(! $user->is_admin, fn ($query) => $query->editableBy($user))
