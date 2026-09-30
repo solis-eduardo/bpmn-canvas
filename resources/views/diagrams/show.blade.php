@@ -23,21 +23,14 @@
             >
                 &larr; {{ __('messages.back_to_diagrams') }}
             </a>
-            @if ((int) $diagram->locked_by === auth()->id())
+            @php($isHolder = (int) $diagram->locked_by === auth()->id())
+            @if ($isHolder || (auth()->user()->is_admin && $diagram->locked_by !== null))
                 <button
                     type="button"
                     id="btn-release-lock"
                     class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 >
-                    {{ __('messages.release_lock') }}
-                </button>
-            @elseif (auth()->user()->is_admin && $diagram->locked_by !== null)
-                <button
-                    type="button"
-                    id="btn-release-lock"
-                    class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                >
-                    {{ __('messages.force_release_lock') }}
+                    {{ __($isHolder ? 'messages.release_lock' : 'messages.force_release_lock') }}
                 </button>
             @endif
 
