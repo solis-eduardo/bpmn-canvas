@@ -47,24 +47,15 @@
                                     {{ __('messages.edit_user') }}
                                 </a>
 
-                                @if ($user->adminRoleIsManuallyRevocable())
-                                    <form method="POST" action="{{ route('admin.users.update', $user) }}">
-                                        @csrf
-                                        @method('PUT')
-                                        <input type="hidden" name="is_admin" value="0">
-                                        <button type="submit" class="font-medium text-red-600 hover:text-red-700">
-                                            {{ __('messages.revoke_administrator') }}
-                                        </button>
-                                    </form>
-                                @elseif ($user->is_admin)
+                                @if ($user->is_admin && ! $user->adminRoleIsManuallyRevocable())
                                     <span class="text-xs text-gray-400">{{ __('messages.not_revocable_via_keycloak') }}</span>
                                 @else
                                     <form method="POST" action="{{ route('admin.users.update', $user) }}">
                                         @csrf
                                         @method('PUT')
-                                        <input type="hidden" name="is_admin" value="1">
-                                        <button type="submit" class="font-medium text-blue-600 hover:text-blue-700">
-                                            {{ __('messages.grant_administrator') }}
+                                        <input type="hidden" name="is_admin" value="{{ $user->is_admin ? 0 : 1 }}">
+                                        <button type="submit" class="font-medium {{ $user->is_admin ? 'text-red-600 hover:text-red-700' : 'text-blue-600 hover:text-blue-700' }}">
+                                            {{ $user->is_admin ? __('messages.revoke_administrator') : __('messages.grant_administrator') }}
                                         </button>
                                     </form>
                                 @endif
