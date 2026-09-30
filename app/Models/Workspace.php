@@ -77,20 +77,10 @@ class Workspace extends Model
      */
     public function addMember(User $user): void
     {
-        $membership = $this->members()->where('user_id', $user->id)->first();
-
-        if ($membership) {
-            if ($membership->origin !== WorkspaceMember::ORIGIN_MANUAL) {
-                $membership->update(['origin' => WorkspaceMember::ORIGIN_MANUAL]);
-            }
-
-            return;
-        }
-
-        $this->members()->create([
-            'user_id' => $user->id,
-            'origin' => WorkspaceMember::ORIGIN_MANUAL,
-        ]);
+        $this->members()->updateOrCreate(
+            ['user_id' => $user->id],
+            ['origin' => WorkspaceMember::ORIGIN_MANUAL],
+        );
     }
 
     /**
