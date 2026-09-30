@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Diagrams\GrantOrRequestCollaborator;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
+use App\Models\Diagram;
 use App\Models\DiagramCollaborator;
 use App\Models\User;
 use App\Notifications\DiagramAccessRequested;
@@ -62,12 +63,7 @@ class DiagramCollaboratorController extends Controller
         if (isset($data['email'])) {
             // If user exists by email, still perform the action
             if ($target) {
-                $collaborator = $grant($diagram, $request->user(), $target);
-                if ($collaborator->status === DiagramCollaborator::STATUS_REQUESTED) {
-                    $diagram->owner->notify(new DiagramAccessRequested($diagram, $target));
-                } elseif ($collaborator->wasRecentlyCreated || $collaborator->wasChanged('status')) {
-                    $target->notify(new DiagramCollaboratorInvited($diagram));
-                }
+                $this->notifyGrantOutcome($diagram, $target, $grant($diagram, $request->user(), $target));
             }
 
             // Return the same response regardless of whether the user exists
@@ -75,21 +71,29 @@ class DiagramCollaboratorController extends Controller
         }
 
         $collaborator = $grant($diagram, $request->user(), $target);
-
-        // A self-request (never a direct invite — those land as "approved")
-        // notifies the Diagram Owner. GrantOrRequestCollaborator only
-        // allows a self-request when the requester isn't already able to
-        // manage Collaborators, so the Owner is never notifying themselves.
-        if ($collaborator->status === DiagramCollaborator::STATUS_REQUESTED) {
-            $diagram->owner->notify(new DiagramAccessRequested($diagram, $target));
-        } elseif ($collaborator->wasRecentlyCreated || $collaborator->wasChanged('status')) {
-            $target->notify(new DiagramCollaboratorInvited($diagram));
-        }
+        $this->notifyGrantOutcome($diagram, $target, $collaborator);
 
         return response()->json([
             'user_id' => $collaborator->user_id,
             'status' => $collaborator->status,
         ], 201);
+    }
+
+    /**
+     * A self-request (never a direct invite — those land as "approved")
+     * notifies the Diagram Owner. GrantOrRequestCollaborator only allows a
+     * self-request when the requester isn't already able to manage
+     * Collaborators, so the Owner is never notifying themselves. A new or
+     * newly-approved grant notifies the invited User; an unchanged grant
+     * notifies no one.
+     */
+    private function notifyGrantOutcome(Diagram $diagram, User $target, DiagramCollaborator $collaborator): void
+    {
+        if ($collaborator->status === DiagramCollaborator::STATUS_REQUESTED) {
+            $diagram->owner->notify(new DiagramAccessRequested($diagram, $target));
+        } elseif ($collaborator->wasRecentlyCreated || $collaborator->wasChanged('status')) {
+            $target->notify(new DiagramCollaboratorInvited($diagram));
+        }
     }
 
     /**
