@@ -6,7 +6,7 @@ use App\Models\Diagram;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
-class HomeController extends Controller
+class HomeController
 {
     public function __invoke(Request $request): View
     {
