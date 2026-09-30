@@ -13,7 +13,7 @@ O stack legado do BPMN Studio (nginx + WebDAV + Basic Auth, hoje em `legacy/`) a
 
 ## Solution
 
-Reconstruir o BPMN Studio como uma aplicação Laravel com contas de Usuário reais (via Keycloak), preservando a filosofia central do produto — Editor simples de diagramas BPMN, link público de leitura sem exigir conta de quem recebe — mas resolvendo as quatro lacunas acima: autoria e Colaboração por Diagrama, Compartilhamento assinado e com expiração, uma Trava de Edição otimista com escape automático, e histórico de Versões restaurável (via Git, invisível ao usuário).
+Reconstruir o BPMN Studio como uma aplicação Laravel com contas de Usuário reais (via Keycloak), preservando a filosofia central do produto — Editor simples de diagramas BPMN, link público de leitura sem exigir conta de quem recebe — mas resolvendo as quatro lacunas acima: autoria e Colaboração por Diagrama, Compartilhamento assinado e com expiração, uma Trava de Edição exclusiva com liberação explícita e recuperação por Administrador ou Fork, e histórico de Versões restaurável (via Git, invisível ao usuário).
 
 Ver `CONTEXT.md` para o glossário completo e `docs/adr/0001` a `0004` para as decisões arquiteturais que sustentam esta spec.
 
@@ -52,15 +52,15 @@ Ver `CONTEXT.md` para o glossário completo e `docs/adr/0001` a `0004` para as d
 
 **Trava de Edição**
 
-23. Como Autor/Colaborador, quero que o Diagrama fique travado enquanto estou editando, para evitar que outra pessoa sobrescreva meu trabalho sem perceber.
+23. Como Autor/Colaborador, quero que o Diagrama fique travado enquanto estou editando, podendo manter Travas em vários Diagramas, para evitar que outra pessoa sobrescreva meu trabalho sem perceber.
 24. Como Usuário que tenta abrir o Editor de um Diagrama travado, quero ver quem detém a Trava, para saber com quem falar ou decidir esperar.
 25. Como Usuário bloqueado por uma Trava, quero poder solicitar a Trava ao detentor atual, para pedir prioridade de edição.
-26. Como detentor de uma Trava que recebe uma solicitação, quero ser avisado e poder transferir a Trava manualmente para quem solicitou, para ceder o controle quando fizer sentido.
-27. Como Usuário que solicitou uma Trava e não obteve resposta em 30 segundos, quero que ela seja transferida automaticamente para mim, para não ficar bloqueado indefinidamente por alguém ausente.
+26. Como detentor de uma Trava que recebe uma solicitação, quero ser avisado para decidir quando liberar explicitamente a Trava.
+27. Como Usuário que solicitou uma Trava, quero continuar bloqueado até que o detentor ou um Administrador a libere explicitamente, para que o controle nunca seja transferido automaticamente.
 28. Como Usuário bloqueado por uma Trava, quero poder criar um Fork do Diagrama, para continuar meu trabalho imediatamente sem esperar.
-29. Como Administrador, quero poder forçar a liberação de qualquer Trava, para resolver casos em que o mecanismo automático de 30s não é suficiente.
-30. Como Autor/Colaborador, quero que a Trava seja liberada automaticamente ao sair do Editor, para não precisar lembrar de liberá-la manualmente.
-31. Como Autor/Colaborador, quero que a Trava seja liberada por inatividade, para não deixar o Diagrama travado indefinidamente se eu esquecer uma aba aberta.
+29. Como Administrador, quero poder forçar explicitamente a liberação de qualquer Trava, para resolver casos em que o detentor não está disponível.
+30. Como Autor/Colaborador, quero liberar explicitamente a Trava quando terminar de editar; sair ou fechar o Editor não deve liberá-la.
+31. Como Autor/Colaborador, quero que a Trava permaneça mesmo após inatividade, para que o controle não seja transferido sem minha ação.
 
 **Versionamento**
 
@@ -93,9 +93,9 @@ Ver `CONTEXT.md` para o glossário completo e `docs/adr/0001` a `0004` para as d
 - O link público carrega um identificador assinado (Laravel signed URL) referenciando o `compartilhamentos.id`; o Visualizador Público valida assinatura + `expires_at` + `revoked_at IS NULL` antes de servir o conteúdo.
 
 **Trava de Edição**
-- Colunas em `diagramas`: `locked_by` (FK `users`, nullable), `locked_at`, `last_heartbeat_at`. Adquirida ao abrir o Editor; heartbeat periódico do front-end mantém `last_heartbeat_at` atualizado; ausência de heartbeat por um período configurável libera a Trava por inatividade. Liberada explicitamente ao sair do Editor.
-- Tabela `trava_solicitacoes`: `diagrama_id`, `solicitante_id`, `created_at`. Ao solicitar, o detentor atual é notificado (mecanismo de polling do front-end lendo essa tabela); se não houver transferência manual em 30 segundos (por comparação com `created_at`), a Trava é transferida automaticamente para o solicitante e a linha é removida/marcada resolvida.
-- Force-release por Administrador: limpa `locked_by`/`locked_at`/`last_heartbeat_at` diretamente, disponível a qualquer momento.
+- Colunas em `diagramas`: `locked_by` (FK `users`, nullable), `locked_at`, `last_heartbeat_at`. É adquirida ao abrir o Editor, e um Usuário pode manter Travas em vários Diagramas. Navegar para outro Diagrama, sair ou fechar o Editor e ficar inativo não libera a Trava; somente o detentor pode liberá-la explicitamente. O heartbeat periódico mantém a comunicação com o Editor, mas não determina expiração.
+- Uma solicitação de Trava notifica o detentor atual por polling. A solicitação não transfere a Trava automaticamente, nem após 30 segundos; quem solicitou continua bloqueado até a liberação explícita pelo detentor ou por um Administrador.
+- Force-release por Administrador é explícito e limpa `locked_by`/`locked_at`/`last_heartbeat_at`, disponível a qualquer momento. Depois da liberação, outro Usuário autorizado pode abrir o Editor e adquirir a Trava.
 
 **Fork**
 - Criar Fork = criar um novo registro em `diagramas` (novo `slug`, `author_id` = quem forkou, `forked_from_id` = Diagrama original), copiando o conteúdo atual do `.bpmn` para um novo diretório com um novo repositório Git (histórico de Versões começa do zero — o Fork não herda o histórico do original).
@@ -111,7 +111,7 @@ Ver `CONTEXT.md` para o glossário completo e `docs/adr/0001` a `0004` para as d
 ## Testing Decisions
 
 - Seam único e mais alto possível: testes de Feature (`tests/Feature/`) usando o HTTP test client do Laravel, autenticando com `actingAs()` sobre Usuários de teste (sem depender de um Keycloak real em execução) e afirmando sobre respostas HTTP, estado no banco (sqlite in-memory, já configurado em `phpunit.xml`) e conteúdo em disco (`storage/app/diagrams`, incluindo o histórico Git, lido pelos próprios endpoints de listagem/restauração de Versão — não há necessidade de inspecionar o repositório Git diretamente no teste).
-- Testes de tempo (expiração de Compartilhamento, timeout de inatividade da Trava, timeout de 30s de transferência) usam manipulação de tempo (`Carbon::setTestNow` / `travelTo`) em vez de `sleep` real.
+- Testes de tempo (expiração de Compartilhamento e permanência da Trava após inatividade e após 30 segundos) usam manipulação de tempo (`Carbon::setTestNow` / `travelTo`) em vez de `sleep` real.
 - Bom teste = testa comportamento observável (o que a rota retorna, o que fica persistido), nunca como a implementação por dentro faz isso (não deve inspecionar commits Git diretamente, nem chamar métodos internos do serviço de Versão fora da rota HTTP).
 - Prior art: o scaffold padrão do Laravel já está em `tests/Feature/ExampleTest.php` e `tests/Unit/ExampleTest.php` — seguir a mesma convenção de diretório/nomenclatura, substituindo pelos testes reais desta spec.
 - Módulos a testar (cada um como um conjunto de testes de Feature): Diagrama (CRUD, slug/redirect, colisão de slug), Colaboração (convite, solicitação, aprovação, remoção, concessão por Admin), Compartilhamento (criação, expiração, revogação, `allow_download`), Trava de Edição (aquisição, liberação explícita, liberação por inatividade, solicitação com timeout de 30s, transferência manual, force-release por Admin), Fork, Versionamento (save gera Versão, listagem agregada por dia, restauração revert-style), Autenticação local (criação de conta por Admin, login, papel de Administrador via flag) e, no ticket independente, Autenticação via Keycloak (login simulado, provisionamento JIT, papel de Administrador via claim).

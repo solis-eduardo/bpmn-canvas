@@ -49,6 +49,42 @@ class EditingLockTest extends TestCase
         $this->assertNotNull($diagram->fresh()->last_heartbeat_at);
     }
 
+    public function test_the_editor_offers_an_explicit_lock_release_action(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+
+        $response = $this->actingAs($user)->get('/diagrams/'.$diagram->slug);
+
+        $response->assertOk();
+        $response->assertSee('id="btn-release-lock"', false);
+    }
+
+    public function test_a_user_can_keep_multiple_locks_across_navigation_and_editor_closure(): void
+    {
+        $holder = User::factory()->create();
+        $other = User::factory()->create();
+        $first = Diagram::factory()->for($holder, 'author')->create(['title' => 'First']);
+        $second = Diagram::factory()->for($holder, 'author')->create(['title' => 'Second']);
+        $this->approveCollaborator($first, $other);
+        $this->approveCollaborator($second, $other);
+
+        $this->actingAs($holder)->get('/diagrams/'.$first->slug)->assertOk();
+        $this->actingAs($holder)->get('/diagrams')->assertOk();
+        $this->actingAs($holder)->get('/diagrams/'.$second->slug)->assertOk();
+
+        // No further Editor requests simulate closing the holder's tabs.
+        $this->travel(91)->seconds();
+
+        $firstResponse = $this->actingAs($other)->get('/diagrams/'.$first->slug);
+        $secondResponse = $this->actingAs($other)->get('/diagrams/'.$second->slug);
+
+        $firstResponse->assertViewIs('diagrams.locked')->assertSee($holder->name);
+        $secondResponse->assertViewIs('diagrams.locked')->assertSee($holder->name);
+        $this->assertSame($holder->id, $first->fresh()->locked_by);
+        $this->assertSame($holder->id, $second->fresh()->locked_by);
+    }
+
     public function test_a_second_user_is_blocked_from_opening_an_actively_locked_diagram_and_sees_who_holds_the_lock(): void
     {
         $holder = User::factory()->create(['name' => 'Ana Author']);
@@ -75,10 +111,10 @@ class EditingLockTest extends TestCase
         $response = $this->actingAs($viewer)->get('/diagrams');
 
         $response->assertOk();
-        $response->assertSee('being edited by Bruno Blocker');
+        $response->assertSee('Bruno Blocker');
     }
 
-    public function test_the_listing_does_not_indicate_a_lock_that_expired_due_to_inactivity(): void
+    public function test_the_listing_continues_to_indicate_a_lock_after_inactivity(): void
     {
         $holder = User::factory()->create(['name' => 'Carla Tired']);
         $viewer = User::factory()->create();
@@ -90,7 +126,7 @@ class EditingLockTest extends TestCase
         $response = $this->actingAs($viewer)->get('/diagrams');
 
         $response->assertOk();
-        $response->assertDontSee('being edited by');
+        $response->assertSee('Carla Tired');
     }
 
     public function test_explicitly_releasing_the_lock_allows_another_user_to_open_the_editor(): void
@@ -112,7 +148,7 @@ class EditingLockTest extends TestCase
         $this->assertSame($other->id, $diagram->fresh()->locked_by);
     }
 
-    public function test_the_lock_is_released_after_a_period_of_inactivity_without_heartbeat(): void
+    public function test_an_inactive_lock_remains_held_until_explicitly_released(): void
     {
         $holder = User::factory()->create();
         $other = User::factory()->create();
@@ -125,8 +161,8 @@ class EditingLockTest extends TestCase
         $response = $this->actingAs($other)->get('/diagrams/'.$diagram->slug);
 
         $response->assertOk();
-        $response->assertViewIs('diagrams.show');
-        $this->assertSame($other->id, $diagram->fresh()->locked_by);
+        $response->assertViewIs('diagrams.locked');
+        $this->assertSame($holder->id, $diagram->fresh()->locked_by);
     }
 
     public function test_heartbeat_keeps_the_lock_alive_past_the_inactivity_timeout(): void
@@ -205,7 +241,7 @@ class EditingLockTest extends TestCase
         $this->assertSame($user->id, $diagram->fresh()->locked_by);
     }
 
-    public function test_requesting_a_lock_held_by_someone_else_waits_until_the_holder_fails_to_respond(): void
+    public function test_requesting_a_lock_notifies_the_holder_but_never_transfers_it_automatically(): void
     {
         $holder = User::factory()->create();
         $requester = User::factory()->create();
@@ -217,11 +253,11 @@ class EditingLockTest extends TestCase
         $waiting->assertOk()->assertJson(['state' => 'waiting']);
         $this->assertSame($holder->id, $diagram->fresh()->locked_by);
 
-        $this->travel(Diagram::LOCK_REQUEST_TRANSFER_SECONDS + 1)->seconds();
+        $this->travel(31)->seconds();
 
-        $transferred = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
-        $transferred->assertOk()->assertJson(['state' => 'acquired']);
-        $this->assertSame($requester->id, $diagram->fresh()->locked_by);
+        $stillWaiting = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
+        $stillWaiting->assertOk()->assertJson(['state' => 'waiting']);
+        $this->assertSame($holder->id, $diagram->fresh()->locked_by);
     }
 
     public function test_a_heartbeat_from_the_holder_cancels_a_pending_lock_request(): void
@@ -251,6 +287,11 @@ class EditingLockTest extends TestCase
         $admin = User::factory()->create(['is_admin' => true]);
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        $this->actingAs($admin)->get('/diagrams/'.$diagram->slug)
+            ->assertOk()
+            ->assertSee('id="btn-release-lock"', false)
+            ->assertSee(__('messages.force_release_lock'));
 
         $response = $this->actingAs($admin)->deleteJson('/diagrams/'.$diagram->slug.'/lock');
 
@@ -295,9 +336,8 @@ class EditingLockTest extends TestCase
     }
 
     /**
-     * A "waiting" response from the lock-request endpoint exposes the
-     * server's own timestamp for the request, so the client can derive its
-     * countdown from the server's clock instead of the client's (issue #9).
+     * A "waiting" response includes the server's request timestamp, but
+     * deliberately exposes no transfer deadline.
      */
     public function test_requesting_a_held_lock_exposes_the_servers_request_timestamp(): void
     {
@@ -312,16 +352,12 @@ class EditingLockTest extends TestCase
 
         $response->assertOk()->assertJson(['state' => 'waiting']);
         $requestedAt = $response->json('requested_at');
-        $expiresAt = $response->json('expires_at');
         $this->assertNotNull($requestedAt);
         $this->assertSame(
             now()->toIso8601String(),
             Carbon::parse($requestedAt)->toIso8601String()
         );
-        $this->assertSame(
-            now()->addSeconds(Diagram::LOCK_REQUEST_TRANSFER_SECONDS)->toIso8601String(),
-            Carbon::parse($expiresAt)->toIso8601String()
-        );
+        $response->assertJsonMissingPath('expires_at');
     }
 
     /**
