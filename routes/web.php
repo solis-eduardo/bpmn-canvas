@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DiagramCollaboratorController;
 use App\Http\Controllers\DiagramController;
 use App\Http\Controllers\DiagramTagController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PublicShareController;
