@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\User;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use InvalidArgumentException;
 
 abstract class PreferenceAwareNotification extends Notification
 {
@@ -23,7 +24,7 @@ abstract class PreferenceAwareNotification extends Notification
     public function toMail(object $notifiable): MailMessage
     {
         if (! $notifiable instanceof User) {
-            throw new \InvalidArgumentException('Email notifications require a User recipient.');
+            throw new InvalidArgumentException('Email notifications require a User recipient.');
         }
 
         return (new MailMessage)
