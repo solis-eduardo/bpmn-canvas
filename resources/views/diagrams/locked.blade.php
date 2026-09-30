@@ -11,7 +11,9 @@
 
     @auth
         <nav aria-label="{{ __('messages.account_navigation') }}">
-            <a href="{{ route('account.edit') }}">{{ __('messages.profile') }}</a>
+            @if (Route::has('account.edit'))
+                <a href="{{ route('account.edit') }}">{{ __('messages.profile') }}</a>
+            @endif
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
                 <button type="submit">{{ __('messages.log_out') }}</button>
