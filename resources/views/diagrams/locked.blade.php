@@ -34,9 +34,22 @@
         <p id="lock-countdown" hidden></p>
     </div>
 
-    <form method="POST" action="{{ route('diagrams.fork', $diagram->slug) }}">
+    <form method="POST" action="{{ route('diagrams.fork', $diagram->slug) }}" class="mt-4 space-y-3">
         @csrf
-        <button type="submit">{{ __('messages.create_a_copy_to_continue') }}</button>
+
+        <label class="block text-sm font-medium text-gray-700">
+            {{ __('messages.workspace_filter_label') }}
+            <select name="workspace_id" class="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <option value="">{{ __('messages.no_workspace') }}</option>
+                @foreach (auth()->user()->workspaces()->orderBy('name')->get() as $workspace)
+                    <option value="{{ $workspace->id }}">{{ $workspace->name }}</option>
+                @endforeach
+            </select>
+        </label>
+
+        <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
+            {{ __('messages.create_a_copy_to_continue') }}
+        </button>
     </form>
 
     <script>

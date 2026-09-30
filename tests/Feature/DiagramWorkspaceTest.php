@@ -171,6 +171,49 @@ class DiagramWorkspaceTest extends TestCase
         $this->actingAs($member)->getJson("/diagrams/{$diagram->slug}/content")->assertOk();
     }
 
+    public function test_a_user_can_fork_a_diagram_into_one_of_their_workspaces(): void
+    {
+        $forker = User::factory()->create();
+        $diagram = Diagram::factory()->for($forker, 'author')->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $forker->id]);
+        $workspace->addMember($forker);
+
+        $this->actingAs($forker)
+            ->post('/diagrams/'.$diagram->slug.'/fork', ['workspace_id' => $workspace->id])
+            ->assertRedirect();
+
+        $forked = Diagram::where('forked_from_id', $diagram->id)->firstOrFail();
+        $this->assertSame($workspace->id, $forked->workspace_id);
+    }
+
+    public function test_a_user_can_fork_a_diagram_without_assigning_it_to_a_workspace(): void
+    {
+        $forker = User::factory()->create();
+        $diagram = Diagram::factory()->for($forker, 'author')->create();
+
+        $this->actingAs($forker)
+            ->post('/diagrams/'.$diagram->slug.'/fork', ['workspace_id' => null])
+            ->assertRedirect();
+
+        $forked = Diagram::where('forked_from_id', $diagram->id)->firstOrFail();
+        $this->assertNull($forked->workspace_id);
+    }
+
+    public function test_a_user_cannot_fork_a_diagram_into_a_workspace_they_are_not_a_member_of(): void
+    {
+        $forker = User::factory()->create();
+        $otherOwner = User::factory()->create();
+        $diagram = Diagram::factory()->for($forker, 'author')->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $otherOwner->id]);
+        $workspace->addMember($otherOwner);
+
+        $this->actingAs($forker)
+            ->post('/diagrams/'.$diagram->slug.'/fork', ['workspace_id' => $workspace->id])
+            ->assertStatus(422);
+
+        $this->assertDatabaseMissing('diagrams', ['forked_from_id' => $diagram->id]);
+    }
+
     public function test_diagram_list_can_filter_to_a_workspace_and_hide_any_hidden_diagrams(): void
     {
         $owner = User::factory()->create();
