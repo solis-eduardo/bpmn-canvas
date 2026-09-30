@@ -57,6 +57,13 @@
                     @endauth
 
                     @include('partials.language-switcher')
+
+                    @auth
+                        <form method="POST" action="{{ route('logout') }}">
+                            @csrf
+                            <button type="submit" class="text-sm font-medium text-gray-600 hover:text-gray-900">{{ __('messages.log_out') }}</button>
+                        </form>
+                    @endauth
                 </div>
             </div>
         </header>
