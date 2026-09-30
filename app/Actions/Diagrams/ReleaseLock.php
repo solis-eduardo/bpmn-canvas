@@ -7,8 +7,8 @@ use App\Models\User;
 
 /**
  * Releases the Editing Lock: the current holder releases it normally; an
- * Administrator can force the release even without being the holder, "as an
- * alternative to the 30-second mechanism" (CONTEXT.md, "Editing Lock").
+ * Administrator can force the release even without being the holder
+ * (CONTEXT.md, "Editing Lock").
  * With no active Lock, it's a successful no-op.
  */
 class ReleaseLock
