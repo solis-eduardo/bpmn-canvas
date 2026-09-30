@@ -24,9 +24,7 @@ class TransferOwnership
     public function __invoke(Workspace $workspace, User $newOwner): void
     {
         DB::transaction(function () use ($workspace, $newOwner) {
-            if (! $workspace->hasMember($newOwner)) {
-                $workspace->members()->create(['user_id' => $newOwner->id]);
-            }
+            $workspace->addMember($newOwner, notify: false);
 
             $workspace->update(['owner_id' => $newOwner->id]);
         });
