@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
@@ -74,13 +75,7 @@ class UserController extends Controller
             abort(403, 'This Administrator role was granted by the Keycloak claim and cannot be revoked here.');
         }
 
-        if (array_key_exists('name', $data)) {
-            $user->name = $data['name'];
-        }
-
-        if (filled($data['password'] ?? null)) {
-            $user->password = Hash::make($data['password']);
-        }
+        $user->fill(array_filter(Arr::only($data, ['name', 'password']), filled(...)));
 
         if (array_key_exists('is_admin', $data)) {
             $user->is_admin = $data['is_admin'];
