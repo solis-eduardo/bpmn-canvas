@@ -21,7 +21,7 @@ class KeycloakLoginTest extends TestCase
         string $name,
         string $email,
         array $realmRoles = [],
-        array $groups = [],
+        ?array $groups = [],
     ): SocialiteUser {
         $jwt = $this->fakeJwt($realmRoles, $groups);
 
@@ -34,15 +34,20 @@ class KeycloakLoginTest extends TestCase
         ]);
     }
 
-    private function fakeJwt(array $realmRoles = [], array $groups = []): string
+    private function fakeJwt(array $realmRoles = [], ?array $groups = []): string
     {
         $encode = fn (array $data) => rtrim(strtr(base64_encode(json_encode($data)), '+/', '-_'), '=');
 
         $header = $encode(['alg' => 'RS256', 'typ' => 'JWT']);
-        $payload = $encode([
+        $payload = [
             'realm_access' => ['roles' => $realmRoles],
-            'groups' => $groups,
-        ]);
+        ];
+
+        if ($groups !== null) {
+            $payload['groups'] = $groups;
+        }
+
+        $payload = $encode($payload);
 
         return "{$header}.{$payload}.fake-signature";
     }
@@ -221,6 +226,33 @@ class KeycloakLoginTest extends TestCase
         $this->assertDatabaseMissing('workspace_members', [
             'workspace_id' => $workspace->id,
             'user_id' => $member->id,
+        ]);
+    }
+
+    public function test_keycloak_login_preserves_group_membership_when_the_groups_claim_is_missing(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create(['keycloak_id' => 'keycloak-sub-12']);
+        $workspace = Workspace::factory()->create([
+            'owner_id' => $owner->id,
+            'keycloak_group' => '/finance',
+        ]);
+        $workspace->addMember($owner);
+        $workspace->addGroupMember($member);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser(
+            'keycloak-sub-12',
+            $member->name,
+            $member->email,
+            groups: null,
+        ));
+
+        $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
+
+        $this->assertDatabaseHas('workspace_members', [
+            'workspace_id' => $workspace->id,
+            'user_id' => $member->id,
+            'origin' => 'group',
         ]);
     }
 

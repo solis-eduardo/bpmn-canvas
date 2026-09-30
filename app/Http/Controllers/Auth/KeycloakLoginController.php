@@ -9,6 +9,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialiteUserContract;
 use Laravel\Socialite\Facades\Socialite;
@@ -41,7 +42,8 @@ class KeycloakLoginController extends Controller
         }
 
         $user->save();
-        $syncGroups($user, $this->keycloakGroups($tokenPayload));
+        $groups = $this->keycloakGroups($tokenPayload);
+        $this->syncWorkspaceMemberships($user, $groups, $syncGroups);
 
         Auth::login($user);
 
@@ -95,17 +97,42 @@ class KeycloakLoginController extends Controller
 
     /**
      * @param  array<string, mixed>  $payload
-     * @return list<string>
+     * @return list<string>|null
      */
-    private function keycloakGroups(array $payload): array
+    private function keycloakGroups(array $payload): ?array
     {
-        $groups = data_get($payload, 'groups', []);
+        $groups = $payload['groups'] ?? null;
 
         if (! is_array($groups)) {
-            return [];
+            return null;
         }
 
-        return array_values(array_filter($groups, is_string(...)));
+        foreach ($groups as $group) {
+            if (! is_string($group)) {
+                return null;
+            }
+        }
+
+        return array_values($groups);
+    }
+
+    /**
+     * @param  list<string>|null  $groups
+     */
+    private function syncWorkspaceMemberships(
+        User $user,
+        ?array $groups,
+        SyncKeycloakGroupMemberships $syncGroups,
+    ): void {
+        if ($groups === null) {
+            Log::warning('Keycloak token is missing a valid groups claim; workspace membership sync was skipped.', [
+                'user_id' => $user->id,
+            ]);
+
+            return;
+        }
+
+        $syncGroups($user, $groups);
     }
 
     /**
