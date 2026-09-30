@@ -35,6 +35,10 @@ Two login methods coexist — the User chooses which to use, and one doesn't rep
 - **Local** (default in this phase): email/password, account created manually by an Administrator.
 - **Keycloak (SSO, optional)**: if `KEYCLOAK_BASE_URL`/`KEYCLOAK_REALM`/`KEYCLOAK_CLIENT_ID`/`KEYCLOAK_CLIENT_SECRET` are configured in `.env`, the Keycloak login button becomes available. Just-in-time provisioning on first access; a pre-existing local account with the same email is automatically linked to the Keycloak identity (never duplicated). A Keycloak role/claim (`KEYCLOAK_ADMIN_ROLE`, default `bpmn-admin`) can grant the Administrator role, but never revokes a manual grant.
 
+## Email notifications
+
+Users can opt in to email copies of their notifications from **Email preferences** in the navigation. Email is off by default. The `queue` Compose service delivers queued mail; set `MAIL_MAILER` and the corresponding mailer variables in `.env` to configure delivery. The development default, `MAIL_MAILER=log`, writes outgoing messages to the application log instead of sending them.
+
 ## Usage
 
 1. **Create a Diagram**: at `/diagrams`, give it a name — a Slug is derived automatically.
@@ -56,12 +60,15 @@ See `.env.example` for the full list. Highlights:
 | `BPMN_JS_VERSION` | Version of bpmn-js vendored in the build (no CDN at runtime) |
 | `BPMN_JS_DIFFER_VERSION` | Version of bpmn-js-differ vendored in the build, used to diff Versions on the canvas (no CDN at runtime) |
 | `APP_PORT` | Host port `web` publishes (default `80`) |
+| `MAIL_MAILER` | Mail transport (defaults to `log`; configure `smtp` and `MAIL_HOST`/credentials to send mail) |
+| `QUEUE_CONNECTION` | Queue backend used for queued mail (defaults to `database`) |
 
 ## Production
 
 - Use HTTPS. By default `web` publishes directly on `APP_PORT`; if this host already runs a shared reverse proxy on an external `nginx-network`, bring the app up with the extra overlay instead: `docker network create nginx-network` (once, if it doesn't exist) then `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`.
 - `storage/app/diagrams` is bind-mounted to `./diagrams` on the host — include it in your backups.
 - Set `APP_ENV=production` and `APP_DEBUG=false` in your production `.env`.
+- Configure a production mail transport using `MAIL_MAILER` and its `MAIL_*` settings; the default `log` mailer does not deliver messages.
 
 ## Backup and Restore
 
@@ -155,6 +162,10 @@ Duas formas de login coexistem — o Usuário escolhe qual usar, uma não substi
 - **Local** (padrão desta fase): e-mail/senha, conta criada manualmente por um Administrador.
 - **Keycloak (SSO, opcional)**: se `KEYCLOAK_BASE_URL`/`KEYCLOAK_REALM`/`KEYCLOAK_CLIENT_ID`/`KEYCLOAK_CLIENT_SECRET` estiverem configurados no `.env`, o botão de login via Keycloak fica disponível. Provisionamento just-in-time no primeiro acesso; uma conta local pré-existente com o mesmo e-mail é vinculada automaticamente à identidade Keycloak (nunca duplicada). Uma role/claim do Keycloak (`KEYCLOAK_ADMIN_ROLE`, default `bpmn-admin`) pode conceder o papel de Administrador, mas nunca revoga uma concessão manual.
 
+## Notificações por e-mail
+
+Usuários podem optar por receber cópias das notificações por e-mail em **Preferências de e-mail** na navegação. O envio fica desativado por padrão. O serviço Compose `queue` processa os e-mails enfileirados; configure `MAIL_MAILER` e as variáveis correspondentes no `.env`. O padrão de desenvolvimento, `MAIL_MAILER=log`, grava as mensagens enviadas no log da aplicação em vez de enviá-las.
+
 ## Uso
 
 1. **Criar um Diagrama**: em `/diagrams`, dê um nome — um Slug é derivado automaticamente.
@@ -176,12 +187,15 @@ Ver `.env.example` para a lista completa. Destaques:
 | `BPMN_JS_VERSION` | Versão do bpmn-js vendorizada no build (sem CDN em runtime) |
 | `BPMN_JS_DIFFER_VERSION` | Versão do bpmn-js-differ vendorizada no build, usada para comparar Versões no canvas (sem CDN em runtime) |
 | `APP_PORT` | Porta do host publicada pelo `web` (default `80`) |
+| `MAIL_MAILER` | Transporte de e-mail (padrão `log`; configure `smtp` e `MAIL_HOST`/credenciais para enviar e-mails) |
+| `QUEUE_CONNECTION` | Backend da fila usada para os e-mails (padrão `database`) |
 
 ## Produção
 
 - Use HTTPS. Por padrão o `web` publica direto na `APP_PORT`; se este host já roda um reverse proxy compartilhado em uma rede externa `nginx-network`, suba a aplicação com o overlay extra: `docker network create nginx-network` (uma vez, se ainda não existir) e depois `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`.
 - `storage/app/diagrams` é bind-mounted em `./diagrams` no host — inclua no seu backup.
 - Ajuste `APP_ENV=production` e `APP_DEBUG=false` no `.env` de produção.
+- Configure um transporte de e-mail de produção por `MAIL_MAILER` e as configurações `MAIL_*` correspondentes; o padrão `log` não entrega mensagens.
 
 ## Backup e Restauração
 

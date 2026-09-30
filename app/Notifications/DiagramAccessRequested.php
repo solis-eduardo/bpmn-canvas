@@ -4,34 +4,30 @@ namespace App\Notifications;
 
 use App\Models\Diagram;
 use App\Models\User;
-use Illuminate\Notifications\Notification;
 
 /**
  * Sent to a Diagram's Owner when a User requests Collaborator access
  * (DiagramCollaboratorController::store, via GrantOrRequestCollaborator —
  * only fired for a self-request, never a direct invite; see issue #15).
- * Database channel only: this app has no mail/broadcast transport wired up
- * for notifications yet, and the bell (polling the unread-count endpoint)
- * is the only surface the spec asks for.
  */
-class DiagramAccessRequested extends Notification
+class DiagramAccessRequested extends PreferenceAwareNotification
 {
     public function __construct(
         private readonly Diagram $diagram,
         private readonly User $requester,
     ) {}
 
-    /**
-     * $notifiable is required by Notification's abstract signature even
-     * though this channel list doesn't vary per notifiable.
-     *
-     * @return array<int, string>
-     *
-     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
-     */
-    public function via(object $notifiable): array
+    protected function emailMessage(): string
     {
-        return ['database'];
+        return __('messages.notification_requested_access', [
+            'name' => $this->requester->name,
+            'diagram' => $this->diagram->title,
+        ]);
+    }
+
+    protected function emailUrl(): string
+    {
+        return route('diagrams.show', $this->diagram->slug).'?open-panel=collaborators';
     }
 
     /**
