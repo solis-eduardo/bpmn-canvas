@@ -1,13 +1,11 @@
 <?php
 
-use App\Http\Controllers\AccountController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\KeycloakLoginController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DiagramCollaboratorController;
 use App\Http\Controllers\DiagramController;
 use App\Http\Controllers\DiagramTagController;
-use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PublicShareController;
@@ -39,10 +37,6 @@ Route::middleware('signed')->group(function () {
 
 Route::middleware('auth')->group(function () {
     Route::get('/home', fn () => redirect()->route('diagrams.index'))->name('home');
-
-    Route::get('/account', [AccountController::class, 'edit'])->name('account.edit');
-    Route::put('/account', [AccountController::class, 'update'])->name('account.update');
-    Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.password.update');
 
     Route::get('/admin/users', [UserController::class, 'index'])->name('admin.users.index');
     Route::get('/admin/users/create', [UserController::class, 'create'])->name('admin.users.create');
