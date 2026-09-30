@@ -142,8 +142,10 @@ BPMN;
     public function scopeEditableBy(Builder $query, User $user): Builder
     {
         return $query->where(fn (Builder $query) => $query
-            ->ownedBy($user)
-            ->orWhere(fn (Builder $query) => $query->collaboratedBy($user))
+            ->where('owner_id', $user->id)
+            ->orWhereHas('collaborators', fn (Builder $collaborators) => $collaborators
+                ->where('user_id', $user->id)
+                ->where('status', DiagramCollaborator::STATUS_APPROVED))
             ->orWhereHas('workspace.members', fn (Builder $members) => $members->where('user_id', $user->id)));
     }
 
