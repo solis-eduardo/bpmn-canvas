@@ -13,7 +13,7 @@ use Illuminate\Notifications\Notifiable;
 
 // keycloak_id is only ever assigned internally by the OAuth flow (KeycloakLoginController),
 // never from a user request payload — no route exposes it.
-#[Fillable(['name', 'email', 'password', 'keycloak_id'])]
+#[Fillable(['name', 'email', 'password', 'keycloak_id', 'email_notifications_enabled'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -32,6 +32,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_admin' => 'boolean',
             'is_admin_via_keycloak_claim' => 'boolean',
+            'email_notifications_enabled' => 'boolean',
         ];
     }
 
