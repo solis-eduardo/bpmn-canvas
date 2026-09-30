@@ -58,12 +58,6 @@
                         >
                             {{ __('messages.profile') }}
                         </a>
-                        <form method="POST" action="{{ route('logout') }}">
-                            @csrf
-                            <button type="submit" class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900">
-                                {{ __('messages.log_out') }}
-                            </button>
-                        </form>
                     @else
                         <div class="h-8 w-8" data-slot="notification-bell" aria-hidden="true"></div>
                     @endauth

@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class AccountController extends Controller
@@ -22,9 +22,7 @@ class AccountController extends Controller
             'name' => ['required', 'string', 'max:255'],
         ]);
 
-        $request->user()->update([
-            'name' => $data['name'],
-        ]);
+        $request->user()->update($data);
 
         return redirect()->route('account.edit');
     }
@@ -42,8 +40,12 @@ class AccountController extends Controller
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ]);
 
-        $user->password = Hash::make($data['password']);
-        $user->save();
+        $user->update(['password' => $data['password']]);
+
+        DB::table('sessions')
+            ->where('user_id', $user->id)
+            ->where('id', '!=', $request->session()->getId())
+            ->delete();
 
         return redirect()->route('account.edit');
     }
