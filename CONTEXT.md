@@ -52,7 +52,7 @@ _Avoid_: commit, revision, tag, label, milestone (a named Version is still just 
 An authenticated account in the system. Two login methods coexist, and the User chooses which to use — it's not a migration from one to the other: local login (an account provisioned manually by an Administrator) and Keycloak SSO login (OpenID Connect), with just-in-time provisioning on first access. A local account and a Keycloak identity with the same email are automatically linked to the same account, never duplicated. Replaces the legacy stack's single shared login (Basic Auth).
 
 **Workspace**:
-A group of Users (its Members) that holds Diagrams. Any User can create a Workspace and becomes its Workspace Owner. A Diagram belongs to at most one Workspace; while it does, every Member can edit it as if they were a Collaborator, and it is hidden from Users who are neither Members nor have direct access to it (Diagram Owner, Collaborator) — a Collaborator keeps seeing the Diagram even without being a Member. A Diagram outside any Workspace stays visible to every User.
+A group of Users (its Members) that holds Diagrams. Any User can create a Workspace and becomes its Workspace Owner. An Administrator may link it to a Keycloak group; those group-managed memberships follow the User's groups on login without changing manually managed memberships. A Diagram belongs to at most one Workspace; while it does, every Member can edit it as if they were a Collaborator, and it is hidden from Users who are neither Members nor have direct access to it (Diagram Owner, Collaborator) — a Collaborator keeps seeing the Diagram even without being a Member. A Diagram outside any Workspace stays visible to every User.
 _Avoid_: group, team, environment, folder
 
 **Member**:

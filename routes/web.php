@@ -86,6 +86,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');
     Route::put('/workspaces/{workspace}', [WorkspaceController::class, 'update'])->name('workspaces.update');
     Route::put('/workspaces/{workspace}/owner', [WorkspaceController::class, 'transferOwnership'])->name('workspaces.owner.transfer');
+    Route::put('/workspaces/{workspace}/keycloak-group', [WorkspaceController::class, 'updateKeycloakGroup'])->name('workspaces.keycloak-group.update');
     Route::delete('/workspaces/{workspace}', [WorkspaceController::class, 'destroy'])->name('workspaces.destroy');
 
     Route::post('/workspaces/{workspace}/members', [WorkspaceMemberController::class, 'store'])->name('workspaces.members.store');

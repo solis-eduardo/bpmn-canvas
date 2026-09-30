@@ -26,6 +26,16 @@ class WorkspacePolicy
     }
 
     /**
+     * Linking a Workspace to a Keycloak group is restricted to Administrators.
+     *
+     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
+     */
+    public function manageKeycloakGroup(User $user, Workspace $workspace): bool
+    {
+        return $user->is_admin === true;
+    }
+
+    /**
      * Transfer the Workspace Owner role to another User: current Workspace
      * Owner or Administrator (CONTEXT.md, "Workspace Owner"; ADR-0006; issue
      * #29). Same rule as manageMembers, kept as its own ability the same way

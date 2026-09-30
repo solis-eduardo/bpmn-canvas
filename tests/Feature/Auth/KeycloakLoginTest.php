@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Models\User;
+use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Socialite\Contracts\Provider as SocialiteProvider;
 use Laravel\Socialite\Facades\Socialite;
@@ -15,9 +16,14 @@ class KeycloakLoginTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function fakeSocialiteUser(string $keycloakId, string $name, string $email, array $realmRoles = []): SocialiteUser
-    {
-        $jwt = $this->fakeJwt($realmRoles);
+    private function fakeSocialiteUser(
+        string $keycloakId,
+        string $name,
+        string $email,
+        array $realmRoles = [],
+        array $groups = [],
+    ): SocialiteUser {
+        $jwt = $this->fakeJwt($realmRoles, $groups);
 
         return SocialiteUser::fake([
             'id' => $keycloakId,
@@ -28,12 +34,15 @@ class KeycloakLoginTest extends TestCase
         ]);
     }
 
-    private function fakeJwt(array $realmRoles = []): string
+    private function fakeJwt(array $realmRoles = [], array $groups = []): string
     {
         $encode = fn (array $data) => rtrim(strtr(base64_encode(json_encode($data)), '+/', '-_'), '=');
 
         $header = $encode(['alg' => 'RS256', 'typ' => 'JWT']);
-        $payload = $encode(['realm_access' => ['roles' => $realmRoles]]);
+        $payload = $encode([
+            'realm_access' => ['roles' => $realmRoles],
+            'groups' => $groups,
+        ]);
 
         return "{$header}.{$payload}.fake-signature";
     }
@@ -162,5 +171,124 @@ class KeycloakLoginTest extends TestCase
         $this->assertDatabaseCount('users', 1);
         $this->assertAuthenticatedAs($localUser->fresh());
         $this->assertSame('keycloak-sub-7', $localUser->fresh()->keycloak_id);
+    }
+
+    public function test_keycloak_login_adds_the_user_to_a_workspace_linked_to_one_of_their_groups(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create(['keycloak_id' => 'keycloak-sub-8']);
+        $workspace = Workspace::factory()->create([
+            'owner_id' => $owner->id,
+            'keycloak_group' => '/finance',
+        ]);
+        $workspace->addMember($owner);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser(
+            'keycloak-sub-8',
+            $member->name,
+            $member->email,
+            groups: ['/finance'],
+        ));
+
+        $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
+
+        $this->assertDatabaseHas('workspace_members', [
+            'workspace_id' => $workspace->id,
+            'user_id' => $member->id,
+            'origin' => 'group',
+        ]);
+    }
+
+    public function test_keycloak_login_removes_group_membership_when_the_user_no_longer_has_the_linked_group(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create(['keycloak_id' => 'keycloak-sub-9']);
+        $workspace = Workspace::factory()->create([
+            'owner_id' => $owner->id,
+            'keycloak_group' => '/finance',
+        ]);
+        $workspace->addMember($owner);
+        $workspace->addGroupMember($member);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser(
+            'keycloak-sub-9',
+            $member->name,
+            $member->email,
+        ));
+
+        $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
+
+        $this->assertDatabaseMissing('workspace_members', [
+            'workspace_id' => $workspace->id,
+            'user_id' => $member->id,
+        ]);
+    }
+
+    public function test_keycloak_group_reconciliation_preserves_a_manual_membership_even_when_the_user_is_in_the_group(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create(['keycloak_id' => 'keycloak-sub-10']);
+        $workspace = Workspace::factory()->create([
+            'owner_id' => $owner->id,
+            'keycloak_group' => '/finance',
+        ]);
+        $workspace->addMember($owner);
+        $workspace->addMember($member);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser(
+            'keycloak-sub-10',
+            $member->name,
+            $member->email,
+            groups: ['/finance'],
+        ));
+
+        $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
+
+        $this->assertDatabaseHas('workspace_members', [
+            'workspace_id' => $workspace->id,
+            'user_id' => $member->id,
+            'origin' => 'manual',
+        ]);
+
+        $this->post('/logout');
+        $this->mockSocialiteUser($this->fakeSocialiteUser(
+            'keycloak-sub-10',
+            $member->name,
+            $member->email,
+        ));
+        $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
+
+        $this->assertDatabaseHas('workspace_members', [
+            'workspace_id' => $workspace->id,
+            'user_id' => $member->id,
+            'origin' => 'manual',
+        ]);
+    }
+
+    public function test_manually_adding_a_group_member_preserves_the_membership_after_they_leave_the_group(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create(['keycloak_id' => 'keycloak-sub-11']);
+        $workspace = Workspace::factory()->create([
+            'owner_id' => $owner->id,
+            'keycloak_group' => '/finance',
+        ]);
+        $workspace->addMember($owner);
+        $workspace->addGroupMember($member);
+        $workspace->addMember($member);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser(
+            'keycloak-sub-11',
+            $member->name,
+            $member->email,
+        ));
+
+        $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
+
+        $this->assertDatabaseHas('workspace_members', [
+            'workspace_id' => $workspace->id,
+            'user_id' => $member->id,
+            'origin' => 'manual',
+        ]);
     }
 }
