@@ -63,6 +63,7 @@ class DiagramController extends Controller
         $user = $request->user();
         $search = trim((string) $request->query('q', ''));
         $tag = trim((string) $request->query('tag', ''));
+        $workspaceFilter = (string) $request->query('workspace', 'all');
 
         $filters = [
             'owner' => $request->boolean('owner'),
@@ -76,6 +77,13 @@ class DiagramController extends Controller
         $requestedDirection = $request->query('direction');
         $direction = in_array($requestedDirection, ['asc', 'desc'], true) ? $requestedDirection : self::SORT_COLUMNS[$sort];
 
+        $workspaces = $user->is_admin
+            ? Workspace::orderBy('name')->get()
+            : Workspace::where(function ($query) use ($user) {
+                $query->where('owner_id', $user->id)
+                    ->orWhereHas('members', fn ($members) => $members->where('user_id', $user->id));
+            })->orderBy('name')->get();
+
         $diagrams = Diagram::with(['author', 'owner', 'lockedBy', 'tags', 'workspace'])
             ->when(! $user->is_admin, fn ($query) => $query->where(function ($query) use ($user) {
                 $query->whereNull('workspace_id')
@@ -83,6 +91,8 @@ class DiagramController extends Controller
                     ->orWhere(fn ($query) => $query->collaboratedBy($user))
                     ->orWhereHas('workspace.members', fn ($members) => $members->where('user_id', $user->id));
             }))
+            ->when($workspaceFilter === 'none', fn ($query) => $query->whereNull('workspace_id'))
+            ->when(is_numeric($workspaceFilter) && (int) $workspaceFilter > 0, fn ($query) => $query->where('workspace_id', (int) $workspaceFilter))
             ->when($search !== '', fn ($query) => $query->search($search))
             // "I'm the Diagram Owner" and "I'm a Collaborator" describe the
             // same thing — the User's relation to the Diagram — so checking
@@ -107,7 +117,7 @@ class DiagramController extends Controller
             ->paginate(self::DIAGRAMS_PER_PAGE)
             ->appends($request->query());
 
-        return view('diagrams.index', compact('diagrams', 'search', 'tag', 'filters', 'sort', 'direction'));
+        return view('diagrams.index', compact('diagrams', 'search', 'tag', 'filters', 'sort', 'direction', 'workspaceFilter', 'workspaces'));
     }
 
     public function store(Request $request, DiagramRepository $diagrams, VersionRepository $versions): RedirectResponse
