@@ -41,7 +41,7 @@ class WorkspaceController extends Controller
             'owner_id' => $request->user()->id,
         ]);
 
-        $workspace->addMember($request->user());
+        $workspace->addMember($request->user(), notify: false);
 
         return redirect()->route('workspaces.index');
     }
