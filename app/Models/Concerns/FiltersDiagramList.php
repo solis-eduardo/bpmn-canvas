@@ -36,16 +36,12 @@ trait FiltersDiagramList
     /**
      * Filters to Diagrams currently under an active Editing Lock (issue #39,
      * "locked right now") — the query-level equivalent of hasActiveLock(),
-     * since that method needs a loaded model to evaluate in PHP. Keep the
-     * reference-timestamp rule (last_heartbeat_at, falling back to
-     * locked_at) in sync with hasActiveLock().
+     * since that method needs a loaded model to evaluate in PHP. Editing
+     * Locks remain held until explicitly released, regardless of activity.
      */
     public function scopeLockedNow(Builder $query): Builder
     {
-        $threshold = now()->subSeconds(self::LOCK_INACTIVITY_TIMEOUT_SECONDS);
-
-        return $query->whereNotNull('locked_by')
-            ->whereRaw('COALESCE(last_heartbeat_at, locked_at) > ?', [$threshold]);
+        return $query->whereNotNull('locked_by');
     }
 
     /**

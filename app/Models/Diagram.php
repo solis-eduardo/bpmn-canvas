@@ -128,18 +128,23 @@ BPMN;
      */
     public function isEditableBy(User $user): bool
     {
-        if ($this->isOwnedBy($user)) {
-            return true;
+        if (! $this->exists) {
+            return false;
         }
 
-        if (DiagramCollaborator::where('diagram_id', $this->id)
-            ->where('user_id', $user->id)
-            ->where('status', DiagramCollaborator::STATUS_APPROVED)
-            ->exists()) {
-            return true;
-        }
+        return static::query()->whereKey($this->getKey())->editableBy($user)->exists();
+    }
 
-        return $this->workspace_id !== null && ($this->workspace?->hasMember($user) ?? false);
+    /**
+     * Restricts a query to Diagrams a User can open as their Diagram Owner,
+     * an approved Collaborator, or a Workspace Member.
+     */
+    public function scopeEditableBy(Builder $query, User $user): Builder
+    {
+        return $query->where(fn (Builder $query) => $query
+            ->ownedBy($user)
+            ->orWhere(fn (Builder $query) => $query->collaboratedBy($user))
+            ->orWhereHas('workspace.members', fn (Builder $members) => $members->where('user_id', $user->id)));
     }
 
     /**
@@ -161,19 +166,6 @@ BPMN;
         return $this->isEditableBy($user);
     }
 
-    /**
-     * Seconds without a heartbeat after which the Editing Lock is considered
-     * released due to inactivity.
-     */
-    public const LOCK_INACTIVITY_TIMEOUT_SECONDS = 90;
-
-    /**
-     * Seconds the current lock holder has to respond (heartbeat) to a
-     * request before it's automatically transferred to whoever requested it
-     * (CONTEXT.md, "Editing Lock").
-     */
-    public const LOCK_REQUEST_TRANSFER_SECONDS = 30;
-
     /** @return BelongsTo<User, $this> */
     public function lockedBy(): BelongsTo
     {
@@ -187,24 +179,12 @@ BPMN;
     }
 
     /**
-     * True if the Diagram is locked and the heartbeat (or, absent a
-     * heartbeat, the moment the lock was acquired) is still within the
-     * inactivity timeout. Keep in sync with the query-level equivalent,
-     * scopeLockedNow() below.
+     * True while a User holds the Diagram's Editing Lock. Locks have no
+     * inactivity expiry and are released only explicitly.
      */
     public function hasActiveLock(): bool
     {
-        if ($this->locked_by === null) {
-            return false;
-        }
-
-        $reference = $this->last_heartbeat_at ?? $this->locked_at;
-
-        if ($reference === null) {
-            return false;
-        }
-
-        return $reference->greaterThan(now()->subSeconds(self::LOCK_INACTIVITY_TIMEOUT_SECONDS));
+        return $this->locked_by !== null;
     }
 
     public function isLockedByOther(User $user): bool
@@ -271,20 +251,8 @@ BPMN;
     }
 
     /**
-     * True if the pending request is already past
-     * LOCK_REQUEST_TRANSFER_SECONDS without the holder responding, and is
-     * therefore ready to be transferred automatically.
-     */
-    public function lockRequestTransferIsDue(): bool
-    {
-        return $this->lock_requested_at !== null
-            && $this->lock_requested_at->lessThanOrEqualTo(now()->subSeconds(self::LOCK_REQUEST_TRANSFER_SECONDS));
-    }
-
-    /**
-     * Registers $user as requesting the Lock, starting the
-     * LOCK_REQUEST_TRANSFER_SECONDS window. Doesn't restart the window if
-     * there's already a pending request from the same User.
+     * Registers $user as requesting the Lock. Doesn't restart the timestamp
+     * if there's already a pending request from the same User.
      */
     public function registerLockRequest(User $user): void
     {
@@ -295,20 +263,6 @@ BPMN;
         $this->forceFill([
             'lock_requested_by' => $user->id,
             'lock_requested_at' => now(),
-        ])->save();
-    }
-
-    /**
-     * Transfers the Lock to $user, ending the pending request.
-     */
-    public function transferLockTo(User $user): void
-    {
-        $this->forceFill([
-            'locked_by' => $user->id,
-            'locked_at' => now(),
-            'last_heartbeat_at' => now(),
-            'lock_requested_by' => null,
-            'lock_requested_at' => null,
         ])->save();
     }
 

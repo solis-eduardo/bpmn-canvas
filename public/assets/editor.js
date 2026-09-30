@@ -112,6 +112,22 @@
     }
   });
 
+  const releaseLockButton = $('btn-release-lock');
+  if (releaseLockButton) {
+    releaseLockButton.addEventListener('click', async () => {
+      if (dirty && !confirm(body.dataset.releaseUnsavedConfirm)) return;
+
+      try {
+        await api('DELETE', unlockUrl);
+        setDirty(false);
+        location.href = indexUrl;
+      } catch (e) {
+        console.error(e);
+        toast('Error releasing the Lock: ' + e.message, true);
+      }
+    });
+  }
+
   modeler.on('commandStack.changed', () => setDirty(true));
   window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 
@@ -140,18 +156,6 @@
       .then(data => showLockRequestedNotice(data.lock_requested_by))
       .catch(e => console.error(e));
   }, 30000);
-
-  function releaseLock() {
-    clearInterval(heartbeatInterval);
-    fetch(unlockUrl, {
-      method: 'DELETE',
-      credentials: 'same-origin',
-      keepalive: true,
-      headers: { 'X-CSRF-TOKEN': csrfToken },
-    }).catch(() => {});
-  }
-
-  window.addEventListener('pagehide', releaseLock);
 
   loadContent();
 })();

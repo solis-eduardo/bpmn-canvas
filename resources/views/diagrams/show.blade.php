@@ -23,6 +23,23 @@
             >
                 &larr; {{ __('messages.back_to_diagrams') }}
             </a>
+            @if ((int) $diagram->locked_by === auth()->id())
+                <button
+                    type="button"
+                    id="btn-release-lock"
+                    class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                >
+                    {{ __('messages.release_lock') }}
+                </button>
+            @elseif (auth()->user()->is_admin && $diagram->locked_by !== null)
+                <button
+                    type="button"
+                    id="btn-release-lock"
+                    class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                >
+                    {{ __('messages.force_release_lock') }}
+                </button>
+            @endif
 
             {{-- Entry point for the Version history panel (see #10). --}}
             <button
@@ -71,6 +88,7 @@
         data-heartbeat-url="{{ route('diagrams.heartbeat', $diagram->slug) }}"
         data-lock-requested-by-notice="{{ __('messages.lock_requested_by_notice', ['name' => ':name']) }}"
         data-unlock-url="{{ route('diagrams.unlock', $diagram->slug) }}"
+        data-release-unsaved-confirm="{{ __('messages.release_lock_unsaved_confirm') }}"
         data-versions-url="{{ route('diagrams.versions', $diagram->slug) }}"
         data-version-content-url-template="{{ route('diagrams.versions.content', [$diagram->slug, 'VERSION_ID']) }}"
         data-version-compare-url="{{ route('diagrams.versions.compare', $diagram->slug) }}"
