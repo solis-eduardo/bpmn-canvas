@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Actions\Workspaces\SyncKeycloakGroupMemberships;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
@@ -21,7 +22,7 @@ class KeycloakLoginController extends Controller
         return Socialite::driver('keycloak')->redirect();
     }
 
-    public function callback(Request $request): RedirectResponse
+    public function callback(Request $request, SyncKeycloakGroupMemberships $syncGroups): RedirectResponse
     {
         try {
             $socialiteUser = Socialite::driver('keycloak')->user();
@@ -32,13 +33,15 @@ class KeycloakLoginController extends Controller
         }
 
         $user = $this->resolveUser($socialiteUser);
+        $tokenPayload = $this->tokenPayload($socialiteUser);
 
-        if ($this->hasAdminRoleClaim($socialiteUser)) {
+        if ($this->hasAdminRoleClaim($tokenPayload)) {
             $user->is_admin = true;
             $user->is_admin_via_keycloak_claim = true;
         }
 
         $user->save();
+        $syncGroups($user, $this->keycloakGroups($tokenPayload));
 
         Auth::login($user);
 
@@ -80,19 +83,39 @@ class KeycloakLoginController extends Controller
         return $user;
     }
 
-    private function hasAdminRoleClaim(SocialiteUserContract $socialiteUser): bool
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function hasAdminRoleClaim(array $payload): bool
     {
-        $token = $socialiteUser->token ?? null;
-
-        if (! is_string($token)) {
-            return false;
-        }
-
-        $payload = $this->decodeJwtPayload($token);
-
         $roles = data_get($payload, 'realm_access.roles', []);
 
         return in_array(config('bpmn.keycloak_admin_role'), $roles, true);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return list<string>
+     */
+    private function keycloakGroups(array $payload): array
+    {
+        $groups = data_get($payload, 'groups', []);
+
+        if (! is_array($groups)) {
+            return [];
+        }
+
+        return array_values(array_filter($groups, is_string(...)));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function tokenPayload(SocialiteUserContract $socialiteUser): array
+    {
+        $token = $socialiteUser->token ?? null;
+
+        return is_string($token) ? $this->decodeJwtPayload($token) : [];
     }
 
     /**

@@ -63,6 +63,22 @@ class WorkspaceController extends Controller
     }
 
     /**
+     * Links or unlinks a Workspace's Keycloak group. Administrators only.
+     */
+    public function updateKeycloakGroup(Request $request, Workspace $workspace): RedirectResponse
+    {
+        $this->authorize('manageKeycloakGroup', $workspace);
+
+        $data = $request->validate([
+            'keycloak_group' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $workspace->update(['keycloak_group' => $data['keycloak_group'] ?? null]);
+
+        return redirect()->route('workspaces.index');
+    }
+
+    /**
      * Transfers the Workspace Owner role to another User: current Workspace
      * Owner or Administrator only (CONTEXT.md, "Workspace Owner"; ADR-0006;
      * issue #29). No acceptance step — takes effect immediately, and the
