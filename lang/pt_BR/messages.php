@@ -169,6 +169,8 @@ return [
     'no_notifications_yet' => 'Nenhuma notificação ainda.',
     'mark_all_as_read' => 'Marcar todas como lidas',
     'notification_requested_access' => ':name solicitou acesso a :diagram',
+    'notification_collaborator_invited' => 'Você foi convidado para colaborar em :diagram',
+    'notification_collaborator_removed' => 'Seu acesso a :diagram foi removido',
     'view_all_notifications' => 'Ver todas',
     'notification_history_heading' => 'Notificações',
 

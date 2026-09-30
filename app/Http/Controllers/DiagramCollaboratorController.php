@@ -7,6 +7,8 @@ use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\DiagramCollaborator;
 use App\Models\User;
 use App\Notifications\DiagramAccessRequested;
+use App\Notifications\DiagramCollaboratorInvited;
+use App\Notifications\DiagramCollaboratorRemoved;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -61,9 +63,10 @@ class DiagramCollaboratorController extends Controller
             // If user exists by email, still perform the action
             if ($target) {
                 $collaborator = $grant($diagram, $request->user(), $target);
-                // Notify on self-request
                 if ($collaborator->status === DiagramCollaborator::STATUS_REQUESTED) {
                     $diagram->owner->notify(new DiagramAccessRequested($diagram, $target));
+                } elseif ($collaborator->wasRecentlyCreated || $collaborator->wasChanged('status')) {
+                    $target->notify(new DiagramCollaboratorInvited($diagram));
                 }
             }
 
@@ -79,6 +82,8 @@ class DiagramCollaboratorController extends Controller
         // manage Collaborators, so the Owner is never notifying themselves.
         if ($collaborator->status === DiagramCollaborator::STATUS_REQUESTED) {
             $diagram->owner->notify(new DiagramAccessRequested($diagram, $target));
+        } elseif ($collaborator->wasRecentlyCreated || $collaborator->wasChanged('status')) {
+            $target->notify(new DiagramCollaboratorInvited($diagram));
         }
 
         return response()->json([
@@ -118,9 +123,17 @@ class DiagramCollaboratorController extends Controller
 
         $this->authorize('manageCollaborators', $diagram);
 
-        DiagramCollaborator::where('diagram_id', $diagram->id)
+        $collaborator = DiagramCollaborator::where('diagram_id', $diagram->id)
             ->where('user_id', $user->id)
-            ->delete();
+            ->first();
+
+        if ($collaborator) {
+            $collaborator->delete();
+
+            if ($collaborator->status === DiagramCollaborator::STATUS_APPROVED) {
+                $user->notify(new DiagramCollaboratorRemoved($diagram));
+            }
+        }
 
         return response()->json(['deleted' => true]);
     }
