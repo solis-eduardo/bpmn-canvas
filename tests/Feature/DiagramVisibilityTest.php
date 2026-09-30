@@ -35,6 +35,56 @@ class DiagramVisibilityTest extends TestCase
         $response->assertDontSee($hidden->title);
     }
 
+    public function test_the_main_list_only_shows_diagrams_the_user_can_open(): void
+    {
+        $owner = User::factory()->create();
+        $openable = Diagram::factory()->for($owner, 'author')->create(['title' => 'My openable diagram']);
+        $inaccessible = Diagram::factory()->for(User::factory()->create(), 'author')->create([
+            'title' => 'Discoverable but inaccessible',
+        ]);
+
+        $response = $this->actingAs($owner)->get('/diagrams');
+
+        $response->assertOk();
+        $listedIds = $response->viewData('diagrams')->getCollection()->pluck('id');
+        $this->assertTrue($listedIds->contains($openable->id));
+        $this->assertFalse($listedIds->contains($inaccessible->id));
+    }
+
+    public function test_discovery_search_only_exposes_title_and_diagram_owner_for_out_of_workspace_diagrams(): void
+    {
+        $owner = User::factory()->create(['name' => 'Diagram Owner Name']);
+        $author = User::factory()->create(['name' => 'Original Author Name']);
+        $match = Diagram::factory()->for($author, 'author')->for($owner, 'owner')->create([
+            'title' => 'Searchable discovery diagram',
+            'slug' => 'private-content-slug',
+        ]);
+        $workspaceOwner = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $workspaceOwner->id]);
+        $workspace->addMember($workspaceOwner);
+        $hidden = Diagram::factory()->for($workspaceOwner, 'author')->create([
+            'title' => 'Workspace secret matching query',
+            'workspace_id' => $workspace->id,
+        ]);
+        $stranger = User::factory()->create();
+
+        $response = $this->actingAs($stranger)->get('/diagrams?discover=discovery');
+
+        $response->assertOk();
+        $response->assertSee('id="diagram-discovery-table"', false);
+        $response->assertSee('scope="col"', false);
+        $response->assertSee($match->title);
+        $response->assertSee($owner->name);
+        $response->assertSee(__('messages.request_access'));
+        $response->assertSee(route('diagrams.collaborators.store', [
+            'slug' => $match->slug,
+            'discover' => 'discovery',
+        ]), false);
+        $response->assertDontSee($author->name);
+        $response->assertDontSee($hidden->title);
+        $response->assertDontSee('href="'.route('diagrams.show', $match->slug).'"', false);
+    }
+
     public function test_the_list_still_shows_a_hidden_diagram_to_a_collaborator_who_is_not_a_member(): void
     {
         $owner = User::factory()->create();
@@ -79,7 +129,8 @@ class DiagramVisibilityTest extends TestCase
         $response = $this->actingAs($stranger)->get('/diagrams');
 
         $response->assertOk();
-        $response->assertSee($diagram->title);
+        $this->assertFalse($response->viewData('diagrams')->getCollection()->contains('id', $diagram->id));
+        $this->assertTrue($response->viewData('discoveryDiagrams')->getCollection()->contains('id', $diagram->id));
     }
 
     public function test_administrator_sees_a_hidden_diagram_in_the_list(): void

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Diagram;
+use App\Models\DiagramCollaborator;
 use App\Models\User;
 use App\Notifications\DiagramAccessRequested;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -43,6 +44,39 @@ class NotificationTest extends TestCase
         $this->assertSame($diagram->id, $notification->data['diagram_id']);
         $this->assertSame($requester->id, $notification->data['requester_id']);
         $this->assertNull($notification->read_at);
+    }
+
+    public function test_discovery_access_requests_are_pending_private_and_notify_once(): void
+    {
+        $owner = User::factory()->create();
+        $requester = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'owner')->for($owner, 'author')->create([
+            'title' => 'Requestable Diagram',
+        ]);
+
+        $this->actingAs($requester)->get('/diagrams?discover=Requestable')
+            ->assertOk()
+            ->assertSee($diagram->title);
+
+        $this->post("/diagrams/{$diagram->slug}/collaborators?discover=Requestable", ['user_id' => $requester->id])
+            ->assertRedirect(route('diagrams.index', ['discover' => 'Requestable']));
+        $this->post("/diagrams/{$diagram->slug}/collaborators?discover=Requestable", ['user_id' => $requester->id])
+            ->assertRedirect(route('diagrams.index', ['discover' => 'Requestable']));
+        $this->get('/diagrams?discover=Requestable')
+            ->assertOk()
+            ->assertSee(__('messages.access_request_pending'))
+            ->assertDontSee('name="user_id" value="'.$requester->id.'"', false);
+
+        $this->assertDatabaseCount('diagram_collaborators', 1);
+        $this->assertDatabaseHas('diagram_collaborators', [
+            'diagram_id' => $diagram->id,
+            'user_id' => $requester->id,
+            'status' => DiagramCollaborator::STATUS_REQUESTED,
+        ]);
+        $this->assertCount(1, $owner->fresh()->notifications);
+
+        $this->get("/diagrams/{$diagram->slug}")->assertForbidden();
+        $this->getJson("/diagrams/{$diagram->slug}/content")->assertForbidden();
     }
 
     public function test_a_direct_invite_does_not_notify_anyone(): void

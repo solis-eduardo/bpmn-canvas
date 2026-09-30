@@ -8,6 +8,7 @@ use App\Models\DiagramCollaborator;
 use App\Models\User;
 use App\Notifications\DiagramAccessRequested;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class DiagramCollaboratorController extends Controller
@@ -42,7 +43,7 @@ class DiagramCollaboratorController extends Controller
      * of whether the email matches an existing User, to avoid email enumeration.
      * When targeting by user_id, returns the usual detailed response.
      */
-    public function store(Request $request, string $slug, GrantOrRequestCollaborator $grant): JsonResponse
+    public function store(Request $request, string $slug, GrantOrRequestCollaborator $grant): JsonResponse|RedirectResponse
     {
         $diagram = $this->resolveDiagram($slug);
 
@@ -60,9 +61,14 @@ class DiagramCollaboratorController extends Controller
         if (isset($data['email'])) {
             // If user exists by email, still perform the action
             if ($target) {
+                $existing = DiagramCollaborator::where('diagram_id', $diagram->id)
+                    ->where('user_id', $target->id)
+                    ->first();
                 $collaborator = $grant($diagram, $request->user(), $target);
-                // Notify on self-request
-                if ($collaborator->status === DiagramCollaborator::STATUS_REQUESTED) {
+                if (
+                    $collaborator->status === DiagramCollaborator::STATUS_REQUESTED
+                    && $existing?->status !== DiagramCollaborator::STATUS_REQUESTED
+                ) {
                     $diagram->owner->notify(new DiagramAccessRequested($diagram, $target));
                 }
             }
@@ -71,20 +77,40 @@ class DiagramCollaboratorController extends Controller
             return response()->json(['success' => true], 201);
         }
 
+        $existing = DiagramCollaborator::where('diagram_id', $diagram->id)
+            ->where('user_id', $target->id)
+            ->first();
         $collaborator = $grant($diagram, $request->user(), $target);
 
         // A self-request (never a direct invite — those land as "approved")
         // notifies the Diagram Owner. GrantOrRequestCollaborator only
         // allows a self-request when the requester isn't already able to
         // manage Collaborators, so the Owner is never notifying themselves.
-        if ($collaborator->status === DiagramCollaborator::STATUS_REQUESTED) {
+        if (
+            $collaborator->status === DiagramCollaborator::STATUS_REQUESTED
+            && $existing?->status !== DiagramCollaborator::STATUS_REQUESTED
+        ) {
             $diagram->owner->notify(new DiagramAccessRequested($diagram, $target));
+        }
+
+        if (! $request->expectsJson()) {
+            return $this->requestRedirect($request);
         }
 
         return response()->json([
             'user_id' => $collaborator->user_id,
             'status' => $collaborator->status,
         ], 201);
+    }
+
+    private function requestRedirect(Request $request): RedirectResponse
+    {
+        $discoverySearch = trim((string) $request->query('discover', ''));
+
+        return redirect()->route(
+            'diagrams.index',
+            $discoverySearch === '' ? [] : ['discover' => $discoverySearch],
+        )->with('status', __('messages.access_request_sent'));
     }
 
     /**
