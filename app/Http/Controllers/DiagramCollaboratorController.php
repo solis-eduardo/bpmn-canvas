@@ -128,9 +128,7 @@ class DiagramCollaboratorController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        DiagramCollaborator::where('diagram_id', $diagram->id)
-            ->where('user_id', $user->id)
-            ->delete();
+        $collaborator?->delete();
 
         if ($collaborator?->status === DiagramCollaborator::STATUS_REQUESTED) {
             $user->notify(new DiagramAccessRequestResolved($diagram, approved: false));
