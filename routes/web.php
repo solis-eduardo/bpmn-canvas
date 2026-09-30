@@ -38,7 +38,7 @@ Route::middleware('signed')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::get('/home', HomeController::class)->name('home');
+    Route::get('/home', fn () => redirect()->route('diagrams.index'))->name('home');
 
     Route::get('/account', [AccountController::class, 'edit'])->name('account.edit');
     Route::put('/account', [AccountController::class, 'update'])->name('account.update');
