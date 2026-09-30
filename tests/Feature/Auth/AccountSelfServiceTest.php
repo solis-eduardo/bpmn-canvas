@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -66,6 +67,30 @@ class AccountSelfServiceTest extends TestCase
         ])->assertRedirect('/account');
 
         $this->assertTrue(Hash::check('replacement-password', $user->fresh()->password));
+    }
+
+    public function test_changing_password_ends_the_user_other_sessions(): void
+    {
+        $user = User::factory()->create(['password' => 'old-password']);
+        $other = User::factory()->create();
+
+        foreach (['stale-session' => $user, 'other-user-session' => $other] as $id => $owner) {
+            DB::table('sessions')->insert([
+                'id' => $id,
+                'user_id' => $owner->id,
+                'payload' => '',
+                'last_activity' => time(),
+            ]);
+        }
+
+        $this->actingAs($user)->put('/account/password', [
+            'current_password' => 'old-password',
+            'password' => 'replacement-password',
+            'password_confirmation' => 'replacement-password',
+        ])->assertRedirect('/account');
+
+        $this->assertDatabaseMissing('sessions', ['id' => 'stale-session']);
+        $this->assertDatabaseHas('sessions', ['id' => 'other-user-session']);
     }
 
     public function test_incorrect_current_password_is_rejected(): void
