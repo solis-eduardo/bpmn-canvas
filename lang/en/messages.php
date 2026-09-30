@@ -169,6 +169,7 @@ return [
     'no_notifications_yet' => 'No notifications yet.',
     'mark_all_as_read' => 'Mark all as read',
     'notification_requested_access' => ':name requested access to :diagram',
+    'notification_diagram_ownership_transferred' => 'You are now the Diagram Owner of :diagram.',
     'view_all_notifications' => 'View all',
     'notification_history_heading' => 'Notifications',
 

@@ -5,6 +5,7 @@ namespace App\Actions\Diagrams;
 use App\Models\Diagram;
 use App\Models\DiagramCollaborator;
 use App\Models\User;
+use App\Notifications\DiagramOwnershipTransferred;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -53,5 +54,9 @@ class TransferOwnership
                 ['status' => DiagramCollaborator::STATUS_APPROVED]
             );
         });
+
+        if ((int) $previousOwnerId !== $newOwner->id) {
+            $newOwner->notify(new DiagramOwnershipTransferred($diagram));
+        }
     }
 }
