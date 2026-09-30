@@ -21,7 +21,7 @@ The User currently responsible for a Diagram: the only one who can delete it, in
 _Avoid_: Owner (unqualified), Author (the Author is fixed; the Diagram Owner can change)
 
 **Collaborator**:
-A User with direct permission to edit a Diagram they're not the Diagram Owner of. Binary permission (there's no role distinction among Collaborators). Granted two ways: the Diagram Owner invites the User directly, or the User requests access and the Diagram Owner approves it; an Administrator can also grant it directly, without going through the Diagram Owner. A Diagram hidden inside a Workspace can't be found to request access — only invitation reaches it.
+A User with direct permission to edit a Diagram they're not the Diagram Owner of. Binary permission (there's no role distinction among Collaborators). Granted two ways: the Diagram Owner invites the User directly, or the User requests access and the Diagram Owner approves it; an Administrator can also grant it directly, without going through the Diagram Owner. Direct invitations and removals notify the affected User. A Diagram hidden inside a Workspace can't be found to request access — only invitation reaches it.
 _Avoid_: Editor (a role, not to be confused with the Editor interface)
 
 **Administrator**:
