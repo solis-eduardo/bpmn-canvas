@@ -293,10 +293,8 @@ class DiagramController extends Controller
 
     /**
      * Requests the Lock on a Diagram locked by another User. Returns
-     * "acquired" if the Lock was obtained (directly, or via automatic
-     * transfer after LOCK_REQUEST_TRANSFER_SECONDS without a response from
-     * the holder) or "waiting" while the deadline hasn't passed — the
-     * client should poll again until it gets "acquired".
+     * "acquired" if the Lock was free, or "waiting" while another User
+     * holds it — the client should poll again until it gets "acquired".
      */
     public function requestLock(Request $request, string $slug, RequestLock $requestLock): JsonResponse
     {
