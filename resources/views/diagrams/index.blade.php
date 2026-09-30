@@ -52,6 +52,17 @@
         >
 
         <label class="flex items-center gap-1.5 text-sm text-gray-700">
+            {{ __('messages.workspace_filter_label') }}
+            <select name="workspace" class="rounded-md border border-gray-300 px-2 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <option value="all" @selected($workspaceFilter === 'all')>{{ __('messages.all_workspaces') }}</option>
+                <option value="none" @selected($workspaceFilter === 'none')>{{ __('messages.no_workspace') }}</option>
+                @foreach ($workspaces as $workspace)
+                    <option value="{{ $workspace->id }}" @selected((string) $workspace->id === $workspaceFilter)>{{ $workspace->name }}</option>
+                @endforeach
+            </select>
+        </label>
+
+        <label class="flex items-center gap-1.5 text-sm text-gray-700">
             {{ __('messages.sort_by') }}
             <select name="sort" class="rounded-md border border-gray-300 px-2 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
                 <option value="title" @selected($sort === 'title')>{{ __('messages.sort_title') }}</option>
@@ -81,6 +92,7 @@
                 <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500">
                     <span>{{ __('messages.author_label', ['name' => $diagram->author->name]) }}</span>
                     <span>{{ __('messages.diagram_owner_label', ['name' => $diagram->owner->name]) }}</span>
+                    <span>{{ $diagram->workspace ? __('messages.workspace_label', ['name' => $diagram->workspace->name]) : __('messages.no_workspace') }}</span>
                     <span title="{{ $diagram->updated_at }}">
                         {{ __('messages.last_modified_label', ['time' => $diagram->updated_at->diffForHumans()]) }}
                     </span>
