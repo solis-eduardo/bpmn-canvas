@@ -173,6 +173,9 @@ return [
     'no_notifications_yet' => 'Nenhuma notificação ainda.',
     'mark_all_as_read' => 'Marcar todas como lidas',
     'notification_requested_access' => ':name solicitou acesso a :diagram',
+    'notification_workspace_added' => 'Você foi adicionado ao Workspace :workspace.',
+    'notification_workspace_removed' => 'Você foi removido do Workspace :workspace.',
+    'notification_workspace_ownership_transferred' => 'Você agora é o dono do Workspace :workspace.',
     'view_all_notifications' => 'Ver todas',
     'notification_history_heading' => 'Notificações',
 
