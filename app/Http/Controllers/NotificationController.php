@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Diagram;
 use App\Notifications\DiagramAccessRequested;
+use App\Notifications\DiagramOwnershipTransferred;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -119,6 +120,9 @@ class NotificationController extends Controller
         return match ($notification->type) {
             DiagramAccessRequested::class => __('messages.notification_requested_access', [
                 'name' => $notification->data['requester_name'] ?? '',
+                'diagram' => $notification->data['diagram_title'] ?? '',
+            ]),
+            DiagramOwnershipTransferred::class => __('messages.notification_diagram_ownership_transferred', [
                 'diagram' => $notification->data['diagram_title'] ?? '',
             ]),
             default => '',
