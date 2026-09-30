@@ -169,6 +169,8 @@ return [
     'no_notifications_yet' => 'Nenhuma notificação ainda.',
     'mark_all_as_read' => 'Marcar todas como lidas',
     'notification_requested_access' => ':name solicitou acesso a :diagram',
+    'notification_access_request_approved' => 'Sua solicitação de acesso a :diagram foi aprovada.',
+    'notification_access_request_refused' => 'Sua solicitação de acesso a :diagram foi recusada.',
     'view_all_notifications' => 'Ver todas',
     'notification_history_heading' => 'Notificações',
 

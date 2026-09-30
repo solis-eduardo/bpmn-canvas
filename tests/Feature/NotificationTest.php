@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\Diagram;
+use App\Models\DiagramCollaborator;
 use App\Models\User;
 use App\Notifications\DiagramAccessRequested;
+use App\Notifications\DiagramAccessRequestResolved;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -69,6 +71,76 @@ class NotificationTest extends TestCase
         ])->assertCreated();
 
         $this->assertCount(0, $requester->fresh()->notifications);
+    }
+
+    public function test_approving_an_access_request_notifies_the_requester_and_links_to_the_diagram(): void
+    {
+        $owner = User::factory()->create();
+        $requester = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'owner')->for($owner, 'author')->create();
+
+        $this->requestAccess($requester, $diagram);
+
+        $this->actingAs($owner)->putJson("/diagrams/{$diagram->slug}/collaborators/{$requester->id}")
+            ->assertOk()
+            ->assertJsonPath('status', DiagramCollaborator::STATUS_APPROVED);
+
+        $notification = $requester->fresh()->notifications->sole();
+
+        $this->assertSame(DiagramAccessRequestResolved::class, $notification->type);
+        $this->assertSame($diagram->id, $notification->data['diagram_id']);
+        $this->assertTrue($notification->data['approved']);
+
+        $this->actingAs($requester)->getJson('/notifications')
+            ->assertJsonPath('0.message', __('messages.notification_access_request_approved', [
+                'diagram' => $diagram->title,
+            ]));
+
+        $this->actingAs($requester)->get("/notifications/{$notification->id}/read")
+            ->assertRedirect(route('diagrams.show', $diagram->slug).'?open-panel=collaborators');
+    }
+
+    public function test_refusing_an_access_request_notifies_the_requester_and_links_to_the_diagram(): void
+    {
+        $owner = User::factory()->create();
+        $requester = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'owner')->for($owner, 'author')->create();
+
+        $this->requestAccess($requester, $diagram);
+
+        $this->actingAs($owner)->deleteJson("/diagrams/{$diagram->slug}/collaborators/{$requester->id}")
+            ->assertOk()
+            ->assertJson(['deleted' => true]);
+
+        $notification = $requester->fresh()->notifications->sole();
+
+        $this->assertSame(DiagramAccessRequestResolved::class, $notification->type);
+        $this->assertSame($diagram->id, $notification->data['diagram_id']);
+        $this->assertFalse($notification->data['approved']);
+
+        $this->actingAs($requester)->getJson('/notifications')
+            ->assertJsonPath('0.message', __('messages.notification_access_request_refused', [
+                'diagram' => $diagram->title,
+            ]));
+
+        $this->actingAs($requester)->get("/notifications/{$notification->id}/read")
+            ->assertRedirect(route('diagrams.show', $diagram->slug).'?open-panel=collaborators');
+    }
+
+    public function test_removing_an_approved_collaborator_does_not_send_an_access_request_refusal(): void
+    {
+        $owner = User::factory()->create();
+        $collaborator = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'owner')->for($owner, 'author')->create();
+
+        $this->actingAs($owner)->postJson("/diagrams/{$diagram->slug}/collaborators", [
+            'user_id' => $collaborator->id,
+        ])->assertCreated();
+
+        $this->actingAs($owner)->deleteJson("/diagrams/{$diagram->slug}/collaborators/{$collaborator->id}")
+            ->assertOk();
+
+        $this->assertCount(0, $collaborator->fresh()->notifications);
     }
 
     public function test_unread_count_endpoint_reports_the_authenticated_users_unread_notifications(): void

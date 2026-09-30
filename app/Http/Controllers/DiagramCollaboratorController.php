@@ -7,6 +7,7 @@ use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\DiagramCollaborator;
 use App\Models\User;
 use App\Notifications\DiagramAccessRequested;
+use App\Notifications\DiagramAccessRequestResolved;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -100,7 +101,12 @@ class DiagramCollaboratorController extends Controller
             ->where('user_id', $user->id)
             ->firstOrFail();
 
+        $isPendingRequest = $collaborator->status === DiagramCollaborator::STATUS_REQUESTED;
         $collaborator->update(['status' => DiagramCollaborator::STATUS_APPROVED]);
+
+        if ($isPendingRequest) {
+            $user->notify(new DiagramAccessRequestResolved($diagram, approved: true));
+        }
 
         return response()->json([
             'user_id' => $collaborator->user_id,
@@ -118,9 +124,17 @@ class DiagramCollaboratorController extends Controller
 
         $this->authorize('manageCollaborators', $diagram);
 
+        $collaborator = DiagramCollaborator::where('diagram_id', $diagram->id)
+            ->where('user_id', $user->id)
+            ->first();
+
         DiagramCollaborator::where('diagram_id', $diagram->id)
             ->where('user_id', $user->id)
             ->delete();
+
+        if ($collaborator?->status === DiagramCollaborator::STATUS_REQUESTED) {
+            $user->notify(new DiagramAccessRequestResolved($diagram, approved: false));
+        }
 
         return response()->json(['deleted' => true]);
     }
