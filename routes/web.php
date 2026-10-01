@@ -8,6 +8,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\DiagramCollaboratorController;
 use App\Http\Controllers\DiagramController;
 use App\Http\Controllers\DiagramTagController;
+use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PublicShareController;
@@ -40,7 +41,7 @@ Route::middleware('signed')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/account/notifications', [AccountNotificationController::class, 'edit'])->name('account.notifications.edit');
     Route::put('/account/notifications', [AccountNotificationController::class, 'update'])->name('account.notifications.update');
-    Route::get('/home', fn () => redirect()->route('diagrams.index'))->name('home');
+    Route::get('/home', HomeController::class)->name('home');
 
     Route::get('/account', [AccountController::class, 'edit'])->name('account.edit');
     Route::put('/account', [AccountController::class, 'update'])->name('account.update');
