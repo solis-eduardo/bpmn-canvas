@@ -39,9 +39,12 @@ Route::middleware('signed')->group(function () {
 Route::middleware('auth')->group(function () {
     Route::get('/account/notifications', [AccountNotificationController::class, 'edit'])->name('account.notifications.edit');
     Route::put('/account/notifications', [AccountNotificationController::class, 'update'])->name('account.notifications.update');
+    Route::get('/home', fn () => redirect()->route('diagrams.index'))->name('home');
 
     Route::get('/admin/users', [UserController::class, 'index'])->name('admin.users.index');
+    Route::get('/admin/users/create', [UserController::class, 'create'])->name('admin.users.create');
     Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');
+    Route::get('/admin/users/{user}/edit', [UserController::class, 'edit'])->name('admin.users.edit');
     Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
