@@ -180,6 +180,7 @@ return [
     'notification_access_request_refused' => 'Your request to access :diagram was refused.',
     'notification_collaborator_invited' => 'You have been invited to collaborate on :diagram',
     'notification_collaborator_removed' => 'Your access to :diagram has been removed',
+    'notification_diagram_ownership_transferred' => 'You are now the Diagram Owner of :diagram.',
     'view_all_notifications' => 'View all',
     'notification_history_heading' => 'Notifications',
 
