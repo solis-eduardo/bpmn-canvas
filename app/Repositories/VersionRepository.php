@@ -230,6 +230,22 @@ class VersionRepository
     }
 
     /**
+     * True if $version is a Version of this Diagram. Asks Git about that one
+     * id instead of parsing the whole history.
+     */
+    public function exists(Diagram $diagram, string $version): bool
+    {
+        if (! preg_match('/^[0-9a-f]{4,40}$/i', $version)) {
+            return false;
+        }
+
+        $process = $this->git(['git', 'cat-file', '-e', $version.'^{commit}'], $this->directory($diagram));
+        $process->run();
+
+        return $process->isSuccessful();
+    }
+
+    /**
      * Content of the Diagram as it was in a specific Version.
      */
     public function get(Diagram $diagram, string $version): string

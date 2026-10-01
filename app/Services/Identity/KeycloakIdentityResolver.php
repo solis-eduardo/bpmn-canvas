@@ -31,19 +31,12 @@ class KeycloakIdentityResolver
             return $user;
         }
 
-        $user = $this->users->findByEmail($socialiteUser->getEmail());
-
-        if ($user && $user->keycloak_id === null) {
-            $user->keycloak_id = $keycloakId;
-
-            return $user;
-        }
-
-        $user = new User([
-            'name' => $socialiteUser->getName() ?: $socialiteUser->getNickname(),
-            'email' => $socialiteUser->getEmail(),
-            'password' => Hash::make(Str::random(40)),
-        ]);
+        $user = $this->users->findUnlinkedByEmail($socialiteUser->getEmail())
+            ?? new User([
+                'name' => $socialiteUser->getName() ?: $socialiteUser->getNickname(),
+                'email' => $socialiteUser->getEmail(),
+                'password' => Hash::make(Str::random(40)),
+            ]);
         $user->keycloak_id = $keycloakId;
 
         return $user;

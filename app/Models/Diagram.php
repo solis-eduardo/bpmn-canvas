@@ -102,6 +102,15 @@ BPMN;
     }
 
     /**
+     * True if $user may administer this Diagram (Collaborators, ownership
+     * transfer): its Diagram Owner or an Administrator.
+     */
+    public function isManagedBy(User $user): bool
+    {
+        return $this->isOwnedBy($user) || $user->is_admin;
+    }
+
+    /**
      * The Workspace this Diagram belongs to, if any (CONTEXT.md,
      * "Workspace"). A Diagram belongs to at most one.
      */
@@ -131,6 +140,15 @@ BPMN;
         }
 
         return static::query()->whereKey($this->getKey())->editableBy($user)->exists();
+    }
+
+    /**
+     * True if $user can open this Diagram: an editor, or an Administrator
+     * who "sees and opens" every Diagram without edit rights.
+     */
+    public function isOpenableBy(User $user): bool
+    {
+        return $this->isEditableBy($user) || $user->is_admin;
     }
 
     /**

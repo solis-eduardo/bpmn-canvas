@@ -27,17 +27,17 @@ class DiagramOwnerService
      */
     public function transfer(Diagram $diagram, User $newOwner, bool $giveUpAccess = false): void
     {
-        $previousOwner = $diagram->owner;
         $changesHands = ! $diagram->isOwnedBy($newOwner);
+        $previousOwner = $changesHands ? $diagram->owner : null;
 
-        DB::transaction(function () use ($diagram, $newOwner, $giveUpAccess, $previousOwner, $changesHands) {
+        DB::transaction(function () use ($diagram, $newOwner, $giveUpAccess, $previousOwner) {
             $this->diagrams->changeOwner($diagram, $newOwner);
 
             // The new Diagram Owner has full access already: drop any
             // leftover Collaborator row so they aren't listed twice.
             $this->collaborators->removeFor($diagram, $newOwner);
 
-            if (! $changesHands) {
+            if ($previousOwner === null) {
                 return;
             }
 
