@@ -176,6 +176,8 @@ return [
     'notification_workspace_added' => 'You were added to :workspace.',
     'notification_workspace_removed' => 'You were removed from :workspace.',
     'notification_workspace_ownership_transferred' => 'You are now the Workspace Owner of :workspace.',
+    'notification_access_request_approved' => 'Your request to access :diagram was approved.',
+    'notification_access_request_refused' => 'Your request to access :diagram was refused.',
     'view_all_notifications' => 'View all',
     'notification_history_heading' => 'Notifications',
 

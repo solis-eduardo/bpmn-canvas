@@ -8,6 +8,7 @@ use App\Notifications\DiagramAccessRequested;
 use App\Notifications\WorkspaceMemberAdded;
 use App\Notifications\WorkspaceMemberRemoved;
 use App\Notifications\WorkspaceOwnershipTransferred;
+use App\Notifications\DiagramAccessRequestResolved;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -140,6 +141,11 @@ class NotificationController extends Controller
             WorkspaceOwnershipTransferred::class => __('messages.notification_workspace_ownership_transferred', [
                 'workspace' => $notification->data['workspace_name'] ?? '',
             ]),
+            DiagramAccessRequestResolved::class => __($notification->data['approved']
+                ? 'messages.notification_access_request_approved'
+                : 'messages.notification_access_request_refused', [
+                    'diagram' => $notification->data['diagram_title'],
+                ]),
             default => '',
         };
     }
