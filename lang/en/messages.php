@@ -17,6 +17,7 @@ return [
     'diagrams' => 'Diagrams',
     'workspaces' => 'Workspaces',
     'users' => 'Users',
+    'notification_preferences' => 'Email preferences',
 
     // Diagram list
     'diagram_name' => 'Diagram name',
@@ -60,6 +61,14 @@ return [
     'back_to_diagrams' => 'Back to Diagrams',
     'version_history' => 'Version history',
     'collaborators' => 'Collaborators',
+    'notification_preferences_heading' => 'Email notification preferences',
+    'email_notifications' => 'Send notifications to my email',
+    'email_notifications_description' => 'When enabled, notifications are also sent to :email.',
+    'notification_preferences_saved' => 'Email notification preferences saved.',
+    'notification_email_subject' => 'BPMN Studio notification',
+    'notification_email_greeting' => 'Hello :name,',
+    'notification_email_action' => 'Open notification',
+    'notification_share_expiring' => 'The Share for :diagram expires on :date.',
 
     // Collaborators & Shares panel
     'collaborators_and_shares' => 'Collaborators & Shares',

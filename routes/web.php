@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountNotificationController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\KeycloakLoginController;
 use App\Http\Controllers\Auth\LoginController;
@@ -36,6 +37,9 @@ Route::middleware('signed')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
+    Route::get('/account/notifications', [AccountNotificationController::class, 'edit'])->name('account.notifications.edit');
+    Route::put('/account/notifications', [AccountNotificationController::class, 'update'])->name('account.notifications.update');
+
     Route::get('/admin/users', [UserController::class, 'index'])->name('admin.users.index');
     Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');
     Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');

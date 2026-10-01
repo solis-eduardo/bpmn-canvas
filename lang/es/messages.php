@@ -17,6 +17,7 @@ return [
     'diagrams' => 'Diagramas',
     'workspaces' => 'Espacios de trabajo',
     'users' => 'Usuarios',
+    'notification_preferences' => 'Preferencias de correo',
 
     // Diagram list
     'diagram_name' => 'Nombre del diagrama',
@@ -60,6 +61,14 @@ return [
     'back_to_diagrams' => 'Volver a Diagramas',
     'version_history' => 'Historial de versiones',
     'collaborators' => 'Colaboradores',
+    'notification_preferences_heading' => 'Preferencias de notificaciones por correo',
+    'email_notifications' => 'Enviar notificaciones a mi correo electrónico',
+    'email_notifications_description' => 'Al activarlo, también recibirás notificaciones en :email.',
+    'notification_preferences_saved' => 'Se guardaron las preferencias de notificaciones por correo.',
+    'notification_email_subject' => 'Notificación de BPMN Studio',
+    'notification_email_greeting' => 'Hola :name:',
+    'notification_email_action' => 'Abrir notificación',
+    'notification_share_expiring' => 'El enlace compartido para :diagram vence el :date.',
 
     // Panel de Colaboradores y Comparticiones
     'collaborators_and_shares' => 'Colaboradores y Comparticiones',

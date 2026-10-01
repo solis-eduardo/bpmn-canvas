@@ -27,6 +27,27 @@ services:
     networks:
       - default
 
+  # Delivers queued notifications and other background work.
+  queue:
+    build:
+      context: .
+      target: app
+      args:
+        BPMN_JS_VERSION: ${BPMN_JS_VERSION:-18.30.0}
+    image: bpmn-studio-app:local
+    restart: unless-stopped
+    entrypoint: ["php"]
+    command: ["artisan", "queue:work", "--sleep=3", "--tries=3", "--timeout=90"]
+    user: www-data
+    env_file: .env
+    volumes:
+      - app-storage:/var/www/html/storage/framework
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - default
+
   # Runs Laravel's scheduler (`backup:run`, see bootstrap/app.php), so
   # backups happen on a schedule from within the compose stack instead of a
   # host cron entry.

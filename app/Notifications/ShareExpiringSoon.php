@@ -3,31 +3,28 @@
 namespace App\Notifications;
 
 use App\Models\Share;
-use Illuminate\Notifications\Notification;
 
 /**
  * Sent to a Diagram's Owner when one of their Shares is inside the
  * configured expiry-warning lead time (`shares:warn-expiring`, issue #21).
- * Database channel only, same as DiagramAccessRequested — this app has no
- * mail/broadcast transport wired up for notifications yet.
  */
-class ShareExpiringSoon extends Notification
+class ShareExpiringSoon extends PreferenceAwareNotification
 {
     public function __construct(
         private readonly Share $share,
     ) {}
 
-    /**
-     * $notifiable is required by Notification's abstract signature even
-     * though this channel list doesn't vary per notifiable.
-     *
-     * @return array<int, string>
-     *
-     * @SuppressWarnings("PHPMD.UnusedFormalParameter")
-     */
-    public function via(object $notifiable): array
+    protected function emailMessage(): string
     {
-        return ['database'];
+        return __('messages.notification_share_expiring', [
+            'diagram' => $this->share->diagram->title,
+            'date' => $this->share->expires_at->translatedFormat('M j, Y'),
+        ]);
+    }
+
+    protected function emailUrl(): string
+    {
+        return route('diagrams.show', $this->share->diagram->slug);
     }
 
     /**
