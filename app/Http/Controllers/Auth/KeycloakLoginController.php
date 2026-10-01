@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Actions\Workspaces\SyncKeycloakGroupMemberships;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialiteUserContract;
 use Laravel\Socialite\Facades\Socialite;
@@ -21,7 +23,7 @@ class KeycloakLoginController extends Controller
         return Socialite::driver('keycloak')->redirect();
     }
 
-    public function callback(Request $request): RedirectResponse
+    public function callback(Request $request, SyncKeycloakGroupMemberships $syncGroups): RedirectResponse
     {
         try {
             $socialiteUser = Socialite::driver('keycloak')->user();
@@ -32,13 +34,16 @@ class KeycloakLoginController extends Controller
         }
 
         $user = $this->resolveUser($socialiteUser);
+        $tokenPayload = $this->tokenPayload($socialiteUser);
 
-        if ($this->hasAdminRoleClaim($socialiteUser)) {
+        if ($this->hasAdminRoleClaim($tokenPayload)) {
             $user->is_admin = true;
             $user->is_admin_via_keycloak_claim = true;
         }
 
         $user->save();
+        $groups = $this->keycloakGroups($tokenPayload);
+        $this->syncWorkspaceMemberships($user, $groups, $syncGroups);
 
         Auth::login($user);
 
@@ -80,19 +85,64 @@ class KeycloakLoginController extends Controller
         return $user;
     }
 
-    private function hasAdminRoleClaim(SocialiteUserContract $socialiteUser): bool
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function hasAdminRoleClaim(array $payload): bool
     {
-        $token = $socialiteUser->token ?? null;
-
-        if (! is_string($token)) {
-            return false;
-        }
-
-        $payload = $this->decodeJwtPayload($token);
-
         $roles = data_get($payload, 'realm_access.roles', []);
 
         return in_array(config('bpmn.keycloak_admin_role'), $roles, true);
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return list<string>|null
+     */
+    private function keycloakGroups(array $payload): ?array
+    {
+        $groups = $payload['groups'] ?? null;
+
+        if (! is_array($groups)) {
+            return null;
+        }
+
+        foreach ($groups as $group) {
+            if (! is_string($group)) {
+                return null;
+            }
+        }
+
+        return array_values($groups);
+    }
+
+    /**
+     * @param  list<string>|null  $groups
+     */
+    private function syncWorkspaceMemberships(
+        User $user,
+        ?array $groups,
+        SyncKeycloakGroupMemberships $syncGroups,
+    ): void {
+        if ($groups === null) {
+            Log::warning('Keycloak token is missing a valid groups claim; workspace membership sync was skipped.', [
+                'user_id' => $user->id,
+            ]);
+
+            return;
+        }
+
+        $syncGroups($user, $groups);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function tokenPayload(SocialiteUserContract $socialiteUser): array
+    {
+        $token = $socialiteUser->token ?? null;
+
+        return is_string($token) ? $this->decodeJwtPayload($token) : [];
     }
 
     /**
