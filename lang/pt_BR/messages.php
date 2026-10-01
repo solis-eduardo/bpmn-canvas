@@ -178,6 +178,8 @@ return [
     'notification_workspace_ownership_transferred' => 'Você agora é o dono do Workspace :workspace.',
     'notification_access_request_approved' => 'Sua solicitação de acesso a :diagram foi aprovada.',
     'notification_access_request_refused' => 'Sua solicitação de acesso a :diagram foi recusada.',
+    'notification_collaborator_invited' => 'Você foi convidado para colaborar em :diagram',
+    'notification_collaborator_removed' => 'Seu acesso a :diagram foi removido',
     'view_all_notifications' => 'Ver todas',
     'notification_history_heading' => 'Notificações',
 
