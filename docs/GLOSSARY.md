@@ -62,10 +62,10 @@ short here; full domain definitions live in `CONTEXT.md`.
 | `VersaoRepository` | `VersionRepository` |
 | `DiagramaPolicy` | `DiagramPolicy` |
 | `DiagramaController` | `DiagramController` |
-| `DiagramaColaboradorController` | `DiagramCollaboratorController` |
+| `DiagramaColaboradorController` | `CollaboratorController` |
 | `CompartilhamentoController` | `ShareController` |
 | `CompartilhamentoPublicoController` | `PublicShareController` |
-| `Actions\Diagramas\ConcederOuSolicitarColaborador` | `Actions\Diagrams\GrantOrRequestCollaborator` |
+| `Actions\Diagramas\ConcederOuSolicitarColaborador` | `Services\CollaboratorService::grant` / `::requestAccess` |
 | `Actions\Diagramas\LiberarTrava` | `Actions\Diagrams\ReleaseLock` |
 | `Actions\Diagramas\SolicitarTrava` | `Actions\Diagrams\RequestLock` |
 | `DiagramaFactory` | `DiagramFactory` |

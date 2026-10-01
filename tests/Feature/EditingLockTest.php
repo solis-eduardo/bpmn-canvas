@@ -174,7 +174,7 @@ class EditingLockTest extends TestCase
         $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
 
         $this->travel(60)->seconds();
-        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/heartbeat')->assertOk();
+        $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $this->travel(60)->seconds();
 
         $response = $this->actingAs($other)->get('/diagrams/'.$diagram->slug);
@@ -191,7 +191,7 @@ class EditingLockTest extends TestCase
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
 
-        $response = $this->actingAs($other)->postJson('/diagrams/'.$diagram->slug.'/heartbeat');
+        $response = $this->actingAs($other)->patchJson('/diagrams/'.$diagram->slug.'/lock');
 
         $response->assertStatus(403);
     }
@@ -235,7 +235,7 @@ class EditingLockTest extends TestCase
         $user = User::factory()->create();
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
-        $response = $this->actingAs($user)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
+        $response = $this->actingAs($user)->postJson('/diagrams/'.$diagram->slug.'/lock');
 
         $response->assertOk()->assertJson(['state' => 'acquired']);
         $this->assertSame($user->id, $diagram->fresh()->locked_by);
@@ -249,13 +249,13 @@ class EditingLockTest extends TestCase
         $this->approveCollaborator($diagram, $requester);
         $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
 
-        $waiting = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
+        $waiting = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
         $waiting->assertOk()->assertJson(['state' => 'waiting']);
         $this->assertSame($holder->id, $diagram->fresh()->locked_by);
 
         $this->travel(31)->seconds();
 
-        $stillWaiting = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
+        $stillWaiting = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
         $stillWaiting->assertOk()->assertJson(['state' => 'waiting']);
         $this->assertSame($holder->id, $diagram->fresh()->locked_by);
     }
@@ -268,14 +268,14 @@ class EditingLockTest extends TestCase
         $this->approveCollaborator($diagram, $requester);
         $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
 
-        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request')
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock')
             ->assertJson(['state' => 'waiting']);
 
         $this->travel(20)->seconds();
-        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/heartbeat')->assertOk();
+        $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $this->travel(20)->seconds();
 
-        $response = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
+        $response = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
 
         $response->assertOk()->assertJson(['state' => 'waiting']);
         $this->assertSame($holder->id, $diagram->fresh()->locked_by);
@@ -348,7 +348,7 @@ class EditingLockTest extends TestCase
         $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
 
         $this->travelTo(now()->addMinute());
-        $response = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
+        $response = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
 
         $response->assertOk()->assertJson(['state' => 'waiting']);
         $requestedAt = $response->json('requested_at');
@@ -373,10 +373,10 @@ class EditingLockTest extends TestCase
         $this->approveCollaborator($diagram, $requester);
         $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
 
-        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request')
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock')
             ->assertJson(['state' => 'waiting']);
 
-        $response = $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/heartbeat');
+        $response = $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock');
 
         $response->assertOk()->assertJson([
             'heartbeat' => true,
@@ -397,15 +397,104 @@ class EditingLockTest extends TestCase
         $this->approveCollaborator($diagram, $requester);
         $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
 
-        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request')
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock')
             ->assertJson(['state' => 'waiting']);
 
         // First heartbeat after the request: still reports it, then cancels it.
-        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/heartbeat')
+        $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock')
             ->assertJson(['lock_requested_by' => $requester->name]);
 
         // Second heartbeat: nothing pending anymore.
-        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/heartbeat')
+        $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock')
             ->assertJson(['lock_requested_by' => null]);
+    }
+
+    public function test_the_holder_can_transfer_the_lock_in_answer_to_a_request(): void
+    {
+        $holder = User::factory()->create();
+        $requester = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $requester);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock')
+            ->assertJson(['state' => 'waiting']);
+
+        $response = $this->actingAs($holder)->putJson('/diagrams/'.$diagram->slug.'/lock', ['user_id' => $requester->id]);
+
+        $response->assertOk()->assertJsonPath('holder.id', $requester->id);
+        $this->assertSame($requester->id, $diagram->fresh()->locked_by);
+        $this->assertNull($diagram->fresh()->lock_requested_by);
+    }
+
+    public function test_the_holder_can_transfer_the_lock_spontaneously(): void
+    {
+        $holder = User::factory()->create();
+        $colleague = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $colleague);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        $this->actingAs($holder)->putJson('/diagrams/'.$diagram->slug.'/lock', ['user_id' => $colleague->id])
+            ->assertOk();
+
+        $this->assertSame($colleague->id, $diagram->fresh()->locked_by);
+    }
+
+    public function test_an_administrator_can_force_the_transfer_of_a_lock(): void
+    {
+        $holder = User::factory()->create();
+        $colleague = User::factory()->create();
+        $admin = User::factory()->create(['is_admin' => true]);
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $colleague);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        $this->actingAs($admin)->putJson('/diagrams/'.$diagram->slug.'/lock', ['user_id' => $colleague->id])
+            ->assertOk();
+
+        $this->assertSame($colleague->id, $diagram->fresh()->locked_by);
+    }
+
+    public function test_someone_who_is_neither_holder_nor_administrator_cannot_transfer_the_lock(): void
+    {
+        $holder = User::factory()->create();
+        $other = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $other);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        $this->actingAs($other)->putJson('/diagrams/'.$diagram->slug.'/lock', ['user_id' => $other->id])
+            ->assertForbidden();
+
+        $this->assertSame($holder->id, $diagram->fresh()->locked_by);
+    }
+
+    public function test_the_lock_cannot_be_transferred_to_someone_who_cannot_edit(): void
+    {
+        $holder = User::factory()->create();
+        $outsider = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        $this->actingAs($holder)->putJson('/diagrams/'.$diagram->slug.'/lock', ['user_id' => $outsider->id])
+            ->assertForbidden();
+
+        $this->assertSame($holder->id, $diagram->fresh()->locked_by);
+    }
+
+    public function test_the_lock_state_reports_the_holder_and_the_pending_request(): void
+    {
+        $holder = User::factory()->create(['name' => 'Hal Holder']);
+        $requester = User::factory()->create(['name' => 'Rita Request']);
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $requester);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
+
+        $this->actingAs($requester)->getJson('/diagrams/'.$diagram->slug.'/lock')
+            ->assertOk()
+            ->assertJsonPath('held', true)
+            ->assertJsonPath('holder.name', 'Hal Holder')
+            ->assertJsonPath('requested_by', 'Rita Request');
     }
 }
