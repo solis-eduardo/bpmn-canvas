@@ -170,4 +170,64 @@ class DiagramWorkspaceTest extends TestCase
 
         $this->actingAs($member)->getJson("/diagrams/{$diagram->slug}/content")->assertOk();
     }
+
+    public function test_diagram_list_can_filter_to_a_workspace_and_hide_any_hidden_diagrams(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $stranger = User::factory()->create();
+
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id, 'name' => 'Alpha Workspace']);
+        $workspace->addMember($owner);
+        $workspace->addMember($member);
+
+        $otherWorkspace = Workspace::factory()->create(['owner_id' => $stranger->id, 'name' => 'Secret Workspace']);
+        $otherWorkspace->addMember($stranger);
+
+        $visibleInWorkspace = Diagram::factory()->for($owner, 'author')->create([
+            'title' => 'Visible workspace diagram',
+            'workspace_id' => $workspace->id,
+        ]);
+
+        $outsideWorkspaceDiagram = Diagram::factory()->for($owner, 'author')->create([
+            'title' => 'Outside workspace diagram',
+            'workspace_id' => null,
+        ]);
+
+        $hiddenDiagram = Diagram::factory()->for($stranger, 'author')->create([
+            'title' => 'Hidden workspace diagram',
+            'workspace_id' => $otherWorkspace->id,
+        ]);
+
+        $response = $this->actingAs($owner)->get("/diagrams?workspace={$workspace->id}");
+
+        $response->assertOk()
+            ->assertSee($visibleInWorkspace->title)
+            ->assertSee($workspace->name)
+            ->assertDontSee($outsideWorkspaceDiagram->title)
+            ->assertDontSee($hiddenDiagram->title);
+    }
+
+    public function test_diagram_list_can_filter_to_diagrams_outside_any_workspace(): void
+    {
+        $owner = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id, 'name' => 'Workspace One']);
+        $workspace->addMember($owner);
+
+        $outsideDiagram = Diagram::factory()->for($owner, 'author')->create([
+            'title' => 'Standalone diagram',
+            'workspace_id' => null,
+        ]);
+
+        $workspaceDiagram = Diagram::factory()->for($owner, 'author')->create([
+            'title' => 'Workspace diagram',
+            'workspace_id' => $workspace->id,
+        ]);
+
+        $this->actingAs($owner)
+            ->get('/diagrams?workspace=none')
+            ->assertOk()
+            ->assertSee($outsideDiagram->title)
+            ->assertDontSee($workspaceDiagram->title);
+    }
 }
