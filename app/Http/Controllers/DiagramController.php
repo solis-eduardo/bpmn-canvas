@@ -160,9 +160,7 @@ class DiagramController extends Controller
                 ]);
             }
 
-            if (! $this->locks->renew($diagram, $user)) {
-                $this->locks->openOrRequest($diagram, $user);
-            }
+            $this->locks->claim($diagram, $user);
         }
 
         $diagram->loadMissing(['author', 'owner']);

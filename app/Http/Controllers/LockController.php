@@ -25,7 +25,7 @@ class LockController extends Controller
 
     public function show(string $slug): JsonResponse
     {
-        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('lock.view', $diagram);
 
@@ -38,7 +38,7 @@ class LockController extends Controller
      */
     public function store(Request $request, string $slug): JsonResponse
     {
-        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('lock.acquire', $diagram);
 
@@ -48,21 +48,17 @@ class LockController extends Controller
     /**
      * Heartbeat. Also reports, on the same response, who requested the Lock
      * since the last one — the Editor piggybacks its "someone wants the Lock"
-     * notice on this poll (issue #9). The request is read *before* renewing,
-     * because a heartbeat counts as the holder responding and clears it.
+     * notice on this poll (issue #9).
      */
     public function update(Request $request, string $slug): JsonResponse
     {
-        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('lock.renew', $diagram);
 
-        $requestedBy = $this->locks->state($diagram)->requester?->name;
-        $this->locks->renew($diagram, $request->user());
-
         return response()->json([
             'heartbeat' => true,
-            'lock_requested_by' => $requestedBy,
+            'lock_requested_by' => $this->locks->heartbeat($diagram, $request->user())?->name,
         ]);
     }
 
@@ -71,7 +67,7 @@ class LockController extends Controller
      */
     public function transfer(Request $request, string $slug): JsonResponse
     {
-        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $data = $request->validate([
             'user_id' => ['required', 'integer', 'exists:users,id'],
@@ -83,12 +79,12 @@ class LockController extends Controller
 
         $this->locks->transfer($diagram, $newHolder);
 
-        return response()->json($this->locks->state($diagram->refresh())->toArray());
+        return response()->json($this->locks->state($diagram)->toArray());
     }
 
     public function destroy(string $slug): JsonResponse
     {
-        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('lock.release', $diagram);
 

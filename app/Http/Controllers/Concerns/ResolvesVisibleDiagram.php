@@ -35,6 +35,15 @@ trait ResolvesVisibleDiagram
         return $resolved;
     }
 
+    /**
+     * resolveDiagramOrOldSlug() for callers that don't care how the Slug
+     * matched.
+     */
+    private function resolveDiagramAllowingOldSlug(string $slug): Diagram
+    {
+        return $this->resolveDiagramOrOldSlug($slug)->diagram;
+    }
+
     private function assertVisible(Diagram $diagram): Diagram
     {
         abort_unless($diagram->isVisibleTo(auth()->user()), 404);

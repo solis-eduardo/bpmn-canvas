@@ -27,7 +27,7 @@ class DiagramWorkspaceController extends Controller
      */
     public function update(Request $request, string $slug): JsonResponse
     {
-        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('putInWorkspace', $diagram);
 
@@ -46,7 +46,7 @@ class DiagramWorkspaceController extends Controller
 
     public function destroy(string $slug): JsonResponse
     {
-        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('diagram-workspace.remove', $diagram);
 
