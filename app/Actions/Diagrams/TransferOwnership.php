@@ -2,8 +2,8 @@
 
 namespace App\Actions\Diagrams;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\User;
 use App\Notifications\DiagramOwnershipTransferred;
 use Illuminate\Support\Facades\DB;
@@ -33,7 +33,7 @@ class TransferOwnership
             // The new Diagram Owner has full access already — drop any
             // leftover Collaborator row for them so they're not listed
             // twice (as Owner and as Collaborator).
-            DiagramCollaborator::where('diagram_id', $diagram->id)
+            Collaborator::where('diagram_id', $diagram->id)
                 ->where('user_id', $newOwner->id)
                 ->delete();
 
@@ -42,16 +42,16 @@ class TransferOwnership
             }
 
             if ($giveUpAccess) {
-                DiagramCollaborator::where('diagram_id', $diagram->id)
+                Collaborator::where('diagram_id', $diagram->id)
                     ->where('user_id', $previousOwnerId)
                     ->delete();
 
                 return;
             }
 
-            DiagramCollaborator::updateOrCreate(
+            Collaborator::updateOrCreate(
                 ['diagram_id' => $diagram->id, 'user_id' => $previousOwnerId],
-                ['status' => DiagramCollaborator::STATUS_APPROVED]
+                ['status' => Collaborator::STATUS_APPROVED]
             );
         });
 

@@ -2,7 +2,7 @@
 
 namespace App\Models\Concerns;
 
-use App\Models\DiagramCollaborator;
+use App\Models\Collaborator;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -30,7 +30,7 @@ trait FiltersDiagramList
     {
         return $query->whereHas('collaborators', fn ($collaborators) => $collaborators
             ->where('user_id', $user->id)
-            ->where('status', DiagramCollaborator::STATUS_APPROVED));
+            ->where('status', Collaborator::STATUS_APPROVED));
     }
 
     /**

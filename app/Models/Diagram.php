@@ -145,7 +145,7 @@ BPMN;
             ->where('owner_id', $user->id)
             ->orWhereHas('collaborators', fn (Builder $collaborators) => $collaborators
                 ->where('user_id', $user->id)
-                ->where('status', DiagramCollaborator::STATUS_APPROVED))
+                ->where('status', Collaborator::STATUS_APPROVED))
             ->orWhereHas('workspace.members', fn (Builder $members) => $members->where('user_id', $user->id)));
     }
 
@@ -274,10 +274,10 @@ BPMN;
         return $this->hasMany(DiagramOldSlug::class);
     }
 
-    /** @return HasMany<DiagramCollaborator, $this> */
+    /** @return HasMany<Collaborator, $this> */
     public function collaborators(): HasMany
     {
-        return $this->hasMany(DiagramCollaborator::class);
+        return $this->hasMany(Collaborator::class);
     }
 
     /** @return HasMany<Share, $this> */

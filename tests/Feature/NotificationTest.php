@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Notifications\DiagramAccessRequested;
@@ -74,11 +74,11 @@ class NotificationTest extends TestCase
             ->assertSee(__('messages.access_request_pending'))
             ->assertDontSee('name="user_id" value="'.$requester->id.'"', false);
 
-        $this->assertDatabaseCount('diagram_collaborators', 1);
-        $this->assertDatabaseHas('diagram_collaborators', [
+        $this->assertDatabaseCount('collaborators', 1);
+        $this->assertDatabaseHas('collaborators', [
             'diagram_id' => $diagram->id,
             'user_id' => $requester->id,
-            'status' => DiagramCollaborator::STATUS_REQUESTED,
+            'status' => Collaborator::STATUS_REQUESTED,
         ]);
         $this->assertCount(1, $owner->fresh()->notifications);
 
@@ -159,10 +159,10 @@ class NotificationTest extends TestCase
         $collaborator = User::factory()->create();
         $diagram = Diagram::factory()->for($owner, 'owner')->for($owner, 'author')->create();
 
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $diagram->id,
             'user_id' => $collaborator->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
 
         $this->actingAs($owner)->deleteJson(
@@ -216,7 +216,7 @@ class NotificationTest extends TestCase
 
         $this->actingAs($owner)->putJson("/diagrams/{$diagram->slug}/collaborators/{$requester->id}")
             ->assertOk()
-            ->assertJsonPath('status', DiagramCollaborator::STATUS_APPROVED);
+            ->assertJsonPath('status', Collaborator::STATUS_APPROVED);
 
         $notification = $requester->fresh()->notifications->sole();
 

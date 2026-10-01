@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -163,7 +163,7 @@ class DiagramWorkspaceTest extends TestCase
         $diagram = Diagram::factory()->for($diagramOwner, 'author')->create(['workspace_id' => $workspace->id]);
         $diagram->collaborators()->create([
             'user_id' => $member->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
 
         $workspace->removeMember($member);

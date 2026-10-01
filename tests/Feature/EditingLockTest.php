@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
@@ -29,10 +29,10 @@ class EditingLockTest extends TestCase
      */
     private function approveCollaborator(Diagram $diagram, User $user): void
     {
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $diagram->id,
             'user_id' => $user->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
     }
 

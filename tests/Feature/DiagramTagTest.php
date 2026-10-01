@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\Tag;
 use App\Models\User;
 use App\Models\Workspace;
@@ -44,10 +44,10 @@ class DiagramTagTest extends TestCase
         $owner = User::factory()->create();
         $collaborator = User::factory()->create();
         $diagram = Diagram::factory()->for($owner, 'author')->create();
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $diagram->id,
             'user_id' => $collaborator->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
 
         $this->actingAs($collaborator)->post("/diagrams/{$diagram->slug}/tags", ['name' => 'Finance'])
