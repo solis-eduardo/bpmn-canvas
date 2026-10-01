@@ -30,6 +30,10 @@
              default threshold allows without indicating a real design
              problem. -->
         <exclude name="CouplingBetweenObjects" />
+        <!-- Every Laravel controller extends the framework's base
+             Controller by convention; the number of children just tracks
+             how many routes/resources the app has, not a design problem. -->
+        <exclude name="NumberOfChildren" />
     </rule>
     <rule ref="rulesets/design.xml/CouplingBetweenObjects">
         <properties>
