@@ -58,4 +58,13 @@ class CollaboratorPolicyTest extends TestCase
         $this->assertTrue($policy->invite($stranger, $diagram, $stranger));
         $this->assertFalse($policy->invite($stranger, $diagram, $other));
     }
+
+    public function test_an_email_that_matched_nobody_can_only_be_tried_by_those_who_can_grant(): void
+    {
+        $diagram = Diagram::factory()->create();
+        $policy = new CollaboratorPolicy;
+
+        $this->assertTrue($policy->invite($diagram->owner, $diagram, null));
+        $this->assertFalse($policy->invite(User::factory()->create(), $diagram, null));
+    }
 }

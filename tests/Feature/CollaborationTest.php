@@ -272,4 +272,19 @@ class CollaborationTest extends TestCase
             'status' => Collaborator::STATUS_APPROVED,
         ]);
     }
+
+    public function test_a_refused_invite_does_not_reveal_whether_the_email_belongs_to_a_user(): void
+    {
+        $owner = User::factory()->create();
+        $stranger = User::factory()->create();
+        $existing = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
+
+        $known = $this->actingAs($stranger)->postJson("/diagrams/{$diagram->slug}/collaborators", ['email' => $existing->email]);
+        $unknown = $this->actingAs($stranger)->postJson("/diagrams/{$diagram->slug}/collaborators", ['email' => 'nobody@example.test']);
+
+        $known->assertForbidden();
+        $unknown->assertForbidden();
+        $this->assertSame($known->json('message'), $unknown->json('message'));
+    }
 }

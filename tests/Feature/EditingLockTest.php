@@ -497,4 +497,19 @@ class EditingLockTest extends TestCase
             ->assertJsonPath('holder.name', 'Hal Holder')
             ->assertJsonPath('requested_by', 'Rita Request');
     }
+
+    public function test_a_refused_transfer_does_not_reveal_whether_the_user_id_exists(): void
+    {
+        $holder = User::factory()->create();
+        $outsider = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        $known = $this->actingAs($holder)->putJson('/diagrams/'.$diagram->slug.'/lock', ['user_id' => $outsider->id]);
+        $unknown = $this->actingAs($holder)->putJson('/diagrams/'.$diagram->slug.'/lock', ['user_id' => 999999]);
+
+        $known->assertForbidden();
+        $unknown->assertForbidden();
+        $this->assertSame($known->json('message'), $unknown->json('message'));
+    }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Repositories\DiagramRepository;
 use App\Repositories\WorkspaceRepository;
 use App\Services\DiagramWorkspaceService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -31,7 +32,9 @@ class DiagramWorkspaceController extends Controller
             'workspace_id' => ['required', 'integer'],
         ]);
 
-        $workspace = $this->workspaces->findOrFail($data['workspace_id']);
+        // An unknown Workspace is refused exactly like one the User isn't a
+        // Member of, so the answer never tells whether the ID exists.
+        $workspace = $this->workspaces->find($data['workspace_id']) ?? throw new AuthorizationException;
 
         $this->authorize('diagram-workspace.assign', [$diagram, $workspace]);
 

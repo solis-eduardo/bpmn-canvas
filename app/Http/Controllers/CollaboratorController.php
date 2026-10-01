@@ -63,12 +63,15 @@ class CollaboratorController extends Controller
 
         $data = $request->validate($this->userIdentifierRules());
 
-        $collaborator = null;
-        $this->actOnTargetUser($data, function (User $target) use ($diagram, &$collaborator) {
-            $this->authorize('collaborator.invite', [$diagram, $target]);
+        $target = $this->resolveUserFrom($data);
 
-            $collaborator = $this->service->invite($diagram, $target, Gate::allows('collaborator.grant', $diagram));
-        });
+        // Authorized whether or not the email matched anybody, so a refusal
+        // never tells the caller if the email belongs to a User.
+        $this->authorize('collaborator.invite', [$diagram, $target]);
+
+        $collaborator = $target
+            ? $this->service->invite($diagram, $target, Gate::allows('collaborator.grant', $diagram))
+            : null;
 
         if ($this->targetedByEmail($data)) {
             return response()->json(['success' => true], 201);

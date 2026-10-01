@@ -62,7 +62,7 @@ class DiagramController extends Controller
             : $this->workspaces->forUserOrderedByName($user);
 
         $diagrams = $this->diagrams->visibleListQuery($user, $criteria)
-            ->orderBy($criteria->sort, $criteria->direction)
+            ->orderBy($criteria->sort->column, $criteria->sort->direction)
             ->orderBy('id')
             ->paginate(self::DIAGRAMS_PER_PAGE)
             ->appends($request->query());
@@ -75,8 +75,8 @@ class DiagramController extends Controller
 
         $search = $criteria->search;
         $tag = $criteria->tag;
-        $sort = $criteria->sort;
-        $direction = $criteria->direction;
+        $sort = $criteria->sort->column;
+        $direction = $criteria->sort->direction;
         $filters = [
             'owner' => $criteria->owner,
             'collaborator' => $criteria->collaborator,
