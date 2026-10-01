@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Models\Diagram;
 use App\Models\Workspace;
 use App\Notifications\DiagramAccessRequested;
+use App\Notifications\DiagramAccessRequestResolved;
+use App\Notifications\DiagramCollaboratorInvited;
+use App\Notifications\DiagramCollaboratorRemoved;
 use App\Notifications\WorkspaceMemberAdded;
 use App\Notifications\WorkspaceMemberRemoved;
 use App\Notifications\WorkspaceOwnershipTransferred;
-use App\Notifications\DiagramAccessRequestResolved;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -75,6 +77,10 @@ class NotificationController extends Controller
         $record = $this->resolveOwn($request, $notification);
 
         $record->markAsRead();
+
+        if ($record->type === DiagramCollaboratorRemoved::class) {
+            return redirect()->route('diagrams.index');
+        }
 
         $diagram = Diagram::find($record->data['diagram_id'] ?? null);
 
@@ -146,6 +152,12 @@ class NotificationController extends Controller
                 : 'messages.notification_access_request_refused', [
                     'diagram' => $notification->data['diagram_title'],
                 ]),
+            DiagramCollaboratorInvited::class => __('messages.notification_collaborator_invited', [
+                'diagram' => $notification->data['diagram_title'] ?? '',
+            ]),
+            DiagramCollaboratorRemoved::class => __('messages.notification_collaborator_removed', [
+                'diagram' => $notification->data['diagram_title'] ?? '',
+            ]),
             default => '',
         };
     }

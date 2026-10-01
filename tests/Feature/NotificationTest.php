@@ -7,10 +7,12 @@ use App\Models\DiagramCollaborator;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Notifications\DiagramAccessRequested;
+use App\Notifications\DiagramAccessRequestResolved;
+use App\Notifications\DiagramCollaboratorInvited;
+use App\Notifications\DiagramCollaboratorRemoved;
 use App\Notifications\WorkspaceMemberAdded;
 use App\Notifications\WorkspaceMemberRemoved;
 use App\Notifications\WorkspaceOwnershipTransferred;
-use App\Notifications\DiagramAccessRequestResolved;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -51,7 +53,7 @@ class NotificationTest extends TestCase
         $this->assertNull($notification->read_at);
     }
 
-    public function test_a_direct_invite_does_not_notify_anyone(): void
+    public function test_a_direct_invite_notifies_the_invited_user(): void
     {
         $owner = User::factory()->create();
         $target = User::factory()->create();
@@ -62,6 +64,100 @@ class NotificationTest extends TestCase
         ])->assertCreated();
 
         $this->assertCount(0, $owner->fresh()->notifications);
+        $this->assertCount(1, $target->fresh()->notifications);
+
+        $notification = $target->fresh()->notifications->first();
+        $this->assertSame(DiagramCollaboratorInvited::class, $notification->type);
+        $this->assertSame($diagram->id, $notification->data['diagram_id']);
+        $this->assertSame($diagram->slug, $notification->data['diagram_slug']);
+        $this->assertSame($diagram->title, $notification->data['diagram_title']);
+        $this->assertNull($notification->read_at);
+
+        $this->actingAs($target)->getJson('/notifications')
+            ->assertOk()
+            ->assertJsonFragment([
+                'message' => __('messages.notification_collaborator_invited', [
+                    'diagram' => $diagram->title,
+                ]),
+            ]);
+    }
+
+    public function test_an_administrator_direct_invite_notifies_the_invited_user(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $owner = User::factory()->create();
+        $target = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'owner')->for($owner, 'author')->create();
+
+        $this->actingAs($admin)->postJson("/diagrams/{$diagram->slug}/collaborators", [
+            'user_id' => $target->id,
+        ])->assertCreated();
+
+        $this->assertSame(
+            DiagramCollaboratorInvited::class,
+            $target->fresh()->notifications->first()->type
+        );
+    }
+
+    public function test_an_email_invite_notifies_the_existing_user_without_repeating_on_an_unchanged_grant(): void
+    {
+        $owner = User::factory()->create();
+        $target = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'owner')->for($owner, 'author')->create();
+
+        $this->actingAs($owner)->postJson("/diagrams/{$diagram->slug}/collaborators", [
+            'email' => $target->email,
+        ])->assertCreated()->assertJson(['success' => true]);
+
+        $this->actingAs($owner)->postJson("/diagrams/{$diagram->slug}/collaborators", [
+            'email' => $target->email,
+        ])->assertCreated()->assertJson(['success' => true]);
+
+        $this->assertCount(1, $target->fresh()->notifications);
+        $this->assertSame(
+            DiagramCollaboratorInvited::class,
+            $target->fresh()->notifications->first()->type
+        );
+    }
+
+    public function test_removing_a_collaborator_notifies_the_removed_user(): void
+    {
+        $owner = User::factory()->create();
+        $collaborator = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'owner')->for($owner, 'author')->create();
+
+        DiagramCollaborator::create([
+            'diagram_id' => $diagram->id,
+            'user_id' => $collaborator->id,
+            'status' => DiagramCollaborator::STATUS_APPROVED,
+        ]);
+
+        $this->actingAs($owner)->deleteJson(
+            "/diagrams/{$diagram->slug}/collaborators/{$collaborator->id}"
+        )->assertOk();
+
+        $this->assertCount(1, $collaborator->fresh()->notifications);
+
+        $notification = $collaborator->fresh()->notifications->first();
+        $this->assertSame(DiagramCollaboratorRemoved::class, $notification->type);
+        $this->assertSame($diagram->id, $notification->data['diagram_id']);
+        $this->assertSame($diagram->slug, $notification->data['diagram_slug']);
+        $this->assertSame($diagram->title, $notification->data['diagram_title']);
+        $this->assertNull($notification->read_at);
+
+        $this->actingAs($collaborator)->getJson('/notifications')
+            ->assertOk()
+            ->assertJsonFragment([
+                'message' => __('messages.notification_collaborator_removed', [
+                    'diagram' => $diagram->title,
+                ]),
+            ]);
+
+        $response = $this->get(
+            "/notifications/{$notification->id}/read"
+        );
+        $response->assertRedirect(route('diagrams.index'));
+        $this->assertNotNull($notification->fresh()->read_at);
     }
 
     public function test_the_requester_is_not_notified_only_the_owner_is(): void
@@ -144,7 +240,13 @@ class NotificationTest extends TestCase
         $this->actingAs($owner)->deleteJson("/diagrams/{$diagram->slug}/collaborators/{$collaborator->id}")
             ->assertOk();
 
-        $this->assertCount(0, $collaborator->fresh()->notifications);
+        $this->assertSame(
+            [DiagramCollaboratorInvited::class, DiagramCollaboratorRemoved::class],
+            $collaborator->fresh()->notifications->pluck('type')->sort()->values()->all()
+        );
+        $this->assertNull(
+            $collaborator->fresh()->notifications->firstWhere('type', DiagramAccessRequestResolved::class)
+        );
     }
 
     public function test_unread_count_endpoint_reports_the_authenticated_users_unread_notifications(): void
