@@ -24,7 +24,7 @@ class DiagramVisibilityTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
         $hidden = $this->hiddenDiagram($owner, $workspace);
 
         $stranger = User::factory()->create();
@@ -61,7 +61,7 @@ class DiagramVisibilityTest extends TestCase
         ]);
         $workspaceOwner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $workspaceOwner->id]);
-        $workspace->addMember($workspaceOwner);
+        $this->addMember($workspace, $workspaceOwner);
         $hidden = Diagram::factory()->for($workspaceOwner, 'author')->create([
             'title' => 'Workspace secret matching query',
             'workspace_id' => $workspace->id,
@@ -89,7 +89,7 @@ class DiagramVisibilityTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
         $hidden = $this->hiddenDiagram($owner, $workspace);
 
         $collaborator = User::factory()->create();
@@ -109,8 +109,8 @@ class DiagramVisibilityTest extends TestCase
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
         $hidden = $this->hiddenDiagram($owner, $workspace);
 
         $response = $this->actingAs($member)->get('/diagrams');
@@ -137,7 +137,7 @@ class DiagramVisibilityTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
         $hidden = $this->hiddenDiagram($owner, $workspace);
 
         $admin = User::factory()->create(['is_admin' => true]);
@@ -164,7 +164,7 @@ class DiagramVisibilityTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
         $hidden = $this->hiddenDiagram($owner, $workspace);
 
         $stranger = User::factory()->create();
@@ -182,7 +182,7 @@ class DiagramVisibilityTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
         $hidden = $this->hiddenDiagram($owner, $workspace);
 
         $admin = User::factory()->create(['is_admin' => true]);
@@ -219,7 +219,7 @@ class DiagramVisibilityTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
         $hidden = $this->hiddenDiagram($owner, $workspace);
 
         $share = Share::factory()->for($hidden, 'diagram')->create([

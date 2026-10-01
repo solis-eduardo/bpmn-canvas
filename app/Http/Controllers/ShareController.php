@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Diagram;
 use App\Models\Share;
+use App\Repositories\DiagramRepository;
+use App\Repositories\ShareRepository;
 use App\Repositories\VersionRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -12,17 +14,18 @@ use Illuminate\Validation\ValidationException;
 
 class ShareController extends Controller
 {
+    public function __construct(
+        private readonly DiagramRepository $diagrams,
+        private readonly ShareRepository $shares,
+    ) {}
+
     public function index(string $slug, VersionRepository $versions): JsonResponse
     {
-        $diagram = Diagram::where('slug', $slug)->firstOrFail();
+        $diagram = $this->diagrams->findBySlugOrFail($slug);
 
         $this->authorize('manageShares', $diagram);
 
-        $shares = $diagram->shares()
-            ->whereNull('revoked_at')
-            ->where('expires_at', '>', now())
-            ->orderByDesc('created_at')
-            ->get();
+        $shares = $this->shares->activeFor($diagram);
 
         $versionsById = $this->versionsById($diagram, $versions, $shares->contains(fn (Share $s) => $s->isPinned()));
 
@@ -33,7 +36,7 @@ class ShareController extends Controller
 
     public function store(Request $request, string $slug, VersionRepository $versions): JsonResponse
     {
-        $diagram = Diagram::where('slug', $slug)->firstOrFail();
+        $diagram = $this->diagrams->findBySlugOrFail($slug);
 
         $this->authorize('manageShares', $diagram);
 
@@ -54,7 +57,7 @@ class ShareController extends Controller
             ]);
         }
 
-        $share = Share::create([
+        $share = $this->shares->create([
             'diagram_id' => $diagram->id,
             'expires_at' => now()->addDays($days),
             'allow_download' => $data['allow_download'] ?? false,
@@ -69,7 +72,7 @@ class ShareController extends Controller
     {
         $this->authorize('manageShares', $share->diagram);
 
-        $share->update(['revoked_at' => now()]);
+        $this->shares->revoke($share);
 
         return response()->json(['revoked' => true]);
     }

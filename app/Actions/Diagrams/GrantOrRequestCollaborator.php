@@ -5,6 +5,7 @@ namespace App\Actions\Diagrams;
 use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
+use App\Repositories\CollaboratorRepository;
 
 /**
  * Direct invite by the Author/Administrator (immediate access, status
@@ -16,6 +17,8 @@ use App\Models\User;
  */
 class GrantOrRequestCollaborator
 {
+    public function __construct(private readonly CollaboratorRepository $collaborators) {}
+
     public function __invoke(Diagram $diagram, User $requester, User $target): Collaborator
     {
         $canGrantDirectly = $requester->can('manageCollaborators', $diagram);
@@ -24,17 +27,12 @@ class GrantOrRequestCollaborator
             abort(403);
         }
 
-        $existing = Collaborator::where('diagram_id', $diagram->id)
-            ->where('user_id', $target->id)
-            ->first();
+        $existing = $this->collaborators->findFor($diagram, $target);
 
         $status = $canGrantDirectly
             ? Collaborator::STATUS_APPROVED
             : ($existing->status ?? Collaborator::STATUS_REQUESTED);
 
-        return Collaborator::updateOrCreate(
-            ['diagram_id' => $diagram->id, 'user_id' => $target->id],
-            ['status' => $status]
-        );
+        return $this->collaborators->upsertStatus($diagram, $target, $status);
     }
 }

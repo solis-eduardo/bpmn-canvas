@@ -83,4 +83,15 @@ class WorkspaceRepositoryTest extends TestCase
         $this->assertTrue($repository->removeMember($workspace, $user));
         $this->assertFalse($repository->removeMember($workspace, $user));
     }
+
+    public function test_lists_workspaces_linked_to_any_of_the_keycloak_groups(): void
+    {
+        $finance = Workspace::factory()->create(['keycloak_group' => 'finance']);
+        Workspace::factory()->create(['keycloak_group' => 'hr']);
+        Workspace::factory()->create();
+
+        $linked = $this->repository()->linkedToKeycloakGroups(['finance']);
+
+        $this->assertSame([$finance->id], $linked->pluck('id')->all());
+    }
 }

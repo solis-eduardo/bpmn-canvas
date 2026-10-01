@@ -89,7 +89,7 @@ class DiagramSearchTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
         $hidden = Diagram::factory()->for($owner, 'author')->create([
             'title' => 'Secret Onboarding Flow',
             'workspace_id' => $workspace->id,
@@ -108,8 +108,8 @@ class DiagramSearchTest extends TestCase
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
         $hidden = Diagram::factory()->for($owner, 'author')->create([
             'title' => 'Team Onboarding Flow',
             'workspace_id' => $workspace->id,

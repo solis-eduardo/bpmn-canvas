@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Repositories\UserRepository;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 
 abstract class Controller
@@ -18,10 +19,10 @@ abstract class Controller
     protected function resolveUserFrom(array $data): ?User
     {
         if (isset($data['user_id'])) {
-            return User::findOrFail($data['user_id']);
+            return app(UserRepository::class)->findOrFail($data['user_id']);
         }
 
-        return User::where('email', $data['email'])->first();
+        return app(UserRepository::class)->findByEmail($data['email']);
     }
 
     /**

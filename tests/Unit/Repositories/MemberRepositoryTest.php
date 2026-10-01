@@ -75,4 +75,23 @@ class MemberRepositoryTest extends TestCase
         $this->assertFalse($repository->removeFor($workspace, $user));
         $this->assertFalse($repository->existsFor($workspace, $user));
     }
+
+    public function test_removes_only_group_memberships_outside_the_given_groups(): void
+    {
+        $user = User::factory()->create();
+        $kept = Workspace::factory()->create(['keycloak_group' => 'finance']);
+        $dropped = Workspace::factory()->create(['keycloak_group' => 'hr']);
+        $manual = Workspace::factory()->create(['keycloak_group' => 'hr']);
+        $repository = new MemberRepository;
+        $repository->createGroupIfMissing($kept, $user);
+        $repository->createGroupIfMissing($dropped, $user);
+        $repository->upsertManual($manual, $user);
+
+        $removed = $repository->removeGroupMembershipsOutside($user, ['finance']);
+
+        $this->assertSame(1, $removed);
+        $this->assertTrue($repository->existsFor($kept, $user));
+        $this->assertFalse($repository->existsFor($dropped, $user));
+        $this->assertTrue($repository->existsFor($manual, $user));
+    }
 }

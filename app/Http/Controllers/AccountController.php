@@ -2,13 +2,17 @@
 
 namespace App\Http\Controllers;
 
+use App\Repositories\UserRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class AccountController extends Controller
 {
+    public function __construct(
+        private readonly UserRepository $users,
+    ) {}
+
     public function edit(Request $request): View
     {
         return view('account.edit', [
@@ -42,10 +46,7 @@ class AccountController extends Controller
 
         $user->update(['password' => $data['password']]);
 
-        DB::table('sessions')
-            ->where('user_id', $user->id)
-            ->where('id', '!=', $request->session()->getId())
-            ->delete();
+        $this->users->invalidateOtherSessions($user, $request->session()->getId());
 
         return redirect()->route('account.edit');
     }

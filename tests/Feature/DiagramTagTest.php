@@ -65,8 +65,8 @@ class DiagramTagTest extends TestCase
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
         $diagram = Diagram::factory()->for($owner, 'author')->create(['workspace_id' => $workspace->id]);
 
         $this->actingAs($member)->post("/diagrams/{$diagram->slug}/tags", ['name' => 'Team'])
@@ -105,7 +105,7 @@ class DiagramTagTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
         $diagram = Diagram::factory()->for($owner, 'author')->create(['workspace_id' => $workspace->id]);
 
         $stranger = User::factory()->create();
@@ -183,7 +183,7 @@ class DiagramTagTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
         $hidden = Diagram::factory()->for($owner, 'author')->create([
             'title' => 'Hidden Tagged Diagram',
             'workspace_id' => $workspace->id,

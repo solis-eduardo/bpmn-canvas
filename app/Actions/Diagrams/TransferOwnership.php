@@ -2,10 +2,10 @@
 
 namespace App\Actions\Diagrams;
 
-use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Notifications\DiagramOwnershipTransferred;
+use App\Repositories\CollaboratorRepository;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -23,36 +23,32 @@ use Illuminate\Support\Facades\DB;
  */
 class TransferOwnership
 {
+    public function __construct(private readonly CollaboratorRepository $collaborators) {}
+
     public function __invoke(Diagram $diagram, User $newOwner, bool $giveUpAccess = false): void
     {
+        $previousOwner = $diagram->owner;
         $previousOwnerId = $diagram->owner_id;
 
-        DB::transaction(function () use ($diagram, $newOwner, $giveUpAccess, $previousOwnerId) {
+        DB::transaction(function () use ($diagram, $newOwner, $giveUpAccess, $previousOwner, $previousOwnerId) {
             $diagram->update(['owner_id' => $newOwner->id]);
 
             // The new Diagram Owner has full access already — drop any
             // leftover Collaborator row for them so they're not listed
             // twice (as Owner and as Collaborator).
-            Collaborator::where('diagram_id', $diagram->id)
-                ->where('user_id', $newOwner->id)
-                ->delete();
+            $this->collaborators->removeFor($diagram, $newOwner);
 
             if ((int) $previousOwnerId === $newOwner->id) {
                 return;
             }
 
             if ($giveUpAccess) {
-                Collaborator::where('diagram_id', $diagram->id)
-                    ->where('user_id', $previousOwnerId)
-                    ->delete();
+                $this->collaborators->removeFor($diagram, $previousOwner);
 
                 return;
             }
 
-            Collaborator::updateOrCreate(
-                ['diagram_id' => $diagram->id, 'user_id' => $previousOwnerId],
-                ['status' => Collaborator::STATUS_APPROVED]
-            );
+            $this->collaborators->upsertApproved($diagram, $previousOwner);
         });
 
         if ((int) $previousOwnerId !== $newOwner->id) {

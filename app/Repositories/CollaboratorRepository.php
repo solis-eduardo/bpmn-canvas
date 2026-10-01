@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -15,16 +16,12 @@ class CollaboratorRepository
 {
     public function findFor(Diagram $diagram, User $user): ?Collaborator
     {
-        return Collaborator::where('diagram_id', $diagram->id)
-            ->where('user_id', $user->id)
-            ->first();
+        return $this->rowFor($diagram, $user)->first();
     }
 
     public function findForOrFail(Diagram $diagram, User $user): Collaborator
     {
-        return Collaborator::where('diagram_id', $diagram->id)
-            ->where('user_id', $user->id)
-            ->firstOrFail();
+        return $this->rowFor($diagram, $user)->firstOrFail();
     }
 
     /**
@@ -59,5 +56,13 @@ class CollaboratorRepository
         $collaborator?->delete();
 
         return $collaborator;
+    }
+
+    /**
+     * @return Builder<Collaborator>
+     */
+    private function rowFor(Diagram $diagram, User $user): Builder
+    {
+        return Collaborator::where('diagram_id', $diagram->id)->where('user_id', $user->id);
     }
 }
