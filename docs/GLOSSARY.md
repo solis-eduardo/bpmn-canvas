@@ -66,8 +66,8 @@ short here; full domain definitions live in `CONTEXT.md`.
 | `CompartilhamentoController` | `ShareController` |
 | `CompartilhamentoPublicoController` | `PublicShareController` |
 | `Actions\Diagramas\ConcederOuSolicitarColaborador` | `Services\CollaboratorService::grant` / `::requestAccess` |
-| `Actions\Diagramas\LiberarTrava` | `Actions\Diagrams\ReleaseLock` |
-| `Actions\Diagramas\SolicitarTrava` | `Actions\Diagrams\RequestLock` |
+| `Actions\Diagramas\LiberarTrava` | `Services\LockService::release` |
+| `Actions\Diagramas\SolicitarTrava` | `Services\LockService::openOrRequest` |
 | `DiagramaFactory` | `DiagramFactory` |
 | `CompartilhamentoFactory` | `ShareFactory` |
 | `ColaboracaoTest` | `CollaborationTest` |
