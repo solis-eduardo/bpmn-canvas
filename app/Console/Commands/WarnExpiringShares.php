@@ -33,9 +33,8 @@ class WarnExpiringShares extends Command
         $leadTimeCutoff = $now->clone()->addDays(config('shares.expiry_warning_lead_days'));
 
         $candidates = Share::query()
-            ->whereNull('revoked_at')
+            ->active()
             ->whereNull('expiry_warned_at')
-            ->where('expires_at', '>', $now)
             ->where('expires_at', '<=', $leadTimeCutoff)
             ->with('diagram.owner')
             ->get();

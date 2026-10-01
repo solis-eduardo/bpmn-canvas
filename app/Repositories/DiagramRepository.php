@@ -6,6 +6,7 @@ use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\DiagramOldSlug;
 use App\Models\User;
+use App\Models\Workspace;
 use App\Support\Slugger;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -233,6 +234,41 @@ class DiagramRepository
 
             throw $e;
         }
+
+        return $diagram;
+    }
+
+    /**
+     * The Diagram's current `.bpmn` content, read from disk. Throws instead
+     * of returning an empty string when the read fails (the "diagrams" disk
+     * is configured with `throw => false`), so callers never mistake a
+     * failed read for an empty Diagram.
+     */
+    public function contentOf(Diagram $diagram): string
+    {
+        $content = Storage::disk('diagrams')->get($diagram->disk_path);
+
+        if (! is_string($content)) {
+            throw new RuntimeException("Could not read the Diagram's content: {$diagram->disk_path}");
+        }
+
+        return $content;
+    }
+
+    public function changeOwner(Diagram $diagram, User $newOwner): Diagram
+    {
+        $diagram->update(['owner_id' => $newOwner->id]);
+
+        return $diagram;
+    }
+
+    /**
+     * Places the Diagram in $workspace, or takes it out of any Workspace
+     * when null.
+     */
+    public function placeInWorkspace(Diagram $diagram, ?Workspace $workspace): Diagram
+    {
+        $diagram->update(['workspace_id' => $workspace?->id]);
 
         return $diagram;
     }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Diagrams\GrantOrRequestCollaborator;
+use App\Http\Controllers\Concerns\ResolvesTargetUser;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Collaborator;
 use App\Models\Diagram;
@@ -13,15 +14,18 @@ use App\Notifications\DiagramCollaboratorInvited;
 use App\Notifications\DiagramCollaboratorRemoved;
 use App\Repositories\CollaboratorRepository;
 use App\Repositories\DiagramRepository;
+use App\Repositories\UserRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class DiagramCollaboratorController extends Controller
 {
+    use ResolvesTargetUser;
     use ResolvesVisibleDiagram;
 
     public function __construct(
+        private readonly UserRepository $users,
         private readonly DiagramRepository $diagrams,
         private readonly CollaboratorRepository $collaborators,
     ) {}
@@ -102,12 +106,10 @@ class DiagramCollaboratorController extends Controller
      */
     private function grantAndNotify(GrantOrRequestCollaborator $grant, Diagram $diagram, User $requester, User $target): Collaborator
     {
-        $wasRequested = $this->collaborators->findFor($diagram, $target)?->status === Collaborator::STATUS_REQUESTED;
-
         $collaborator = $grant($diagram, $requester, $target);
 
         if ($collaborator->status === Collaborator::STATUS_REQUESTED) {
-            if (! $wasRequested) {
+            if ($collaborator->wasRecentlyCreated) {
                 $diagram->owner->notify(new DiagramAccessRequested($diagram, $target));
             }
         } elseif ($collaborator->wasRecentlyCreated || $collaborator->wasChanged('status')) {
@@ -136,8 +138,9 @@ class DiagramCollaboratorController extends Controller
 
         $this->authorize('manageCollaborators', $diagram);
 
-        $isPendingRequest = $this->collaborators->findForOrFail($diagram, $user)->status === Collaborator::STATUS_REQUESTED;
-        $collaborator = $this->collaborators->upsertApproved($diagram, $user);
+        $collaborator = $this->collaborators->findForOrFail($diagram, $user);
+        $isPendingRequest = $collaborator->status === Collaborator::STATUS_REQUESTED;
+        $this->collaborators->approve($collaborator);
 
         if ($isPendingRequest) {
             $user->notify(new DiagramAccessRequestResolved($diagram, approved: true));

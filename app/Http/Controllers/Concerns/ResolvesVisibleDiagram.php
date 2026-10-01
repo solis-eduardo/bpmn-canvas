@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Concerns;
 
 use App\Models\Diagram;
 use App\Repositories\DiagramRepository;
+use App\Repositories\ResolvedDiagram;
 
 /**
  * Shared lookup for Diagram controllers (Collaborators, Tags, Versions,
@@ -22,16 +23,16 @@ trait ResolvesVisibleDiagram
     }
 
     /**
-     * Like resolveDiagram(), but also accepts an old Slug; the flag says
-     * whether it was one.
-     *
-     * @return array{0: Diagram, 1: bool}
+     * Like resolveDiagram(), but also accepts an old Slug; `viaOldSlug`
+     * says whether it was one.
      */
-    private function resolveDiagramOrOldSlug(string $slug): array
+    private function resolveDiagramOrOldSlug(string $slug): ResolvedDiagram
     {
         $resolved = $this->diagrams->findBySlugOrOldSlug($slug) ?? abort(404);
 
-        return [$this->assertVisible($resolved->diagram), $resolved->viaOldSlug];
+        $this->assertVisible($resolved->diagram);
+
+        return $resolved;
     }
 
     private function assertVisible(Diagram $diagram): Diagram

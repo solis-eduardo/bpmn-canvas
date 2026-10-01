@@ -79,6 +79,13 @@ class WorkspaceRepository
         });
     }
 
+    public function changeOwner(Workspace $workspace, User $newOwner): Workspace
+    {
+        $workspace->update(['owner_id' => $newOwner->id]);
+
+        return $workspace;
+    }
+
     public function addMember(Workspace $workspace, User $user): Member
     {
         return $this->members->upsertManual($workspace, $user);

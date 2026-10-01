@@ -252,6 +252,21 @@ BPMN;
     }
 
     /**
+     * Hands the Lock straight to $newHolder in a single write, dropping any
+     * pending request (a Transfer answers it, or pre-empts it).
+     */
+    public function transferLockTo(User $newHolder): void
+    {
+        $this->forceFill([
+            'locked_by' => $newHolder->id,
+            'locked_at' => now(),
+            'last_heartbeat_at' => now(),
+            'lock_requested_by' => null,
+            'lock_requested_at' => null,
+        ])->save();
+    }
+
+    /**
      * True if there's a pending Lock request made by $user.
      */
     public function pendingLockRequestIsFrom(User $user): bool
