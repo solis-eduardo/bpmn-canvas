@@ -14,10 +14,10 @@ class ForkPolicy
      */
     public function create(User $user, Diagram $diagram, ?Workspace $workspace = null): bool
     {
-        if (! ($diagram->isEditableBy($user) || $user->is_admin)) {
+        if (! $diagram->isOpenableBy($user)) {
             return false;
         }
 
-        return $workspace === null || $workspace->members()->where('user_id', $user->id)->exists();
+        return $workspace === null || $workspace->hasMember($user);
     }
 }

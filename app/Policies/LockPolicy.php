@@ -17,7 +17,7 @@ class LockPolicy
      */
     public function view(User $user, Diagram $diagram): bool
     {
-        return $diagram->isEditableBy($user) || $user->is_admin;
+        return $diagram->isOpenableBy($user);
     }
 
     /**

@@ -17,7 +17,7 @@ class CollaboratorPolicy
      */
     public function grant(User $user, Diagram $diagram): bool
     {
-        return $diagram->isOwnedBy($user) || $user->is_admin;
+        return $diagram->isManagedBy($user);
     }
 
     /**

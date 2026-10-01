@@ -13,6 +13,6 @@ class WorkspaceOwnerPolicy
      */
     public function transfer(User $user, Workspace $workspace): bool
     {
-        return $workspace->isOwnedBy($user) || $user->is_admin;
+        return $workspace->isManagedBy($user);
     }
 }

@@ -14,8 +14,7 @@ class DiagramWorkspacePolicy
      */
     public function assign(User $user, Diagram $diagram, Workspace $workspace): bool
     {
-        return $diagram->isOwnedBy($user)
-            && $workspace->members()->where('user_id', $user->id)->exists();
+        return $diagram->isOwnedBy($user) && $workspace->hasMember($user);
     }
 
     /**
@@ -24,8 +23,7 @@ class DiagramWorkspacePolicy
      */
     public function remove(User $user, Diagram $diagram): bool
     {
-        return $diagram->isOwnedBy($user)
-            || $user->is_admin
+        return $diagram->isManagedBy($user)
             || ($diagram->workspace?->isOwnedBy($user) ?? false);
     }
 }

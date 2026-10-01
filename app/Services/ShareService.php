@@ -30,7 +30,7 @@ class ShareService
      */
     public function create(Diagram $diagram, User $creator, int $days = 7, bool $allowDownload = false, ?string $pinnedVersionId = null): Share
     {
-        if ($pinnedVersionId !== null && ! collect($this->versions->list($diagram))->contains('id', $pinnedVersionId)) {
+        if ($pinnedVersionId !== null && ! $this->versions->exists($diagram, $pinnedVersionId)) {
             throw ValidationException::withMessages([
                 'pinned_version_id' => 'The selected version does not exist.',
             ]);

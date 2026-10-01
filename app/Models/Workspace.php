@@ -54,6 +54,20 @@ class Workspace extends Model
         return $this->diagrams()->exists();
     }
 
+    public function hasMember(User $user): bool
+    {
+        return $this->members()->where('user_id', $user->id)->exists();
+    }
+
+    /**
+     * True if $user may manage this Workspace: its Workspace Owner or an
+     * Administrator.
+     */
+    public function isManagedBy(User $user): bool
+    {
+        return $this->isOwnedBy($user) || $user->is_admin;
+    }
+
     /**
      * True if $user is this Workspace's current Workspace Owner.
      */
