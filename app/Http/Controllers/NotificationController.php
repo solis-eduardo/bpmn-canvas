@@ -11,6 +11,7 @@ use App\Notifications\DiagramCollaboratorRemoved;
 use App\Notifications\WorkspaceMemberAdded;
 use App\Notifications\WorkspaceMemberRemoved;
 use App\Notifications\WorkspaceOwnershipTransferred;
+use App\Notifications\DiagramOwnershipTransferred;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -156,6 +157,9 @@ class NotificationController extends Controller
                 'diagram' => $notification->data['diagram_title'] ?? '',
             ]),
             DiagramCollaboratorRemoved::class => __('messages.notification_collaborator_removed', [
+                'diagram' => $notification->data['diagram_title'] ?? '',
+            ]),
+            DiagramOwnershipTransferred::class => __('messages.notification_diagram_ownership_transferred', [
                 'diagram' => $notification->data['diagram_title'] ?? '',
             ]),
             default => '',

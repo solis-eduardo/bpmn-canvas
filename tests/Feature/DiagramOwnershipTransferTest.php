@@ -52,6 +52,8 @@ class DiagramOwnershipTransferTest extends TestCase
             'status' => DiagramCollaborator::STATUS_APPROVED,
         ]);
 
+        $this->assertNewOwnerIsNotified($newOwner, $diagram);
+
         // The recipient has full access immediately, as Diagram Owner.
         $this->actingAs($newOwner)->get("/diagrams/{$diagram->slug}")->assertOk();
         // The previous Owner kept access too, now as a Collaborator.
@@ -103,6 +105,8 @@ class DiagramOwnershipTransferTest extends TestCase
             'user_id' => $owner->id,
             'status' => DiagramCollaborator::STATUS_APPROVED,
         ]);
+
+        $this->assertNewOwnerIsNotified($newOwner, $diagram);
     }
 
     public function test_an_administrator_can_transfer_ownership_and_the_previous_owner_gives_up_access(): void
@@ -219,5 +223,20 @@ class DiagramOwnershipTransferTest extends TestCase
         ]);
 
         $this->assertEmailEnumerationPrevented($responseWithExistingEmail, $responseWithNonExistingEmail, 200);
+    }
+
+    private function assertNewOwnerIsNotified(User $newOwner, Diagram $diagram): void
+    {
+        $notification = $newOwner->fresh()->notifications->sole();
+
+        $this->actingAs($newOwner)->getJson('/notifications')
+            ->assertOk()
+            ->assertJsonPath('0.message', __('messages.notification_diagram_ownership_transferred', [
+                'diagram' => $diagram->title,
+            ]))
+            ->assertJsonPath('0.url', route('notifications.read', $notification->id));
+
+        $this->actingAs($newOwner)->get("/notifications/{$notification->id}/read")
+            ->assertRedirect(route('diagrams.show', $diagram->slug).'?open-panel=collaborators');
     }
 }
