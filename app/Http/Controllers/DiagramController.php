@@ -324,6 +324,18 @@ class DiagramController extends Controller
 
         $this->authorize('view', $diagram);
 
+        $data = $request->validate([
+            'workspace_id' => ['nullable', 'integer', 'exists:workspaces,id'],
+        ]);
+
+        $workspace = null;
+        $workspaceId = $data['workspace_id'] ?? null;
+
+        if ($workspaceId !== null) {
+            $workspace = Workspace::findOrFail($workspaceId);
+            abort_unless($workspace->hasMember($request->user()), 422, __('messages.must_be_workspace_member'));
+        }
+
         // The "diagrams" disk is configured with `throw => false`, so a
         // failed read comes back as null rather than an exception. Catch
         // that explicitly: silently coercing null/false into an empty
@@ -342,6 +354,7 @@ class DiagramController extends Controller
             'slug' => $newSlug,
             'author_id' => $request->user()->id,
             'owner_id' => $request->user()->id,
+            'workspace_id' => $workspace?->id,
             'disk_path' => $newSlug.'/diagram.bpmn',
             'forked_from_id' => $diagram->id,
         ], $content);
