@@ -4,6 +4,7 @@ namespace App\Actions\Workspaces;
 
 use App\Models\User;
 use App\Models\Workspace;
+use App\Notifications\WorkspaceOwnershipTransferred;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -23,8 +24,11 @@ class TransferOwnership
     public function __invoke(Workspace $workspace, User $newOwner): void
     {
         DB::transaction(function () use ($workspace, $newOwner) {
-            $workspace->addMember($newOwner);
+            $workspace->addMember($newOwner, notify: false);
+
             $workspace->update(['owner_id' => $newOwner->id]);
         });
+
+        $newOwner->notify(new WorkspaceOwnershipTransferred($workspace));
     }
 }

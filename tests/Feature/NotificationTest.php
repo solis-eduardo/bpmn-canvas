@@ -4,7 +4,11 @@ namespace Tests\Feature;
 
 use App\Models\Diagram;
 use App\Models\User;
+use App\Models\Workspace;
 use App\Notifications\DiagramAccessRequested;
+use App\Notifications\WorkspaceMemberAdded;
+use App\Notifications\WorkspaceMemberRemoved;
+use App\Notifications\WorkspaceOwnershipTransferred;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -131,6 +135,60 @@ class NotificationTest extends TestCase
             ->assertJson(['marked' => true]);
 
         $this->assertSame(0, $owner->fresh()->unreadNotifications->count());
+    }
+
+    public function test_adding_a_member_notifies_that_user(): void
+    {
+        $owner = User::factory()->create();
+        $newMember = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $workspace->addMember($owner);
+
+        $this->actingAs($owner)->post("/workspaces/{$workspace->id}/members", [
+            'email' => $newMember->email,
+        ])->assertRedirect();
+
+        $this->assertCount(1, $newMember->fresh()->notifications);
+
+        $notification = $newMember->fresh()->notifications->first();
+        $this->assertSame(WorkspaceMemberAdded::class, $notification->type);
+        $this->assertSame($workspace->id, $notification->data['workspace_id']);
+    }
+
+    public function test_removing_a_member_notifies_that_user(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $workspace->addMember($owner, notify: false);
+        $workspace->addMember($member, notify: false);
+
+        $this->actingAs($owner)->delete("/workspaces/{$workspace->id}/members/{$member->id}")
+            ->assertRedirect();
+
+        $this->assertCount(1, $member->fresh()->notifications);
+
+        $notification = $member->fresh()->notifications->first();
+        $this->assertSame(WorkspaceMemberRemoved::class, $notification->type);
+        $this->assertSame($workspace->id, $notification->data['workspace_id']);
+    }
+
+    public function test_transferring_workspace_ownership_notifies_the_new_owner(): void
+    {
+        $owner = User::factory()->create();
+        $newOwner = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $workspace->addMember($owner);
+
+        $this->actingAs($owner)->put("/workspaces/{$workspace->id}/owner", [
+            'user_id' => $newOwner->id,
+        ])->assertRedirect();
+
+        $this->assertCount(1, $newOwner->fresh()->notifications);
+
+        $notification = $newOwner->fresh()->notifications->first();
+        $this->assertSame(WorkspaceOwnershipTransferred::class, $notification->type);
+        $this->assertSame($workspace->id, $notification->data['workspace_id']);
     }
 
     public function test_a_user_cannot_mark_or_view_another_users_notification(): void
