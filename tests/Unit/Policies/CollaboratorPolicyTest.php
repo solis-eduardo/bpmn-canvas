@@ -1,0 +1,49 @@
+<?php
+
+namespace Tests\Unit\Policies;
+
+use App\Models\Collaborator;
+use App\Models\Diagram;
+use App\Models\User;
+use App\Policies\CollaboratorPolicy;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class CollaboratorPolicyTest extends TestCase
+{
+    use RefreshDatabase;
+
+    public function test_grant_and_revoke_are_for_the_diagram_owner_and_administrators(): void
+    {
+        $diagram = Diagram::factory()->create();
+        $policy = new CollaboratorPolicy;
+        $admin = User::factory()->create(['is_admin' => true]);
+        $stranger = User::factory()->create();
+        $collaborator = User::factory()->create();
+        Collaborator::create(['diagram_id' => $diagram->id, 'user_id' => $collaborator->id, 'status' => Collaborator::STATUS_APPROVED]);
+
+        foreach (['grant', 'revoke'] as $ability) {
+            $this->assertTrue($policy->$ability($diagram->owner, $diagram), $ability);
+            $this->assertTrue($policy->$ability($admin, $diagram), $ability);
+            $this->assertFalse($policy->$ability($collaborator, $diagram), $ability);
+            $this->assertFalse($policy->$ability($stranger, $diagram), $ability);
+        }
+    }
+
+    public function test_only_those_without_access_can_request_it(): void
+    {
+        $diagram = Diagram::factory()->create();
+        $policy = new CollaboratorPolicy;
+        $stranger = User::factory()->create();
+        $pending = User::factory()->create();
+        Collaborator::create(['diagram_id' => $diagram->id, 'user_id' => $pending->id, 'status' => Collaborator::STATUS_REQUESTED]);
+        $approved = User::factory()->create();
+        Collaborator::create(['diagram_id' => $diagram->id, 'user_id' => $approved->id, 'status' => Collaborator::STATUS_APPROVED]);
+
+        $this->assertTrue($policy->requestAccess($stranger, $diagram));
+        $this->assertTrue($policy->requestAccess($pending, $diagram));
+        $this->assertFalse($policy->requestAccess($approved, $diagram));
+        $this->assertFalse($policy->requestAccess($diagram->owner, $diagram));
+        $this->assertFalse($policy->requestAccess(User::factory()->create(['is_admin' => true]), $diagram));
+    }
+}

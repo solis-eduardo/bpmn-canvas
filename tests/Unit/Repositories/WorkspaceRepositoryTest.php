@@ -94,4 +94,14 @@ class WorkspaceRepositoryTest extends TestCase
 
         $this->assertSame([$finance->id], $linked->pluck('id')->all());
     }
+
+    public function test_change_owner_sets_the_workspace_owner(): void
+    {
+        $workspace = Workspace::factory()->create();
+        $newOwner = User::factory()->create();
+
+        (new WorkspaceRepository(new MemberRepository))->changeOwner($workspace, $newOwner);
+
+        $this->assertSame($newOwner->id, $workspace->fresh()->owner_id);
+    }
 }

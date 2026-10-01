@@ -13,7 +13,9 @@ use App\Repositories\DiagramRepository;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use RuntimeException;
 use Tests\TestCase;
 
 class DiagramRepositoryTest extends TestCase
@@ -205,5 +207,43 @@ class DiagramRepositoryTest extends TestCase
         $this->assertEquals(new DiagramListCriteria(search: 'bill', tag: 'hr', workspaceId: 7, owner: true, recent: true), $criteria);
         $this->assertTrue(DiagramListCriteria::fromRequest(Request::create('/diagrams', 'GET', ['workspace' => 'none']))->withoutWorkspace);
         $this->assertNull(DiagramListCriteria::fromRequest(Request::create('/diagrams', 'GET', ['workspace' => 'all']))->workspaceId);
+    }
+
+    public function test_content_of_reads_the_file_and_fails_loudly_when_missing(): void
+    {
+        Storage::fake('diagrams');
+        $diagram = Diagram::factory()->create();
+        Storage::disk('diagrams')->put($diagram->disk_path, '<bpmn/>');
+
+        $this->assertSame('<bpmn/>', $this->repository->contentOf($diagram));
+
+        Storage::disk('diagrams')->delete($diagram->disk_path);
+        $this->expectException(RuntimeException::class);
+
+        $this->repository->contentOf($diagram);
+    }
+
+    public function test_change_owner_leaves_the_author_alone(): void
+    {
+        $diagram = Diagram::factory()->create();
+        $author = $diagram->author_id;
+        $newOwner = User::factory()->create();
+
+        $this->repository->changeOwner($diagram, $newOwner);
+
+        $this->assertSame($newOwner->id, $diagram->fresh()->owner_id);
+        $this->assertSame($author, $diagram->fresh()->author_id);
+    }
+
+    public function test_place_in_workspace_sets_and_clears_the_workspace(): void
+    {
+        $diagram = Diagram::factory()->create();
+        $workspace = Workspace::factory()->create();
+
+        $this->repository->placeInWorkspace($diagram, $workspace);
+        $this->assertSame($workspace->id, $diagram->fresh()->workspace_id);
+
+        $this->repository->placeInWorkspace($diagram, null);
+        $this->assertNull($diagram->fresh()->workspace_id);
     }
 }
