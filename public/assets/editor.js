@@ -134,7 +134,7 @@
   const lockRequestBanner = $('lock-request-banner');
 
   // The Lock holder's only signal that someone else wants the Lock is this
-  // same heartbeat poll (see DiagramController::heartbeat) — no separate
+  // same heartbeat poll (see LockController::update) — no separate
   // poll loop is started just for this (issue #9).
   function showLockRequestedNotice(requestedByName) {
     if (!lockRequestBanner) return;
@@ -151,7 +151,7 @@
   }
 
   const heartbeatInterval = setInterval(() => {
-    api('POST', heartbeatUrl)
+    api('PATCH', heartbeatUrl)
       .then(res => res.json())
       .then(data => showLockRequestedNotice(data.lock_requested_by))
       .catch(e => console.error(e));

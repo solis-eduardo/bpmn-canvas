@@ -26,4 +26,17 @@ final class LockState
     {
         return $this->holder?->id === $user->id;
     }
+
+    /**
+     * @return array{held: bool, holder: array{id: int, name: string}|null, requested_by: string|null, requested_at: string|null}
+     */
+    public function toArray(): array
+    {
+        return [
+            'held' => $this->isHeld(),
+            'holder' => $this->holder ? ['id' => $this->holder->id, 'name' => $this->holder->name] : null,
+            'requested_by' => $this->requester?->name,
+            'requested_at' => $this->requestedAt?->toIso8601String(),
+        ];
+    }
 }

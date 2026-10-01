@@ -5,17 +5,22 @@ use App\Http\Controllers\AccountNotificationController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\KeycloakLoginController;
 use App\Http\Controllers\Auth\LoginController;
-use App\Http\Controllers\DiagramCollaboratorController;
+use App\Http\Controllers\CollaboratorController;
 use App\Http\Controllers\DiagramController;
+use App\Http\Controllers\DiagramOwnerController;
 use App\Http\Controllers\DiagramTagController;
+use App\Http\Controllers\DiagramWorkspaceController;
+use App\Http\Controllers\ForkController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\LockController;
+use App\Http\Controllers\MemberController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PublicShareController;
 use App\Http\Controllers\ShareController;
 use App\Http\Controllers\VersionController;
 use App\Http\Controllers\WorkspaceController;
-use App\Http\Controllers\WorkspaceMemberController;
+use App\Http\Controllers\WorkspaceOwnerController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -66,23 +71,25 @@ Route::middleware('auth')->group(function () {
     Route::put('/diagrams/{slug}', [DiagramController::class, 'rename'])->name('diagrams.rename');
     Route::delete('/diagrams/{slug}', [DiagramController::class, 'destroy'])->name('diagrams.destroy');
 
-    Route::get('/diagrams/{slug}/collaborators', [DiagramCollaboratorController::class, 'index'])->name('diagrams.collaborators.index');
-    Route::post('/diagrams/{slug}/collaborators', [DiagramCollaboratorController::class, 'store'])->name('diagrams.collaborators.store');
-    Route::put('/diagrams/{slug}/collaborators/{user}', [DiagramCollaboratorController::class, 'update'])->name('diagrams.collaborators.update');
-    Route::delete('/diagrams/{slug}/collaborators/{user}', [DiagramCollaboratorController::class, 'destroy'])->name('diagrams.collaborators.destroy');
+    Route::get('/diagrams/{slug}/collaborators', [CollaboratorController::class, 'index'])->name('diagrams.collaborators.index');
+    Route::post('/diagrams/{slug}/collaborators', [CollaboratorController::class, 'store'])->name('diagrams.collaborators.store');
+    Route::put('/diagrams/{slug}/collaborators/{user}', [CollaboratorController::class, 'update'])->name('diagrams.collaborators.update');
+    Route::delete('/diagrams/{slug}/collaborators/{user}', [CollaboratorController::class, 'destroy'])->name('diagrams.collaborators.destroy');
 
     Route::post('/diagrams/{slug}/tags', [DiagramTagController::class, 'store'])->name('diagrams.tags.store');
     Route::delete('/diagrams/{slug}/tags/{tag}', [DiagramTagController::class, 'destroy'])->name('diagrams.tags.destroy');
 
-    Route::put('/diagrams/{slug}/owner', [DiagramController::class, 'transferOwnership'])->name('diagrams.owner.transfer');
+    Route::put('/diagrams/{slug}/owner', [DiagramOwnerController::class, 'update'])->name('diagrams.owner.transfer');
 
-    Route::put('/diagrams/{slug}/workspace', [DiagramController::class, 'putInWorkspace'])->name('diagrams.workspace.store');
-    Route::delete('/diagrams/{slug}/workspace', [DiagramController::class, 'removeFromWorkspace'])->name('diagrams.workspace.destroy');
+    Route::put('/diagrams/{slug}/workspace', [DiagramWorkspaceController::class, 'update'])->name('diagrams.workspace.store');
+    Route::delete('/diagrams/{slug}/workspace', [DiagramWorkspaceController::class, 'destroy'])->name('diagrams.workspace.destroy');
 
-    Route::post('/diagrams/{slug}/heartbeat', [DiagramController::class, 'heartbeat'])->name('diagrams.heartbeat');
-    Route::post('/diagrams/{slug}/lock/request', [DiagramController::class, 'requestLock'])->name('diagrams.lock.request');
-    Route::delete('/diagrams/{slug}/lock', [DiagramController::class, 'unlock'])->name('diagrams.unlock');
-    Route::post('/diagrams/{slug}/fork', [DiagramController::class, 'fork'])->name('diagrams.fork');
+    Route::get('/diagrams/{slug}/lock', [LockController::class, 'show'])->name('diagrams.lock.show');
+    Route::post('/diagrams/{slug}/lock', [LockController::class, 'store'])->name('diagrams.lock.store');
+    Route::patch('/diagrams/{slug}/lock', [LockController::class, 'update'])->name('diagrams.lock.update');
+    Route::put('/diagrams/{slug}/lock', [LockController::class, 'transfer'])->name('diagrams.lock.transfer');
+    Route::delete('/diagrams/{slug}/lock', [LockController::class, 'destroy'])->name('diagrams.lock.destroy');
+    Route::post('/diagrams/{slug}/fork', [ForkController::class, 'store'])->name('diagrams.fork');
 
     Route::get('/diagrams/{slug}/versions', [VersionController::class, 'versions'])->name('diagrams.versions');
     Route::get('/diagrams/{slug}/versions/compare', [VersionController::class, 'compareVersions'])->name('diagrams.versions.compare');
@@ -98,11 +105,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/workspaces', [WorkspaceController::class, 'index'])->name('workspaces.index');
     Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');
     Route::put('/workspaces/{workspace}', [WorkspaceController::class, 'update'])->name('workspaces.update');
-    Route::put('/workspaces/{workspace}/owner', [WorkspaceController::class, 'transferOwnership'])->name('workspaces.owner.transfer');
+    Route::put('/workspaces/{workspace}/owner', [WorkspaceOwnerController::class, 'update'])->name('workspaces.owner.transfer');
     Route::put('/workspaces/{workspace}/keycloak-group', [WorkspaceController::class, 'updateKeycloakGroup'])->name('workspaces.keycloak-group.update');
     Route::delete('/workspaces/{workspace}', [WorkspaceController::class, 'destroy'])->name('workspaces.destroy');
 
-    Route::post('/workspaces/{workspace}/members', [WorkspaceMemberController::class, 'store'])->name('workspaces.members.store');
-    Route::delete('/workspaces/{workspace}/members/{user}', [WorkspaceMemberController::class, 'destroy'])->name('workspaces.members.destroy');
-    Route::delete('/workspaces/{workspace}/leave', [WorkspaceMemberController::class, 'leave'])->name('workspaces.leave');
+    Route::post('/workspaces/{workspace}/members', [MemberController::class, 'store'])->name('workspaces.members.store');
+    Route::delete('/workspaces/{workspace}/members/{user}', [MemberController::class, 'destroy'])->name('workspaces.members.destroy');
+    Route::delete('/workspaces/{workspace}/leave', [MemberController::class, 'leave'])->name('workspaces.leave');
 });

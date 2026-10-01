@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers\Auth;
 
-use App\Actions\Workspaces\SyncKeycloakGroupMemberships;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Repositories\UserRepository;
+use App\Services\MemberService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -28,7 +28,7 @@ class KeycloakLoginController extends Controller
         return Socialite::driver('keycloak')->redirect();
     }
 
-    public function callback(Request $request, SyncKeycloakGroupMemberships $syncGroups): RedirectResponse
+    public function callback(Request $request, MemberService $members): RedirectResponse
     {
         try {
             $socialiteUser = Socialite::driver('keycloak')->user();
@@ -48,7 +48,7 @@ class KeycloakLoginController extends Controller
 
         $user->save();
         $groups = $this->keycloakGroups($tokenPayload);
-        $this->syncWorkspaceMemberships($user, $groups, $syncGroups);
+        $this->syncWorkspaceMemberships($user, $groups, $members);
 
         Auth::login($user);
 
@@ -125,7 +125,7 @@ class KeycloakLoginController extends Controller
     private function syncWorkspaceMemberships(
         User $user,
         ?array $groups,
-        SyncKeycloakGroupMemberships $syncGroups,
+        MemberService $members,
     ): void {
         if ($groups === null) {
             Log::warning('Keycloak token is missing a valid groups claim; workspace membership sync was skipped.', [
@@ -135,7 +135,7 @@ class KeycloakLoginController extends Controller
             return;
         }
 
-        $syncGroups($user, $groups);
+        $members->syncFromKeycloakGroups($user, $groups);
     }
 
     /**

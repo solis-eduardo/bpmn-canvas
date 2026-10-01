@@ -39,7 +39,7 @@
 
     <div
         id="lock-request"
-        data-request-url="{{ route('diagrams.lock.request', $diagram->slug) }}"
+        data-request-url="{{ route('diagrams.lock.store', $diagram->slug) }}"
         data-show-url="{{ route('diagrams.show', $diagram->slug) }}"
     >
         <button type="button" id="btn-request-lock">{{ __('messages.request_the_lock') }}</button>
