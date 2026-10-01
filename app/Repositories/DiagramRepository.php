@@ -104,15 +104,25 @@ class DiagramRepository
         ]);
 
         if ($user->is_admin) {
-            $query->whereRaw('1 = 0');
-        } else {
+            return $this->titleContaining($query->whereRaw('1 = 0'), $search);
+        }
+
+        return $this->titleContaining(
             $query->whereNull('workspace_id')
                 ->where('owner_id', '!=', $user->id)
                 ->whereDoesntHave('collaborators', fn ($collaborators) => $collaborators
                     ->where('user_id', $user->id)
-                    ->where('status', Collaborator::STATUS_APPROVED));
-        }
+                    ->where('status', Collaborator::STATUS_APPROVED)),
+            $search,
+        );
+    }
 
+    /**
+     * @param  Builder<Diagram>  $query
+     * @return Builder<Diagram>
+     */
+    private function titleContaining(Builder $query, string $search): Builder
+    {
         return $query->when($search !== '', fn (Builder $query) => $query->where('title', 'like', '%'.$search.'%'));
     }
 

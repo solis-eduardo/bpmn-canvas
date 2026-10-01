@@ -153,7 +153,7 @@ BPMN;
      */
     public function scopeOpenableBy(Builder $query, User $user): Builder
     {
-        return $user->is_admin ? $query : $query->editableBy($user);
+        return $user->is_admin ? $query : $this->scopeEditableBy($query, $user);
     }
 
     /**
