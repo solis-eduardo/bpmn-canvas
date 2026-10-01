@@ -3,7 +3,11 @@
 namespace App\Http\Controllers;
 
 use App\Models\Diagram;
+use App\Models\Workspace;
 use App\Notifications\DiagramAccessRequested;
+use App\Notifications\WorkspaceMemberAdded;
+use App\Notifications\WorkspaceMemberRemoved;
+use App\Notifications\WorkspaceOwnershipTransferred;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -73,11 +77,17 @@ class NotificationController extends Controller
 
         $diagram = Diagram::find($record->data['diagram_id'] ?? null);
 
-        if (! $diagram) {
-            return redirect()->route('diagrams.index');
+        if ($diagram) {
+            return redirect(route('diagrams.show', $diagram->slug).'?open-panel=collaborators');
         }
 
-        return redirect(route('diagrams.show', $diagram->slug).'?open-panel=collaborators');
+        $workspace = Workspace::find($record->data['workspace_id'] ?? null);
+
+        if ($workspace) {
+            return redirect()->route('workspaces.index');
+        }
+
+        return redirect()->route('diagrams.index');
     }
 
     /**
@@ -120,6 +130,15 @@ class NotificationController extends Controller
             DiagramAccessRequested::class => __('messages.notification_requested_access', [
                 'name' => $notification->data['requester_name'] ?? '',
                 'diagram' => $notification->data['diagram_title'] ?? '',
+            ]),
+            WorkspaceMemberAdded::class => __('messages.notification_workspace_added', [
+                'workspace' => $notification->data['workspace_name'] ?? '',
+            ]),
+            WorkspaceMemberRemoved::class => __('messages.notification_workspace_removed', [
+                'workspace' => $notification->data['workspace_name'] ?? '',
+            ]),
+            WorkspaceOwnershipTransferred::class => __('messages.notification_workspace_ownership_transferred', [
+                'workspace' => $notification->data['workspace_name'] ?? '',
             ]),
             default => '',
         };
