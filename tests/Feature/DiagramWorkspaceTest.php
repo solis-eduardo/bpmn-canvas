@@ -273,4 +273,23 @@ class DiagramWorkspaceTest extends TestCase
             ->assertSee($outsideDiagram->title)
             ->assertDontSee($workspaceDiagram->title);
     }
+
+    public function test_an_unknown_workspace_is_refused_like_one_the_user_is_not_a_member_of(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+        $foreign = Workspace::factory()->create();
+
+        $known = $this->actingAs($owner)->putJson("/diagrams/{$diagram->slug}/workspace", ['workspace_id' => $foreign->id]);
+        $unknown = $this->actingAs($owner)->putJson("/diagrams/{$diagram->slug}/workspace", ['workspace_id' => 999999]);
+
+        $known->assertForbidden();
+        $unknown->assertForbidden();
+        $this->assertSame($known->json('message'), $unknown->json('message'));
+
+        $this->actingAs($owner)
+            ->post("/diagrams/{$diagram->slug}/fork", ['workspace_id' => 999999])
+            ->assertForbidden();
+        $this->assertDatabaseMissing('diagrams', ['forked_from_id' => $diagram->id]);
+    }
 }

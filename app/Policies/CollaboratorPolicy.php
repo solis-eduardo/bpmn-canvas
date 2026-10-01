@@ -22,11 +22,13 @@ class CollaboratorPolicy
 
     /**
      * Add $target as a Collaborator: whoever can grant access may name
-     * anyone; everyone else may only name themselves (a request).
+     * anyone; everyone else may only name themselves (a request). A null
+     * $target is an email that matched nobody, which only those who can
+     * grant may try.
      */
-    public function invite(User $user, Diagram $diagram, User $target): bool
+    public function invite(User $user, Diagram $diagram, ?User $target): bool
     {
-        return $this->grant($user, $diagram) || $user->is($target);
+        return $this->grant($user, $diagram) || ($target !== null && $user->is($target));
     }
 
     /**

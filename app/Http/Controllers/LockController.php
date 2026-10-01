@@ -70,10 +70,10 @@ class LockController extends Controller
         $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $data = $request->validate([
-            'user_id' => ['required', 'integer', 'exists:users,id'],
+            'user_id' => ['required', 'integer'],
         ]);
 
-        $newHolder = $this->users->findOrFail($data['user_id']);
+        $newHolder = $this->users->find($data['user_id']);
 
         $this->authorize('lock.transfer', [$diagram, $newHolder]);
 

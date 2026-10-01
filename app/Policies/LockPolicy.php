@@ -39,12 +39,15 @@ class LockPolicy
 
     /**
      * Transfer the Lock to $newHolder: the current holder or an
-     * Administrator, to a User who is eligible to edit. Nothing to transfer
+     * Administrator, to a User who is eligible to edit. A null $newHolder (an
+     * ID that matched nobody) is refused like any other ineligible one, so the
+     * answer never tells whether the ID exists. Nothing to transfer
      * when the Lock is free.
      */
-    public function transfer(User $user, Diagram $diagram, User $newHolder): bool
+    public function transfer(User $user, Diagram $diagram, ?User $newHolder): bool
     {
-        return $diagram->hasActiveLock()
+        return $newHolder !== null
+            && $diagram->hasActiveLock()
             && $this->canActAsHolder($user, $diagram)
             && $diagram->isEditableBy($newHolder);
     }

@@ -129,4 +129,11 @@ class LockPolicyTest extends TestCase
         $this->assertTrue($this->holder->can('lock.transfer', [$locked, $this->collaborator]));
         $this->assertFalse($this->stranger->can('lock.release', $locked));
     }
+
+    public function test_a_transfer_to_nobody_is_refused(): void
+    {
+        $locked = $this->lockedByOwner();
+
+        $this->assertFalse($this->policy->transfer($this->holder, $locked, null));
+    }
 }
