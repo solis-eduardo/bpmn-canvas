@@ -55,6 +55,15 @@ class WorkspaceRepository
     }
 
     /**
+     * @param  list<string>  $groups
+     * @return Collection<int, Workspace>
+     */
+    public function linkedToKeycloakGroups(array $groups): Collection
+    {
+        return Workspace::whereIn('keycloak_group', $groups)->get();
+    }
+
+    /**
      * Creates the Workspace owned by $owner and adds them as its first
      * Member, atomically: a Workspace never exists without its Owner being
      * a Member.

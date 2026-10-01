@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Diagram;
 use App\Models\User;
+use App\Repositories\DiagramRepository;
 use App\Repositories\VersionRepository;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Storage;
@@ -21,7 +22,7 @@ class DiagramFactory extends Factory
     public function definition(): array
     {
         $title = fake()->unique()->words(3, true);
-        $slug = Diagram::uniqueSlug($title);
+        $slug = app(DiagramRepository::class)->uniqueSlug($title);
 
         return [
             'title' => $title,

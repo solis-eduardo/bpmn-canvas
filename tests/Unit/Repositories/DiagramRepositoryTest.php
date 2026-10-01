@@ -8,9 +8,12 @@ use App\Models\DiagramOldSlug;
 use App\Models\Tag;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Repositories\DiagramListCriteria;
 use App\Repositories\DiagramRepository;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class DiagramRepositoryTest extends TestCase
@@ -47,13 +50,13 @@ class DiagramRepositoryTest extends TestCase
         $diagram = Diagram::factory()->create(['slug' => 'current']);
         DiagramOldSlug::create(['diagram_id' => $diagram->id, 'old_slug' => 'former']);
 
-        [$byCurrent, $currentIsOld] = $this->repository->findBySlugOrOldSlug('current');
-        [$byOld, $oldIsOld] = $this->repository->findBySlugOrOldSlug('former');
+        $byCurrent = $this->repository->findBySlugOrOldSlug('current');
+        $byOld = $this->repository->findBySlugOrOldSlug('former');
 
-        $this->assertTrue($byCurrent->is($diagram));
-        $this->assertFalse($currentIsOld);
-        $this->assertTrue($byOld->is($diagram));
-        $this->assertTrue($oldIsOld);
+        $this->assertTrue($byCurrent->diagram->is($diagram));
+        $this->assertFalse($byCurrent->viaOldSlug);
+        $this->assertTrue($byOld->diagram->is($diagram));
+        $this->assertTrue($byOld->viaOldSlug);
         $this->assertNull($this->repository->findBySlugOrOldSlug('missing'));
     }
 
@@ -91,24 +94,16 @@ class DiagramRepositoryTest extends TestCase
     public function test_unique_slug_falls_back_to_a_long_suffix_when_short_ones_keep_colliding(): void
     {
         Diagram::factory()->create(['slug' => 'my-process']);
-        // Every short suffix is "taken" by pre-seeding a repository whose
-        // collision check always answers yes until the long fallback.
-        $repository = new class extends DiagramRepository
-        {
-            public int $checks = 0;
+        Diagram::factory()->create(['slug' => 'my-process-aaaa']);
+        Str::createRandomStringsUsing(fn (int $length) => str_repeat('a', $length));
 
-            protected function slugIsTaken(string $slug, ?int $ignoreDiagramId): bool
-            {
-                $this->checks++;
+        try {
+            $slug = $this->repository->uniqueSlug('My Process');
+        } finally {
+            Str::createRandomStringsNormally();
+        }
 
-                return strlen($slug) < strlen('my-process-') + 12;
-            }
-        };
-
-        $slug = $repository->uniqueSlug('My Process');
-
-        $this->assertMatchesRegularExpression('/^my-process-[a-z0-9]{12}$/', $slug);
-        $this->assertSame(21, $repository->checks);
+        $this->assertSame('my-process-aaaaaaaaaaaa', $slug);
     }
 
     public function test_recent_for_returns_the_users_most_recent_editable_diagrams(): void
@@ -136,7 +131,7 @@ class DiagramRepositoryTest extends TestCase
         $mine = Diagram::factory()->create(['owner_id' => $user->id]);
         Diagram::factory()->create();
 
-        $ids = $this->repository->visibleListQuery($user)->pluck('id')->all();
+        $ids = $this->repository->visibleListQuery($user, new DiagramListCriteria)->pluck('id')->all();
 
         $this->assertSame([$mine->id], $ids);
     }
@@ -152,13 +147,13 @@ class DiagramRepositoryTest extends TestCase
         $tagged = Diagram::factory()->create(['owner_id' => $user->id]);
         $tagged->tags()->attach(Tag::create(['name' => 'hr']));
 
-        $ids = fn (array $criteria) => $this->repository->visibleListQuery($user, $criteria)->pluck('id')->all();
+        $ids = fn (DiagramListCriteria $criteria) => $this->repository->visibleListQuery($user, $criteria)->pluck('id')->all();
 
-        $this->assertSame([$inWorkspace->id], $ids(['workspace' => (string) $workspace->id, 'search' => 'bill']));
-        $this->assertEqualsCanonicalizing([$plain->id, $locked->id, $tagged->id], $ids(['workspace' => 'none']));
-        $this->assertSame([$locked->id], $ids(['locked' => true]));
-        $this->assertSame([$tagged->id], $ids(['tag' => 'hr']));
-        $this->assertCount(4, $ids(['recent' => true]));
+        $this->assertSame([$inWorkspace->id], $ids(new DiagramListCriteria(search: 'bill', workspaceId: $workspace->id)));
+        $this->assertEqualsCanonicalizing([$plain->id, $locked->id, $tagged->id], $ids(new DiagramListCriteria(withoutWorkspace: true)));
+        $this->assertSame([$locked->id], $ids(new DiagramListCriteria(locked: true)));
+        $this->assertSame([$tagged->id], $ids(new DiagramListCriteria(tag: 'hr')));
+        $this->assertCount(4, $ids(new DiagramListCriteria(recent: true)));
     }
 
     public function test_visible_list_query_treats_owner_and_collaborator_as_a_union(): void
@@ -168,9 +163,9 @@ class DiagramRepositoryTest extends TestCase
         $collaborated = Diagram::factory()->create();
         Collaborator::create(['diagram_id' => $collaborated->id, 'user_id' => $user->id, 'status' => Collaborator::STATUS_APPROVED]);
 
-        $both = $this->repository->visibleListQuery($user, ['owner' => true, 'collaborator' => true])->pluck('id')->all();
-        $onlyOwner = $this->repository->visibleListQuery($user, ['owner' => true])->pluck('id')->all();
-        $onlyCollaborator = $this->repository->visibleListQuery($user, ['collaborator' => true])->pluck('id')->all();
+        $both = $this->repository->visibleListQuery($user, new DiagramListCriteria(owner: true, collaborator: true))->pluck('id')->all();
+        $onlyOwner = $this->repository->visibleListQuery($user, new DiagramListCriteria(owner: true))->pluck('id')->all();
+        $onlyCollaborator = $this->repository->visibleListQuery($user, new DiagramListCriteria(collaborator: true))->pluck('id')->all();
 
         $this->assertEqualsCanonicalizing([$owned->id, $collaborated->id], $both);
         $this->assertSame([$owned->id], $onlyOwner);
@@ -199,5 +194,16 @@ class DiagramRepositoryTest extends TestCase
         Diagram::factory()->create();
 
         $this->assertCount(0, $this->repository->discoveryQuery($admin)->get());
+    }
+
+    public function test_criteria_are_read_from_the_query_string(): void
+    {
+        $request = Request::create('/diagrams', 'GET', ['q' => ' bill ', 'tag' => 'hr', 'workspace' => '7', 'owner' => '1', 'recent' => '1']);
+
+        $criteria = DiagramListCriteria::fromRequest($request);
+
+        $this->assertEquals(new DiagramListCriteria(search: 'bill', tag: 'hr', workspaceId: 7, owner: true, recent: true), $criteria);
+        $this->assertTrue(DiagramListCriteria::fromRequest(Request::create('/diagrams', 'GET', ['workspace' => 'none']))->withoutWorkspace);
+        $this->assertNull(DiagramListCriteria::fromRequest(Request::create('/diagrams', 'GET', ['workspace' => 'all']))->workspaceId);
     }
 }

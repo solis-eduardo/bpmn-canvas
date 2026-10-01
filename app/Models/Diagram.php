@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Models\Concerns\FiltersDiagramList;
 use App\Models\Concerns\HasTags;
-use App\Repositories\DiagramRepository;
 use Database\Factories\DiagramFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -149,6 +148,15 @@ BPMN;
     }
 
     /**
+     * Restricts a query to Diagrams $user can open: all of them for an
+     * Administrator, otherwise only those they can edit.
+     */
+    public function scopeOpenableBy(Builder $query, User $user): Builder
+    {
+        return $user->is_admin ? $query : $query->editableBy($user);
+    }
+
+    /**
      * True if $user can see this Diagram exists at all (CONTEXT.md,
      * "Workspace"; issue #28): a Diagram outside any Workspace is visible
      * to everyone, an Administrator sees every Diagram, and a hidden
@@ -283,14 +291,6 @@ BPMN;
     public function shares(): HasMany
     {
         return $this->hasMany(Share::class);
-    }
-
-    /**
-     * Kept for existing callers; the logic lives in DiagramRepository.
-     */
-    public static function uniqueSlug(string $name, ?int $ignoreDiagramId = null): string
-    {
-        return app(DiagramRepository::class)->uniqueSlug($name, $ignoreDiagramId);
     }
 
     /**

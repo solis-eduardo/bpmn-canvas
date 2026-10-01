@@ -4,12 +4,17 @@ namespace App\Http\Controllers;
 
 use App\Actions\Workspaces\TransferOwnership;
 use App\Models\Workspace;
+use App\Repositories\WorkspaceRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class WorkspaceController extends Controller
 {
+    public function __construct(
+        private readonly WorkspaceRepository $workspaces,
+    ) {}
+
     /**
      * Lists the Workspaces the current User is a Member of (CONTEXT.md,
      * "Member"). An Administrator sees every Workspace instead, since they
@@ -20,8 +25,8 @@ class WorkspaceController extends Controller
         $user = $request->user();
 
         $workspaces = $user->is_admin
-            ? Workspace::with(['owner', 'members.user'])->orderBy('name')->get()
-            : $user->workspaces()->with(['owner', 'members.user'])->orderBy('name')->get();
+            ? $this->workspaces->allWithOwnerAndMembers()
+            : $this->workspaces->forUserWithOwnerAndMembers($user);
 
         return view('workspaces.index', compact('workspaces'));
     }
@@ -36,12 +41,7 @@ class WorkspaceController extends Controller
             'name' => ['required', 'string', 'max:255'],
         ]);
 
-        $workspace = Workspace::create([
-            'name' => $data['name'],
-            'owner_id' => $request->user()->id,
-        ]);
-
-        $workspace->addMember($request->user(), notify: false);
+        $this->workspaces->create($data['name'], $request->user());
 
         return redirect()->route('workspaces.index');
     }

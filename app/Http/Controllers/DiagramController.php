@@ -6,12 +6,11 @@ use App\Actions\Diagrams\ReleaseLock;
 use App\Actions\Diagrams\RequestLock;
 use App\Actions\Diagrams\TransferOwnership;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
-use App\Models\Collaborator;
 use App\Models\Diagram;
-use App\Models\DiagramOldSlug;
-use App\Models\Workspace;
+use App\Repositories\DiagramListCriteria;
 use App\Repositories\DiagramRepository;
 use App\Repositories\VersionRepository;
+use App\Repositories\WorkspaceRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -40,6 +39,11 @@ class DiagramController extends Controller
         'updated_at' => 'desc',
     ];
 
+    public function __construct(
+        private readonly DiagramRepository $diagrams,
+        private readonly WorkspaceRepository $workspaces,
+    ) {}
+
     /**
      * Lists Diagrams visible to the current User (CONTEXT.md, "Workspace";
      * issue #28): only Diagrams the User can open (Diagram Owner, approved
@@ -63,17 +67,9 @@ class DiagramController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        $search = trim((string) $request->query('q', ''));
+        $criteria = DiagramListCriteria::fromRequest($request);
         $discoverySearch = trim((string) $request->query('discover', ''));
-        $tag = trim((string) $request->query('tag', ''));
         $workspaceFilter = (string) $request->query('workspace', 'all');
-
-        $filters = [
-            'owner' => $request->boolean('owner'),
-            'collaborator' => $request->boolean('collaborator'),
-            'locked' => $request->boolean('locked'),
-            'recent' => $request->boolean('recent'),
-        ];
 
         $requestedSort = (string) $request->query('sort', 'title');
         $sort = array_key_exists($requestedSort, self::SORT_COLUMNS) ? $requestedSort : 'title';
@@ -81,53 +77,29 @@ class DiagramController extends Controller
         $direction = in_array($requestedDirection, ['asc', 'desc'], true) ? $requestedDirection : self::SORT_COLUMNS[$sort];
 
         $workspaces = $user->is_admin
-            ? Workspace::orderBy('name')->get()
-            : $user->workspaces()->orderBy('name')->get();
+            ? $this->workspaces->allOrderedByName()
+            : $this->workspaces->forUserOrderedByName($user);
 
-        $diagrams = Diagram::with(['author', 'owner', 'lockedBy', 'tags', 'workspace'])
-            ->when(! $user->is_admin, fn ($query) => $query->editableBy($user))
-            ->when($workspaceFilter === 'none', fn ($query) => $query->whereNull('workspace_id'))
-            ->when(ctype_digit($workspaceFilter) && (int) $workspaceFilter > 0, fn ($query) => $query->where('workspace_id', (int) $workspaceFilter))
-            ->when($search !== '', fn ($query) => $query->search($search))
-            // "I'm the Diagram Owner" and "I'm a Collaborator" describe the
-            // same thing — the User's relation to the Diagram — so checking
-            // both is a union (any Diagram matching either), not an
-            // intersection (a Diagram is never both at once). "locked" and
-            // "recent" are independent constraints that narrow further, so
-            // they stay as separate AND'ed when() calls below.
-            ->when($filters['owner'] || $filters['collaborator'], fn ($query) => $query->where(function ($query) use ($user, $filters) {
-                if ($filters['owner']) {
-                    $query->orWhere(fn ($query) => $query->ownedBy($user));
-                }
-
-                if ($filters['collaborator']) {
-                    $query->orWhere(fn ($query) => $query->collaboratedBy($user));
-                }
-            }))
-            ->when($filters['locked'], fn ($query) => $query->lockedNow())
-            ->when($filters['recent'], fn ($query) => $query->recentlyModified())
-            ->when($tag !== '', fn ($query) => $query->taggedWith($tag))
+        $diagrams = $this->diagrams->visibleListQuery($user, $criteria)
             ->orderBy($sort, $direction)
             ->orderBy('id')
             ->paginate(self::DIAGRAMS_PER_PAGE)
             ->appends($request->query());
 
-        $discoveryDiagrams = Diagram::with([
-            'owner',
-            'collaborators' => fn ($query) => $query->where('user_id', $user->id),
-        ])
-            ->when(! $user->is_admin, fn ($query) => $query
-                ->whereNull('workspace_id')
-                ->where('owner_id', '!=', $user->id)
-                ->whereDoesntHave('collaborators', fn ($collaborators) => $collaborators
-                    ->where('user_id', $user->id)
-                    ->where('status', Collaborator::STATUS_APPROVED)))
-            ->when($user->is_admin, fn ($query) => $query->whereRaw('1 = 0'))
-            ->when($discoverySearch !== '', fn ($query) => $query->where('title', 'like', '%'.$discoverySearch.'%'))
+        $discoveryDiagrams = $this->diagrams->discoveryQuery($user, $discoverySearch)
             ->orderBy('title')
             ->orderBy('id')
             ->simplePaginate(self::DIAGRAMS_PER_PAGE, ['*'], 'discovery_page')
             ->appends($request->except(['page', 'discovery_page']));
+
+        $search = $criteria->search;
+        $tag = $criteria->tag;
+        $filters = [
+            'owner' => $criteria->owner,
+            'collaborator' => $criteria->collaborator,
+            'locked' => $criteria->locked,
+            'recent' => $criteria->recent,
+        ];
 
         return view('diagrams.index', compact(
             'diagrams',
@@ -143,15 +115,15 @@ class DiagramController extends Controller
         ));
     }
 
-    public function store(Request $request, DiagramRepository $diagrams, VersionRepository $versions): RedirectResponse
+    public function store(Request $request, VersionRepository $versions): RedirectResponse
     {
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
         ]);
 
-        $slug = Diagram::uniqueSlug($data['title']);
+        $slug = $this->diagrams->uniqueSlug($data['title']);
 
-        $diagram = $diagrams->create([
+        $diagram = $this->diagrams->create([
             'title' => $data['title'],
             'slug' => $slug,
             'author_id' => $request->user()->id,
@@ -166,7 +138,7 @@ class DiagramController extends Controller
 
     public function show(Request $request, string $slug): View|RedirectResponse
     {
-        [$diagram, $isOldSlug] = $this->resolve($slug);
+        [$diagram, $isOldSlug] = $this->resolveDiagramOrOldSlug($slug);
 
         if ($isOldSlug) {
             return redirect()->route('diagrams.show', $diagram->slug);
@@ -200,7 +172,7 @@ class DiagramController extends Controller
 
     public function content(string $slug): JsonResponse
     {
-        [$diagram] = $this->resolve($slug);
+        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
 
         $this->authorize('view', $diagram);
 
@@ -213,7 +185,7 @@ class DiagramController extends Controller
 
     public function save(Request $request, string $slug, VersionRepository $versions): JsonResponse
     {
-        [$diagram] = $this->resolve($slug);
+        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
 
         $this->authorize('update', $diagram);
 
@@ -226,17 +198,17 @@ class DiagramController extends Controller
         return response()->json(['saved' => true]);
     }
 
-    public function rename(Request $request, string $slug, DiagramRepository $diagrams): JsonResponse
+    public function rename(Request $request, string $slug): JsonResponse
     {
-        [$diagram] = $this->resolve($slug);
+        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
         ]);
 
-        $newSlug = Diagram::uniqueSlug($data['title'], $diagram->id);
+        $newSlug = $this->diagrams->uniqueSlug($data['title'], $diagram->id);
 
-        $diagram = $diagrams->move($diagram, $data['title'], $newSlug);
+        $diagram = $this->diagrams->move($diagram, $data['title'], $newSlug);
 
         return response()->json([
             'slug' => $diagram->slug,
@@ -255,7 +227,7 @@ class DiagramController extends Controller
      */
     public function transferOwnership(Request $request, string $slug, TransferOwnership $transfer): JsonResponse
     {
-        [$diagram] = $this->resolve($slug);
+        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
 
         $this->authorize('transferOwnership', $diagram);
 
@@ -298,7 +270,7 @@ class DiagramController extends Controller
      */
     public function heartbeat(Request $request, string $slug): JsonResponse
     {
-        [$diagram] = $this->resolve($slug);
+        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
 
         $diagram->loadMissing('lockRequestedBy');
         $lockRequestedByName = $diagram->lockRequestedBy?->name;
@@ -315,7 +287,7 @@ class DiagramController extends Controller
 
     public function unlock(Request $request, string $slug, ReleaseLock $releaseLock): JsonResponse
     {
-        [$diagram] = $this->resolve($slug);
+        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
 
         if (! $releaseLock($diagram, $request->user())) {
             return response()->json(['message' => __('messages.lock_not_held')], 403);
@@ -331,7 +303,7 @@ class DiagramController extends Controller
      */
     public function requestLock(Request $request, string $slug, RequestLock $requestLock): JsonResponse
     {
-        [$diagram] = $this->resolve($slug);
+        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
 
         // 'update', not 'view': requesting a Lock is only meaningful for an
         // actual editor. DiagramPolicy::view()'s admin bypass ("sees and
@@ -341,9 +313,9 @@ class DiagramController extends Controller
         return response()->json($requestLock($diagram, $request->user()));
     }
 
-    public function fork(Request $request, string $slug, DiagramRepository $diagrams, VersionRepository $versions): RedirectResponse
+    public function fork(Request $request, string $slug, VersionRepository $versions): RedirectResponse
     {
-        [$diagram] = $this->resolve($slug);
+        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
 
         $this->authorize('view', $diagram);
 
@@ -355,8 +327,8 @@ class DiagramController extends Controller
         $workspaceId = $data['workspace_id'] ?? null;
 
         if ($workspaceId !== null) {
-            $workspace = Workspace::findOrFail($workspaceId);
-            abort_unless($workspace->hasMember($request->user()), 422, __('messages.must_be_workspace_member'));
+            $workspace = $this->workspaces->findOrFail($workspaceId);
+            abort_unless($this->workspaces->hasMember($workspace, $request->user()), 422, __('messages.must_be_workspace_member'));
         }
 
         // The "diagrams" disk is configured with `throw => false`, so a
@@ -370,9 +342,9 @@ class DiagramController extends Controller
             throw new RuntimeException("Could not read the Diagram's content to fork it: {$diagram->disk_path}");
         }
 
-        $newSlug = Diagram::uniqueSlug($diagram->title);
+        $newSlug = $this->diagrams->uniqueSlug($diagram->title);
 
-        $forked = $diagrams->create([
+        $forked = $this->diagrams->create([
             'title' => $diagram->title,
             'slug' => $newSlug,
             'author_id' => $request->user()->id,
@@ -398,7 +370,7 @@ class DiagramController extends Controller
      */
     public function putInWorkspace(Request $request, string $slug): JsonResponse
     {
-        [$diagram] = $this->resolve($slug);
+        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
 
         $this->authorize('putInWorkspace', $diagram);
 
@@ -406,9 +378,9 @@ class DiagramController extends Controller
             'workspace_id' => ['required', 'integer', 'exists:workspaces,id'],
         ]);
 
-        $workspace = Workspace::findOrFail($data['workspace_id']);
+        $workspace = $this->workspaces->findOrFail($data['workspace_id']);
 
-        abort_unless($workspace->hasMember($request->user()), 422, __('messages.must_be_workspace_member'));
+        abort_unless($this->workspaces->hasMember($workspace, $request->user()), 422, __('messages.must_be_workspace_member'));
 
         $diagram->update(['workspace_id' => $workspace->id]);
 
@@ -421,7 +393,7 @@ class DiagramController extends Controller
      */
     public function removeFromWorkspace(string $slug): JsonResponse
     {
-        [$diagram] = $this->resolve($slug);
+        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
 
         $this->authorize('removeFromWorkspace', $diagram);
 
@@ -430,34 +402,14 @@ class DiagramController extends Controller
         return response()->json(['workspace_id' => null]);
     }
 
-    public function destroy(string $slug, DiagramRepository $diagrams): JsonResponse
+    public function destroy(string $slug): JsonResponse
     {
-        [$diagram] = $this->resolve($slug);
+        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
 
         $this->authorize('delete', $diagram);
 
-        $diagrams->remove($diagram);
+        $this->diagrams->remove($diagram);
 
         return response()->json(['deleted' => true]);
-    }
-
-    /**
-     * @return array{0: Diagram, 1: bool}
-     */
-    private function resolve(string $slug): array
-    {
-        $diagram = Diagram::where('slug', $slug)->first();
-
-        if ($diagram) {
-            return [$this->assertVisible($diagram), false];
-        }
-
-        $old = DiagramOldSlug::with('diagram')->where('old_slug', $slug)->first();
-
-        if ($old && $old->diagram) {
-            return [$this->assertVisible($old->diagram), true];
-        }
-
-        abort(404);
     }
 }

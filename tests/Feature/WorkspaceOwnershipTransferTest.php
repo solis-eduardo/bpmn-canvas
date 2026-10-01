@@ -25,7 +25,7 @@ class WorkspaceOwnershipTransferTest extends TestCase
         $owner = User::factory()->create();
         $newOwner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $response = $this->actingAs($owner)->put("/workspaces/{$workspace->id}/owner", [
             'user_id' => $newOwner->id,
@@ -35,9 +35,9 @@ class WorkspaceOwnershipTransferTest extends TestCase
 
         $workspace->refresh();
         $this->assertTrue($workspace->isOwnedBy($newOwner));
-        $this->assertTrue($workspace->hasMember($newOwner));
+        $this->assertTrue($this->isMember($workspace, $newOwner));
         // The previous Owner stays a Member.
-        $this->assertTrue($workspace->hasMember($owner));
+        $this->assertTrue($this->isMember($workspace, $owner));
     }
 
     public function test_transferring_to_an_existing_member_just_promotes_them(): void
@@ -45,8 +45,8 @@ class WorkspaceOwnershipTransferTest extends TestCase
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
 
         $response = $this->actingAs($owner)->put("/workspaces/{$workspace->id}/owner", [
             'user_id' => $member->id,
@@ -56,7 +56,7 @@ class WorkspaceOwnershipTransferTest extends TestCase
 
         $workspace->refresh();
         $this->assertTrue($workspace->isOwnedBy($member));
-        $this->assertTrue($workspace->hasMember($member));
+        $this->assertTrue($this->isMember($workspace, $member));
         $this->assertSame(2, $workspace->members()->count(), 'no duplicate Member row is created');
     }
 
@@ -66,7 +66,7 @@ class WorkspaceOwnershipTransferTest extends TestCase
         $admin = User::factory()->create(['is_admin' => true]);
         $newOwner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $response = $this->actingAs($admin)->put("/workspaces/{$workspace->id}/owner", [
             'user_id' => $newOwner->id,
@@ -76,7 +76,7 @@ class WorkspaceOwnershipTransferTest extends TestCase
 
         $workspace->refresh();
         $this->assertTrue($workspace->isOwnedBy($newOwner));
-        $this->assertTrue($workspace->hasMember($newOwner));
+        $this->assertTrue($this->isMember($workspace, $newOwner));
     }
 
     public function test_a_plain_member_cannot_transfer_ownership(): void
@@ -85,8 +85,8 @@ class WorkspaceOwnershipTransferTest extends TestCase
         $member = User::factory()->create();
         $newOwner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
 
         $response = $this->actingAs($member)->put("/workspaces/{$workspace->id}/owner", [
             'user_id' => $newOwner->id,
@@ -104,7 +104,7 @@ class WorkspaceOwnershipTransferTest extends TestCase
         $stranger = User::factory()->create();
         $newOwner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $response = $this->actingAs($stranger)->put("/workspaces/{$workspace->id}/owner", [
             'user_id' => $newOwner->id,
@@ -121,9 +121,9 @@ class WorkspaceOwnershipTransferTest extends TestCase
         $owner = User::factory()->create();
         $existingUser = User::factory()->create();
         $workspace1 = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace1->addMember($owner);
+        $this->addMember($workspace1, $owner);
         $workspace2 = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace2->addMember($owner);
+        $this->addMember($workspace2, $owner);
 
         $responseWithExistingEmail = $this->actingAs($owner)->put("/workspaces/{$workspace1->id}/owner", [
             'email' => $existingUser->email,

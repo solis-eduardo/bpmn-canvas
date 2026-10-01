@@ -54,4 +54,18 @@ class MemberRepository
     {
         return $workspace->members()->where('user_id', $user->id)->delete() > 0;
     }
+
+    /**
+     * Drops the User's group-managed memberships in Workspaces not linked
+     * to any of $groups. Manual memberships are never touched.
+     *
+     * @param  list<string>  $groups
+     */
+    public function removeGroupMembershipsOutside(User $user, array $groups): int
+    {
+        return Member::where('user_id', $user->id)
+            ->where('origin', Member::ORIGIN_GROUP)
+            ->whereDoesntHave('workspace', fn ($query) => $query->whereIn('keycloak_group', $groups))
+            ->delete();
+    }
 }
