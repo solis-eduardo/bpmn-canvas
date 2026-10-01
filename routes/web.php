@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\KeycloakLoginController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CollaboratorController;
+use App\Http\Controllers\DiagramContentController;
 use App\Http\Controllers\DiagramController;
 use App\Http\Controllers\DiagramOwnerController;
 use App\Http\Controllers\DiagramTagController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\PublicShareController;
 use App\Http\Controllers\ShareController;
 use App\Http\Controllers\VersionController;
 use App\Http\Controllers\WorkspaceController;
+use App\Http\Controllers\WorkspaceKeycloakGroupController;
 use App\Http\Controllers\WorkspaceOwnerController;
 use Illuminate\Support\Facades\Route;
 
@@ -66,9 +68,9 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/diagrams', [DiagramController::class, 'index'])->name('diagrams.index');
     Route::post('/diagrams', [DiagramController::class, 'store'])->name('diagrams.store');
-    Route::get('/diagrams/{slug}/content', [DiagramController::class, 'content'])->name('diagrams.content');
-    Route::put('/diagrams/{slug}/content', [DiagramController::class, 'save'])->name('diagrams.save');
-    Route::put('/diagrams/{slug}', [DiagramController::class, 'rename'])->name('diagrams.rename');
+    Route::get('/diagrams/{slug}/content', [DiagramContentController::class, 'show'])->name('diagrams.content');
+    Route::put('/diagrams/{slug}/content', [DiagramContentController::class, 'update'])->name('diagrams.save');
+    Route::put('/diagrams/{slug}', [DiagramController::class, 'update'])->name('diagrams.rename');
     Route::delete('/diagrams/{slug}', [DiagramController::class, 'destroy'])->name('diagrams.destroy');
 
     Route::get('/diagrams/{slug}/collaborators', [CollaboratorController::class, 'index'])->name('diagrams.collaborators.index');
@@ -106,7 +108,7 @@ Route::middleware('auth')->group(function () {
     Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');
     Route::put('/workspaces/{workspace}', [WorkspaceController::class, 'update'])->name('workspaces.update');
     Route::put('/workspaces/{workspace}/owner', [WorkspaceOwnerController::class, 'update'])->name('workspaces.owner.transfer');
-    Route::put('/workspaces/{workspace}/keycloak-group', [WorkspaceController::class, 'updateKeycloakGroup'])->name('workspaces.keycloak-group.update');
+    Route::put('/workspaces/{workspace}/keycloak-group', [WorkspaceKeycloakGroupController::class, 'update'])->name('workspaces.keycloak-group.update');
     Route::delete('/workspaces/{workspace}', [WorkspaceController::class, 'destroy'])->name('workspaces.destroy');
 
     Route::post('/workspaces/{workspace}/members', [MemberController::class, 'store'])->name('workspaces.members.store');

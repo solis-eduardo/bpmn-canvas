@@ -149,4 +149,25 @@ class CollaboratorServiceTest extends TestCase
 
         Notification::assertNothingSent();
     }
+
+    public function test_a_self_request_never_downgrades_an_approved_collaborator(): void
+    {
+        $diagram = Diagram::factory()->create();
+        $user = User::factory()->create();
+        $this->service->grant($diagram, $user);
+
+        $result = $this->service->requestAccess($diagram, $user);
+
+        $this->assertSame(Collaborator::STATUS_APPROVED, $result->status);
+    }
+
+    public function test_invite_grants_directly_or_leaves_a_pending_request(): void
+    {
+        $diagram = Diagram::factory()->create();
+        $granted = User::factory()->create();
+        $requester = User::factory()->create();
+
+        $this->assertSame(Collaborator::STATUS_APPROVED, $this->service->invite($diagram, $granted, true)->status);
+        $this->assertSame(Collaborator::STATUS_REQUESTED, $this->service->invite($diagram, $requester, false)->status);
+    }
 }

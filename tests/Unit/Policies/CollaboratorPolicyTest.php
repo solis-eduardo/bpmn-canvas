@@ -46,4 +46,16 @@ class CollaboratorPolicyTest extends TestCase
         $this->assertFalse($policy->requestAccess($diagram->owner, $diagram));
         $this->assertFalse($policy->requestAccess(User::factory()->create(['is_admin' => true]), $diagram));
     }
+
+    public function test_inviting_is_open_to_managers_for_anyone_and_to_others_only_for_themselves(): void
+    {
+        $diagram = Diagram::factory()->create();
+        $policy = new CollaboratorPolicy;
+        $stranger = User::factory()->create();
+        $other = User::factory()->create();
+
+        $this->assertTrue($policy->invite($diagram->owner, $diagram, $other));
+        $this->assertTrue($policy->invite($stranger, $diagram, $stranger));
+        $this->assertFalse($policy->invite($stranger, $diagram, $other));
+    }
 }

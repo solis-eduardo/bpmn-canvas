@@ -59,14 +59,21 @@ class LockService
     }
 
     /**
-     * Takes the Lock for $user unless they already hold it, in which case
-     * only the heartbeat is refreshed (the original "locked since" stays).
+     * Opens the Editor for $user: false when someone else holds the Lock.
+     * Otherwise the Lock is theirs — a holder only gets the heartbeat
+     * refreshed, so the original "locked since" stays.
      */
-    public function claim(Diagram $diagram, User $user): void
+    public function enter(Diagram $diagram, User $user): bool
     {
+        if ($diagram->isLockedByOther($user)) {
+            return false;
+        }
+
         if (! $this->renew($diagram, $user)) {
             $this->openOrRequest($diagram, $user);
         }
+
+        return true;
     }
 
     /**

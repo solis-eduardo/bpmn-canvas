@@ -8,7 +8,6 @@ use App\Repositories\WorkspaceRepository;
 use App\Services\ForkService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 
 class ForkController extends Controller
 {
@@ -24,17 +23,15 @@ class ForkController extends Controller
     {
         $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
-        $this->authorize('fork.create', $diagram);
-
         $data = $request->validate([
-            'workspace_id' => ['nullable', 'integer', 'exists:workspaces,id'],
+            'workspace_id' => ['nullable', 'integer'],
         ]);
 
         $workspace = isset($data['workspace_id'])
             ? $this->workspaces->findOrFail($data['workspace_id'])
             : null;
 
-        abort_unless(Gate::allows('fork.create', [$diagram, $workspace]), 422, __('messages.must_be_workspace_member'));
+        $this->authorize('fork.create', [$diagram, $workspace]);
 
         $fork = $this->forks->create($diagram, $request->user(), $workspace);
 

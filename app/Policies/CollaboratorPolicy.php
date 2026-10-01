@@ -21,6 +21,15 @@ class CollaboratorPolicy
     }
 
     /**
+     * Add $target as a Collaborator: whoever can grant access may name
+     * anyone; everyone else may only name themselves (a request).
+     */
+    public function invite(User $user, Diagram $diagram, User $target): bool
+    {
+        return $this->grant($user, $diagram) || $user->is($target);
+    }
+
+    /**
      * Ask for access to a Diagram one can't edit yet. Those who can grant it
      * directly (Diagram Owner, Administrator) or already edit it have no
      * reason to ask.

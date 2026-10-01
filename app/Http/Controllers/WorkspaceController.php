@@ -62,22 +62,6 @@ class WorkspaceController extends Controller
     }
 
     /**
-     * Links or unlinks a Workspace's Keycloak group. Administrators only.
-     */
-    public function updateKeycloakGroup(Request $request, Workspace $workspace): RedirectResponse
-    {
-        $this->authorize('manageKeycloakGroup', $workspace);
-
-        $data = $request->validate([
-            'keycloak_group' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $workspace->update(['keycloak_group' => $data['keycloak_group'] ?? null]);
-
-        return redirect()->route('workspaces.index');
-    }
-
-    /**
      * Deletes a Workspace: Workspace Owner or Administrator only. Refused
      * while the Workspace still holds Diagrams (CONTEXT.md, "Workspace
      * Owner") — allowed once it's empty.

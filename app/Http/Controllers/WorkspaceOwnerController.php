@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ResolvesTargetUser;
+use App\Models\User;
 use App\Models\Workspace;
 use App\Repositories\UserRepository;
 use App\Services\WorkspaceOwnerService;
@@ -29,11 +30,7 @@ class WorkspaceOwnerController extends Controller
 
         $data = $request->validate($this->userIdentifierRules());
 
-        $newOwner = $this->resolveUserFrom($data);
-
-        if ($newOwner) {
-            $this->owners->transfer($workspace, $newOwner);
-        }
+        $this->actOnTargetUser($data, fn (User $owner) => $this->owners->transfer($workspace, $owner));
 
         return redirect()->route('workspaces.index');
     }

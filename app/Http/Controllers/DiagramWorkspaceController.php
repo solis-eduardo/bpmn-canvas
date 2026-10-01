@@ -8,7 +8,6 @@ use App\Repositories\WorkspaceRepository;
 use App\Services\DiagramWorkspaceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 
 class DiagramWorkspaceController extends Controller
 {
@@ -22,22 +21,19 @@ class DiagramWorkspaceController extends Controller
 
     /**
      * Puts the Diagram into a Workspace (CONTEXT.md, "Diagram Owner"; issue
-     * #27). Not being the Diagram Owner is a 403; being one but not a Member
-     * of the target Workspace is a 422.
+     * #27).
      */
     public function update(Request $request, string $slug): JsonResponse
     {
         $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
-        $this->authorize('putInWorkspace', $diagram);
-
         $data = $request->validate([
-            'workspace_id' => ['required', 'integer', 'exists:workspaces,id'],
+            'workspace_id' => ['required', 'integer'],
         ]);
 
         $workspace = $this->workspaces->findOrFail($data['workspace_id']);
 
-        abort_unless(Gate::allows('diagram-workspace.assign', [$diagram, $workspace]), 422, __('messages.must_be_workspace_member'));
+        $this->authorize('diagram-workspace.assign', [$diagram, $workspace]);
 
         $this->placement->assign($diagram, $workspace);
 
