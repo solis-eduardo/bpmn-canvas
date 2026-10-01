@@ -91,6 +91,27 @@
                     </div>
                 </div>
 
+                @if (auth()->user()->is_admin)
+                    <form method="POST" action="{{ route('workspaces.keycloak-group.update', $workspace) }}" class="flex flex-col gap-2 border-b border-gray-200 px-4 py-4 sm:flex-row sm:items-center sm:px-6">
+                        @csrf
+                        @method('PUT')
+                        <label for="keycloak-group-{{ $workspace->id }}" class="text-sm font-medium text-gray-700">
+                            {{ __('messages.keycloak_group') }}
+                        </label>
+                        <input
+                            id="keycloak-group-{{ $workspace->id }}"
+                            type="text"
+                            name="keycloak_group"
+                            value="{{ $workspace->keycloak_group }}"
+                            placeholder="{{ __('messages.keycloak_group_placeholder') }}"
+                            class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:flex-1"
+                        >
+                        <button type="submit" class="text-sm font-medium text-blue-600 hover:text-blue-700">
+                            {{ __('messages.update_keycloak_group') }}
+                        </button>
+                    </form>
+                @endif
+
                 <div class="px-4 py-4 sm:px-6">
                     <p class="text-sm font-medium text-gray-500">{{ __('messages.members') }}</p>
 

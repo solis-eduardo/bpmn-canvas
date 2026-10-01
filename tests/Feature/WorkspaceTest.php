@@ -56,6 +56,7 @@ class WorkspaceTest extends TestCase
         $response->assertOk();
         $response->assertSee($mine->name);
         $response->assertDontSee($notMine->name);
+        $response->assertDontSee(route('workspaces.keycloak-group.update', $mine));
     }
 
     public function test_administrator_viewing_a_workspace_they_are_not_a_member_of_is_not_offered_a_leave_button(): void
@@ -83,6 +84,7 @@ class WorkspaceTest extends TestCase
 
         $response->assertOk();
         $response->assertSee($workspace->name);
+        $response->assertSee(route('workspaces.keycloak-group.update', $workspace));
     }
 
     public function test_workspace_owner_can_rename_the_workspace(): void
@@ -128,6 +130,43 @@ class WorkspaceTest extends TestCase
 
         $response->assertForbidden();
         $this->assertSame($workspace->name, $workspace->fresh()->name);
+    }
+
+    public function test_only_an_administrator_can_link_a_workspace_to_a_keycloak_group(): void
+    {
+        $owner = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $workspace->addMember($owner);
+
+        $this->actingAs($owner)->put("/workspaces/{$workspace->id}/keycloak-group", [
+            'keycloak_group' => '/finance',
+        ])->assertForbidden();
+
+        $this->assertNull($workspace->fresh()->keycloak_group);
+
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->put("/workspaces/{$workspace->id}/keycloak-group", [
+            'keycloak_group' => '/finance',
+        ])->assertRedirect(route('workspaces.index'));
+
+        $this->assertSame('/finance', $workspace->fresh()->keycloak_group);
+    }
+
+    public function test_an_administrator_can_unlink_a_workspace_from_a_keycloak_group(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $owner = User::factory()->create();
+        $workspace = Workspace::factory()->create([
+            'owner_id' => $owner->id,
+            'keycloak_group' => '/finance',
+        ]);
+
+        $this->actingAs($admin)->put("/workspaces/{$workspace->id}/keycloak-group", [
+            'keycloak_group' => '',
+        ])->assertRedirect(route('workspaces.index'));
+
+        $this->assertNull($workspace->fresh()->keycloak_group);
     }
 
     public function test_unrelated_user_cannot_rename_the_workspace(): void

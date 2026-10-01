@@ -13,10 +13,9 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * A group of Users (its Members) that holds Diagrams (CONTEXT.md,
- * "Workspace"). This ticket (#26) only covers creating a Workspace and
- * managing its Members — putting Diagrams inside one is a later ticket.
+ * "Workspace"), optionally mirroring Members from a Keycloak group.
  */
-#[Fillable(['name', 'owner_id'])]
+#[Fillable(['name', 'owner_id', 'keycloak_group'])]
 class Workspace extends Model
 {
     /** @use HasFactory<WorkspaceFactory> */
@@ -80,11 +79,29 @@ class Workspace extends Model
      */
     public function addMember(User $user, bool $notify = true): void
     {
+        $member = $this->members()->updateOrCreate(
+            ['user_id' => $user->id],
+            ['origin' => WorkspaceMember::ORIGIN_MANUAL],
+        );
+
+        if ($notify && $member->wasRecentlyCreated) {
+            $user->notify(new WorkspaceMemberAdded($this));
+        }
+    }
+
+    /**
+     * Adds a group-managed Member without changing any existing manual grant.
+     */
+    public function addGroupMember(User $user, bool $notify = true): void
+    {
         if ($this->hasMember($user)) {
             return;
         }
 
-        $this->members()->create(['user_id' => $user->id]);
+        $this->members()->create([
+            'user_id' => $user->id,
+            'origin' => WorkspaceMember::ORIGIN_GROUP,
+        ]);
 
         if ($notify) {
             $user->notify(new WorkspaceMemberAdded($this));
