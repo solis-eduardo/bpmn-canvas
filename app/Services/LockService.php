@@ -44,6 +44,32 @@ class LockService
     }
 
     /**
+     * Heartbeat that also reports who, if anyone, was waiting for the Lock.
+     * A heartbeat counts as the holder responding and clears the request, so
+     * the requester has to be read first.
+     */
+    public function heartbeat(Diagram $diagram, User $holder): ?User
+    {
+        $diagram->loadMissing('lockRequestedBy');
+        $requester = $diagram->lockRequestedBy;
+
+        $this->renew($diagram, $holder);
+
+        return $requester;
+    }
+
+    /**
+     * Takes the Lock for $user unless they already hold it, in which case
+     * only the heartbeat is refreshed (the original "locked since" stays).
+     */
+    public function claim(Diagram $diagram, User $user): void
+    {
+        if (! $this->renew($diagram, $user)) {
+            $this->openOrRequest($diagram, $user);
+        }
+    }
+
+    /**
      * Hands the Lock to $newHolder (ADR-0011), whether or not they asked
      * for it first.
      */

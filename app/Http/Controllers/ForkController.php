@@ -22,7 +22,7 @@ class ForkController extends Controller
 
     public function store(Request $request, string $slug): RedirectResponse
     {
-        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('fork.create', $diagram);
 

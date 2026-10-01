@@ -178,4 +178,31 @@ class LockServiceTest extends TestCase
         $this->assertNull($fresh->locked_by);
         $this->assertNull($fresh->lock_requested_by);
     }
+
+    public function test_heartbeat_reports_the_pending_requester_and_clears_the_request(): void
+    {
+        $holder = User::factory()->create();
+        $requester = User::factory()->create();
+        $diagram = Diagram::factory()->create();
+        $this->service->openOrRequest($diagram, $holder);
+        $this->service->openOrRequest($diagram, $requester);
+
+        $reported = $this->service->heartbeat($diagram->fresh(), $holder);
+
+        $this->assertTrue($reported->is($requester));
+        $this->assertNull($diagram->fresh()->lock_requested_by);
+    }
+
+    public function test_claim_keeps_the_original_lock_time_for_the_current_holder(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = Diagram::factory()->create();
+        $this->service->claim($diagram, $holder);
+        $lockedAt = $diagram->fresh()->locked_at;
+
+        $this->travel(5)->minutes();
+        $this->service->claim($diagram->fresh(), $holder);
+
+        $this->assertEquals($lockedAt, $diagram->fresh()->locked_at);
+    }
 }

@@ -32,7 +32,7 @@ class DiagramOwnerController extends Controller
      */
     public function update(Request $request, string $slug): JsonResponse
     {
-        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('diagram-owner.transfer', $diagram);
 
