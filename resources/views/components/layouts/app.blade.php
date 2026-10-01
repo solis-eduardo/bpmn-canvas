@@ -58,6 +58,12 @@
                 <div class="flex items-center gap-3">
                     @auth
                         @include('partials.notification-bell')
+                        <a
+                            href="{{ route('account.edit') }}"
+                            class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('account.*') ? 'bg-gray-100 text-gray-900' : '' }}"
+                        >
+                            {{ __('messages.profile') }}
+                        </a>
                     @else
                         <div class="h-8 w-8" data-slot="notification-bell" aria-hidden="true"></div>
                     @endauth

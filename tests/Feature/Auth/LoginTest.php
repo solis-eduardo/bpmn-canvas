@@ -66,7 +66,11 @@ class LoginTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->post('/logout')->assertRedirect('/login');
+        $this->actingAs($user)
+            ->withSession(['private-session-data' => 'must be discarded'])
+            ->post('/logout')
+            ->assertRedirect('/login')
+            ->assertSessionMissing('private-session-data');
 
         $this->assertGuest();
     }
