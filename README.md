@@ -42,7 +42,7 @@ Users can opt in to email copies of their notifications from **Email preferences
 ## Usage
 
 1. **Create a Diagram**: at `/diagrams`, give it a name — a Slug is derived automatically.
-2. **Editor**: opens the bpmn-js Modeler. While it's open, you hold the Editing Lock for that Diagram — anyone else who tries to open the same Editor sees who's editing and can request the Lock (transferred automatically after 30s with no response) or create a Fork (independent copy) to proceed without waiting.
+2. **Editor**: opens the bpmn-js Modeler and acquires that Diagram's Editing Lock. You can hold Locks on multiple Diagrams. Leaving or closing the Editor and inactivity do not release a Lock; explicitly release it when you're done. Anyone else who tries to open the same Editor sees who's holding the Lock and can request it (the holder is notified, but requests never transfer the Lock automatically) or create a Fork (independent copy). An Administrator can explicitly force-release it.
 3. **Renaming** updates the Slug; the previous Slug keeps working (redirects to the current one), even after several renames.
 4. **Collaborators**: as Author, invite another User directly (immediate access) or approve an access request; an Administrator can also grant access on any Diagram.
 5. **Sharing**: generates a signed public link, expiring in days (default 7, max 60) with an option to allow download (disabled by default). Revocable at any time; a Diagram can have several active Shares at once. Whoever receives the link can view it without an account.
@@ -169,7 +169,7 @@ Usuários podem optar por receber cópias das notificações por e-mail em **Pre
 ## Uso
 
 1. **Criar um Diagrama**: em `/diagrams`, dê um nome — um Slug é derivado automaticamente.
-2. **Editor**: abre o bpmn-js Modeler. Enquanto aberto, você detém a Trava de Edição daquele Diagrama — outra pessoa que tentar abrir o mesmo Editor vê quem está editando e pode solicitar a Trava (transferida automaticamente após 30s sem resposta) ou criar um Fork (cópia independente) para seguir sem esperar.
+2. **Editor**: abre o bpmn-js Modeler e adquire a Trava de Edição daquele Diagrama. Você pode manter Travas em vários Diagramas. Sair ou fechar o Editor e ficar inativo não libera a Trava; use **Liberar Trava** quando terminar. Outra pessoa que tentar abrir o mesmo Editor vê quem detém a Trava e pode solicitar (o detentor é avisado, mas a solicitação nunca transfere a Trava automaticamente) ou criar um Fork (cópia independente). Um Administrador pode forçar explicitamente a liberação.
 3. **Renomear** atualiza o Slug; o Slug anterior continua funcionando (redireciona para o atual), mesmo após várias renomeações.
 4. **Colaboradores**: como Autor, convide outro Usuário diretamente (acesso imediato) ou aprove uma solicitação de acesso; um Administrador também pode conceder acesso em qualquer Diagrama.
 5. **Compartilhar**: gera um link público assinado, com expiração em dias (padrão 7, máximo 60) e uma opção de permitir download (desabilitada por padrão). Revogável a qualquer momento; um Diagrama pode ter vários links de Compartilhamento ativos simultaneamente. Quem recebe o link visualiza sem precisar de conta.

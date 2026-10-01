@@ -18,7 +18,7 @@ short here; full domain definitions live in `CONTEXT.md`.
 | Compartilhamento | Share | Public, signed, expiring read-only link. |
 | Editor | Editor | Unchanged — the authenticated editing interface. |
 | Visualizador Público | Public Viewer | Read-only interface for Share links. |
-| Trava (de edição) | (Editing) Lock | Exclusive edit state on a Diagram. |
+| Trava (de edição) | Editing Lock | Exclusive edit state on a Diagram; held until explicitly released by its holder or force-released by an Administrator. |
 | Solicitar (Trava) | Request (a Lock) | |
 | Conceder | Grant | |
 | Liberar (Trava) | Release (a Lock) | |

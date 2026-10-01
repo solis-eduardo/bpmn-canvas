@@ -1,4 +1,8 @@
-# 04: Trava de Edição — solicitação, timeout de 30s e força-liberação
+# 04: Trava de Edição — solicitação e força-liberação (superseded)
+
+> **Superseded by issue #95:** this ticket records the earlier automatic-transfer and timeout design. Current behavior is explicit release only: navigation, closing the Editor, and inactivity do not release a Lock; a request only notifies the holder and never transfers the Lock, including after 30 seconds. Only the holder or an Administrator can release it.
+>
+> The original checklist and implementation notes below are historical; use issue #95 and the current Editing Lock glossary/ADR as the requirements.
 
 **What to build:** Quem está bloqueado por uma Trava de Edição (ticket 03) pode solicitá-la ao detentor atual em vez de só esperar ou fazer um Fork. O detentor é avisado e pode transferir manualmente; se não responder em 30 segundos, a Trava é transferida automaticamente. Um Administrador pode forçar a liberação de qualquer Trava a qualquer momento.
 

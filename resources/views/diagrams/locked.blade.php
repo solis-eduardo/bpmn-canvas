@@ -9,6 +9,18 @@
 <body>
     @include('partials.language-switcher')
 
+    @auth
+        <nav aria-label="{{ __('messages.account_navigation') }}">
+            @if (Route::has('account.edit'))
+                <a href="{{ route('account.edit') }}">{{ __('messages.profile') }}</a>
+            @endif
+            <form method="POST" action="{{ route('logout') }}">
+                @csrf
+                <button type="submit">{{ __('messages.log_out') }}</button>
+            </form>
+        </nav>
+    @endauth
+
     <p><a href="{{ url('/diagrams') }}">{{ __('messages.diagrams') }}</a></p>
 
     <h1>{{ $diagram->title }}</h1>
@@ -31,7 +43,7 @@
         data-show-url="{{ route('diagrams.show', $diagram->slug) }}"
     >
         <button type="button" id="btn-request-lock">{{ __('messages.request_the_lock') }}</button>
-        <p id="lock-countdown" hidden></p>
+        <p id="lock-request-waiting" hidden>{{ __('messages.lock_request_waiting') }}</p>
     </div>
 
     <form method="POST" action="{{ route('diagrams.fork', $diagram->slug) }}" class="mt-4 space-y-3">
@@ -52,11 +64,6 @@
         </button>
     </form>
 
-    <script>
-        window.lockedMessages = {
-            lock_transfers_in: @json(__('messages.lock_transfers_in', ['seconds' => ':seconds'])),
-        };
-    </script>
     <script src="{{ asset('assets/locked.js') }}"></script>
 </body>
 </html>
