@@ -5,10 +5,12 @@ namespace App\Http\Controllers;
 use App\Actions\Diagrams\ReleaseLock;
 use App\Actions\Diagrams\RequestLock;
 use App\Actions\Diagrams\TransferOwnership;
+use App\Http\Controllers\Concerns\ResolvesTargetUser;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Diagram;
 use App\Repositories\DiagramListCriteria;
 use App\Repositories\DiagramRepository;
+use App\Repositories\UserRepository;
 use App\Repositories\VersionRepository;
 use App\Repositories\WorkspaceRepository;
 use Illuminate\Http\JsonResponse;
@@ -20,6 +22,7 @@ use RuntimeException;
 
 class DiagramController extends Controller
 {
+    use ResolvesTargetUser;
     use ResolvesVisibleDiagram;
 
     /**
@@ -40,6 +43,7 @@ class DiagramController extends Controller
     ];
 
     public function __construct(
+        private readonly UserRepository $users,
         private readonly DiagramRepository $diagrams,
         private readonly WorkspaceRepository $workspaces,
     ) {}
@@ -138,9 +142,10 @@ class DiagramController extends Controller
 
     public function show(Request $request, string $slug): View|RedirectResponse
     {
-        [$diagram, $isOldSlug] = $this->resolveDiagramOrOldSlug($slug);
+        $resolved = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $resolved->diagram;
 
-        if ($isOldSlug) {
+        if ($resolved->viaOldSlug) {
             return redirect()->route('diagrams.show', $diagram->slug);
         }
 
@@ -172,7 +177,7 @@ class DiagramController extends Controller
 
     public function content(string $slug): JsonResponse
     {
-        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('view', $diagram);
 
@@ -185,7 +190,7 @@ class DiagramController extends Controller
 
     public function save(Request $request, string $slug, VersionRepository $versions): JsonResponse
     {
-        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('update', $diagram);
 
@@ -200,7 +205,7 @@ class DiagramController extends Controller
 
     public function rename(Request $request, string $slug): JsonResponse
     {
-        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
@@ -227,7 +232,7 @@ class DiagramController extends Controller
      */
     public function transferOwnership(Request $request, string $slug, TransferOwnership $transfer): JsonResponse
     {
-        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('transferOwnership', $diagram);
 
@@ -270,7 +275,7 @@ class DiagramController extends Controller
      */
     public function heartbeat(Request $request, string $slug): JsonResponse
     {
-        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $diagram->loadMissing('lockRequestedBy');
         $lockRequestedByName = $diagram->lockRequestedBy?->name;
@@ -287,7 +292,7 @@ class DiagramController extends Controller
 
     public function unlock(Request $request, string $slug, ReleaseLock $releaseLock): JsonResponse
     {
-        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         if (! $releaseLock($diagram, $request->user())) {
             return response()->json(['message' => __('messages.lock_not_held')], 403);
@@ -303,7 +308,7 @@ class DiagramController extends Controller
      */
     public function requestLock(Request $request, string $slug, RequestLock $requestLock): JsonResponse
     {
-        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         // 'update', not 'view': requesting a Lock is only meaningful for an
         // actual editor. DiagramPolicy::view()'s admin bypass ("sees and
@@ -315,7 +320,7 @@ class DiagramController extends Controller
 
     public function fork(Request $request, string $slug, VersionRepository $versions): RedirectResponse
     {
-        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('view', $diagram);
 
@@ -370,7 +375,7 @@ class DiagramController extends Controller
      */
     public function putInWorkspace(Request $request, string $slug): JsonResponse
     {
-        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('putInWorkspace', $diagram);
 
@@ -393,7 +398,7 @@ class DiagramController extends Controller
      */
     public function removeFromWorkspace(string $slug): JsonResponse
     {
-        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('removeFromWorkspace', $diagram);
 
@@ -404,7 +409,7 @@ class DiagramController extends Controller
 
     public function destroy(string $slug): JsonResponse
     {
-        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('delete', $diagram);
 

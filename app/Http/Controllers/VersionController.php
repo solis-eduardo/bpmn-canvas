@@ -19,7 +19,7 @@ class VersionController extends Controller
 
     public function versions(string $slug, VersionRepository $versions): JsonResponse
     {
-        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('view', $diagram);
 
@@ -49,7 +49,7 @@ class VersionController extends Controller
      */
     public function versionContent(string $slug, string $version, VersionRepository $versions): JsonResponse
     {
-        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('update', $diagram);
 
@@ -76,7 +76,7 @@ class VersionController extends Controller
      */
     public function compareVersions(Request $request, string $slug, VersionRepository $versions): JsonResponse
     {
-        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('update', $diagram);
 
@@ -119,7 +119,7 @@ class VersionController extends Controller
 
     public function restoreVersion(Request $request, string $slug, string $version, VersionRepository $versions): JsonResponse
     {
-        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('update', $diagram);
 
@@ -139,7 +139,7 @@ class VersionController extends Controller
      */
     public function renameVersion(Request $request, string $slug, string $version, VersionRepository $versions): JsonResponse
     {
-        [$diagram] = $this->resolveDiagramOrOldSlug($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('update', $diagram);
 

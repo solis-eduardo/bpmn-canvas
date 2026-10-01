@@ -2,17 +2,22 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ResolvesTargetUser;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Notifications\WorkspaceMemberAdded;
 use App\Notifications\WorkspaceMemberRemoved;
+use App\Repositories\UserRepository;
 use App\Repositories\WorkspaceRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class WorkspaceMemberController extends Controller
 {
+    use ResolvesTargetUser;
+
     public function __construct(
+        private readonly UserRepository $users,
         private readonly WorkspaceRepository $workspaces,
     ) {}
 

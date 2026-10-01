@@ -36,14 +36,14 @@ class TransferOwnership
             // The new Diagram Owner has full access already — drop any
             // leftover Collaborator row for them so they're not listed
             // twice (as Owner and as Collaborator).
-            $this->collaborators->removeFor($diagram, $newOwner);
+            $this->collaborators->deleteFor($diagram, $newOwner);
 
             if ((int) $previousOwnerId === $newOwner->id) {
                 return;
             }
 
             if ($giveUpAccess) {
-                $this->collaborators->removeFor($diagram, $previousOwner);
+                $this->collaborators->deleteFor($diagram, $previousOwner);
 
                 return;
             }

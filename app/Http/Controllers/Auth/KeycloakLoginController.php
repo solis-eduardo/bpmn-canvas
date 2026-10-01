@@ -70,9 +70,9 @@ class KeycloakLoginController extends Controller
         // A pre-existing local account with the same email is linked to the Keycloak
         // identity (same person) instead of creating a duplicate account, which would
         // also collide with the unique constraint on `email`.
-        $user = $this->users->findByEmail($socialiteUser->getEmail());
+        $user = $this->users->findUnlinkedByEmail($socialiteUser->getEmail());
 
-        if ($user && $user->keycloak_id === null) {
+        if ($user) {
             $user->keycloak_id = $keycloakId;
 
             return $user;

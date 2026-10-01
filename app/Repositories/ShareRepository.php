@@ -26,8 +26,7 @@ class ShareRepository
     public function activeFor(Diagram $diagram): Collection
     {
         return $diagram->shares()
-            ->whereNull('revoked_at')
-            ->where('expires_at', '>', now())
+            ->active()
             ->orderByDesc('created_at')
             ->orderByDesc('id')
             ->get();

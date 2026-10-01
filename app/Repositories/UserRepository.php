@@ -23,6 +23,15 @@ class UserRepository
         return User::where('email', $email)->first();
     }
 
+    /**
+     * A local account with this email that isn't linked to a Keycloak
+     * identity yet.
+     */
+    public function findUnlinkedByEmail(string $email): ?User
+    {
+        return User::whereNull('keycloak_id')->where('email', $email)->first();
+    }
+
     public function findByKeycloakId(string $keycloakId): ?User
     {
         return User::where('keycloak_id', $keycloakId)->first();

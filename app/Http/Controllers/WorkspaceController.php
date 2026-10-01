@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Workspaces\TransferOwnership;
+use App\Http\Controllers\Concerns\ResolvesTargetUser;
 use App\Models\Workspace;
+use App\Repositories\UserRepository;
 use App\Repositories\WorkspaceRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -11,7 +13,10 @@ use Illuminate\View\View;
 
 class WorkspaceController extends Controller
 {
+    use ResolvesTargetUser;
+
     public function __construct(
+        private readonly UserRepository $users,
         private readonly WorkspaceRepository $workspaces,
     ) {}
 
