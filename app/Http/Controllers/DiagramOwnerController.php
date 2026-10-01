@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ResolvesTargetUser;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
+use App\Models\User;
 use App\Repositories\DiagramRepository;
 use App\Repositories\UserRepository;
 use App\Services\DiagramOwnerService;
@@ -41,13 +42,12 @@ class DiagramOwnerController extends Controller
             'give_up_access' => ['sometimes', 'boolean'],
         ]);
 
-        $newOwner = $this->resolveUserFrom($data);
+        $newOwner = $this->actOnTargetUser(
+            $data,
+            fn (User $owner) => $this->owners->transfer($diagram, $owner, (bool) ($data['give_up_access'] ?? false)),
+        );
 
-        if ($newOwner) {
-            $this->owners->transfer($diagram, $newOwner, (bool) ($data['give_up_access'] ?? false));
-        }
-
-        return response()->json(isset($data['email'])
+        return response()->json($this->targetedByEmail($data)
             ? ['success' => true]
             : ['owner_id' => $newOwner->id]);
     }

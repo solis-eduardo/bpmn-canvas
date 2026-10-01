@@ -129,7 +129,7 @@ class WorkspaceMemberTest extends TestCase
 
         $response = $this->actingAs($owner)->delete("/workspaces/{$workspace->id}/members/{$owner->id}");
 
-        $response->assertStatus(422);
+        $response->assertForbidden();
         $this->assertTrue($this->isMember($workspace, $owner));
     }
 
@@ -155,7 +155,7 @@ class WorkspaceMemberTest extends TestCase
 
         $response = $this->actingAs($owner)->delete("/workspaces/{$workspace->id}/leave");
 
-        $response->assertStatus(422);
+        $response->assertForbidden();
         $this->assertTrue($this->isMember($workspace, $owner));
     }
 

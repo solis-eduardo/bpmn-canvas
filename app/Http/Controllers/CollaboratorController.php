@@ -8,6 +8,7 @@ use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Repositories\CollaboratorRepository;
+use App\Repositories\DiagramListCriteria;
 use App\Repositories\DiagramRepository;
 use App\Repositories\UserRepository;
 use App\Services\CollaboratorService;
@@ -62,17 +63,16 @@ class CollaboratorController extends Controller
 
         $data = $request->validate($this->userIdentifierRules());
 
-        $target = $this->resolveUserFrom($data);
+        $collaborator = null;
+        $this->actOnTargetUser($data, function (User $target) use ($diagram, &$collaborator) {
+            $this->authorize('collaborator.invite', [$diagram, $target]);
 
-        if (isset($data['email'])) {
-            if ($target) {
-                $this->grantOrRequest($diagram, $request->user(), $target);
-            }
+            $collaborator = $this->service->invite($diagram, $target, Gate::allows('collaborator.grant', $diagram));
+        });
 
+        if ($this->targetedByEmail($data)) {
             return response()->json(['success' => true], 201);
         }
-
-        $collaborator = $this->grantOrRequest($diagram, $request->user(), $target);
 
         if (! $request->expectsJson()) {
             return $this->requestRedirect($request);
@@ -84,29 +84,9 @@ class CollaboratorController extends Controller
         ], 201);
     }
 
-    /**
-     * Only a self-request is open to someone who cannot grant. A User who
-     * already edits the Diagram has no reason to ask, so a repeat leaves
-     * their access as it is.
-     */
-    private function grantOrRequest(Diagram $diagram, User $requester, User $target): Collaborator
-    {
-        if (Gate::forUser($requester)->allows('collaborator.grant', $diagram)) {
-            return $this->service->grant($diagram, $target);
-        }
-
-        abort_unless($requester->is($target), 403);
-
-        if (Gate::forUser($requester)->allows('collaborator.requestAccess', $diagram)) {
-            return $this->service->requestAccess($diagram, $requester);
-        }
-
-        return $this->collaborators->findFor($diagram, $requester) ?? abort(403);
-    }
-
     private function requestRedirect(Request $request): RedirectResponse
     {
-        $discoverySearch = trim((string) $request->query('discover', ''));
+        $discoverySearch = DiagramListCriteria::discoverSearch($request);
 
         return redirect()->route(
             'diagrams.index',

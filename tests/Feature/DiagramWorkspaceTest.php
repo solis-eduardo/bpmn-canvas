@@ -40,7 +40,7 @@ class DiagramWorkspaceTest extends TestCase
             'workspace_id' => $workspace->id,
         ]);
 
-        $response->assertStatus(422);
+        $response->assertForbidden();
         $this->assertNull($diagram->fresh()->workspace_id);
     }
 
@@ -209,7 +209,7 @@ class DiagramWorkspaceTest extends TestCase
 
         $this->actingAs($forker)
             ->post('/diagrams/'.$diagram->slug.'/fork', ['workspace_id' => $workspace->id])
-            ->assertStatus(422);
+            ->assertForbidden();
 
         $this->assertDatabaseMissing('diagrams', ['forked_from_id' => $diagram->id]);
     }

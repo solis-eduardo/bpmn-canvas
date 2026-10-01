@@ -9,7 +9,6 @@ use App\Repositories\UserRepository;
 use App\Services\MemberService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 
 class MemberController extends Controller
 {
@@ -31,24 +30,17 @@ class MemberController extends Controller
 
         $data = $request->validate($this->userIdentifierRules());
 
-        $member = $this->resolveUserFrom($data);
-
-        if ($member) {
-            $this->members->add($workspace, $member);
-        }
+        $this->actOnTargetUser($data, fn (User $member) => $this->members->add($workspace, $member));
 
         return redirect()->route('workspaces.index');
     }
 
     /**
-     * Not managing the Workspace is a 403; managing it but targeting the
-     * Workspace Owner is a 422 — the Workspace would end up ownerless.
+     * Refused for the Workspace Owner: the Workspace would end up ownerless.
      */
     public function destroy(Workspace $workspace, User $user): RedirectResponse
     {
-        $this->authorize('member.add', $workspace);
-
-        abort_unless(Gate::allows('member.remove', [$workspace, $user]), 422, __('messages.cannot_remove_workspace_owner'));
+        $this->authorize('member.remove', [$workspace, $user]);
 
         $this->members->remove($workspace, $user);
 
@@ -61,7 +53,7 @@ class MemberController extends Controller
      */
     public function leave(Request $request, Workspace $workspace): RedirectResponse
     {
-        abort_unless(Gate::allows('member.leave', $workspace), 422, __('messages.workspace_owner_must_transfer_before_leaving'));
+        $this->authorize('member.leave', $workspace);
 
         $this->members->leave($workspace, $request->user());
 

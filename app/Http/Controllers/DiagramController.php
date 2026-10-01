@@ -13,7 +13,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class DiagramController extends Controller
@@ -24,18 +23,6 @@ class DiagramController extends Controller
      * Number of Diagrams shown per page in the list (issue #39).
      */
     private const DIAGRAMS_PER_PAGE = 20;
-
-    /**
-     * Sortable columns for the Diagram list (issue #39), mapped from the
-     * "sort" query param to the actual column, with each one's default
-     * direction when no explicit "direction" is given.
-     *
-     * @var array<string, string>
-     */
-    private const SORT_COLUMNS = [
-        'title' => 'asc',
-        'updated_at' => 'desc',
-    ];
 
     public function __construct(
         private readonly DiagramRepository $diagrams,
@@ -67,20 +54,15 @@ class DiagramController extends Controller
     {
         $user = $request->user();
         $criteria = DiagramListCriteria::fromRequest($request);
-        $discoverySearch = trim((string) $request->query('discover', ''));
+        $discoverySearch = DiagramListCriteria::discoverSearch($request);
         $workspaceFilter = (string) $request->query('workspace', 'all');
-
-        $requestedSort = (string) $request->query('sort', 'title');
-        $sort = array_key_exists($requestedSort, self::SORT_COLUMNS) ? $requestedSort : 'title';
-        $requestedDirection = $request->query('direction');
-        $direction = in_array($requestedDirection, ['asc', 'desc'], true) ? $requestedDirection : self::SORT_COLUMNS[$sort];
 
         $workspaces = $user->is_admin
             ? $this->workspaces->allOrderedByName()
             : $this->workspaces->forUserOrderedByName($user);
 
         $diagrams = $this->diagrams->visibleListQuery($user, $criteria)
-            ->orderBy($sort, $direction)
+            ->orderBy($criteria->sort, $criteria->direction)
             ->orderBy('id')
             ->paginate(self::DIAGRAMS_PER_PAGE)
             ->appends($request->query());
@@ -93,6 +75,8 @@ class DiagramController extends Controller
 
         $search = $criteria->search;
         $tag = $criteria->tag;
+        $sort = $criteria->sort;
+        $direction = $criteria->direction;
         $filters = [
             'owner' => $criteria->owner,
             'collaborator' => $criteria->collaborator,
@@ -152,15 +136,11 @@ class DiagramController extends Controller
         // Collaborator, Member) — an Administrator who can merely "see and
         // open" the Diagram (DiagramPolicy::view()'s admin bypass) but
         // can't save must never acquire, hold, or be blocked by it.
-        if (Gate::allows('lock.acquire', $diagram)) {
-            if ($diagram->isLockedByOther($user)) {
-                return view('diagrams.locked', [
-                    'diagram' => $diagram,
-                    'lockedBy' => $diagram->lockedBy,
-                ]);
-            }
-
-            $this->locks->claim($diagram, $user);
+        if (Gate::allows('lock.acquire', $diagram) && ! $this->locks->enter($diagram, $user)) {
+            return view('diagrams.locked', [
+                'diagram' => $diagram,
+                'lockedBy' => $diagram->lockedBy,
+            ]);
         }
 
         $diagram->loadMissing(['author', 'owner']);
@@ -168,35 +148,7 @@ class DiagramController extends Controller
         return view('diagrams.show', compact('diagram'));
     }
 
-    public function content(string $slug): JsonResponse
-    {
-        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
-
-        $this->authorize('view', $diagram);
-
-        return response()->json([
-            'slug' => $diagram->slug,
-            'title' => $diagram->title,
-            'content' => Storage::disk('diagrams')->get($diagram->disk_path),
-        ]);
-    }
-
-    public function save(Request $request, string $slug, VersionRepository $versions): JsonResponse
-    {
-        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
-
-        $this->authorize('update', $diagram);
-
-        $data = $request->validate([
-            'content' => ['required', 'string'],
-        ]);
-
-        $versions->save($diagram, $request->user(), $data['content']);
-
-        return response()->json(['saved' => true]);
-    }
-
-    public function rename(Request $request, string $slug): JsonResponse
+    public function update(Request $request, string $slug): JsonResponse
     {
         $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 

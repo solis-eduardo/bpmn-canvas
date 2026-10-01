@@ -20,6 +20,15 @@ class CollaboratorService
     public function __construct(private readonly CollaboratorRepository $collaborators) {}
 
     /**
+     * Adds $target either way the caller is allowed to: directly when
+     * $direct (CollaboratorPolicy::grant), otherwise as a pending request.
+     */
+    public function invite(Diagram $diagram, User $target, bool $direct): Collaborator
+    {
+        return $direct ? $this->grant($diagram, $target) : $this->requestAccess($diagram, $target);
+    }
+
+    /**
      * Direct invite: the target gets access immediately, and is told — unless
      * they already had it.
      */
@@ -35,12 +44,19 @@ class CollaboratorService
     }
 
     /**
-     * Self-request: always stays pending until the Diagram Owner decides.
+     * Self-request: stays pending until the Diagram Owner decides, and never
+     * downgrades someone already approved.
      * Repeating a pending request doesn't notify the Diagram Owner again.
      */
     public function requestAccess(Diagram $diagram, User $requester): Collaborator
     {
-        $wasRequested = $this->collaborators->findFor($diagram, $requester)?->status === Collaborator::STATUS_REQUESTED;
+        $existing = $this->collaborators->findFor($diagram, $requester);
+
+        if ($existing?->status === Collaborator::STATUS_APPROVED) {
+            return $existing;
+        }
+
+        $wasRequested = $existing?->status === Collaborator::STATUS_REQUESTED;
 
         $collaborator = $this->collaborators->upsertStatus($diagram, $requester, Collaborator::STATUS_REQUESTED);
 
