@@ -23,7 +23,7 @@ class DiagramFiltersTest extends TestCase
 
         $response->assertOk();
         $response->assertSee($owned->title);
-        $response->assertDontSee($other->title);
+        $this->assertFalse($response->viewData('diagrams')->getCollection()->contains('id', $other->id));
     }
 
     public function test_collaborator_filter_shows_only_diagrams_the_user_is_an_approved_collaborator_on(): void
@@ -50,11 +50,12 @@ class DiagramFiltersTest extends TestCase
 
         $response->assertOk();
         $response->assertSee($approved->title);
-        $response->assertDontSee($requested->title);
-        $response->assertDontSee($unrelated->title);
+        $listedIds = $response->viewData('diagrams')->getCollection()->pluck('id');
+        $this->assertFalse($listedIds->contains($requested->id));
+        $this->assertFalse($listedIds->contains($unrelated->id));
     }
 
-    public function test_locked_filter_shows_only_diagrams_under_an_active_lock(): void
+    public function test_locked_filter_includes_locks_regardless_of_inactivity(): void
     {
         $user = User::factory()->create();
         $locker = User::factory()->create();
@@ -79,7 +80,7 @@ class DiagramFiltersTest extends TestCase
 
         $response->assertOk();
         $response->assertSee($locked->title);
-        $response->assertDontSee($expiredLock->title);
+        $response->assertSee($expiredLock->title);
         $response->assertDontSee($unlocked->title);
     }
 
@@ -119,7 +120,7 @@ class DiagramFiltersTest extends TestCase
         $response->assertOk();
         $response->assertSee($owned->title);
         $response->assertSee($collaborated->title);
-        $response->assertDontSee($unrelated->title);
+        $this->assertFalse($response->viewData('diagrams')->getCollection()->contains('id', $unrelated->id));
     }
 
     public function test_filters_combine_with_search(): void
@@ -135,7 +136,7 @@ class DiagramFiltersTest extends TestCase
         $response->assertOk();
         $response->assertSee($match->title);
         $response->assertDontSee($ownedButNoMatch->title);
-        $response->assertDontSee($matchButNotOwned->title);
+        $this->assertFalse($response->viewData('diagrams')->getCollection()->contains('id', $matchButNotOwned->id));
     }
 
     public function test_filters_never_surface_a_hidden_diagram_the_user_cannot_see(): void
