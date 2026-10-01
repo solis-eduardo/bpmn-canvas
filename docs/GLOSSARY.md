@@ -41,14 +41,14 @@ short here; full domain definitions live in `CONTEXT.md`.
 |---|---|
 | `diagramas` | `diagrams` |
 | `diagrama_slugs_antigos` | `diagram_old_slugs` |
-| `diagrama_colaboradores` | `diagram_collaborators` |
+| `diagrama_colaboradores` | `collaborators` |
 | `compartilhamentos` | `shares` |
 | `slug_antigo` | `old_slug` |
 | `usuario_id` | `user_id` |
 | `diagrama_id` (FK, appears in 3 migrations) | `diagram_id` |
 | `STATUS_APROVADO` / `STATUS_SOLICITADO` | `STATUS_APPROVED` / `STATUS_REQUESTED` |
 
-**Laravel convention check** (reviewed against migrations in `database/migrations/`): all four renamed tables are plural snake_case matching their singular-StudlyCase models (`diagrams`↔`Diagram`, `shares`↔`Share`, `diagram_old_slugs`↔`DiagramOldSlug`, `diagram_collaborators`↔`DiagramCollaborator`), foreign keys follow `{singular}_id` (`diagram_id`, `user_id`, `author_id`), and audit-style columns correctly use the `_by`/`_at` suffix convention (`created_by`, `locked_by`, `locked_at`, `lock_requested_by`, `lock_requested_at`) rather than the FK suffix — no changes needed there. `diagram_collaborators` is not a bare `belongsToMany` pivot (it has its own model, a `status` column, and no `updated_at`), so the plural table name is correct Eloquent convention, not the alphabetical-singular pivot pattern (`role_user`-style) that only applies to pivot tables without a dedicated model.
+**Laravel convention check** (reviewed against migrations in `database/migrations/`): all four renamed tables are plural snake_case matching their singular-StudlyCase models (`diagrams`↔`Diagram`, `shares`↔`Share`, `diagram_old_slugs`↔`DiagramOldSlug`, `collaborators`↔`Collaborator`), foreign keys follow `{singular}_id` (`diagram_id`, `user_id`, `author_id`), and audit-style columns correctly use the `_by`/`_at` suffix convention (`created_by`, `locked_by`, `locked_at`, `lock_requested_by`, `lock_requested_at`) rather than the FK suffix — no changes needed there. `collaborators` is not a bare `belongsToMany` pivot (it has its own model, a `status` column, and no `updated_at`), so the plural table name is correct Eloquent convention, not the alphabetical-singular pivot pattern (`role_user`-style) that only applies to pivot tables without a dedicated model. Per ADR-0012, `Collaborator` carries no aggregate prefix since the concept is unambiguous (unlike `Diagram`/`Workspace` `Owner`).
 
 ### Classes
 
@@ -56,7 +56,7 @@ short here; full domain definitions live in `CONTEXT.md`.
 |---|---|
 | `Diagrama` (Model) | `Diagram` |
 | `DiagramaSlugAntigo` (Model) | `DiagramOldSlug` |
-| `DiagramaColaborador` (Model) | `DiagramCollaborator` |
+| `DiagramaColaborador` (Model) | `Collaborator` |
 | `Compartilhamento` (Model) | `Share` |
 | `DiagramaRepository` | `DiagramRepository` |
 | `VersaoRepository` | `VersionRepository` |
