@@ -7,6 +7,7 @@ use App\Actions\Diagrams\RequestLock;
 use App\Actions\Diagrams\TransferOwnership;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Diagram;
+use App\Models\DiagramCollaborator;
 use App\Models\DiagramOldSlug;
 use App\Models\Workspace;
 use App\Repositories\DiagramRepository;
@@ -41,9 +42,10 @@ class DiagramController extends Controller
 
     /**
      * Lists Diagrams visible to the current User (CONTEXT.md, "Workspace";
-     * issue #28): every Diagram outside a Workspace, plus hidden ones the
-     * User can see (Diagram Owner, approved Collaborator, or Member of its
-     * Workspace). An Administrator sees every Diagram.
+     * issue #28): only Diagrams the User can open (Diagram Owner, approved
+     * Collaborator, or Member of its Workspace). An Administrator sees
+     * every Diagram. Other out-of-Workspace Diagrams are listed separately
+     * as searchable discovery results without Editor access.
      *
      * Accepts an optional "q" search term matching title, Slug (issue #38),
      * or the BPMN content's task/event/gateway/lane/pool names (issue #41).
@@ -62,6 +64,7 @@ class DiagramController extends Controller
     {
         $user = $request->user();
         $search = trim((string) $request->query('q', ''));
+        $discoverySearch = trim((string) $request->query('discover', ''));
         $tag = trim((string) $request->query('tag', ''));
         $workspaceFilter = (string) $request->query('workspace', 'all');
 
@@ -82,12 +85,7 @@ class DiagramController extends Controller
             : $user->workspaces()->orderBy('name')->get();
 
         $diagrams = Diagram::with(['author', 'owner', 'lockedBy', 'tags', 'workspace'])
-            ->when(! $user->is_admin, fn ($query) => $query->where(function ($query) use ($user) {
-                $query->whereNull('workspace_id')
-                    ->orWhere(fn ($query) => $query->ownedBy($user))
-                    ->orWhere(fn ($query) => $query->collaboratedBy($user))
-                    ->orWhereHas('workspace.members', fn ($members) => $members->where('user_id', $user->id));
-            }))
+            ->when(! $user->is_admin, fn ($query) => $query->editableBy($user))
             ->when($workspaceFilter === 'none', fn ($query) => $query->whereNull('workspace_id'))
             ->when(ctype_digit($workspaceFilter) && (int) $workspaceFilter > 0, fn ($query) => $query->where('workspace_id', (int) $workspaceFilter))
             ->when($search !== '', fn ($query) => $query->search($search))
@@ -114,7 +112,35 @@ class DiagramController extends Controller
             ->paginate(self::DIAGRAMS_PER_PAGE)
             ->appends($request->query());
 
-        return view('diagrams.index', compact('diagrams', 'search', 'tag', 'filters', 'sort', 'direction', 'workspaceFilter', 'workspaces'));
+        $discoveryDiagrams = Diagram::with([
+            'owner',
+            'collaborators' => fn ($query) => $query->where('user_id', $user->id),
+        ])
+            ->when(! $user->is_admin, fn ($query) => $query
+                ->whereNull('workspace_id')
+                ->where('owner_id', '!=', $user->id)
+                ->whereDoesntHave('collaborators', fn ($collaborators) => $collaborators
+                    ->where('user_id', $user->id)
+                    ->where('status', DiagramCollaborator::STATUS_APPROVED)))
+            ->when($user->is_admin, fn ($query) => $query->whereRaw('1 = 0'))
+            ->when($discoverySearch !== '', fn ($query) => $query->where('title', 'like', '%'.$discoverySearch.'%'))
+            ->orderBy('title')
+            ->orderBy('id')
+            ->simplePaginate(self::DIAGRAMS_PER_PAGE, ['*'], 'discovery_page')
+            ->appends($request->except(['page', 'discovery_page']));
+
+        return view('diagrams.index', compact(
+            'diagrams',
+            'discoveryDiagrams',
+            'search',
+            'discoverySearch',
+            'tag',
+            'filters',
+            'sort',
+            'direction',
+            'workspaceFilter',
+            'workspaces',
+        ));
     }
 
     public function store(Request $request, DiagramRepository $diagrams, VersionRepository $versions): RedirectResponse
@@ -299,18 +325,17 @@ class DiagramController extends Controller
     }
 
     /**
-     * Requests the Lock on a Diagram locked by another User. Returns
-     * "acquired" if the Lock was free, or "waiting" while another User
-     * holds it — the client should poll again until it gets "acquired".
+     * Requests a Lock held by another User. Returns "waiting" until the
+     * holder or an Administrator explicitly releases it, or "acquired" if
+     * the Lock is already free.
      */
     public function requestLock(Request $request, string $slug, RequestLock $requestLock): JsonResponse
     {
         [$diagram] = $this->resolve($slug);
 
-        // 'update', not 'view': requesting/transferring the Lock is only
-        // meaningful for an actual editor. DiagramPolicy::view()'s admin
-        // bypass ("sees and opens") must never let an Administrator who
-        // can't save force the Lock away from the real editor.
+        // 'update', not 'view': requesting a Lock is only meaningful for an
+        // actual editor. DiagramPolicy::view()'s admin bypass ("sees and
+        // opens") must never let an Administrator who can't save request it.
         $this->authorize('update', $diagram);
 
         return response()->json($requestLock($diagram, $request->user()));
