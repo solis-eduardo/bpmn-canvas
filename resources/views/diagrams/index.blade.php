@@ -1,13 +1,6 @@
 <x-layouts.app :title="__('messages.diagrams')">
     <div class="flex items-center justify-between gap-4">
         <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.diagrams') }}</h1>
-
-        <form method="POST" action="{{ route('logout') }}">
-            @csrf
-            <button type="submit" class="text-sm font-medium text-gray-500 hover:text-gray-700">
-                {{ __('messages.log_out') }}
-            </button>
-        </form>
     </div>
 
     <form method="POST" action="{{ route('diagrams.store') }}" class="mt-6 flex flex-wrap items-center gap-3">
@@ -82,26 +75,39 @@
         </button>
     </form>
 
-    <ul class="mt-8 divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white shadow-sm">
+    <div class="mt-8 overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+        <table class="min-w-[1040px] w-full divide-y divide-gray-200 text-left text-sm">
+            <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                <tr>
+                    <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_title') }}</th>
+                    <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_author') }}</th>
+                    <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_owner') }}</th>
+                    <th scope="col" class="px-4 py-3">{{ __('messages.workspace_filter_label') }}</th>
+                    <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_modified') }}</th>
+                    <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_lock') }}</th>
+                    <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_tags') }}</th>
+                    <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_actions') }}</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-200 bg-white">
         @forelse ($diagrams as $diagram)
-            <li class="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-                <a href="{{ route('diagrams.show', $diagram->slug) }}" class="font-medium text-blue-600 hover:text-blue-700 hover:underline">
-                    {{ $diagram->title }}
-                </a>
-
-                <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-500">
-                    <span>{{ __('messages.author_label', ['name' => $diagram->author->name]) }}</span>
-                    <span>{{ __('messages.diagram_owner_label', ['name' => $diagram->owner->name]) }}</span>
-                    <span>{{ $diagram->workspace ? __('messages.workspace_label', ['name' => $diagram->workspace->name]) : __('messages.no_workspace') }}</span>
-                    <span title="{{ $diagram->updated_at }}">
-                        {{ __('messages.last_modified_label', ['time' => $diagram->updated_at->diffForHumans()]) }}
-                    </span>
+            <tr>
+                <td class="px-4 py-3 font-medium text-gray-900">{{ $diagram->title }}</td>
+                <td class="px-4 py-3 text-gray-600">{{ $diagram->author->name }}</td>
+                <td class="px-4 py-3 text-gray-600">{{ $diagram->owner->name }}</td>
+                <td class="px-4 py-3 text-gray-600">{{ $diagram->workspace?->name ?? __('messages.no_workspace') }}</td>
+                <td class="whitespace-nowrap px-4 py-3 text-gray-600" title="{{ $diagram->updated_at }}">
+                    {{ $diagram->updated_at->diffForHumans() }}
+                </td>
+                <td class="px-4 py-3">
                     @if ($diagram->hasActiveLock())
                         <span class="text-amber-600">{{ __('messages.being_edited_by', ['name' => $diagram->lockedBy->name]) }}</span>
+                    @else
+                        <span class="text-gray-500">{{ __('messages.not_locked') }}</span>
                     @endif
-                </div>
-
-                <div class="flex w-full flex-wrap items-center gap-1.5">
+                </td>
+                <td class="px-4 py-3">
+                    <div class="flex min-w-40 flex-wrap items-center gap-1.5">
                     @php($canManageTags = auth()->user()->can('manageTags', $diagram))
 
                     @foreach ($diagram->tags as $diagramTag)
@@ -129,16 +135,107 @@
                             <button type="submit" class="text-xs font-medium text-blue-600 hover:underline">{{ __('messages.add_tag') }}</button>
                         </form>
                     @endif
-                </div>
-            </li>
+                    </div>
+                </td>
+                <td class="whitespace-nowrap px-4 py-3">
+                    <a href="{{ route('diagrams.show', $diagram->slug) }}" class="font-medium text-blue-600 hover:text-blue-700 hover:underline">
+                        {{ __('messages.open_diagram') }}
+                    </a>
+                </td>
+            </tr>
         @empty
-            <li class="px-4 py-6 text-center text-sm text-gray-500">
+            <tr>
+                <td colspan="8" class="px-4 py-6 text-center text-sm text-gray-500">
                 {{ ($search !== '' || $tag !== '' || in_array(true, $filters, true)) ? __('messages.no_diagrams_match_search') : __('messages.no_diagrams_yet') }}
-            </li>
+                </td>
+            </tr>
         @endforelse
-    </ul>
+            </tbody>
+        </table>
+    </div>
 
     <div class="mt-4">
         {{ $diagrams->links() }}
     </div>
+
+    @if (session('status'))
+        <p class="mt-6 rounded-md bg-green-50 px-4 py-3 text-sm text-green-700" role="status">
+            {{ session('status') }}
+        </p>
+    @endif
+
+    <section class="mt-12" aria-labelledby="diagram-discovery-heading">
+        <h2 id="diagram-discovery-heading" class="text-xl font-semibold text-gray-900">
+            {{ __('messages.diagram_discovery_heading') }}
+        </h2>
+        <p class="mt-1 text-sm text-gray-600">{{ __('messages.diagram_discovery_description') }}</p>
+
+        <form method="GET" action="{{ route('diagrams.index') }}" class="mt-4 flex flex-wrap items-center gap-3">
+            <label for="diagram-discovery-search" class="sr-only">{{ __('messages.diagram_discovery_search_label') }}</label>
+            <input
+                id="diagram-discovery-search"
+                type="search"
+                name="discover"
+                value="{{ $discoverySearch }}"
+                placeholder="{{ __('messages.diagram_discovery_search_placeholder') }}"
+                class="w-full max-w-sm rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+            <button
+                type="submit"
+                class="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+            >
+                {{ __('messages.search') }}
+            </button>
+        </form>
+
+        <div class="mt-4 overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+            <table id="diagram-discovery-table" class="min-w-[480px] w-full divide-y divide-gray-200 text-left text-sm">
+                <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+                    <tr>
+                        <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_title') }}</th>
+                        <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_owner') }}</th>
+                        <th scope="col" class="px-4 py-3">{{ __('messages.request_access') }}</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+            @forelse ($discoveryDiagrams as $discoveryDiagram)
+                <tr>
+                    <td class="px-4 py-3 font-medium text-gray-900">{{ $discoveryDiagram->title }}</td>
+                    <td class="px-4 py-3 text-gray-600">{{ $discoveryDiagram->owner->name }}</td>
+                    <td class="px-4 py-3">
+
+                    @if ($discoveryDiagram->collaborators->first()?->status === \App\Models\DiagramCollaborator::STATUS_REQUESTED)
+                        <span class="text-sm text-gray-500">{{ __('messages.access_request_pending') }}</span>
+                    @else
+                        <form
+                            method="POST"
+                            action="{{ route('diagrams.collaborators.store', ['slug' => $discoveryDiagram->slug, 'discover' => $discoverySearch]) }}"
+                        >
+                            @csrf
+                            <input type="hidden" name="user_id" value="{{ auth()->id() }}">
+                            <button
+                                type="submit"
+                                class="rounded-md border border-blue-600 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50"
+                            >
+                                {{ __('messages.request_access') }}
+                            </button>
+                        </form>
+                    @endif
+                    </td>
+                </tr>
+            @empty
+                <tr>
+                    <td colspan="3" class="px-4 py-6 text-center text-sm text-gray-500">
+                        {{ $discoverySearch !== '' ? __('messages.no_diagrams_match_search') : __('messages.no_discoverable_diagrams') }}
+                    </td>
+                </tr>
+            @endforelse
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-4">
+            {{ $discoveryDiagrams->links() }}
+        </div>
+    </section>
 </x-layouts.app>
