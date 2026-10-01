@@ -4,7 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\FiltersDiagramList;
 use App\Models\Concerns\HasTags;
-use App\Support\Slugger;
+use App\Repositories\DiagramRepository;
 use Database\Factories\DiagramFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,7 +13,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 #[Fillable(['slug', 'title', 'author_id', 'owner_id', 'workspace_id', 'disk_path', 'forked_from_id'])]
 class Diagram extends Model
@@ -287,43 +286,11 @@ BPMN;
     }
 
     /**
-     * Generates a unique slug from a free-form name, normalizing it and
-     * appending a short alphanumeric suffix on collision with the current
-     * slug of any Diagram or with a reserved old slug.
+     * Kept for existing callers; the logic lives in DiagramRepository.
      */
     public static function uniqueSlug(string $name, ?int $ignoreDiagramId = null): string
     {
-        $base = Slugger::slugify($name);
-        $slug = $base;
-        $attempts = 0;
-        $maxAttempts = 20;
-
-        while (self::slugIsTaken($slug, $ignoreDiagramId)) {
-            if (++$attempts > $maxAttempts) {
-                $slug = $base.'-'.Str::lower(Str::random(12));
-
-                break;
-            }
-
-            $slug = $base.'-'.Str::lower(Str::random(4));
-        }
-
-        return $slug;
-    }
-
-    private static function slugIsTaken(string $slug, ?int $ignoreDiagramId): bool
-    {
-        $query = static::where('slug', $slug);
-
-        if ($ignoreDiagramId !== null) {
-            $query->where('id', '!=', $ignoreDiagramId);
-        }
-
-        if ($query->exists()) {
-            return true;
-        }
-
-        return DiagramOldSlug::where('old_slug', $slug)->exists();
+        return app(DiagramRepository::class)->uniqueSlug($name, $ignoreDiagramId);
     }
 
     /**
