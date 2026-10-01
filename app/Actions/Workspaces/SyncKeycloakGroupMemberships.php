@@ -2,9 +2,9 @@
 
 namespace App\Actions\Workspaces;
 
+use App\Models\Member;
 use App\Models\User;
 use App\Models\Workspace;
-use App\Models\WorkspaceMember;
 use Illuminate\Support\Facades\DB;
 
 class SyncKeycloakGroupMemberships
@@ -18,8 +18,8 @@ class SyncKeycloakGroupMemberships
     public function __invoke(User $user, array $groups): void
     {
         DB::transaction(function () use ($user, $groups) {
-            WorkspaceMember::where('user_id', $user->id)
-                ->where('origin', WorkspaceMember::ORIGIN_GROUP)
+            Member::where('user_id', $user->id)
+                ->where('origin', Member::ORIGIN_GROUP)
                 ->whereDoesntHave('workspace', fn ($query) => $query->whereIn('keycloak_group', $groups))
                 ->delete();
 

@@ -2,8 +2,8 @@
 
 namespace App\Actions\Diagrams;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\User;
 
 /**
@@ -16,7 +16,7 @@ use App\Models\User;
  */
 class GrantOrRequestCollaborator
 {
-    public function __invoke(Diagram $diagram, User $requester, User $target): DiagramCollaborator
+    public function __invoke(Diagram $diagram, User $requester, User $target): Collaborator
     {
         $canGrantDirectly = $requester->can('manageCollaborators', $diagram);
 
@@ -24,15 +24,15 @@ class GrantOrRequestCollaborator
             abort(403);
         }
 
-        $existing = DiagramCollaborator::where('diagram_id', $diagram->id)
+        $existing = Collaborator::where('diagram_id', $diagram->id)
             ->where('user_id', $target->id)
             ->first();
 
         $status = $canGrantDirectly
-            ? DiagramCollaborator::STATUS_APPROVED
-            : ($existing->status ?? DiagramCollaborator::STATUS_REQUESTED);
+            ? Collaborator::STATUS_APPROVED
+            : ($existing->status ?? Collaborator::STATUS_REQUESTED);
 
-        return DiagramCollaborator::updateOrCreate(
+        return Collaborator::updateOrCreate(
             ['diagram_id' => $diagram->id, 'user_id' => $target->id],
             ['status' => $status]
         );

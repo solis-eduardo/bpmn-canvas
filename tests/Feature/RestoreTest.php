@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\Share;
 use App\Models\User;
 use App\Repositories\VersionRepository;
@@ -38,7 +38,7 @@ class RestoreTest extends TestCase
     public const TABLES_IN_DEPENDENCY_ORDER = [
         'users',
         'diagrams',
-        'diagram_collaborators',
+        'collaborators',
         'diagram_version_names',
         'shares',
     ];
@@ -94,10 +94,10 @@ class RestoreTest extends TestCase
 
         app(VersionRepository::class)->save($diagram, $owner, '<bpmn:definitions>original</bpmn:definitions>');
 
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $diagram->id,
             'user_id' => $collaborator->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
 
         $share = Share::factory()->for($diagram)->for($owner, 'author')->create([
@@ -120,7 +120,7 @@ class RestoreTest extends TestCase
         // --- mutate everything the restore is supposed to bring back ---
         app(VersionRepository::class)->save($diagram, $owner, '<bpmn:definitions>mutated after backup</bpmn:definitions>');
 
-        DiagramCollaborator::where('diagram_id', $diagram->id)
+        Collaborator::where('diagram_id', $diagram->id)
             ->where('user_id', $collaborator->id)
             ->delete();
 
@@ -148,7 +148,7 @@ class RestoreTest extends TestCase
 
         $this->getJson(route('diagrams.collaborators.index', $diagram->slug))
             ->assertOk()
-            ->assertJsonFragment(['user_id' => $collaborator->id, 'status' => DiagramCollaborator::STATUS_APPROVED]);
+            ->assertJsonFragment(['user_id' => $collaborator->id, 'status' => Collaborator::STATUS_APPROVED]);
 
         $this->get($downloadUrl)
             ->assertOk()
