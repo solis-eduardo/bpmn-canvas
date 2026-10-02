@@ -72,22 +72,34 @@ class NotificationController extends Controller
     {
         $term = trim((string) $request->query('q', ''));
 
-        if ($term === '') {
-            $notifications = $request->user()->notifications()->latest()->paginate(20);
-        } else {
-            $matches = $search->matching($request->user(), $term);
-            $notifications = (new LengthAwarePaginator(
-                $matches->forPage(Paginator::resolveCurrentPage(), 20)->values(),
-                $matches->count(),
-                20,
-                Paginator::resolveCurrentPage(),
-                ['path' => Paginator::resolveCurrentPath()],
-            ))->appends($request->except('page'));
-        }
-
-        $notifications = $notifications->through(fn (DatabaseNotification $notification) => $this->present($notification));
+        $notifications = $this->paginated($request, $search, $term)
+            ->through(fn (DatabaseNotification $notification) => $this->present($notification));
 
         return view('notifications.history', compact('notifications', 'term'));
+    }
+
+    /**
+     * The User's own notifications, newest first, optionally narrowed to
+     * those whose message contains $term.
+     *
+     * @return LengthAwarePaginator<int, DatabaseNotification>
+     */
+    private function paginated(Request $request, NotificationSearch $search, string $term): LengthAwarePaginator
+    {
+        if ($term === '') {
+            return $request->user()->notifications()->latest()->paginate(20);
+        }
+
+        $matches = $search->matching($request->user(), $term);
+        $page = Paginator::resolveCurrentPage();
+
+        return (new LengthAwarePaginator(
+            $matches->forPage($page, 20)->values(),
+            $matches->count(),
+            20,
+            $page,
+            ['path' => Paginator::resolveCurrentPath()],
+        ))->appends($request->except('page'));
     }
 
     /**
