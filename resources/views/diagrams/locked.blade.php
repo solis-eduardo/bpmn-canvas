@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>{{ $diagram->title }} — {{ __('messages.being_edited') }}</title>
+    <title>{{ $diagram->title }} | {{ __('messages.being_edited') }}</title>
     <link rel="stylesheet" href="{{ asset('assets/app.css') }}">
 </head>
 <body>

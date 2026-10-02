@@ -1,4 +1,4 @@
-<x-layouts.app :title="$diagram->title . ' — ' . __('messages.bpmn_editor')" :fluid="true">
+<x-layouts.app :title="$diagram->title . ' | ' . __('messages.bpmn_editor')" :fluid="true">
     <x-slot:head>
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/diagram-js.css') }}">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-js.css') }}">

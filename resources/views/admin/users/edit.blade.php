@@ -1,7 +1,7 @@
 <x-layouts.app :title="__('messages.edit_user')">
     <div class="mx-auto max-w-xl">
         <div class="flex items-center justify-between gap-4">
-            <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.edit_user') }} — {{ $user->name }}</h1>
+            <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.edit_user') }}: {{ $user->name }}</h1>
             <a href="{{ route('admin.users.index') }}" class="text-sm font-medium text-blue-600 hover:text-blue-700">
                 {{ __('messages.back_to_users') }}
             </a>
