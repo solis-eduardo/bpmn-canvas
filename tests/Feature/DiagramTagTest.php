@@ -212,4 +212,33 @@ class DiagramTagTest extends TestCase
         $this->actingAs($user)->get('/diagrams?'.http_build_query(['tag' => 'Shared']))
             ->assertSee($first->title)->assertSee($second->title);
     }
+
+    public function test_the_listing_offers_existing_tags_in_the_tom_select_picker(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+        $diagram->attachTag(Tag::findOrCreate('Onboarding'));
+        Tag::findOrCreate('Finance');
+
+        $response = $this->actingAs($owner)->get('/diagrams');
+
+        $response->assertOk();
+        $response->assertSee('data-tag-select', false);
+        $response->assertSee('<option value="Finance">Finance</option>', false);
+        $response->assertSee('<option value="Onboarding">Onboarding</option>', false);
+    }
+
+    public function test_an_invalid_tag_shows_its_error_under_the_picker(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+
+        $response = $this->actingAs($owner)
+            ->from('/diagrams')
+            ->followingRedirects()
+            ->post("/diagrams/{$diagram->slug}/tags", ['name' => '', '_form' => "diagram-tag-{$diagram->id}"]);
+
+        $response->assertSee('aria-invalid="true"', false);
+        $response->assertSee('role="alert"', false);
+    }
 }
