@@ -57,7 +57,7 @@ return [
     'author_label' => '(autor: :name)',
     'diagram_owner_label' => '(propietario: :name)',
     'last_modified_label' => 'Última modificación :time',
-    'being_edited_by' => '— en edición por :name',
+    'being_edited_by' => 'en edición por :name',
     'filter_owner' => 'Soy el Propietario del Diagrama',
     'filter_collaborator' => 'Soy Colaborador',
     'filter_locked' => 'Bloqueado ahora',
