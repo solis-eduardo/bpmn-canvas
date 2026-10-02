@@ -186,26 +186,7 @@ class AdminUserManagementTest extends TestCase
         ]);
     }
 
-    public function test_admin_can_create_a_keycloak_user_without_a_password(): void
-    {
-        $this->configureKeycloak();
-        $admin = User::factory()->create(['is_admin' => true]);
-
-        $this->actingAs($admin)->post('/admin/users', [
-            'name' => 'Sso Person',
-            'email' => 'sso@example.com',
-            'login_method' => 'keycloak',
-        ])->assertSessionHasNoErrors();
-
-        $this->assertDatabaseHas('users', [
-            'email' => 'sso@example.com',
-            'login_method' => 'keycloak',
-            'keycloak_id' => null,
-            'password' => null,
-        ]);
-    }
-
-    public function test_local_user_requires_a_password_at_creation(): void
+    public function test_creating_a_user_requires_a_password(): void
     {
         $this->configureKeycloak();
         $admin = User::factory()->create(['is_admin' => true]);
@@ -213,10 +194,37 @@ class AdminUserManagementTest extends TestCase
         $this->actingAs($admin)->post('/admin/users', [
             'name' => 'Local Person',
             'email' => 'local@example.com',
-            'login_method' => 'local',
         ])->assertSessionHasErrors('password');
 
         $this->assertDatabaseMissing('users', ['email' => 'local@example.com']);
+    }
+
+    public function test_a_submitted_login_method_is_ignored_when_creating_a_user(): void
+    {
+        $this->configureKeycloak();
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->post('/admin/users', [
+            'name' => 'Sso Person',
+            'email' => 'sso@example.com',
+            'password' => 'initial-password',
+            'login_method' => 'keycloak',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('users', ['email' => 'sso@example.com', 'login_method' => 'local']);
+    }
+
+    public function test_create_form_has_no_login_method_field_even_when_keycloak_is_configured(): void
+    {
+        $this->configureKeycloak();
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->get(route('admin.users.create'))
+            ->assertOk()
+            ->assertSee(__('messages.create_user'))
+            ->assertDontSee('name="login_method"', false)
+            ->assertDontSee(__('messages.login_method'))
+            ->assertDontSee('value="keycloak"', false);
     }
 
     public function test_created_user_defaults_to_the_local_method(): void
@@ -232,29 +240,28 @@ class AdminUserManagementTest extends TestCase
         $this->assertDatabaseHas('users', ['email' => 'new@example.com', 'login_method' => 'local']);
     }
 
-    public function test_keycloak_method_is_refused_and_hidden_when_keycloak_is_not_configured(): void
+    public function test_edit_form_hides_the_keycloak_method_when_keycloak_is_not_configured(): void
     {
         $this->configureKeycloak(false);
         $admin = User::factory()->create(['is_admin' => true]);
+        $target = User::factory()->create();
 
-        $this->actingAs($admin)->get(route('admin.users.create'))
+        $this->actingAs($admin)->get(route('admin.users.edit', $target))
             ->assertOk()
+            ->assertSee('name="login_method"', false)
             ->assertDontSee('value="keycloak"', false);
 
-        $this->actingAs($admin)->post('/admin/users', [
-            'name' => 'Sso Person',
-            'email' => 'sso@example.com',
+        $this->actingAs($admin)->put(route('admin.users.update', $target), [
             'login_method' => 'keycloak',
         ])->assertSessionHasErrors('login_method');
     }
 
-    public function test_form_offers_the_keycloak_method_when_configured(): void
+    public function test_edit_form_offers_the_keycloak_method_when_configured(): void
     {
         $this->configureKeycloak();
         $admin = User::factory()->create(['is_admin' => true]);
         $target = User::factory()->create();
 
-        $this->actingAs($admin)->get(route('admin.users.create'))->assertSee('value="keycloak"', false);
         $this->actingAs($admin)->get(route('admin.users.edit', $target))->assertSee('value="keycloak"', false);
     }
 

@@ -100,10 +100,10 @@ class WorkspaceRepository
      * Member, atomically: a Workspace never exists without its Owner being
      * a Member.
      */
-    public function create(string $name, User $owner): Workspace
+    public function create(string $name, User $owner, ?string $keycloakGroup = null): Workspace
     {
-        return DB::transaction(function () use ($name, $owner) {
-            $workspace = Workspace::create(['name' => $name, 'owner_id' => $owner->id]);
+        return DB::transaction(function () use ($name, $owner, $keycloakGroup) {
+            $workspace = Workspace::create(['name' => $name, 'owner_id' => $owner->id, 'keycloak_group' => $keycloakGroup]);
 
             $this->members->upsertManual($workspace, $owner);
 

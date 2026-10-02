@@ -124,7 +124,6 @@ class WorkspaceTest extends TestCase
         $response->assertOk();
         $response->assertSee($mine->name);
         $response->assertDontSee($notMine->name);
-        $response->assertDontSee(route('workspaces.keycloak-group.update', $mine));
     }
 
     public function test_administrator_viewing_a_workspace_they_are_not_a_member_of_is_not_offered_a_leave_button(): void
@@ -199,23 +198,39 @@ class WorkspaceTest extends TestCase
         $this->assertSame($workspace->name, $workspace->fresh()->name);
     }
 
-    public function test_only_an_administrator_can_link_a_workspace_to_a_keycloak_group(): void
+    public function test_only_an_administrator_can_link_a_workspace_to_a_keycloak_group_through_the_workspace_form(): void
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
         $this->addMember($workspace, $owner);
 
-        $this->actingAs($owner)->put("/workspaces/{$workspace->id}/keycloak-group", [
+        $this->actingAs($owner)->put("/workspaces/{$workspace->id}", [
+            'name' => 'Renamed',
             'keycloak_group' => '/finance',
         ])->assertForbidden();
 
         $this->assertNull($workspace->fresh()->keycloak_group);
+        $this->assertNotSame('Renamed', $workspace->fresh()->name);
 
         $admin = User::factory()->create(['is_admin' => true]);
 
-        $this->actingAs($admin)->put("/workspaces/{$workspace->id}/keycloak-group", [
+        $this->actingAs($admin)->put("/workspaces/{$workspace->id}", [
+            'name' => 'Renamed',
             'keycloak_group' => '/finance',
-        ])->assertRedirect(route('workspaces.edit', $workspace));
+        ])->assertRedirect(route('workspaces.index'));
+
+        $this->assertSame('/finance', $workspace->fresh()->keycloak_group);
+        $this->assertSame('Renamed', $workspace->fresh()->name);
+    }
+
+    public function test_the_owner_renaming_without_the_keycloak_field_keeps_the_link(): void
+    {
+        $owner = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id, 'keycloak_group' => '/finance']);
+        $this->addMember($workspace, $owner);
+
+        $this->actingAs($owner)->put("/workspaces/{$workspace->id}", ['name' => 'Renamed'])
+            ->assertRedirect(route('workspaces.index'));
 
         $this->assertSame('/finance', $workspace->fresh()->keycloak_group);
     }
@@ -229,11 +244,52 @@ class WorkspaceTest extends TestCase
             'keycloak_group' => '/finance',
         ]);
 
-        $this->actingAs($admin)->put("/workspaces/{$workspace->id}/keycloak-group", [
+        $this->actingAs($admin)->put("/workspaces/{$workspace->id}", [
+            'name' => $workspace->name,
             'keycloak_group' => '',
-        ])->assertRedirect(route('workspaces.edit', $workspace));
+        ])->assertRedirect(route('workspaces.index'));
 
         $this->assertNull($workspace->fresh()->keycloak_group);
+    }
+
+    public function test_keycloak_group_is_validated_in_the_workspace_form(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $workspace = Workspace::factory()->create();
+
+        $this->actingAs($admin)->put("/workspaces/{$workspace->id}", [
+            'name' => 'Ok',
+            'keycloak_group' => str_repeat('x', 256),
+        ])->assertSessionHasErrors('keycloak_group');
+    }
+
+    public function test_an_administrator_can_set_the_keycloak_group_when_creating_a_workspace(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->post('/workspaces', ['name' => 'Linked', 'keycloak_group' => '/finance'])
+            ->assertRedirect(route('workspaces.index'));
+
+        $this->assertDatabaseHas('workspaces', ['name' => 'Linked', 'keycloak_group' => '/finance']);
+    }
+
+    public function test_a_non_administrator_cannot_set_the_keycloak_group_when_creating_a_workspace(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post('/workspaces', ['name' => 'Linked', 'keycloak_group' => '/finance'])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('workspaces', ['name' => 'Linked']);
+    }
+
+    public function test_the_keycloak_field_is_offered_on_the_create_form_to_administrators_only(): void
+    {
+        $this->actingAs(User::factory()->create())->get('/workspaces/create')
+            ->assertOk()->assertDontSee('name="keycloak_group"', false);
+
+        $this->actingAs(User::factory()->create(['is_admin' => true]))->get('/workspaces/create')
+            ->assertOk()->assertSee('name="keycloak_group"', false);
     }
 
     public function test_unrelated_user_cannot_rename_the_workspace(): void
@@ -346,10 +402,15 @@ class WorkspaceTest extends TestCase
         });
         $response->assertSee('Candidate Person');
         $response->assertSee('candidate@example.test');
-        $response->assertDontSee(route('workspaces.keycloak-group.update', $workspace));
+        $response->assertDontSee('name="keycloak_group"', false);
+        $response->assertDontSee('data-user-select', false);
+        $response->assertDontSee('type="search"', false);
+        $response->assertSee('data-tag-select', false);
+        $response->assertSee('for="add-member-user_id"', false);
+        $response->assertSee('for="transfer-owner-user_id"', false);
     }
 
-    public function test_only_an_administrator_sees_the_keycloak_link_form_in_the_workspace_form(): void
+    public function test_only_an_administrator_sees_the_keycloak_field_in_the_main_workspace_form(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
         $workspace = Workspace::factory()->create();
@@ -357,7 +418,9 @@ class WorkspaceTest extends TestCase
 
         $this->actingAs($admin)->get("/workspaces/{$workspace->id}/edit")
             ->assertOk()
-            ->assertSee(route('workspaces.keycloak-group.update', $workspace));
+            ->assertSee('name="keycloak_group"', false)
+            ->assertSee(__('messages.keycloak_group'))
+            ->assertDontSee('/keycloak-group', false);
     }
 
     public function test_listing_is_read_only_for_keycloak_link_members_and_ownership(): void
@@ -374,7 +437,6 @@ class WorkspaceTest extends TestCase
         $response->assertOk()
             ->assertSee(__('messages.keycloak_group'))
             ->assertSee('/finance')
-            ->assertDontSee(route('workspaces.keycloak-group.update', $workspace))
             ->assertDontSee(route('workspaces.members.store', $workspace))
             ->assertDontSee(route('workspaces.owner.transfer', $workspace))
             ->assertDontSee('data-user-select', false);

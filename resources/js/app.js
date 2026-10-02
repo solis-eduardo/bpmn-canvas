@@ -7,28 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('[aria-invalid="true"]')?.focus();
 });
 
-// Searchable user <select>s (components/user-select.blade.php): the filter
-// input narrows the select's options; the placeholder option always stays.
-document.querySelectorAll('[data-user-select]').forEach((root) => {
-    const filter = root.querySelector('[data-user-select-filter]');
-    const select = root.querySelector('select');
-    // The first option is the placeholder; it is never filtered out.
-    const options = Array.from(select.options).slice(1);
-
-    filter.addEventListener('input', () => {
-        const term = filter.value.trim().toLowerCase();
-        const matches = options.filter((option) => option.text.toLowerCase().includes(term));
-
-        select.replaceChildren(select.options[0], ...matches);
-
-        if (!matches.some((option) => option.value === select.value)) {
-            select.value = '';
-        }
-    });
-});
-
-// Tag pickers (components/tag-select.blade.php): choose an existing Tag or
-// create one by typing. Keeps the original <select>, so the form still
+// Tom Select pickers (components/tag-select.blade.php for Tags,
+// components/user-select.blade.php for Users): choose an existing option or,
+// for Tags, create one by typing. Keeps the original <select>, so the form still
 // submits `name`; Tom Select only replaces the control.
 document.querySelectorAll('select[data-tag-select]').forEach((select) => {
     const invalid = select.getAttribute('aria-invalid') === 'true';

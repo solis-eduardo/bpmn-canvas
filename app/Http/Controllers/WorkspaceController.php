@@ -10,6 +10,7 @@ use App\Repositories\WorkspaceRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 class WorkspaceController extends Controller
@@ -69,11 +70,13 @@ class WorkspaceController extends Controller
      */
     public function store(Request $request): RedirectResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-        ]);
+        $data = $request->validate($this->rules());
 
-        $this->workspaces->create($data['name'], $request->user());
+        if ($request->has('keycloak_group')) {
+            Gate::authorize('manageKeycloakGroup', new Workspace);
+        }
+
+        $this->workspaces->create($data['name'], $request->user(), $data['keycloak_group'] ?? null);
 
         return redirect()->route('workspaces.index');
     }
@@ -98,15 +101,34 @@ class WorkspaceController extends Controller
     }
 
     /**
-     * Renames a Workspace: Workspace Owner or Administrator only.
+     * Name and Keycloak group path, the two fields of the Workspace form. The
+     * Keycloak group is part of the record but only Administrators may set it
+     * (CONTEXT.md, "Workspace").
+     *
+     * @return array<string, list<string>>
+     */
+    private function rules(): array
+    {
+        return [
+            'name' => ['required', 'string', 'max:255'],
+            'keycloak_group' => ['nullable', 'string', 'max:255'],
+        ];
+    }
+
+    /**
+     * Updates a Workspace (rename, and the Keycloak group link for
+     * Administrators): Workspace Owner or Administrator only.
      */
     public function update(Request $request, Workspace $workspace): RedirectResponse
     {
         $this->authorize('update', $workspace);
 
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-        ]);
+        $data = $request->validate($this->rules());
+
+        if ($request->has('keycloak_group')) {
+            $this->authorize('manageKeycloakGroup', $workspace);
+            $this->workspaces->linkKeycloakGroup($workspace, $data['keycloak_group'] ?? null);
+        }
 
         $workspace->update(['name' => $data['name']]);
 

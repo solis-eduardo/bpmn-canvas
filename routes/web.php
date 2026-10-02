@@ -21,7 +21,6 @@ use App\Http\Controllers\PublicShareController;
 use App\Http\Controllers\ShareController;
 use App\Http\Controllers\VersionController;
 use App\Http\Controllers\WorkspaceController;
-use App\Http\Controllers\WorkspaceKeycloakGroupController;
 use App\Http\Controllers\WorkspaceOwnerController;
 use Illuminate\Support\Facades\Route;
 
@@ -111,7 +110,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/workspaces/{workspace}/edit', [WorkspaceController::class, 'edit'])->name('workspaces.edit');
     Route::put('/workspaces/{workspace}', [WorkspaceController::class, 'update'])->name('workspaces.update');
     Route::put('/workspaces/{workspace}/owner', [WorkspaceOwnerController::class, 'update'])->name('workspaces.owner.transfer');
-    Route::put('/workspaces/{workspace}/keycloak-group', [WorkspaceKeycloakGroupController::class, 'update'])->name('workspaces.keycloak-group.update');
     Route::delete('/workspaces/{workspace}', [WorkspaceController::class, 'destroy'])->name('workspaces.destroy');
 
     Route::post('/workspaces/{workspace}/members', [MemberController::class, 'store'])->name('workspaces.members.store');
