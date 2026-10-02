@@ -36,7 +36,7 @@ class DiagramTagTest extends TestCase
         $response = $this->actingAs($owner)->post("/diagrams/{$diagram->slug}/tags", ['name' => 'Onboarding']);
 
         $response->assertRedirect();
-        $this->assertTrue($diagram->tags()->where('name', 'Onboarding')->exists());
+        $this->assertTrue($diagram->tags()->whereJsonContainsLocale('name', 'en', 'Onboarding')->exists());
     }
 
     public function test_an_approved_collaborator_can_apply_and_remove_tags(): void
@@ -52,7 +52,7 @@ class DiagramTagTest extends TestCase
 
         $this->actingAs($collaborator)->post("/diagrams/{$diagram->slug}/tags", ['name' => 'Finance'])
             ->assertRedirect();
-        $tag = Tag::where('name', 'Finance')->firstOrFail();
+        $tag = Tag::findFromString('Finance');
         $this->assertTrue($diagram->tags()->where('tags.id', $tag->id)->exists());
 
         $this->actingAs($collaborator)->delete("/diagrams/{$diagram->slug}/tags/{$tag->id}")
@@ -72,7 +72,7 @@ class DiagramTagTest extends TestCase
         $this->actingAs($member)->post("/diagrams/{$diagram->slug}/tags", ['name' => 'Team'])
             ->assertRedirect();
 
-        $this->assertTrue($diagram->tags()->where('name', 'Team')->exists());
+        $this->assertTrue($diagram->tags()->whereJsonContainsLocale('name', 'en', 'Team')->exists());
     }
 
     public function test_a_user_who_cannot_edit_the_diagram_is_refused(): void
@@ -84,7 +84,7 @@ class DiagramTagTest extends TestCase
         $this->actingAs($stranger)->post("/diagrams/{$diagram->slug}/tags", ['name' => 'Nope'])
             ->assertForbidden();
 
-        $this->assertFalse($diagram->tags()->where('name', 'Nope')->exists());
+        $this->assertFalse($diagram->tags()->whereJsonContainsLocale('name', 'en', 'Nope')->exists());
     }
 
     public function test_removing_a_tag_is_refused_to_a_user_who_cannot_edit_the_diagram(): void
@@ -92,8 +92,8 @@ class DiagramTagTest extends TestCase
         $owner = User::factory()->create();
         $stranger = User::factory()->create();
         $diagram = Diagram::factory()->for($owner, 'author')->create();
-        $tag = Tag::create(['name' => 'Kept']);
-        $diagram->tags()->attach($tag);
+        $tag = Tag::findOrCreate('Kept');
+        $diagram->attachTag($tag);
 
         $this->actingAs($stranger)->delete("/diagrams/{$diagram->slug}/tags/{$tag->id}")
             ->assertForbidden();
@@ -123,9 +123,9 @@ class DiagramTagTest extends TestCase
         $this->actingAs($user)->post("/diagrams/{$first->slug}/tags", ['name' => 'Shared'])->assertRedirect();
         $this->actingAs($user)->post("/diagrams/{$second->slug}/tags", ['name' => 'Shared'])->assertRedirect();
 
-        $this->assertSame(1, Tag::where('name', 'Shared')->count());
-        $this->assertTrue($first->tags()->where('name', 'Shared')->exists());
-        $this->assertTrue($second->tags()->where('name', 'Shared')->exists());
+        $this->assertSame(1, Tag::count());
+        $this->assertTrue($first->tags()->whereJsonContainsLocale('name', 'en', 'Shared')->exists());
+        $this->assertTrue($second->tags()->whereJsonContainsLocale('name', 'en', 'Shared')->exists());
     }
 
     public function test_removing_a_tag_from_one_diagram_does_not_delete_it_or_untag_another_diagram(): void
@@ -133,9 +133,9 @@ class DiagramTagTest extends TestCase
         $user = User::factory()->create();
         $first = Diagram::factory()->for($user, 'author')->create();
         $second = Diagram::factory()->for($user, 'author')->create();
-        $tag = Tag::create(['name' => 'Shared']);
-        $first->tags()->attach($tag);
-        $second->tags()->attach($tag);
+        $tag = Tag::findOrCreate('Shared');
+        $first->attachTag($tag);
+        $second->attachTag($tag);
 
         $this->actingAs($user)->delete("/diagrams/{$first->slug}/tags/{$tag->id}")->assertRedirect();
 
@@ -157,7 +157,7 @@ class DiagramTagTest extends TestCase
     {
         $user = User::factory()->create();
         $diagram = Diagram::factory()->for($user, 'author')->create();
-        $diagram->tags()->attach(Tag::create(['name' => 'Payroll']));
+        $diagram->attachTag(Tag::findOrCreate('Payroll'));
 
         $response = $this->actingAs($user)->get('/diagrams');
 
@@ -169,7 +169,7 @@ class DiagramTagTest extends TestCase
     {
         $user = User::factory()->create();
         $tagged = Diagram::factory()->for($user, 'author')->create(['title' => 'Tagged Diagram']);
-        $tagged->tags()->attach(Tag::create(['name' => 'Payroll']));
+        $tagged->attachTag(Tag::findOrCreate('Payroll'));
         $untagged = Diagram::factory()->for($user, 'author')->create(['title' => 'Untagged Diagram']);
 
         $response = $this->actingAs($user)->get('/diagrams?'.http_build_query(['tag' => 'Payroll']));
@@ -188,7 +188,7 @@ class DiagramTagTest extends TestCase
             'title' => 'Hidden Tagged Diagram',
             'workspace_id' => $workspace->id,
         ]);
-        $hidden->tags()->attach(Tag::create(['name' => 'Payroll']));
+        $hidden->attachTag(Tag::findOrCreate('Payroll'));
 
         $stranger = User::factory()->create();
 
@@ -196,5 +196,20 @@ class DiagramTagTest extends TestCase
 
         $response->assertOk();
         $response->assertDontSee($hidden->title);
+    }
+
+    public function test_the_same_tag_typed_under_another_ui_locale_is_the_same_tag(): void
+    {
+        $user = User::factory()->create();
+        $first = Diagram::factory()->for($user, 'author')->create();
+        $second = Diagram::factory()->for($user, 'author')->create();
+
+        $this->actingAs($user)->post("/diagrams/{$first->slug}/tags", ['name' => 'Shared'])->assertRedirect();
+        app()->setLocale('pt_BR');
+        $this->actingAs($user)->post("/diagrams/{$second->slug}/tags", ['name' => 'Shared'])->assertRedirect();
+
+        $this->assertSame(1, Tag::count());
+        $this->actingAs($user)->get('/diagrams?'.http_build_query(['tag' => 'Shared']))
+            ->assertSee($first->title)->assertSee($second->title);
     }
 }
