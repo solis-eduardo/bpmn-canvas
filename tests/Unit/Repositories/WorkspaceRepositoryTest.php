@@ -2,9 +2,11 @@
 
 namespace Tests\Unit\Repositories;
 
+use App\Models\Diagram;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Repositories\MemberRepository;
+use App\Repositories\WorkspaceListFilters;
 use App\Repositories\WorkspaceRepository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -50,23 +52,44 @@ class WorkspaceRepositoryTest extends TestCase
         $this->assertSame([$alpha->id, $zeta->id], $repository->forUserOrderedByName($user)->pluck('id')->all());
     }
 
-    public function test_listings_with_owner_and_members_eager_load_them(): void
+    public function test_search_eager_loads_and_scopes_to_the_user_unless_admin_view(): void
     {
         $user = User::factory()->create();
         $repository = $this->repository();
         $repository->create('Alpha', $user);
         Workspace::factory()->create(['name' => 'Foreign']);
 
-        $all = $repository->allWithOwnerAndMembers();
-        $mine = $repository->forUserWithOwnerAndMembers($user);
+        $all = $repository->search($user, new WorkspaceListFilters, true)->getCollection();
+        $mine = $repository->search($user, new WorkspaceListFilters, false)->getCollection();
 
         $this->assertCount(2, $all);
         $this->assertCount(1, $mine);
-        foreach ([$all->first(), $mine->first()] as $workspace) {
-            $this->assertTrue($workspace->relationLoaded('owner'));
-            $this->assertTrue($workspace->relationLoaded('members'));
-            $this->assertTrue($workspace->members->first()->relationLoaded('user'));
-        }
+        $this->assertTrue($mine->first()->relationLoaded('owner'));
+        $this->assertTrue($mine->first()->members->first()->relationLoaded('user'));
+    }
+
+    public function test_search_filters_by_name_owner_member_and_diagram(): void
+    {
+        $admin = User::factory()->create();
+        $repository = $this->repository();
+        $ann = User::factory()->create(['name' => 'Ann Owner', 'email' => 'ann@example.test']);
+        $bob = User::factory()->create(['name' => 'Bob Member', 'email' => 'bob@example.test']);
+
+        $finance = $repository->create('Finance', $ann);
+        $repository->addMember($finance, $bob);
+        Diagram::factory()->create(['workspace_id' => $finance->id, 'title' => 'Invoice approval', 'slug' => 'invoice-approval']);
+        $hr = $repository->create('Human Resources', $bob);
+
+        $names = fn (WorkspaceListFilters $f) => $repository->search($admin, $f, true)->pluck('name')->all();
+
+        $this->assertSame(['Finance'], $names(new WorkspaceListFilters(name: 'fin')));
+        $this->assertSame(['Finance'], $names(new WorkspaceListFilters(owner: 'ann@')));
+        $this->assertSame(['Finance'], $names(new WorkspaceListFilters(owner: 'Ann')));
+        $this->assertSame(['Finance', 'Human Resources'], $names(new WorkspaceListFilters(member: 'Bob')));
+        $this->assertSame(['Finance'], $names(new WorkspaceListFilters(diagram: 'invoice')));
+        $this->assertSame(['Finance'], $names(new WorkspaceListFilters(diagram: 'invoice-approval')));
+        $this->assertSame([], $names(new WorkspaceListFilters(name: 'fin', owner: 'Bob')));
+        $this->assertNotNull($hr);
     }
 
     public function test_add_and_remove_member(): void

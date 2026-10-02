@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Workspace;
+use App\Repositories\WorkspaceListFilters;
 use App\Repositories\WorkspaceRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,16 +19,21 @@ class WorkspaceController extends Controller
      * Lists the Workspaces the current User is a Member of (CONTEXT.md,
      * "Member"). An Administrator sees every Workspace instead, since they
      * "can manage any Workspace" (CONTEXT.md, "Administrator").
+     *
+     * Paginated, and narrowed by the "name", "owner", "member" and "diagram"
+     * query filters (issue #127), which are kept on the pagination links.
      */
     public function index(Request $request): View
     {
         $user = $request->user();
 
-        $workspaces = $user->is_admin
-            ? $this->workspaces->allWithOwnerAndMembers()
-            : $this->workspaces->forUserWithOwnerAndMembers($user);
+        $filters = WorkspaceListFilters::fromRequest($request);
 
-        return view('workspaces.index', compact('workspaces'));
+        $workspaces = $this->workspaces
+            ->search($user, $filters, (bool) $user->is_admin)
+            ->appends($request->query());
+
+        return view('workspaces.index', compact('workspaces', 'filters'));
     }
 
     /**

@@ -239,4 +239,11 @@ return [
     'view_all_notifications' => 'Ver todas',
     'notification_history_heading' => 'Notificaciones',
 
+    'workspace_column_name' => 'Nombre',
+    'workspace_column_owner' => 'Propietario',
+    'workspace_column_actions' => 'Acciones',
+    'filter_workspace_owner' => 'Propietario',
+    'filter_workspace_member' => 'Miembro',
+    'filter_workspace_diagram' => 'Diagrama',
+    'no_workspaces_match_filters' => 'Ningún Workspace coincide con los filtros.',
 ];

@@ -252,4 +252,48 @@ class WorkspaceTest extends TestCase
         $response->assertRedirect();
         $this->assertDatabaseMissing('workspaces', ['id' => $workspace->id]);
     }
+
+    public function test_listing_is_a_table_filterable_by_name_owner_member_and_diagram_and_keeps_filters_on_pagination(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $owner = User::factory()->create(['name' => 'Olivia Owner']);
+        $member = User::factory()->create(['name' => 'Mark Member']);
+
+        $finance = Workspace::factory()->create(['name' => 'Finance', 'owner_id' => $owner->id]);
+        $this->addMember($finance, $owner);
+        $this->addMember($finance, $member);
+        Diagram::factory()->create(['workspace_id' => $finance->id, 'title' => 'Invoice approval']);
+        $other = Workspace::factory()->create(['name' => 'Logistics']);
+        $this->addMember($other, $other->owner);
+
+        $this->actingAs($admin)->get('/workspaces')
+            ->assertOk()->assertSee('<table', false)->assertSee('Finance')->assertSee('Logistics');
+
+        foreach (['name' => 'Fin', 'owner' => 'Olivia', 'member' => 'Mark', 'diagram' => 'Invoice'] as $key => $value) {
+            $this->actingAs($admin)->get('/workspaces?'.$key.'='.$value)
+                ->assertOk()->assertSee('Finance')->assertDontSee('Logistics');
+        }
+
+        foreach (range(1, 25) as $i) {
+            $w = Workspace::factory()->create(['name' => sprintf('Bulk %02d', $i), 'owner_id' => $owner->id]);
+            $this->addMember($w, $owner);
+        }
+
+        $this->actingAs($admin)->get('/workspaces?owner=Olivia')
+            ->assertOk()->assertSee('owner=Olivia', false)->assertSee('page=2', false);
+        $this->actingAs($admin)->get('/workspaces?owner=Olivia&page=2')
+            ->assertOk()->assertSee('Bulk 25')->assertDontSee('Logistics');
+    }
+
+    public function test_non_admin_filters_stay_scoped_to_their_workspaces(): void
+    {
+        $user = User::factory()->create();
+        $mine = Workspace::factory()->create(['name' => 'Mine', 'owner_id' => $user->id]);
+        $this->addMember($mine, $user);
+        $foreign = Workspace::factory()->create(['name' => 'Foreign Mine']);
+        $this->addMember($foreign, $foreign->owner);
+
+        $this->actingAs($user)->get('/workspaces?name=Mine')
+            ->assertOk()->assertSee('Mine')->assertDontSee('Foreign Mine');
+    }
 }
