@@ -2,6 +2,7 @@
     <div class="flex items-center justify-between gap-4">
         <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.users_heading') }}</h1>
         <x-button :href="route('admin.users.create')">
+            <x-icon name="plus" class="h-4 w-4" />
             {{ __('messages.create_user') }}
         </x-button>
     </div>
@@ -52,10 +53,11 @@
             <thead class="bg-gray-50">
                 <tr>
                     <x-sortable-th column="name" :sort="$sort" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.name') }}</x-sortable-th>
-                    <x-sortable-th column="email" :sort="$sort" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.email') }}</x-sortable-th>
-                    <x-sortable-th column="login_method" :sort="$sort" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.login_method') }}</x-sortable-th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.administrator_status') }}</th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.user_actions') }}</th>
+                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.email') }}</th>
+                    <th scope="col" class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.login_method') }}</th>
+                    <th scope="col" class="px-4 py-3 text-center text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.administrator_status') }}</th>
+                    <x-sortable-th column="updated_at" :sort="$sort" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.diagram_column_modified') }}</x-sortable-th>
+                    <th scope="col" class="w-px whitespace-nowrap px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.user_actions') }}</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 bg-white">
@@ -63,12 +65,12 @@
                     <tr>
                         <td class="whitespace-nowrap px-4 py-3 font-medium text-gray-900">{{ $user->name }}</td>
                         <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{{ $user->email }}</td>
-                        <td class="whitespace-nowrap px-4 py-3">
+                        <td class="whitespace-nowrap px-4 py-3 text-center">
                             <span class="rounded-full bg-gray-100 px-2.5 py-1 text-sm text-gray-600">
                                 {{ $user->usesKeycloak() ? __('messages.login_method_keycloak') : __('messages.login_method_local') }}
                             </span>
                         </td>
-                        <td class="whitespace-nowrap px-4 py-3">
+                        <td class="whitespace-nowrap px-4 py-3 text-center">
                             @if ($user->is_admin)
                                 <span class="rounded-full bg-green-100 px-2.5 py-1 text-sm text-green-700">
                                     {{ $user->is_admin_via_keycloak_claim ? __('messages.administrator_via_keycloak') : __('messages.administrator_status') }}
@@ -79,7 +81,8 @@
                                 </span>
                             @endif
                         </td>
-                        <td class="whitespace-nowrap px-4 py-3">
+                        <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-600"><x-timestamp :at="$user->updated_at" /></td>
+                        <td class="w-px whitespace-nowrap px-4 py-3">
                             <div class="flex flex-nowrap items-center gap-3 text-sm">
                                 <x-button :href="route('admin.users.edit', $user)" variant="secondary" size="sm">
                                     <x-icon name="pencil" />
@@ -93,9 +96,13 @@
                                         @csrf
                                         @method('PUT')
                                         <input type="hidden" name="is_admin" value="{{ $user->is_admin ? 0 : 1 }}">
-                                        <x-button type="submit" :variant="$user->is_admin ? 'destructive' : 'secondary'" size="sm" class="min-w-44">
+                                        <x-button type="submit" :variant="$user->is_admin ? 'destructive' : 'secondary'" size="sm">
                                             <x-icon name="shield-check" />
-                                            {{ $user->is_admin ? __('messages.revoke_administrator') : __('messages.grant_administrator') }}
+                                            {{-- Both labels share one grid cell so the button always reserves the width of the longer one. --}}
+                                            <span class="inline-grid" data-admin-toggle-label>
+                                                <span class="col-start-1 row-start-1">{{ $user->is_admin ? __('messages.revoke_administrator') : __('messages.grant_administrator') }}</span>
+                                                <span class="invisible col-start-1 row-start-1" aria-hidden="true">{{ $user->is_admin ? __('messages.grant_administrator') : __('messages.revoke_administrator') }}</span>
+                                            </span>
                                         </x-button>
                                     </form>
                                 @endif
@@ -104,7 +111,7 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500">{{ $filters->isActive() ? __('messages.no_users_match_filters') : __('messages.no_users_yet') }}</td>
+                        <td colspan="6" class="px-4 py-6 text-center text-sm text-gray-500">{{ $filters->isActive() ? __('messages.no_users_match_filters') : __('messages.no_users_yet') }}</td>
                     </tr>
                 @endforelse
             </tbody>

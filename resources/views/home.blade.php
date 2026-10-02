@@ -73,8 +73,7 @@
                     </div>
                 @endforeach
             </section>
-        @endif
-
+        @else
         <section aria-labelledby="home-recent-diagrams-heading">
             <div class="mb-4 flex items-center justify-between gap-4">
                 <h2 id="home-recent-diagrams-heading" class="text-xl font-semibold text-gray-900">
@@ -126,5 +125,6 @@
                 {{ __('messages.home_search_shortcut') }}
             </a>
         </nav>
+        @endif
     </div>
 </x-layouts.app>

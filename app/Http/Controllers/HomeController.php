@@ -28,15 +28,15 @@ class HomeController
     ) {}
 
     /**
-     * The home page. With a "q" term it also shows the grouped global
-     * search: Diagrams (ADR-0013 rules, shared with the Diagram list),
+     * The home page. With a "q" term it shows only the grouped global
+     * search (the default content is hidden): Diagrams (ADR-0013 rules, shared with the Diagram list),
      * Workspaces the User may see, and the User's own notifications.
      */
     public function __invoke(Request $request): View
     {
         $user = $request->user();
-        $diagrams = $this->diagrams->recentFor($user);
         $search = trim((string) $request->query('q', ''));
+        $diagrams = $search === '' ? $this->diagrams->recentFor($user) : collect();
         $results = null;
 
         if ($search !== '') {

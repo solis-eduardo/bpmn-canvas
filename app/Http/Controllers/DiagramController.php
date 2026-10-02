@@ -48,9 +48,8 @@ class DiagramController extends Controller
      * Editor or Diagram content.
      *
      * Also accepts, all combinable with each other and with search (issue
-     * #39): "owner"/"collaborator"/"locked"/"recent" boolean filters ("I'm
-     * the Diagram Owner", "I'm a Collaborator", "locked right now",
-     * "recently modified"), a "tag" name filter (issue #40), a "sort" column
+     * #39): "owner"/"collaborator" boolean filters ("I'm
+     * the Diagram Owner", "I'm a Collaborator"), a "tag" name filter (issue #40), a "sort" column
      * ("title" or "updated_at", from the table headers) with a "direction" ("asc"/"desc"), and
      * server-side pagination via "page".
      *
@@ -97,8 +96,6 @@ class DiagramController extends Controller
         $filters = [
             'owner' => $criteria->owner,
             'collaborator' => $criteria->collaborator,
-            'locked' => $criteria->locked,
-            'recent' => $criteria->recent,
         ];
 
         return view('diagrams.index', compact(
