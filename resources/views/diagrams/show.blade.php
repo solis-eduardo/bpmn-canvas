@@ -1,4 +1,4 @@
-<x-layouts.app :title="$diagram->title . ' — ' . __('messages.bpmn_editor')" :fluid="true">
+<x-layouts.app :title="$diagram->title . ' | ' . __('messages.bpmn_editor')" :fluid="true">
     <x-slot:head>
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/diagram-js.css') }}">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-js.css') }}">
@@ -15,21 +15,19 @@
     </x-slot:head>
 
     <x-slot:headerActions>
-        <div class="flex items-center gap-2">
-            <a
-                href="{{ route('diagrams.index') }}"
-                id="btn-back-to-list"
-                class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-            >
-                &larr; {{ __('messages.back_to_diagrams') }}
-            </a>
+        <div class="flex flex-wrap items-center gap-2">
+            <x-button :href="route('diagrams.index')" id="btn-back-to-list" variant="secondary">
+                <x-icon name="arrow-left" />
+                {{ __('messages.back_to_diagrams') }}
+            </x-button>
             @php($isHolder = (int) $diagram->locked_by === auth()->id())
             @if ($isHolder || (auth()->user()->is_admin && $diagram->locked_by !== null))
                 <button
                     type="button"
                     id="btn-release-lock"
-                    class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 >
+                    <x-icon name="key" />
                     {{ __($isHolder ? 'messages.release_lock' : 'messages.force_release_lock') }}
                 </button>
             @endif
@@ -43,9 +41,7 @@
                 title="{{ __('messages.version_history') }}"
                 aria-label="{{ __('messages.version_history') }}"
             >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 1 1-9-9 9 9 0 0 1 9 9Z" />
-                </svg>
+                <x-icon name="clock" class="h-5 w-5" />
             </button>
 
             {{-- Entry point for the Collaborators / Shares panel (see #11). --}}
@@ -58,9 +54,7 @@
                         title="{{ __('messages.collaborators') }}"
                         aria-label="{{ __('messages.collaborators') }}"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-1a4 4 0 0 0-3-3.87M9 20H4v-1a4 4 0 0 1 4-4h2a4 4 0 0 1 4 4v1Zm3-14a4 4 0 0 1 0 8m-6-4a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" />
-                        </svg>
+                        <x-icon name="users" class="h-5 w-5" />
                     </button>
                 @else
                     <div class="h-8 w-8" aria-hidden="true"></div>
@@ -144,33 +138,33 @@
                 <span class="spacer"></span>
                 <input type="text" id="name" value="{{ $diagram->title }}" autocomplete="off" spellcheck="false">
                 <span class="dirty" id="dirty" title="{{ __('messages.unsaved_changes') }}">●</span>
-                <button type="button" class="primary" id="btn-save" title="Ctrl+S">{{ __('messages.save') }}</button>
-                <button type="button" class="danger" id="btn-delete">{{ __('messages.delete') }}</button>
+                <button type="button" class="primary" id="btn-save" title="Ctrl+S"><x-icon name="save" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.save') }}</button>
+                <button type="button" class="danger" id="btn-delete"><x-icon name="trash" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.delete') }}</button>
             </header>
             <aside id="version-panel" hidden>
                 <div class="aside-head">
                     <span>{{ __('messages.versions') }}</span>
-                    <button type="button" id="btn-history-close" aria-label="Close">✕</button>
+                    <button type="button" id="btn-history-close" aria-label="{{ __('messages.close') }}"><x-icon name="x-mark" /></button>
                 </div>
                 <p class="version-hint">{{ __('messages.select_two_versions_hint') }}</p>
                 <ul id="version-list"></ul>
                 <div class="version-compare-bar">
                     <span id="version-compare-count">0/2</span>
-                    <button type="button" id="btn-compare-selected" disabled>{{ __('messages.compare_selected') }}</button>
+                    <button type="button" id="btn-compare-selected" disabled><x-icon name="transfer" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.compare_selected') }}</button>
                 </div>
             </aside>
             @can('manageCollaborators', $diagram)
                 <aside id="collaborators-panel" hidden>
                     <div class="aside-head">
                         <span>{{ __('messages.collaborators_and_shares') }}</span>
-                        <button type="button" id="btn-collaborators-close" aria-label="Close">✕</button>
+                        <button type="button" id="btn-collaborators-close" aria-label="{{ __('messages.close') }}"><x-icon name="x-mark" /></button>
                     </div>
                     <div class="collab-body">
                         <section class="collab-section">
                             <h3>{{ __('messages.collaborators') }}</h3>
                             <form id="collab-invite-form">
                                 <input type="email" id="collab-invite-email" placeholder="{{ __('messages.invite_by_email') }}" autocomplete="off" required>
-                                <button type="submit" class="primary">{{ __('messages.invite') }}</button>
+                                <button type="submit" class="primary"><x-icon name="user-plus" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.invite') }}</button>
                             </form>
                             <ul id="collab-list"></ul>
                         </section>
@@ -189,7 +183,7 @@
                                         <option value="">{{ __('messages.follow_latest_version') }}</option>
                                     </select>
                                 </label>
-                                <button type="submit" class="primary">{{ __('messages.create_share') }}</button>
+                                <button type="submit" class="primary"><x-icon name="plus" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.create_share') }}</button>
                             </form>
                             <ul id="share-list"></ul>
                         </section>
@@ -199,16 +193,16 @@
             <main>
                 <div id="canvas"></div>
                 <div class="zoom">
-                    <button type="button" id="zoom-in" title="{{ __('messages.zoom_in') }}">+</button>
-                    <button type="button" id="zoom-out" title="{{ __('messages.zoom_out') }}">−</button>
-                    <button type="button" id="zoom-fit" title="{{ __('messages.fit_to_screen') }}">⤢</button>
+                    <button type="button" id="zoom-in" title="{{ __('messages.zoom_in') }}" aria-label="{{ __('messages.zoom_in') }}"><x-icon name="plus" /></button>
+                    <button type="button" id="zoom-out" title="{{ __('messages.zoom_out') }}" aria-label="{{ __('messages.zoom_out') }}"><x-icon name="minus" /></button>
+                    <button type="button" id="zoom-fit" title="{{ __('messages.fit_to_screen') }}" aria-label="{{ __('messages.fit_to_screen') }}"><x-icon name="fit" /></button>
                 </div>
                 <div class="diff-banner" id="diff-banner" hidden>
                     <strong id="diff-banner-label"></strong>
                     <span class="legend"><span class="swatch added"></span>{{ __('messages.diff_added') }}</span>
                     <span class="legend"><span class="swatch changed"></span>{{ __('messages.diff_changed') }}</span>
                     <span class="legend"><span class="swatch removed"></span>{{ __('messages.diff_removed') }}</span>
-                    <button type="button" id="btn-diff-exit">{{ __('messages.exit_comparison') }}</button>
+                    <button type="button" id="btn-diff-exit"><x-icon name="x-mark" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.exit_comparison') }}</button>
                 </div>
                 <div class="diff-removed-panel" id="diff-removed-panel" hidden>
                     <div class="head">{{ __('messages.diff_removed_elements') }}</div>

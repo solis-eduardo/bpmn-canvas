@@ -9,6 +9,7 @@ use App\Repositories\UserRepository;
 use App\Services\MemberService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class MemberController extends Controller
 {
@@ -30,9 +31,22 @@ class MemberController extends Controller
 
         $data = $request->validate($this->userIdentifierRules());
 
+        $this->rejectIfAlreadyMember($data, $workspace);
+
         $this->actOnTargetUser($data, fn (User $member) => $this->members->add($workspace, $member));
 
         return redirect()->route('workspaces.index');
+    }
+
+    /**
+     * A picked `user_id` can't probe anything, so a stale form is told
+     * plainly; an email stays silent (see actOnTargetUser()).
+     */
+    private function rejectIfAlreadyMember(array $data, Workspace $workspace): void
+    {
+        if (isset($data['user_id']) && $workspace->members()->where('user_id', $data['user_id'])->exists()) {
+            throw ValidationException::withMessages(['user_id' => __('messages.user_already_member')]);
+        }
     }
 
     /**

@@ -62,14 +62,17 @@ class NotificationTest extends TestCase
         ]);
 
         $this->actingAs($requester)->get('/diagrams?discover=Requestable')
+            ->assertRedirect(route('diagrams.index', ['q' => 'Requestable']));
+
+        $this->actingAs($requester)->get('/diagrams?q=Requestable')
             ->assertOk()
             ->assertSee($diagram->title);
 
-        $this->post("/diagrams/{$diagram->slug}/collaborators?discover=Requestable", ['user_id' => $requester->id])
-            ->assertRedirect(route('diagrams.index', ['discover' => 'Requestable']));
-        $this->post("/diagrams/{$diagram->slug}/collaborators?discover=Requestable", ['user_id' => $requester->id])
-            ->assertRedirect(route('diagrams.index', ['discover' => 'Requestable']));
-        $this->get('/diagrams?discover=Requestable')
+        $this->post("/diagrams/{$diagram->slug}/collaborators?q=Requestable", ['user_id' => $requester->id])
+            ->assertRedirect(route('diagrams.index', ['q' => 'Requestable']));
+        $this->post("/diagrams/{$diagram->slug}/collaborators?q=Requestable", ['user_id' => $requester->id])
+            ->assertRedirect(route('diagrams.index', ['q' => 'Requestable']));
+        $this->get('/diagrams?q=Requestable')
             ->assertOk()
             ->assertSee(__('messages.access_request_pending'))
             ->assertDontSee('name="user_id" value="'.$requester->id.'"', false);

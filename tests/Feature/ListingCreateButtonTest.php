@@ -29,7 +29,7 @@ class ListingCreateButtonTest extends TestCase
             ->assertOk()
             ->assertSee('href="'.route('workspaces.create').'"', false)
             ->assertSee(__('messages.create_workspace'))
-            ->assertDontSee(__('messages.workspace_name'));
+            ->assertDontSee('action="'.route('workspaces.store').'"', false);
     }
 
     public function test_diagram_create_form_is_blank_and_posts_to_store(): void
