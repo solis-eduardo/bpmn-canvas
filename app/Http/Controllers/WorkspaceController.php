@@ -30,6 +30,11 @@ class WorkspaceController extends Controller
         return view('workspaces.index', compact('workspaces'));
     }
 
+    public function create(): View
+    {
+        return view('workspaces.create');
+    }
+
     /**
      * Any User can create a Workspace and becomes its Workspace Owner (and a
      * Member) (CONTEXT.md, "Workspace", "Workspace Owner").
@@ -43,6 +48,13 @@ class WorkspaceController extends Controller
         $this->workspaces->create($data['name'], $request->user());
 
         return redirect()->route('workspaces.index');
+    }
+
+    public function edit(Workspace $workspace): View
+    {
+        $this->authorize('update', $workspace);
+
+        return view('workspaces.edit', compact('workspace'));
     }
 
     /**

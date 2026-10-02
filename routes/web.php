@@ -105,7 +105,9 @@ Route::middleware('auth')->group(function () {
     Route::delete('/shares/{share}', [ShareController::class, 'destroy'])->name('shares.destroy');
 
     Route::get('/workspaces', [WorkspaceController::class, 'index'])->name('workspaces.index');
+    Route::get('/workspaces/create', [WorkspaceController::class, 'create'])->name('workspaces.create');
     Route::post('/workspaces', [WorkspaceController::class, 'store'])->name('workspaces.store');
+    Route::get('/workspaces/{workspace}/edit', [WorkspaceController::class, 'edit'])->name('workspaces.edit');
     Route::put('/workspaces/{workspace}', [WorkspaceController::class, 'update'])->name('workspaces.update');
     Route::put('/workspaces/{workspace}/owner', [WorkspaceOwnerController::class, 'update'])->name('workspaces.owner.transfer');
     Route::put('/workspaces/{workspace}/keycloak-group', [WorkspaceKeycloakGroupController::class, 'update'])->name('workspaces.keycloak-group.update');
