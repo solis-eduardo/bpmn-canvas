@@ -22,22 +22,19 @@ class EmailNotificationPreferencesTest extends TestCase
     {
         $user = User::factory()->create();
 
-        $this->actingAs($user)->get('/account')
+        $this->actingAs($user)->get('/account/notifications')
             ->assertOk()
             ->assertSee('name="email_notifications_enabled"', false)
             ->assertDontSee('checked', false);
 
-        $this->actingAs($user)->get('/account/notifications')
-            ->assertRedirect('/account');
-
         $this->actingAs($user)->put('/account/notifications', [
             'email_notifications_enabled' => '1',
-        ])->assertRedirect('/account');
+        ])->assertRedirect('/account/notifications');
 
         $this->assertTrue($user->fresh()->email_notifications_enabled);
 
         $this->actingAs($user)->put('/account/notifications', [])
-            ->assertRedirect('/account');
+            ->assertRedirect('/account/notifications');
 
         $this->assertFalse($user->fresh()->email_notifications_enabled);
     }

@@ -17,7 +17,6 @@ class AccountController extends Controller
     {
         return view('account.edit', [
             'user' => $request->user(),
-            'emailNotificationsEnabled' => $request->user()->email_notifications_enabled,
         ]);
     }
 

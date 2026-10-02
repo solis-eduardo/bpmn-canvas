@@ -35,6 +35,12 @@
                     >
                         {{ __('messages.workspaces') }}
                     </a>
+                    <a
+                        href="{{ route('account.notifications.edit') }}"
+                        class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('account.notifications.*') ? 'bg-gray-100 text-gray-900' : '' }}"
+                    >
+                        {{ __('messages.notification_preferences') }}
+                    </a>
                     @if (auth()->check() && auth()->user()->is_admin)
                         <a
                             href="{{ route('admin.users.index') }}"
