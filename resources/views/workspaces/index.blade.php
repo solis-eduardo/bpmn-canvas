@@ -1,24 +1,11 @@
 <x-layouts.app :title="__('messages.workspaces_heading')">
     <div class="flex items-center justify-between gap-4">
         <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.workspaces_heading') }}</h1>
-    </div>
-
-    <form method="POST" action="{{ route('workspaces.store') }}" class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-        @csrf
-        <input
-            type="text"
-            name="name"
-            placeholder="{{ __('messages.workspace_name') }}"
-            required
-            class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:flex-1"
-        >
-        <button
-            type="submit"
-            class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-        >
+        <x-button :href="route('workspaces.create')">
+            <x-icon name="plus" />
             {{ __('messages.create_workspace') }}
-        </button>
-    </form>
+        </x-button>
+    </div>
 
     @if ($errors->any())
         <ul class="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -40,9 +27,10 @@
             >
         @endforeach
 
-        <button type="submit" class="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+        <x-button type="submit" variant="secondary">
+            <x-icon name="funnel" />
             {{ __('messages.apply_filters') }}
-        </button>
+        </x-button>
     </form>
 
     <div class="mt-8 overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -77,9 +65,10 @@
                                     placeholder="{{ __('messages.keycloak_group_placeholder') }}"
                                     class="w-36 rounded-md border border-gray-300 px-2 py-1 text-xs font-normal shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 >
-                                <button type="submit" class="text-xs font-medium text-blue-600 hover:text-blue-700">
+                                <x-button type="submit" variant="secondary" size="sm">
+                                    <x-icon name="check" />
                                     {{ __('messages.update_keycloak_group') }}
-                                </button>
+                                </x-button>
                             </form>
                         @endif
                     </td>
@@ -94,9 +83,10 @@
                                         <form method="POST" action="{{ route('workspaces.members.destroy', [$workspace, $member->user]) }}">
                                             @csrf
                                             @method('DELETE')
-                                            <button type="submit" class="text-sm font-medium text-red-600 hover:text-red-700">
+                                            <x-button type="submit" variant="destructive" size="sm">
+                                                <x-icon name="user-minus" />
                                                 {{ __('messages.remove_member') }}
-                                            </button>
+                                            </x-button>
                                         </form>
                                     @endif
                                 </li>
@@ -115,29 +105,20 @@
                                     required
                                     class="rounded-md border border-gray-300 px-2 py-1 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 >
-                                <button type="submit" class="rounded-md bg-gray-100 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-200">
+                                <x-button type="submit" variant="secondary" size="sm">
+                                    <x-icon name="user-plus" />
                                     {{ __('messages.add_member') }}
-                                </button>
+                                </x-button>
                             </form>
                         @endif
                     </td>
                     <td class="px-4 py-3">
                         <div class="flex flex-col gap-2">
                             @if ($canManage)
-                                <form method="POST" action="{{ route('workspaces.update', $workspace) }}" class="flex items-center gap-2">
-                                    @csrf
-                                    @method('PUT')
-                                    <input
-                                        type="text"
-                                        name="name"
-                                        value="{{ $workspace->name }}"
-                                        required
-                                        class="rounded-md border border-gray-300 px-2 py-1 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    >
-                                    <button type="submit" class="text-sm font-medium text-blue-600 hover:text-blue-700">
-                                        {{ __('messages.rename') }}
-                                    </button>
-                                </form>
+                                <x-button :href="route('workspaces.edit', $workspace)" variant="secondary" size="sm">
+                                    <x-icon name="pencil" />
+                                    {{ __('messages.edit_workspace_link') }}
+                                </x-button>
 
                                 <form method="POST" action="{{ route('workspaces.owner.transfer', $workspace) }}" class="flex items-center gap-2">
                                     @csrf
@@ -149,17 +130,19 @@
                                         required
                                         class="rounded-md border border-gray-300 px-2 py-1 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                     >
-                                    <button type="submit" class="text-sm font-medium text-blue-600 hover:text-blue-700">
+                                    <x-button type="submit" variant="secondary" size="sm">
+                                        <x-icon name="transfer" />
                                         {{ __('messages.transfer_ownership') }}
-                                    </button>
+                                    </x-button>
                                 </form>
 
                                 <form method="POST" action="{{ route('workspaces.destroy', $workspace) }}">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="text-sm font-medium text-red-600 hover:text-red-700">
+                                    <x-button type="submit" variant="destructive" size="sm">
+                                        <x-icon name="trash" />
                                         {{ __('messages.delete_workspace') }}
-                                    </button>
+                                    </x-button>
                                 </form>
                             @endif
 
@@ -167,9 +150,10 @@
                                 <form method="POST" action="{{ route('workspaces.leave', $workspace) }}">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="text-sm font-medium text-red-600 hover:text-red-700">
+                                    <x-button type="submit" variant="destructive" size="sm">
+                                        <x-icon name="logout" />
                                         {{ __('messages.leave_workspace') }}
-                                    </button>
+                                    </x-button>
                                 </form>
                             @endif
                         </div>

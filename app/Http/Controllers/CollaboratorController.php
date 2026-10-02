@@ -89,12 +89,8 @@ class CollaboratorController extends Controller
 
     private function requestRedirect(Request $request): RedirectResponse
     {
-        $discoverySearch = DiagramListCriteria::discoverSearch($request);
-
-        return redirect()->route(
-            'diagrams.index',
-            $discoverySearch === '' ? [] : ['discover' => $discoverySearch],
-        )->with('status', __('messages.access_request_sent'));
+        return redirect()->route('diagrams.index', DiagramListCriteria::unifiedSearchQuery($request))
+            ->with('status', __('messages.access_request_sent'));
     }
 
     /**

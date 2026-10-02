@@ -32,6 +32,74 @@ class WorkspaceTest extends TestCase
         $this->assertTrue($this->isMember($workspace, $user));
     }
 
+    public function test_listing_page_has_no_create_or_rename_form_and_links_to_create_and_edit_pages(): void
+    {
+        $user = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $user->id]);
+        $this->addMember($workspace, $user);
+
+        $response = $this->actingAs($user)->get('/workspaces');
+
+        $response->assertOk();
+        $response->assertSee(route('workspaces.create'));
+        $response->assertSee(route('workspaces.edit', $workspace));
+        $response->assertDontSee('action="'.route('workspaces.store').'"', false);
+        $response->assertDontSee('name="name"', false);
+    }
+
+    public function test_listing_does_not_link_to_the_edit_page_for_a_workspace_the_user_cannot_manage(): void
+    {
+        $user = User::factory()->create();
+        $owner = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $user);
+
+        $this->actingAs($user)->get('/workspaces')
+            ->assertDontSee(route('workspaces.edit', $workspace));
+    }
+
+    public function test_create_page_renders_the_create_form(): void
+    {
+        $user = User::factory()->create();
+
+        $response = $this->actingAs($user)->get('/workspaces/create');
+
+        $response->assertOk();
+        $response->assertSee('action="'.route('workspaces.store').'"', false);
+    }
+
+    public function test_edit_page_renders_the_rename_form_for_the_owner(): void
+    {
+        $owner = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id, 'name' => 'Old Name']);
+        $this->addMember($workspace, $owner);
+
+        $response = $this->actingAs($owner)->get("/workspaces/{$workspace->id}/edit");
+
+        $response->assertOk();
+        $response->assertSee('action="'.route('workspaces.update', $workspace).'"', false);
+        $response->assertSee('Old Name');
+    }
+
+    public function test_administrator_can_open_the_edit_page_of_any_workspace(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $workspace = Workspace::factory()->create();
+
+        $this->actingAs($admin)->get("/workspaces/{$workspace->id}/edit")->assertOk();
+    }
+
+    public function test_unrelated_user_cannot_open_the_edit_page(): void
+    {
+        $owner = User::factory()->create();
+        $stranger = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $this->addMember($workspace, $owner);
+
+        $this->actingAs($stranger)->get("/workspaces/{$workspace->id}/edit")->assertForbidden();
+    }
+
     public function test_guest_cannot_create_a_workspace(): void
     {
         $response = $this->post('/workspaces', ['name' => 'No Login']);

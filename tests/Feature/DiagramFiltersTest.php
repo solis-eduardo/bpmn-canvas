@@ -13,7 +13,7 @@ class DiagramFiltersTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_owner_filter_shows_only_diagrams_owned_by_the_current_user(): void
+    public function test_owner_filter_shows_owned_diagrams_and_preserves_discoverable_results(): void
     {
         $user = User::factory()->create();
         $owned = Diagram::factory()->for($user, 'author')->create(['title' => 'Owned by me']);
@@ -23,10 +23,10 @@ class DiagramFiltersTest extends TestCase
 
         $response->assertOk();
         $response->assertSee($owned->title);
-        $this->assertFalse($response->viewData('diagrams')->getCollection()->contains('id', $other->id));
+        $this->assertTrue($response->viewData('diagrams')->getCollection()->contains('id', $other->id));
     }
 
-    public function test_collaborator_filter_shows_only_diagrams_the_user_is_an_approved_collaborator_on(): void
+    public function test_collaborator_filter_shows_approved_collaborators_and_preserves_discoverable_results(): void
     {
         $user = User::factory()->create();
 
@@ -51,8 +51,8 @@ class DiagramFiltersTest extends TestCase
         $response->assertOk();
         $response->assertSee($approved->title);
         $listedIds = $response->viewData('diagrams')->getCollection()->pluck('id');
-        $this->assertFalse($listedIds->contains($requested->id));
-        $this->assertFalse($listedIds->contains($unrelated->id));
+        $this->assertTrue($listedIds->contains($requested->id));
+        $this->assertTrue($listedIds->contains($unrelated->id));
     }
 
     public function test_locked_filter_includes_locks_regardless_of_inactivity(): void
@@ -120,7 +120,7 @@ class DiagramFiltersTest extends TestCase
         $response->assertOk();
         $response->assertSee($owned->title);
         $response->assertSee($collaborated->title);
-        $this->assertFalse($response->viewData('diagrams')->getCollection()->contains('id', $unrelated->id));
+        $this->assertTrue($response->viewData('diagrams')->getCollection()->contains('id', $unrelated->id));
     }
 
     public function test_filters_combine_with_search(): void
@@ -136,7 +136,7 @@ class DiagramFiltersTest extends TestCase
         $response->assertOk();
         $response->assertSee($match->title);
         $response->assertDontSee($ownedButNoMatch->title);
-        $this->assertFalse($response->viewData('diagrams')->getCollection()->contains('id', $matchButNotOwned->id));
+        $this->assertTrue($response->viewData('diagrams')->getCollection()->contains('id', $matchButNotOwned->id));
     }
 
     public function test_filters_never_surface_a_hidden_diagram_the_user_cannot_see(): void

@@ -1,12 +1,9 @@
 <x-layouts.app :title="__('messages.users_heading')">
     <div class="flex items-center justify-between gap-4">
         <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.users_heading') }}</h1>
-        <a
-            href="{{ route('admin.users.create') }}"
-            class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-        >
+        <x-button :href="route('admin.users.create')">
             {{ __('messages.create_local_account') }}
-        </a>
+        </x-button>
     </div>
 
     <div class="mt-6 overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
@@ -43,9 +40,10 @@
                         </td>
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap items-center gap-3 text-sm">
-                                <a href="{{ route('admin.users.edit', $user) }}" class="font-medium text-blue-600 hover:text-blue-700">
+                                <x-button :href="route('admin.users.edit', $user)" variant="secondary" size="sm">
+                                    <x-icon name="pencil" />
                                     {{ __('messages.edit_user') }}
-                                </a>
+                                </x-button>
 
                                 @if ($user->is_admin && ! $user->adminRoleIsManuallyRevocable())
                                     <span class="text-xs text-gray-400">{{ __('messages.not_revocable_via_keycloak') }}</span>
@@ -54,9 +52,10 @@
                                         @csrf
                                         @method('PUT')
                                         <input type="hidden" name="is_admin" value="{{ $user->is_admin ? 0 : 1 }}">
-                                        <button type="submit" class="font-medium {{ $user->is_admin ? 'text-red-600 hover:text-red-700' : 'text-blue-600 hover:text-blue-700' }}">
+                                        <x-button type="submit" :variant="$user->is_admin ? 'destructive' : 'secondary'" size="sm">
+                                            <x-icon name="shield-check" />
                                             {{ $user->is_admin ? __('messages.revoke_administrator') : __('messages.grant_administrator') }}
-                                        </button>
+                                        </x-button>
                                     </form>
                                 @endif
                             </div>
