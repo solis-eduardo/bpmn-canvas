@@ -46,6 +46,6 @@ Thumbs.db
 
 # Local agent skills (symlinks) and runtime data
 /.agents/
-/.claude/skills/
+/.claude/
 /skills-lock.json
 /storage/app/
