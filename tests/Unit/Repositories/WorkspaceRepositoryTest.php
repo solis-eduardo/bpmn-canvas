@@ -2,7 +2,6 @@
 
 namespace Tests\Unit\Repositories;
 
-use App\Models\Diagram;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Repositories\MemberRepository;
@@ -66,10 +65,11 @@ class WorkspaceRepositoryTest extends TestCase
         $this->assertCount(2, $all);
         $this->assertCount(1, $mine);
         $this->assertTrue($mine->first()->relationLoaded('owner'));
-        $this->assertTrue($mine->first()->members->first()->relationLoaded('user'));
+        $this->assertSame(1, $mine->first()->members_count);
+        $this->assertTrue($mine->first()->is_member);
     }
 
-    public function test_search_filters_by_name_owner_member_and_diagram(): void
+    public function test_search_filters_by_name_owner_and_member(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
         $repository = $this->repository();
@@ -78,18 +78,14 @@ class WorkspaceRepositoryTest extends TestCase
 
         $finance = $repository->create('Finance', $ann);
         $repository->addMember($finance, $bob);
-        Diagram::factory()->create(['workspace_id' => $finance->id, 'title' => 'Invoice approval', 'slug' => 'invoice-approval']);
         $repository->create('Human Resources', $bob);
 
         $names = fn (WorkspaceListFilters $f) => $repository->search($admin, $f)->pluck('name')->all();
 
         $this->assertSame(['Finance'], $names(new WorkspaceListFilters(name: 'fin')));
-        $this->assertSame(['Finance'], $names(new WorkspaceListFilters(owner: 'ann@')));
-        $this->assertSame(['Finance'], $names(new WorkspaceListFilters(owner: 'Ann')));
-        $this->assertSame(['Finance', 'Human Resources'], $names(new WorkspaceListFilters(member: 'Bob')));
-        $this->assertSame(['Finance'], $names(new WorkspaceListFilters(diagram: 'invoice')));
-        $this->assertSame(['Finance'], $names(new WorkspaceListFilters(diagram: 'invoice-approval')));
-        $this->assertSame([], $names(new WorkspaceListFilters(name: 'fin', owner: 'Bob')));
+        $this->assertSame(['Finance'], $names(new WorkspaceListFilters(owner: $ann->id)));
+        $this->assertSame(['Finance', 'Human Resources'], $names(new WorkspaceListFilters(member: $bob->id)));
+        $this->assertSame([], $names(new WorkspaceListFilters(name: 'fin', owner: $bob->id)));
     }
 
     public function test_add_and_remove_member(): void

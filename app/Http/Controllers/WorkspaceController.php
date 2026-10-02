@@ -24,8 +24,9 @@ class WorkspaceController extends Controller
      * "Member"). An Administrator sees every Workspace instead, since they
      * "can manage any Workspace" (CONTEXT.md, "Administrator").
      *
-     * Paginated, and narrowed by the "name", "owner", "member" and "diagram"
-     * query filters (issue #127), which are kept on the pagination links.
+     * Paginated, and narrowed by the "name", "owner" and "member"
+     * query filters (issues #127, #148) — the last two pick an existing User
+     * — which are kept on the pagination links.
      */
     public function index(Request $request): View
     {
@@ -37,23 +38,9 @@ class WorkspaceController extends Controller
             ->search($user, $filters)
             ->appends($request->query());
 
-        $memberCandidates = [];
-        $ownerCandidates = [];
+        $users = $this->asOptions($this->users->allOrderedByName());
 
-        $managed = collect($workspaces->items())->filter(fn (Workspace $workspace) => $workspace->isManagedBy($user));
-
-        if ($managed->isNotEmpty()) {
-            $everyone = $this->users->allOrderedByName();
-
-            foreach ($managed as $workspace) {
-                $memberIds = $workspace->members->pluck('user_id');
-
-                $memberCandidates[$workspace->id] = $this->asOptions($everyone->reject(fn (User $candidate) => $memberIds->contains($candidate->id)));
-                $ownerCandidates[$workspace->id] = $this->asOptions($everyone->reject(fn (User $candidate) => $workspace->isOwnedBy($candidate)));
-            }
-        }
-
-        return view('workspaces.index', compact('workspaces', 'filters', 'memberCandidates', 'ownerCandidates'));
+        return view('workspaces.index', compact('workspaces', 'filters', 'users'));
     }
 
     public function create(): View
@@ -91,11 +78,23 @@ class WorkspaceController extends Controller
         return redirect()->route('workspaces.index');
     }
 
+    /**
+     * The Workspace form: rename, Keycloak link (Administrators), Members and
+     * ownership transfer (issue #148).
+     */
     public function edit(Workspace $workspace): View
     {
         $this->authorize('update', $workspace);
 
-        return view('workspaces.edit', compact('workspace'));
+        $workspace->load('members.user');
+
+        $everyone = $this->users->allOrderedByName();
+        $memberIds = $workspace->members->pluck('user_id');
+
+        $memberCandidates = $this->asOptions($everyone->reject(fn (User $candidate) => $memberIds->contains($candidate->id)));
+        $ownerCandidates = $this->asOptions($everyone->reject(fn (User $candidate) => $workspace->isOwnedBy($candidate)));
+
+        return view('workspaces.edit', compact('workspace', 'memberCandidates', 'ownerCandidates'));
     }
 
     /**

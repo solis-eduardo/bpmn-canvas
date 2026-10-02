@@ -67,8 +67,12 @@ class IconsTest extends TestCase
         Workspace::factory()->create(['owner_id' => $user->id]);
 
         $this->actingAs($user)->get(route('workspaces.index'))
-            ->assertSee('data-icon="pencil"', false)
-            ->assertSee('data-icon="user-plus"', false);
+            ->assertSee('data-icon="pencil"', false);
+
+        $workspace = Workspace::first();
+        $this->actingAs($user)->get(route('workspaces.edit', $workspace))
+            ->assertSee('data-icon="user-plus"', false)
+            ->assertSee('data-icon="transfer"', false);
 
         $this->actingAs($user)->get(route('account.edit'))
             ->assertSee('data-icon="save"', false);
@@ -83,7 +87,10 @@ class IconsTest extends TestCase
 
         $html = $this->actingAs($user)->get('/home')->assertOk()->getContent();
 
-        $this->assertSame(1, substr_count($html, 'data-icon="search"'));
+        preg_match('#<a href="'.preg_quote(route('diagrams.index'), '#').'".*?</a>#s', $html, $shortcut);
+
+        $this->assertNotEmpty($shortcut);
+        $this->assertSame(1, substr_count($shortcut[0], 'data-icon="search"'));
     }
 
     public function test_diagram_search_icon_is_sized_like_other_inline_icons(): void

@@ -24,6 +24,6 @@ class WorkspaceKeycloakGroupController extends Controller
 
         $this->workspaces->linkKeycloakGroup($workspace, $data['keycloak_group'] ?? null);
 
-        return redirect()->route('workspaces.index');
+        return redirect()->route('workspaces.edit', $workspace);
     }
 }
