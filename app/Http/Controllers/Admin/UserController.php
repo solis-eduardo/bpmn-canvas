@@ -49,7 +49,7 @@ class UserController extends Controller
     {
         $this->authorize('manage-users');
 
-        return view('admin.users.create', ['keycloakConfigured' => KeycloakConfig::isConfigured()]);
+        return view('admin.users.create');
     }
 
     public function edit(User $user): View
@@ -66,20 +66,16 @@ class UserController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'email', 'unique:users,email'],
-            'login_method' => ['sometimes', Rule::in($this->allowedLoginMethods())],
-            'password' => [
-                Rule::requiredIf(fn () => ($request->input('login_method') ?? User::LOGIN_METHOD_LOCAL) === User::LOGIN_METHOD_LOCAL),
-                'nullable', 'string', 'min:8',
-            ],
+            'password' => ['required', 'string', 'min:8'],
         ]);
 
-        // A `keycloak` User may have no password; it stays unlinked until the
-        // first verified Keycloak login (ADR-0015).
+        // Created Users always start with local login; the Administrator can
+        // switch the method afterwards, on the edit form (ADR-0015).
         $this->users->create([
             'name' => $data['name'],
             'email' => $data['email'],
-            'login_method' => $data['login_method'] ?? User::LOGIN_METHOD_LOCAL,
-            'password' => filled($data['password'] ?? null) ? Hash::make($data['password']) : null,
+            'login_method' => User::LOGIN_METHOD_LOCAL,
+            'password' => Hash::make($data['password']),
         ]);
 
         return back();

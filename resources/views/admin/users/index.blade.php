@@ -2,7 +2,7 @@
     <div class="flex items-center justify-between gap-4">
         <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.users_heading') }}</h1>
         <x-button :href="route('admin.users.create')">
-            {{ __('messages.create_local_account') }}
+            {{ __('messages.create_user') }}
         </x-button>
     </div>
 

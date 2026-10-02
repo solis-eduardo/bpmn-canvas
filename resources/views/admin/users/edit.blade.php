@@ -1,27 +1,7 @@
 <x-layouts.app :title="__('messages.edit_user')">
-    <div class="mx-auto max-w-xl">
-        <div class="flex items-center justify-between gap-4">
-            <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.edit_user') }}: {{ $user->name }}</h1>
-            <x-button :href="route('admin.users.index')" variant="secondary" size="sm">
-                <x-icon name="arrow-left" />
-                {{ __('messages.back_to_users') }}
-            </x-button>
-        </div>
-
-        <form method="POST" action="{{ route('admin.users.update', $user) }}" class="mt-6 space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            @csrf
-            @method('PUT')
-            <div class="flex flex-col gap-1">
-                <label for="name" class="text-sm font-medium text-gray-700">{{ __('messages.name') }}</label>
-                <x-form.input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value="{{ old('name', $user->name) }}"
-                    required
-                    class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-            </div>
+    <x-form.page :title="__('messages.edit_user').': '.$user->name" :back-href="route('admin.users.index')" :back-label="__('messages.back_to_users')">
+        <x-form.card :action="route('admin.users.update', $user)" method="PUT">
+            <x-form.field name="name" :label="__('messages.name')" value="{{ old('name', $user->name) }}" required />
             <div class="flex flex-col gap-1">
                 <label for="email" class="text-sm font-medium text-gray-700">{{ __('messages.email') }}</label>
                 <input
@@ -54,21 +34,11 @@
                     <span class="text-xs text-gray-500">{{ __('messages.login_method_keycloak') }}: {{ $user->keycloak_id }}</span>
                 @endif
             </div>
-            <div class="flex flex-col gap-1">
-                <label for="password" class="text-sm font-medium text-gray-700">{{ __('messages.set_new_password') }}</label>
-                <x-form.input
-                    type="password"
-                    id="password"
-                    name="password"
-                    autocomplete="new-password"
-                    class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                <span class="text-xs text-gray-500">{{ __('messages.leave_blank_to_keep_password') }}</span>
-            </div>
+            <x-form.field name="password" type="password" :label="__('messages.set_new_password')" :hint="__('messages.leave_blank_to_keep_password')" autocomplete="new-password" />
             <x-button type="submit">
                 <x-icon name="save" />
                 {{ __('messages.save') }}
             </x-button>
-        </form>
-    </div>
+        </x-form.card>
+    </x-form.page>
 </x-layouts.app>

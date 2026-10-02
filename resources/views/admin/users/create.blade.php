@@ -1,67 +1,13 @@
-<x-icon name="user-plus" />
-<x-layouts.app :title="__('messages.create_local_account')">
-    <div class="mx-auto max-w-xl">
-        <div class="flex items-center justify-between gap-4">
-            <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.create_local_account') }}</h1>
-            <x-button :href="route('admin.users.index')" variant="secondary" size="sm">
-                <x-icon name="arrow-left" />
-                {{ __('messages.back_to_users') }}
-            </x-button>
-        </div>
-
-        <form method="POST" action="{{ route('admin.users.store') }}" class="mt-6 space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
-            @csrf
-            <div class="flex flex-col gap-1">
-                <label for="name" class="text-sm font-medium text-gray-700">{{ __('messages.name') }}</label>
-                <x-form.input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value="{{ old('name') }}"
-                    required
-                    class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-            </div>
-            <div class="flex flex-col gap-1">
-                <label for="email" class="text-sm font-medium text-gray-700">{{ __('messages.email') }}</label>
-                <x-form.input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value="{{ old('email') }}"
-                    required
-                    class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-            </div>
-            @if ($keycloakConfigured)
-                <div class="flex flex-col gap-1">
-                    <label for="login_method" class="text-sm font-medium text-gray-700">{{ __('messages.login_method') }}</label>
-                    <select
-                        id="login_method"
-                        name="login_method"
-                        class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    >
-                        <option value="local" @selected(old('login_method', 'local') === 'local')>{{ __('messages.login_method_local') }}</option>
-                        <option value="keycloak" @selected(old('login_method') === 'keycloak')>{{ __('messages.login_method_keycloak') }}</option>
-                    </select>
-                </div>
-            @endif
-            <div class="flex flex-col gap-1">
-                <label for="password" class="text-sm font-medium text-gray-700">{{ __('messages.password') }}</label>
-                <x-form.input
-                    type="password"
-                    id="password"
-                    name="password"
-                    autocomplete="new-password"
-                    class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                />
-                @if ($keycloakConfigured)
-                    <span class="text-xs text-gray-500">{{ __('messages.password_optional_for_keycloak') }}</span>
-                @endif
-            </div>
+<x-layouts.app :title="__('messages.create_user')">
+    <x-form.page :title="__('messages.create_user')" :back-href="route('admin.users.index')" :back-label="__('messages.back_to_users')">
+        <x-form.card :action="route('admin.users.store')">
+            <x-form.field name="name" :label="__('messages.name')" value="{{ old('name') }}" required />
+            <x-form.field name="email" type="email" :label="__('messages.email')" value="{{ old('email') }}" required />
+            <x-form.field name="password" type="password" :label="__('messages.password')" autocomplete="new-password" required />
             <x-button type="submit">
-                {{ __('messages.create_local_account') }}
+                <x-icon name="user-plus" />
+                {{ __('messages.create_user') }}
             </x-button>
-        </form>
-    </div>
+        </x-form.card>
+    </x-form.page>
 </x-layouts.app>
