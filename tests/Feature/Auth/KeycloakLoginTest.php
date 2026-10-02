@@ -22,8 +22,9 @@ class KeycloakLoginTest extends TestCase
         string $email,
         array $realmRoles = [],
         ?array $groups = [],
+        mixed $emailVerified = true,
     ): SocialiteUser {
-        $jwt = $this->fakeJwt($realmRoles, $groups);
+        $jwt = $this->fakeJwt($realmRoles, $groups, $emailVerified);
 
         return SocialiteUser::fake([
             'id' => $keycloakId,
@@ -34,7 +35,7 @@ class KeycloakLoginTest extends TestCase
         ]);
     }
 
-    private function fakeJwt(array $realmRoles = [], ?array $groups = []): string
+    private function fakeJwt(array $realmRoles = [], ?array $groups = [], mixed $emailVerified = true): string
     {
         $encode = fn (array $data) => rtrim(strtr(base64_encode(json_encode($data)), '+/', '-_'), '=');
 
@@ -42,6 +43,10 @@ class KeycloakLoginTest extends TestCase
         $payload = [
             'realm_access' => ['roles' => $realmRoles],
         ];
+
+        if ($emailVerified !== null) {
+            $payload['email_verified'] = $emailVerified;
+        }
 
         if ($groups !== null) {
             $payload['groups'] = $groups;
@@ -176,6 +181,89 @@ class KeycloakLoginTest extends TestCase
         $this->assertDatabaseCount('users', 1);
         $this->assertAuthenticatedAs($localUser->fresh());
         $this->assertSame('keycloak-sub-7', $localUser->fresh()->keycloak_id);
+    }
+
+    public function test_unverified_email_is_not_linked_to_an_existing_local_account(): void
+    {
+        $victim = User::factory()->create(['email' => 'victim@example.com', 'keycloak_id' => null, 'is_admin' => true]);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser(
+            'attacker-sub', 'Attacker', 'victim@example.com', ['bpmn-admin'], emailVerified: false,
+        ));
+
+        $this->get('/login/keycloak/callback')
+            ->assertRedirect('/login')
+            ->assertSessionHas('error', __('messages.keycloak_email_not_verified'));
+
+        $this->assertGuest();
+        $this->assertNull($victim->fresh()->keycloak_id);
+        $this->assertDatabaseCount('users', 1);
+    }
+
+    public function test_missing_or_non_boolean_email_verified_claim_is_treated_as_unverified(): void
+    {
+        $victim = User::factory()->create(['email' => 'victim@example.com', 'keycloak_id' => null]);
+
+        foreach ([null, 'true', 1] as $claim) {
+            $this->mockSocialiteUser($this->fakeSocialiteUser(
+                'attacker-sub', 'Attacker', 'victim@example.com', emailVerified: $claim,
+            ));
+
+            $this->get('/login/keycloak/callback')->assertRedirect('/login');
+            $this->assertGuest();
+        }
+
+        $this->assertNull($victim->fresh()->keycloak_id);
+    }
+
+    public function test_unverified_email_does_not_provision_a_new_account(): void
+    {
+        $this->mockSocialiteUser($this->fakeSocialiteUser(
+            'new-sub', 'New', 'new@example.com', emailVerified: false,
+        ));
+
+        $this->get('/login/keycloak/callback')->assertRedirect('/login');
+
+        $this->assertDatabaseCount('users', 0);
+    }
+
+    public function test_verified_email_links_case_insensitively(): void
+    {
+        $local = User::factory()->create(['email' => 'Fatima@Example.com', 'keycloak_id' => null]);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser('sub-ci', 'Fatima', 'fatima@example.com'));
+
+        $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
+
+        $this->assertDatabaseCount('users', 1);
+        $this->assertSame('sub-ci', $local->fresh()->keycloak_id);
+    }
+
+    public function test_login_by_linked_sub_works_even_when_email_is_unverified_but_gets_no_admin_elevation(): void
+    {
+        $user = User::factory()->create(['keycloak_id' => 'linked-sub']);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser(
+            'linked-sub', $user->name, $user->email, ['bpmn-admin'], emailVerified: false,
+        ));
+
+        $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
+
+        $this->assertAuthenticatedAs($user->fresh());
+        $this->assertFalse($user->fresh()->is_admin);
+    }
+
+    public function test_email_of_an_account_linked_to_another_keycloak_identity_is_never_relinked(): void
+    {
+        $owner = User::factory()->create(['email' => 'taken@example.com', 'keycloak_id' => 'original-sub']);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser('other-sub', 'Other', 'taken@example.com'));
+
+        $this->get('/login/keycloak/callback')->assertRedirect('/login');
+
+        $this->assertGuest();
+        $this->assertSame('original-sub', $owner->fresh()->keycloak_id);
+        $this->assertDatabaseCount('users', 1);
     }
 
     public function test_keycloak_login_adds_the_user_to_a_workspace_linked_to_one_of_their_groups(): void

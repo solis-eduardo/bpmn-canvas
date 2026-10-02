@@ -10,6 +10,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Mockery;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class DiagramTest extends TestCase
@@ -123,7 +124,7 @@ class DiagramTest extends TestCase
     {
         $user = User::factory()->create();
         $diagram = Diagram::factory()->for($user, 'author')->create();
-        $newContent = '<bpmn:definitions>new content</bpmn:definitions>';
+        $newContent = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">new content</bpmn:definitions>';
 
         $response = $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
             'content' => $newContent,
@@ -391,5 +392,58 @@ class DiagramTest extends TestCase
         $diagram = Diagram::factory()->for($author, 'author')->for($owner, 'owner')->create();
 
         $this->actingAs($author)->getJson('/diagrams/'.$diagram->slug.'/content')->assertForbidden();
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function invalidContentProvider(): array
+    {
+        $ns = 'xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"';
+
+        return [
+            'not xml' => ['hello'],
+            'malformed xml' => ["<bpmn:definitions {$ns}><bpmn:process></bpmn:definitions>"],
+            'script break-out in element text' => ["<bpmn:definitions {$ns}></script><script>alert(1)</script></bpmn:definitions>"],
+            'wrong root element' => ['<html><body>hi</body></html>'],
+            'bpmn root without the BPMN namespace' => ['<definitions><process/></definitions>'],
+            'doctype' => ["<!DOCTYPE bpmn:definitions><bpmn:definitions {$ns}/>"],
+            'external entity (XXE)' => ["<!DOCTYPE d [<!ENTITY x SYSTEM \"file:///etc/passwd\">]><bpmn:definitions {$ns}>&x;</bpmn:definitions>"],
+            'internal entity declaration' => ["<!DOCTYPE d [<!ENTITY a \"aaaa\">]><bpmn:definitions {$ns}>&a;</bpmn:definitions>"],
+        ];
+    }
+
+    #[DataProvider('invalidContentProvider')]
+    public function test_saving_content_that_is_not_safe_bpmn_xml_is_rejected(string $content): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+        $before = Storage::disk('diagrams')->get($diagram->disk_path);
+
+        $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
+            'content' => $content,
+        ])->assertUnprocessable()->assertJsonValidationErrors(['content' => 'The content is not valid BPMN 2.0 XML.']);
+
+        $this->assertSame($before, Storage::disk('diagrams')->get($diagram->disk_path));
+    }
+
+    public function test_the_rejection_message_is_translated(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+
+        $this->actingAs($user)->withSession(['locale' => 'pt_BR'])
+            ->putJson('/diagrams/'.$diagram->slug.'/content', ['content' => 'x'])
+            ->assertJsonValidationErrors(['content' => 'O conteúdo não é um XML BPMN 2.0 válido.']);
+    }
+
+    public function test_saving_a_full_valid_bpmn_document_is_accepted(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+
+        $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
+            'content' => Diagram::emptyBpmn(),
+        ])->assertOk();
     }
 }

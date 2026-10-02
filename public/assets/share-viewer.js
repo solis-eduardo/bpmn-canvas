@@ -9,7 +9,7 @@
   setupZoom(viewer);
 
   try {
-    const xml = document.getElementById('diagram-xml').textContent;
+    const xml = JSON.parse(document.getElementById('diagram-xml').textContent);
     const { warnings } = await viewer.importXML(xml);
     if (warnings && warnings.length) console.warn('Import warnings:', warnings);
 

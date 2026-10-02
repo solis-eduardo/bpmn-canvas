@@ -117,7 +117,7 @@ class DiagramWorkspaceTest extends TestCase
         $this->actingAs($member)->getJson("/diagrams/{$diagram->slug}/content")->assertOk();
 
         $response = $this->actingAs($member)->putJson("/diagrams/{$diagram->slug}/content", [
-            'content' => '<xml>member edit</xml>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">member edit</bpmn:definitions>',
         ]);
 
         $response->assertOk();

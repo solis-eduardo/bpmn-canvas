@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -20,7 +21,7 @@ class UserRepository
 
     public function findByEmail(string $email): ?User
     {
-        return User::where('email', $email)->first();
+        return $this->byEmail($email)->first();
     }
 
     /**
@@ -29,7 +30,15 @@ class UserRepository
      */
     public function findUnlinkedByEmail(string $email): ?User
     {
-        return User::whereNull('keycloak_id')->where('email', $email)->first();
+        return $this->byEmail($email)->whereNull('keycloak_id')->first();
+    }
+
+    /**
+     * @return Builder<User>
+     */
+    private function byEmail(string $email): Builder
+    {
+        return User::whereRaw('LOWER(email) = ?', [mb_strtolower($email)]);
     }
 
     public function findByKeycloakId(string $keycloakId): ?User
