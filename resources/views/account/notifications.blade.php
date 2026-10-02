@@ -32,11 +32,8 @@
             </span>
         </label>
 
-        <button
-            type="submit"
-            class="mt-6 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-        >
+        <x-button type="submit" class="mt-6">
             {{ __('messages.save') }}
-        </button>
+        </x-button>
     </form>
 </x-layouts.app>

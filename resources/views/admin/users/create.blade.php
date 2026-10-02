@@ -50,12 +50,9 @@
                     class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
             </div>
-            <button
-                type="submit"
-                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-            >
+            <x-button type="submit">
                 {{ __('messages.create_local_account') }}
-            </button>
+            </x-button>
         </form>
     </div>
 </x-layouts.app>

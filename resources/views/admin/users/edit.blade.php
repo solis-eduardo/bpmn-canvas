@@ -61,12 +61,9 @@
                     <span class="text-xs text-gray-500">{{ __('messages.leave_blank_to_keep_password') }}</span>
                 </div>
             @endunless
-            <button
-                type="submit"
-                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-            >
+            <x-button type="submit">
                 {{ __('messages.save') }}
-            </button>
+            </x-button>
         </form>
     </div>
 </x-layouts.app>
