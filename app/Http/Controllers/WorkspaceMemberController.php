@@ -2,13 +2,25 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ResolvesTargetUser;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Notifications\WorkspaceMemberAdded;
+use App\Notifications\WorkspaceMemberRemoved;
+use App\Repositories\UserRepository;
+use App\Repositories\WorkspaceRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class WorkspaceMemberController extends Controller
 {
+    use ResolvesTargetUser;
+
+    public function __construct(
+        private readonly UserRepository $users,
+        private readonly WorkspaceRepository $workspaces,
+    ) {}
+
     /**
      * Adds a Member to a Workspace: Workspace Owner or Administrator only
      * (CONTEXT.md, "Member"). "Members are added by the Workspace Owner" —
@@ -27,8 +39,8 @@ class WorkspaceMemberController extends Controller
 
         // Only add the member if the User exists; silently do nothing if
         // the email doesn't match (avoiding email enumeration).
-        if ($member) {
-            $workspace->addMember($member);
+        if ($member && $this->workspaces->addMember($workspace, $member)->wasRecentlyCreated) {
+            $member->notify(new WorkspaceMemberAdded($workspace));
         }
 
         return redirect()->route('workspaces.index');
@@ -48,7 +60,7 @@ class WorkspaceMemberController extends Controller
             abort(422, __('messages.cannot_remove_workspace_owner'));
         }
 
-        $workspace->removeMember($user);
+        $this->removeAndNotify($workspace, $user);
 
         return redirect()->route('workspaces.index');
     }
@@ -68,8 +80,15 @@ class WorkspaceMemberController extends Controller
             abort(422, __('messages.workspace_owner_must_transfer_before_leaving'));
         }
 
-        $workspace->removeMember($user);
+        $this->removeAndNotify($workspace, $user);
 
         return redirect()->route('workspaces.index');
+    }
+
+    private function removeAndNotify(Workspace $workspace, User $user): void
+    {
+        if ($this->workspaces->removeMember($workspace, $user)) {
+            $user->notify(new WorkspaceMemberRemoved($workspace));
+        }
     }
 }

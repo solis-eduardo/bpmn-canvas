@@ -94,7 +94,7 @@ BPMN;
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
         $hidden = Diagram::factory()->for($owner, 'author')->create([
             'title' => 'Hidden Procurement',
             'workspace_id' => $workspace->id,

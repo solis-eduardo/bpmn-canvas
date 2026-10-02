@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Actions\Workspaces\SyncKeycloakGroupMemberships;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Repositories\UserRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +19,10 @@ use Throwable;
 
 class KeycloakLoginController extends Controller
 {
+    public function __construct(
+        private readonly UserRepository $users,
+    ) {}
+
     public function redirect(): BaseRedirectResponse
     {
         return Socialite::driver('keycloak')->redirect();
@@ -56,7 +61,7 @@ class KeycloakLoginController extends Controller
     {
         $keycloakId = $socialiteUser->getId();
 
-        $user = User::where('keycloak_id', $keycloakId)->first();
+        $user = $this->users->findByKeycloakId($keycloakId);
 
         if ($user) {
             return $user;
@@ -65,9 +70,7 @@ class KeycloakLoginController extends Controller
         // A pre-existing local account with the same email is linked to the Keycloak
         // identity (same person) instead of creating a duplicate account, which would
         // also collide with the unique constraint on `email`.
-        $user = User::whereNull('keycloak_id')
-            ->where('email', $socialiteUser->getEmail())
-            ->first();
+        $user = $this->users->findUnlinkedByEmail($socialiteUser->getEmail());
 
         if ($user) {
             $user->keycloak_id = $keycloakId;

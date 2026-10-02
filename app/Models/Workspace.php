@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use App\Notifications\WorkspaceMemberAdded;
-use App\Notifications\WorkspaceMemberRemoved;
 use Database\Factories\WorkspaceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -56,70 +54,25 @@ class Workspace extends Model
         return $this->diagrams()->exists();
     }
 
-    /**
-     * True if $user is this Workspace's current Workspace Owner.
-     */
-    public function isOwnedBy(User $user): bool
-    {
-        return (int) $this->owner_id === $user->id;
-    }
-
-    /**
-     * True if $user is a Member of this Workspace (including the Workspace
-     * Owner, who is also a Member).
-     */
     public function hasMember(User $user): bool
     {
         return $this->members()->where('user_id', $user->id)->exists();
     }
 
     /**
-     * Adds $user as a Member. Silently does nothing if already a Member —
-     * callers don't need to check first.
+     * True if $user may manage this Workspace: its Workspace Owner or an
+     * Administrator.
      */
-    public function addMember(User $user, bool $notify = true): void
+    public function isManagedBy(User $user): bool
     {
-        $member = $this->members()->updateOrCreate(
-            ['user_id' => $user->id],
-            ['origin' => Member::ORIGIN_MANUAL],
-        );
-
-        if ($notify && $member->wasRecentlyCreated) {
-            $user->notify(new WorkspaceMemberAdded($this));
-        }
+        return $this->isOwnedBy($user) || $user->is_admin;
     }
 
     /**
-     * Adds a group-managed Member without changing any existing manual grant.
+     * True if $user is this Workspace's current Workspace Owner.
      */
-    public function addGroupMember(User $user, bool $notify = true): void
+    public function isOwnedBy(User $user): bool
     {
-        if ($this->hasMember($user)) {
-            return;
-        }
-
-        $this->members()->create([
-            'user_id' => $user->id,
-            'origin' => Member::ORIGIN_GROUP,
-        ]);
-
-        if ($notify) {
-            $user->notify(new WorkspaceMemberAdded($this));
-        }
-    }
-
-    /**
-     * Removes $user as a Member. Returns false without effect if they
-     * weren't a Member.
-     */
-    public function removeMember(User $user, bool $notify = true): bool
-    {
-        $removed = $this->members()->where('user_id', $user->id)->delete() > 0;
-
-        if ($removed && $notify) {
-            $user->notify(new WorkspaceMemberRemoved($this));
-        }
-
-        return $removed;
+        return (int) $this->owner_id === $user->id;
     }
 }

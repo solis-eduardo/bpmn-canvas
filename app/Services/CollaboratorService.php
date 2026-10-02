@@ -1,0 +1,86 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Collaborator;
+use App\Models\Diagram;
+use App\Models\User;
+use App\Notifications\DiagramAccessRequested;
+use App\Notifications\DiagramAccessRequestResolved;
+use App\Notifications\DiagramCollaboratorInvited;
+use App\Notifications\DiagramCollaboratorRemoved;
+use App\Repositories\CollaboratorRepository;
+
+/**
+ * A Diagram's Collaborators and the notification each change deserves.
+ * Whether the caller may do any of this is CollaboratorPolicy's call.
+ */
+class CollaboratorService
+{
+    public function __construct(private readonly CollaboratorRepository $collaborators) {}
+
+    /**
+     * Direct invite: the target gets access immediately, and is told — unless
+     * they already had it.
+     */
+    public function grant(Diagram $diagram, User $target): Collaborator
+    {
+        $collaborator = $this->collaborators->upsertApproved($diagram, $target);
+
+        if ($collaborator->wasRecentlyCreated || $collaborator->wasChanged('status')) {
+            $target->notify(new DiagramCollaboratorInvited($diagram));
+        }
+
+        return $collaborator;
+    }
+
+    /**
+     * Self-request: always stays pending until the Diagram Owner decides.
+     * Repeating a pending request doesn't notify the Diagram Owner again.
+     */
+    public function requestAccess(Diagram $diagram, User $requester): Collaborator
+    {
+        $wasRequested = $this->collaborators->findFor($diagram, $requester)?->status === Collaborator::STATUS_REQUESTED;
+
+        $collaborator = $this->collaborators->upsertStatus($diagram, $requester, Collaborator::STATUS_REQUESTED);
+
+        if (! $wasRequested) {
+            $diagram->owner->notify(new DiagramAccessRequested($diagram, $requester));
+        }
+
+        return $collaborator;
+    }
+
+    /**
+     * Approves a pending request, telling the requester. Approving someone
+     * already approved changes nothing and notifies no one.
+     */
+    public function approve(Diagram $diagram, User $user): Collaborator
+    {
+        $wasPending = $this->collaborators->findForOrFail($diagram, $user)->status === Collaborator::STATUS_REQUESTED;
+        $collaborator = $this->collaborators->upsertApproved($diagram, $user);
+
+        if ($wasPending) {
+            $user->notify(new DiagramAccessRequestResolved($diagram, approved: true));
+        }
+
+        return $collaborator;
+    }
+
+    /**
+     * Declines a pending request or removes an approved Collaborator, telling
+     * the User which of the two happened. Nothing to remove is not an error.
+     */
+    public function revoke(Diagram $diagram, User $user): void
+    {
+        $removed = $this->collaborators->removeFor($diagram, $user);
+
+        if ($removed === null) {
+            return;
+        }
+
+        $user->notify($removed->status === Collaborator::STATUS_REQUESTED
+            ? new DiagramAccessRequestResolved($diagram, approved: false)
+            : new DiagramCollaboratorRemoved($diagram));
+    }
+}

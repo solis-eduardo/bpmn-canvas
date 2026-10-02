@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Models\Concerns\FiltersDiagramList;
 use App\Models\Concerns\HasTags;
-use App\Support\Slugger;
 use Database\Factories\DiagramFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -13,7 +12,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 #[Fillable(['slug', 'title', 'author_id', 'owner_id', 'workspace_id', 'disk_path', 'forked_from_id'])]
 class Diagram extends Model
@@ -104,6 +102,15 @@ BPMN;
     }
 
     /**
+     * True if $user may administer this Diagram (Collaborators, ownership
+     * transfer): its Diagram Owner or an Administrator.
+     */
+    public function isManagedBy(User $user): bool
+    {
+        return $this->isOwnedBy($user) || $user->is_admin;
+    }
+
+    /**
      * The Workspace this Diagram belongs to, if any (CONTEXT.md,
      * "Workspace"). A Diagram belongs to at most one.
      */
@@ -136,6 +143,15 @@ BPMN;
     }
 
     /**
+     * True if $user can open this Diagram: an editor, or an Administrator
+     * who "sees and opens" every Diagram without edit rights.
+     */
+    public function isOpenableBy(User $user): bool
+    {
+        return $this->isEditableBy($user) || $user->is_admin;
+    }
+
+    /**
      * Restricts a query to Diagrams a User can open as their Diagram Owner,
      * an approved Collaborator, or a Workspace Member.
      */
@@ -147,6 +163,15 @@ BPMN;
                 ->where('user_id', $user->id)
                 ->where('status', Collaborator::STATUS_APPROVED))
             ->orWhereHas('workspace.members', fn (Builder $members) => $members->where('user_id', $user->id)));
+    }
+
+    /**
+     * Restricts a query to Diagrams $user can open: all of them for an
+     * Administrator, otherwise only those they can edit.
+     */
+    public function scopeOpenableBy(Builder $query, User $user): Builder
+    {
+        return $user->is_admin ? $query : $this->scopeEditableBy($query, $user);
     }
 
     /**
@@ -245,6 +270,21 @@ BPMN;
     }
 
     /**
+     * Hands the Lock straight to $newHolder in a single write, dropping any
+     * pending request (a Transfer answers it, or pre-empts it).
+     */
+    public function transferLockTo(User $newHolder): void
+    {
+        $this->forceFill([
+            'locked_by' => $newHolder->id,
+            'locked_at' => now(),
+            'last_heartbeat_at' => now(),
+            'lock_requested_by' => null,
+            'lock_requested_at' => null,
+        ])->save();
+    }
+
+    /**
      * True if there's a pending Lock request made by $user.
      */
     public function pendingLockRequestIsFrom(User $user): bool
@@ -284,46 +324,6 @@ BPMN;
     public function shares(): HasMany
     {
         return $this->hasMany(Share::class);
-    }
-
-    /**
-     * Generates a unique slug from a free-form name, normalizing it and
-     * appending a short alphanumeric suffix on collision with the current
-     * slug of any Diagram or with a reserved old slug.
-     */
-    public static function uniqueSlug(string $name, ?int $ignoreDiagramId = null): string
-    {
-        $base = Slugger::slugify($name);
-        $slug = $base;
-        $attempts = 0;
-        $maxAttempts = 20;
-
-        while (self::slugIsTaken($slug, $ignoreDiagramId)) {
-            if (++$attempts > $maxAttempts) {
-                $slug = $base.'-'.Str::lower(Str::random(12));
-
-                break;
-            }
-
-            $slug = $base.'-'.Str::lower(Str::random(4));
-        }
-
-        return $slug;
-    }
-
-    private static function slugIsTaken(string $slug, ?int $ignoreDiagramId): bool
-    {
-        $query = static::where('slug', $slug);
-
-        if ($ignoreDiagramId !== null) {
-            $query->where('id', '!=', $ignoreDiagramId);
-        }
-
-        if ($query->exists()) {
-            return true;
-        }
-
-        return DiagramOldSlug::where('old_slug', $slug)->exists();
     }
 
     /**

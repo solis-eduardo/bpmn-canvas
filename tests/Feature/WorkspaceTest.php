@@ -29,7 +29,7 @@ class WorkspaceTest extends TestCase
 
         $workspace = Workspace::where('name', 'Finance Team')->firstOrFail();
         $this->assertTrue($workspace->isOwnedBy($user));
-        $this->assertTrue($workspace->hasMember($user));
+        $this->assertTrue($this->isMember($workspace, $user));
     }
 
     public function test_guest_cannot_create_a_workspace(): void
@@ -46,10 +46,10 @@ class WorkspaceTest extends TestCase
         $otherOwner = User::factory()->create();
 
         $mine = Workspace::factory()->create(['owner_id' => $user->id]);
-        $mine->addMember($user);
+        $this->addMember($mine, $user);
 
         $notMine = Workspace::factory()->create(['owner_id' => $otherOwner->id]);
-        $notMine->addMember($otherOwner);
+        $this->addMember($notMine, $otherOwner);
 
         $response = $this->actingAs($user)->get('/workspaces');
 
@@ -64,7 +64,7 @@ class WorkspaceTest extends TestCase
         $admin = User::factory()->create(['is_admin' => true]);
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $response = $this->actingAs($admin)->get('/workspaces');
 
@@ -78,7 +78,7 @@ class WorkspaceTest extends TestCase
         $owner = User::factory()->create();
 
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $response = $this->actingAs($admin)->get('/workspaces');
 
@@ -91,7 +91,7 @@ class WorkspaceTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $response = $this->actingAs($owner)->put("/workspaces/{$workspace->id}", [
             'name' => 'Renamed Workspace',
@@ -106,7 +106,7 @@ class WorkspaceTest extends TestCase
         $admin = User::factory()->create(['is_admin' => true]);
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $response = $this->actingAs($admin)->put("/workspaces/{$workspace->id}", [
             'name' => 'Renamed By Admin',
@@ -121,8 +121,8 @@ class WorkspaceTest extends TestCase
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
 
         $response = $this->actingAs($member)->put("/workspaces/{$workspace->id}", [
             'name' => 'Should Not Happen',
@@ -136,7 +136,7 @@ class WorkspaceTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $this->actingAs($owner)->put("/workspaces/{$workspace->id}/keycloak-group", [
             'keycloak_group' => '/finance',
@@ -174,7 +174,7 @@ class WorkspaceTest extends TestCase
         $owner = User::factory()->create();
         $stranger = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $response = $this->actingAs($stranger)->put("/workspaces/{$workspace->id}", [
             'name' => 'Should Not Happen',
@@ -187,7 +187,7 @@ class WorkspaceTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $response = $this->actingAs($owner)->delete("/workspaces/{$workspace->id}");
 
@@ -200,7 +200,7 @@ class WorkspaceTest extends TestCase
         $admin = User::factory()->create(['is_admin' => true]);
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $response = $this->actingAs($admin)->delete("/workspaces/{$workspace->id}");
 
@@ -213,8 +213,8 @@ class WorkspaceTest extends TestCase
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
 
         $response = $this->actingAs($member)->delete("/workspaces/{$workspace->id}");
 
@@ -228,7 +228,7 @@ class WorkspaceTest extends TestCase
 
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
         Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create(['workspace_id' => $workspace->id]);
 
         $response = $this->actingAs($owner)->delete("/workspaces/{$workspace->id}");
@@ -243,7 +243,7 @@ class WorkspaceTest extends TestCase
 
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
         $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create(['workspace_id' => $workspace->id]);
         $diagram->update(['workspace_id' => null]);
 

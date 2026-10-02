@@ -18,7 +18,7 @@ class DiagramWorkspaceTest extends TestCase
         $owner = User::factory()->create();
         $diagram = Diagram::factory()->for($owner, 'author')->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $response = $this->actingAs($owner)->putJson("/diagrams/{$diagram->slug}/workspace", [
             'workspace_id' => $workspace->id,
@@ -34,7 +34,7 @@ class DiagramWorkspaceTest extends TestCase
         $diagram = Diagram::factory()->for($owner, 'author')->create();
         $otherOwner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $otherOwner->id]);
-        $workspace->addMember($otherOwner);
+        $this->addMember($workspace, $otherOwner);
 
         $response = $this->actingAs($owner)->putJson("/diagrams/{$diagram->slug}/workspace", [
             'workspace_id' => $workspace->id,
@@ -50,7 +50,7 @@ class DiagramWorkspaceTest extends TestCase
         $stranger = User::factory()->create();
         $diagram = Diagram::factory()->for($owner, 'author')->create();
         $workspace = Workspace::factory()->create(['owner_id' => $stranger->id]);
-        $workspace->addMember($stranger);
+        $this->addMember($workspace, $stranger);
 
         $response = $this->actingAs($stranger)->putJson("/diagrams/{$diagram->slug}/workspace", [
             'workspace_id' => $workspace->id,
@@ -64,7 +64,7 @@ class DiagramWorkspaceTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
         $diagram = Diagram::factory()->for($owner, 'author')->create(['workspace_id' => $workspace->id]);
 
         $response = $this->actingAs($owner)->deleteJson("/diagrams/{$diagram->slug}/workspace");
@@ -78,8 +78,8 @@ class DiagramWorkspaceTest extends TestCase
         $diagramOwner = User::factory()->create();
         $workspaceOwner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $workspaceOwner->id]);
-        $workspace->addMember($workspaceOwner);
-        $workspace->addMember($diagramOwner);
+        $this->addMember($workspace, $workspaceOwner);
+        $this->addMember($workspace, $diagramOwner);
         $diagram = Diagram::factory()->for($diagramOwner, 'author')->create(['workspace_id' => $workspace->id]);
 
         $response = $this->actingAs($workspaceOwner)->deleteJson("/diagrams/{$diagram->slug}/workspace");
@@ -94,9 +94,9 @@ class DiagramWorkspaceTest extends TestCase
         $workspaceOwner = User::factory()->create();
         $plainMember = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $workspaceOwner->id]);
-        $workspace->addMember($workspaceOwner);
-        $workspace->addMember($diagramOwner);
-        $workspace->addMember($plainMember);
+        $this->addMember($workspace, $workspaceOwner);
+        $this->addMember($workspace, $diagramOwner);
+        $this->addMember($workspace, $plainMember);
         $diagram = Diagram::factory()->for($diagramOwner, 'author')->create(['workspace_id' => $workspace->id]);
 
         $response = $this->actingAs($plainMember)->deleteJson("/diagrams/{$diagram->slug}/workspace");
@@ -110,8 +110,8 @@ class DiagramWorkspaceTest extends TestCase
         $diagramOwner = User::factory()->create();
         $member = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $diagramOwner->id]);
-        $workspace->addMember($diagramOwner);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $diagramOwner);
+        $this->addMember($workspace, $member);
         $diagram = Diagram::factory()->for($diagramOwner, 'author')->create(['workspace_id' => $workspace->id]);
 
         $this->actingAs($member)->getJson("/diagrams/{$diagram->slug}/content")->assertOk();
@@ -128,7 +128,7 @@ class DiagramWorkspaceTest extends TestCase
         $diagramOwner = User::factory()->create();
         $stranger = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $diagramOwner->id]);
-        $workspace->addMember($diagramOwner);
+        $this->addMember($workspace, $diagramOwner);
         $diagram = Diagram::factory()->for($diagramOwner, 'author')->create(['workspace_id' => $workspace->id]);
 
         // 404, not 403: a Workspace Diagram a stranger has no access to is
@@ -141,13 +141,13 @@ class DiagramWorkspaceTest extends TestCase
         $diagramOwner = User::factory()->create();
         $member = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $diagramOwner->id]);
-        $workspace->addMember($diagramOwner);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $diagramOwner);
+        $this->addMember($workspace, $member);
         $diagram = Diagram::factory()->for($diagramOwner, 'author')->create(['workspace_id' => $workspace->id]);
 
         $this->actingAs($member)->getJson("/diagrams/{$diagram->slug}/content")->assertOk();
 
-        $workspace->removeMember($member);
+        $this->removeMember($workspace, $member);
 
         // 404, not 403 (issue #28) — same reasoning as above.
         $this->actingAs($member)->getJson("/diagrams/{$diagram->slug}/content")->assertNotFound();
@@ -158,15 +158,15 @@ class DiagramWorkspaceTest extends TestCase
         $diagramOwner = User::factory()->create();
         $member = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $diagramOwner->id]);
-        $workspace->addMember($diagramOwner);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $diagramOwner);
+        $this->addMember($workspace, $member);
         $diagram = Diagram::factory()->for($diagramOwner, 'author')->create(['workspace_id' => $workspace->id]);
         $diagram->collaborators()->create([
             'user_id' => $member->id,
             'status' => Collaborator::STATUS_APPROVED,
         ]);
 
-        $workspace->removeMember($member);
+        $this->removeMember($workspace, $member);
 
         $this->actingAs($member)->getJson("/diagrams/{$diagram->slug}/content")->assertOk();
     }
@@ -176,7 +176,7 @@ class DiagramWorkspaceTest extends TestCase
         $forker = User::factory()->create();
         $diagram = Diagram::factory()->for($forker, 'author')->create();
         $workspace = Workspace::factory()->create(['owner_id' => $forker->id]);
-        $workspace->addMember($forker);
+        $this->addMember($workspace, $forker);
 
         $this->actingAs($forker)
             ->post('/diagrams/'.$diagram->slug.'/fork', ['workspace_id' => $workspace->id])
@@ -205,7 +205,7 @@ class DiagramWorkspaceTest extends TestCase
         $otherOwner = User::factory()->create();
         $diagram = Diagram::factory()->for($forker, 'author')->create();
         $workspace = Workspace::factory()->create(['owner_id' => $otherOwner->id]);
-        $workspace->addMember($otherOwner);
+        $this->addMember($workspace, $otherOwner);
 
         $this->actingAs($forker)
             ->post('/diagrams/'.$diagram->slug.'/fork', ['workspace_id' => $workspace->id])
@@ -221,11 +221,11 @@ class DiagramWorkspaceTest extends TestCase
         $stranger = User::factory()->create();
 
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id, 'name' => 'Alpha Workspace']);
-        $workspace->addMember($owner);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
 
         $otherWorkspace = Workspace::factory()->create(['owner_id' => $stranger->id, 'name' => 'Secret Workspace']);
-        $otherWorkspace->addMember($stranger);
+        $this->addMember($otherWorkspace, $stranger);
 
         $visibleInWorkspace = Diagram::factory()->for($owner, 'author')->create([
             'title' => 'Visible workspace diagram',
@@ -255,7 +255,7 @@ class DiagramWorkspaceTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id, 'name' => 'Workspace One']);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $outsideDiagram = Diagram::factory()->for($owner, 'author')->create([
             'title' => 'Standalone diagram',
