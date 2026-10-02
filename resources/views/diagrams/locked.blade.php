@@ -6,7 +6,7 @@
     <title>{{ $diagram->title }} | {{ __('messages.being_edited') }}</title>
     <link rel="stylesheet" href="{{ asset('assets/app.css') }}">
 </head>
-<body>
+<body class="locked-page">
     @include('partials.language-switcher')
 
     @auth

@@ -15,7 +15,7 @@
     </x-slot:head>
 
     <x-slot:headerActions>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-wrap items-center gap-2">
             <x-button :href="route('diagrams.index')" id="btn-back-to-list" variant="secondary">
                 <x-icon name="arrow-left" />
                 {{ __('messages.back_to_diagrams') }}

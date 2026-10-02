@@ -11,12 +11,12 @@
 <body class="h-full font-sans text-gray-900 antialiased">
     <div class="{{ ($fluid ?? false) ? 'flex h-screen flex-col overflow-hidden' : 'min-h-full' }}">
         <header class="shrink-0 border-b border-gray-200 bg-white">
-            <div class="mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6">
+            <div class="{{ ($fluid ?? false) ? 'mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6' : 'mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6' }}">
                 <a href="{{ url('/home') }}" class="text-lg font-semibold text-gray-900">
                     {{ config('app.name') }}
                 </a>
 
-                <nav class="flex flex-1 items-center gap-1">
+                <nav class="{{ ($fluid ?? false) ? 'flex w-full min-w-0 flex-wrap items-center gap-1 sm:w-auto sm:flex-1' : 'flex flex-1 items-center gap-1' }}">
                     <a
                         href="{{ url('/home') }}"
                         class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->is('home') ? 'bg-gray-100 text-gray-900' : '' }}"
@@ -53,7 +53,7 @@
                      and the reserved Version history / Collaborators entry points). --}}
                 {{ $headerActions ?? '' }}
 
-                <div class="flex items-center gap-3">
+                <div class="{{ ($fluid ?? false) ? 'flex flex-wrap items-center gap-3' : 'flex items-center gap-3' }}">
                     @auth
                         @include('partials.notification-bell')
                         <a
