@@ -21,28 +21,28 @@
                         href="{{ url('/home') }}"
                         class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->is('home') ? 'bg-gray-100 text-gray-900' : '' }}"
                     >
-                        <x-icon name="home" class="h-4 w-4" />
+                        <x-icon name="home" />
                         {{ __('messages.home') }}
                     </a>
                     <a
                         href="{{ route('diagrams.index') }}"
                         class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('diagrams.*') ? 'bg-gray-100 text-gray-900' : '' }}"
                     >
-                        <x-icon name="diagrams" class="h-4 w-4" />
+                        <x-icon name="diagrams" />
                         {{ __('messages.diagrams') }}
                     </a>
                     <a
                         href="{{ route('workspaces.index') }}"
                         class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('workspaces.*') ? 'bg-gray-100 text-gray-900' : '' }}"
                     >
-                        <x-icon name="workspaces" class="h-4 w-4" />
+                        <x-icon name="workspaces" />
                         {{ __('messages.workspaces') }}
                     </a>
                     <a
                         href="{{ route('account.notifications.edit') }}"
                         class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('account.notifications.*') ? 'bg-gray-100 text-gray-900' : '' }}"
                     >
-                        <x-icon name="bell" class="h-4 w-4" />
+                        <x-icon name="bell" />
                         {{ __('messages.notification_preferences') }}
                     </a>
                     @if (auth()->check() && auth()->user()->is_admin)
@@ -50,7 +50,7 @@
                             href="{{ route('admin.users.index') }}"
                             class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('admin.users.*') ? 'bg-gray-100 text-gray-900' : '' }}"
                         >
-                            <x-icon name="users" class="h-4 w-4" />
+                            <x-icon name="users" />
                             {{ __('messages.users') }}
                         </a>
                     @endif
@@ -67,7 +67,7 @@
                             href="{{ route('account.edit') }}"
                             class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('account.*') ? 'bg-gray-100 text-gray-900' : '' }}"
                         >
-                            <x-icon name="user-circle" class="h-4 w-4" />
+                            <x-icon name="user-circle" />
                             {{ __('messages.profile') }}
                         </a>
                     @else

@@ -44,9 +44,7 @@
                 title="{{ __('messages.version_history') }}"
                 aria-label="{{ __('messages.version_history') }}"
             >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 1 1-9-9 9 9 0 0 1 9 9Z" />
-                </svg>
+                <x-icon name="clock" class="h-5 w-5" />
             </button>
 
             {{-- Entry point for the Collaborators / Shares panel (see #11). --}}
@@ -59,9 +57,7 @@
                         title="{{ __('messages.collaborators') }}"
                         aria-label="{{ __('messages.collaborators') }}"
                     >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="h-5 w-5" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-1a4 4 0 0 0-3-3.87M9 20H4v-1a4 4 0 0 1 4-4h2a4 4 0 0 1 4 4v1Zm3-14a4 4 0 0 1 0 8m-6-4a4 4 0 1 1 8 0 4 4 0 0 1-8 0Z" />
-                        </svg>
+                        <x-icon name="users" class="h-5 w-5" />
                     </button>
                 @else
                     <div class="h-8 w-8" aria-hidden="true"></div>
@@ -145,13 +141,13 @@
                 <span class="spacer"></span>
                 <input type="text" id="name" value="{{ $diagram->title }}" autocomplete="off" spellcheck="false">
                 <span class="dirty" id="dirty" title="{{ __('messages.unsaved_changes') }}">●</span>
-                <button type="button" class="primary" id="btn-save" title="Ctrl+S">{{ __('messages.save') }}</button>
-                <button type="button" class="danger" id="btn-delete">{{ __('messages.delete') }}</button>
+                <button type="button" class="primary" id="btn-save" title="Ctrl+S"><x-icon name="save" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.save') }}</button>
+                <button type="button" class="danger" id="btn-delete"><x-icon name="trash" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.delete') }}</button>
             </header>
             <aside id="version-panel" hidden>
                 <div class="aside-head">
                     <span>{{ __('messages.versions') }}</span>
-                    <button type="button" id="btn-history-close" aria-label="Close">✕</button>
+                    <button type="button" id="btn-history-close" aria-label="{{ __('messages.close') }}"><x-icon name="x-mark" /></button>
                 </div>
                 <p class="version-hint">{{ __('messages.select_two_versions_hint') }}</p>
                 <ul id="version-list"></ul>
@@ -164,7 +160,7 @@
                 <aside id="collaborators-panel" hidden>
                     <div class="aside-head">
                         <span>{{ __('messages.collaborators_and_shares') }}</span>
-                        <button type="button" id="btn-collaborators-close" aria-label="Close">✕</button>
+                        <button type="button" id="btn-collaborators-close" aria-label="{{ __('messages.close') }}"><x-icon name="x-mark" /></button>
                     </div>
                     <div class="collab-body">
                         <section class="collab-section">
@@ -200,9 +196,9 @@
             <main>
                 <div id="canvas"></div>
                 <div class="zoom">
-                    <button type="button" id="zoom-in" title="{{ __('messages.zoom_in') }}">+</button>
-                    <button type="button" id="zoom-out" title="{{ __('messages.zoom_out') }}">−</button>
-                    <button type="button" id="zoom-fit" title="{{ __('messages.fit_to_screen') }}">⤢</button>
+                    <button type="button" id="zoom-in" title="{{ __('messages.zoom_in') }}" aria-label="{{ __('messages.zoom_in') }}"><x-icon name="plus" /></button>
+                    <button type="button" id="zoom-out" title="{{ __('messages.zoom_out') }}" aria-label="{{ __('messages.zoom_out') }}"><x-icon name="minus" /></button>
+                    <button type="button" id="zoom-fit" title="{{ __('messages.fit_to_screen') }}" aria-label="{{ __('messages.fit_to_screen') }}"><x-icon name="fit" /></button>
                 </div>
                 <div class="diff-banner" id="diff-banner" hidden>
                     <strong id="diff-banner-label"></strong>

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Diagram;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -41,5 +42,21 @@ class IconsTest extends TestCase
 
         $this->assertMatchesRegularExpression('/data-icon="home"\s+aria-hidden="true"/', $response->getContent());
         $response->assertSee('aria-label="'.__('messages.notifications').'"', false);
+    }
+
+    public function test_editor_icon_only_controls_have_localized_accessible_names(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+
+        $response = $this->actingAs($user)->get(route('diagrams.show', $diagram->slug));
+
+        $response->assertOk();
+        foreach (['close', 'zoom_in', 'zoom_out', 'fit_to_screen'] as $key) {
+            $response->assertSee('aria-label="'.__('messages.'.$key).'"', false);
+        }
+        foreach (['save', 'trash', 'x-mark', 'fit'] as $icon) {
+            $response->assertSee('data-icon="'.$icon.'"', false);
+        }
     }
 }

@@ -48,9 +48,9 @@
             {{ __('messages.loading') }}
         </div>
         <div class="absolute bottom-16 right-4 z-10 flex flex-col gap-1">
-            <button type="button" id="zoom-in" title="{{ __('messages.zoom_in') }}" class="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-lg shadow-sm hover:bg-gray-50">+</button>
-            <button type="button" id="zoom-out" title="{{ __('messages.zoom_out') }}" class="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-lg shadow-sm hover:bg-gray-50">−</button>
-            <button type="button" id="zoom-fit" title="{{ __('messages.fit_to_screen') }}" class="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white text-lg shadow-sm hover:bg-gray-50">⤢</button>
+            <button type="button" id="zoom-in" title="{{ __('messages.zoom_in') }}" aria-label="{{ __('messages.zoom_in') }}" class="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white shadow-sm hover:bg-gray-50"><x-icon name="plus" class="h-5 w-5" /></button>
+            <button type="button" id="zoom-out" title="{{ __('messages.zoom_out') }}" aria-label="{{ __('messages.zoom_out') }}" class="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white shadow-sm hover:bg-gray-50"><x-icon name="minus" class="h-5 w-5" /></button>
+            <button type="button" id="zoom-fit" title="{{ __('messages.fit_to_screen') }}" aria-label="{{ __('messages.fit_to_screen') }}" class="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white shadow-sm hover:bg-gray-50"><x-icon name="fit" class="h-5 w-5" /></button>
         </div>
     </div>
 
