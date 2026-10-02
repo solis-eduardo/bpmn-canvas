@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Repositories\ListSort;
 use App\Repositories\UserListFilters;
 use App\Repositories\UserRepository;
 use App\Services\Identity\UserSessionRevoker;
@@ -33,11 +34,13 @@ class UserController extends Controller
         $this->authorize('manage-users');
 
         $filters = UserListFilters::fromRequest($request);
-        $users = $this->users->search($filters)->appends($request->query());
+        $sort = ListSort::fromRequest($request, UserRepository::SORT_COLUMNS);
+        $users = $this->users->search($filters, $sort)->appends($request->query());
 
         return view('admin.users.index', [
             'users' => $users,
             'filters' => $filters,
+            'sort' => $sort,
             'keycloakConfigured' => KeycloakConfig::isConfigured(),
         ]);
     }

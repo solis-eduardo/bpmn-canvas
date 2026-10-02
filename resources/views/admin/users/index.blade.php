@@ -37,7 +37,7 @@
             class="w-56 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
             <option value="">{{ __('messages.administrator_status') }}</option>
-            <option value="1" @selected($filters->admin === true)>{{ __('messages.administrator_status') }}</option>
+            <option value="1" @selected($filters->admin === true)>{{ __('messages.filter_administrators_only') }}</option>
             <option value="0" @selected($filters->admin === false)>{{ __('messages.not_administrator') }}</option>
         </select>
 
@@ -51,9 +51,9 @@
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.name') }}</th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.email') }}</th>
-                    <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.login_method') }}</th>
+                    <x-sortable-th column="name" :sort="$sort" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.name') }}</x-sortable-th>
+                    <x-sortable-th column="email" :sort="$sort" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.email') }}</x-sortable-th>
+                    <x-sortable-th column="login_method" :sort="$sort" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.login_method') }}</x-sortable-th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.administrator_status') }}</th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.user_actions') }}</th>
                 </tr>
@@ -79,8 +79,8 @@
                                 </span>
                             @endif
                         </td>
-                        <td class="px-4 py-3">
-                            <div class="flex flex-wrap items-center gap-3 text-sm">
+                        <td class="whitespace-nowrap px-4 py-3">
+                            <div class="flex flex-nowrap items-center gap-3 text-sm">
                                 <x-button :href="route('admin.users.edit', $user)" variant="secondary" size="sm">
                                     <x-icon name="pencil" />
                                     {{ __('messages.edit_user') }}
@@ -93,7 +93,7 @@
                                         @csrf
                                         @method('PUT')
                                         <input type="hidden" name="is_admin" value="{{ $user->is_admin ? 0 : 1 }}">
-                                        <x-button type="submit" :variant="$user->is_admin ? 'destructive' : 'secondary'" size="sm">
+                                        <x-button type="submit" :variant="$user->is_admin ? 'destructive' : 'secondary'" size="sm" class="min-w-44">
                                             <x-icon name="shield-check" />
                                             {{ $user->is_admin ? __('messages.revoke_administrator') : __('messages.grant_administrator') }}
                                         </x-button>

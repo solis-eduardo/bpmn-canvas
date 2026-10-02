@@ -51,7 +51,7 @@ class DiagramController extends Controller
      * #39): "owner"/"collaborator"/"locked"/"recent" boolean filters ("I'm
      * the Diagram Owner", "I'm a Collaborator", "locked right now",
      * "recently modified"), a "tag" name filter (issue #40), a "sort" column
-     * ("title" or "updated_at") with a "direction" ("asc"/"desc"), and
+     * ("title" or "updated_at", from the table headers) with a "direction" ("asc"/"desc"), and
      * server-side pagination via "page".
      *
      * Filters, search, and sorting are always composed with the visibility
@@ -93,8 +93,7 @@ class DiagramController extends Controller
         $selectedTags = $criteria->facets->tags;
         $ownerId = $criteria->facets->ownerId;
         $authorId = $criteria->facets->authorId;
-        $sort = $criteria->sort->column;
-        $direction = $criteria->sort->direction;
+        $sort = $criteria->sort;
         $filters = [
             'owner' => $criteria->owner,
             'collaborator' => $criteria->collaborator,
@@ -111,7 +110,6 @@ class DiagramController extends Controller
             'users',
             'filters',
             'sort',
-            'direction',
             'workspaceFilter',
             'workspaces',
             'tagNames',

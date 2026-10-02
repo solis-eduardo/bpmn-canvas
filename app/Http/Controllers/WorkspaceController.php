@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Models\Workspace;
+use App\Repositories\ListSort;
 use App\Repositories\UserRepository;
 use App\Repositories\WorkspaceListFilters;
 use App\Repositories\WorkspaceRepository;
@@ -33,14 +34,15 @@ class WorkspaceController extends Controller
         $user = $request->user();
 
         $filters = WorkspaceListFilters::fromRequest($request);
+        $sort = ListSort::fromRequest($request, WorkspaceRepository::SORT_COLUMNS);
 
         $workspaces = $this->workspaces
-            ->search($user, $filters)
+            ->search($user, $filters, $sort)
             ->appends($request->query());
 
         $users = $this->asOptions($this->users->allOrderedByName());
 
-        return view('workspaces.index', compact('workspaces', 'filters', 'users'));
+        return view('workspaces.index', compact('workspaces', 'filters', 'users', 'sort'));
     }
 
     public function create(): View

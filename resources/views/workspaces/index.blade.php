@@ -51,10 +51,10 @@
         <table class="min-w-[720px] w-full divide-y divide-gray-200 text-left text-sm">
             <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
-                    <th scope="col" class="px-4 py-3">{{ __('messages.workspace_column_name') }}</th>
+                    <x-sortable-th column="name" :sort="$sort">{{ __('messages.workspace_column_name') }}</x-sortable-th>
                     <th scope="col" class="px-4 py-3">{{ __('messages.workspace_column_owner') }}</th>
                     <th scope="col" class="px-4 py-3">{{ __('messages.keycloak_group') }}</th>
-                    <th scope="col" class="px-4 py-3">{{ __('messages.members') }}</th>
+                    <x-sortable-th column="members_count" :sort="$sort">{{ __('messages.members') }}</x-sortable-th>
                     <th scope="col" class="px-4 py-3">{{ __('messages.workspace_column_actions') }}</th>
                 </tr>
             </thead>
@@ -66,8 +66,8 @@
                     <td class="px-4 py-3 text-gray-600">{{ $workspace->owner->name }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ $workspace->keycloak_group ?? '—' }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ $workspace->members_count }}</td>
-                    <td class="px-4 py-3">
-                        <div class="flex flex-col gap-2">
+                    <td class="whitespace-nowrap px-4 py-3">
+                        <div class="flex flex-nowrap items-center gap-2">
                             @if ($canManage)
                                 <x-button :href="route('workspaces.edit', $workspace)" variant="secondary" size="sm">
                                     <x-icon name="pencil" />

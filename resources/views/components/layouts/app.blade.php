@@ -8,10 +8,11 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     {{ $head ?? '' }}
 </head>
+@php($maxWidth = ($wide ?? false) ? 'max-w-[1600px]' : 'max-w-6xl')
 <body class="h-full font-sans text-gray-900 antialiased">
     <div class="{{ ($fluid ?? false) ? 'flex h-screen flex-col overflow-hidden' : 'min-h-full' }}">
         <header class="shrink-0 border-b border-gray-200 bg-white">
-            <div class="{{ ($fluid ?? false) ? 'mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6' : 'mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6' }}">
+            <div class="{{ ($fluid ?? false) ? 'mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6' : 'mx-auto flex '.$maxWidth.' items-center gap-4 px-4 py-3 sm:px-6' }}">
                 <a href="{{ url('/home') }}" class="text-lg font-semibold text-gray-900">
                     {{ config('app.name') }}
                 </a>
@@ -82,7 +83,7 @@
             </div>
         </header>
 
-        <main class="{{ ($fluid ?? false) ? 'min-h-0 flex-1 overflow-hidden' : 'mx-auto max-w-6xl px-4 py-8 sm:px-6' }}">
+        <main class="{{ ($fluid ?? false) ? 'min-h-0 flex-1 overflow-hidden' : 'mx-auto '.$maxWidth.' px-4 py-8 sm:px-6' }}">
             {{ $slot }}
         </main>
     </div>

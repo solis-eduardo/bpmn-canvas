@@ -11,6 +11,13 @@ use Illuminate\Http\Request;
  */
 final readonly class DiagramListCriteria
 {
+    /**
+     * Sortable columns (header clicks) with their default direction.
+     *
+     * @var array<string, string>
+     */
+    public const SORT_COLUMNS = ['title' => 'asc', 'updated_at' => 'desc'];
+
     public function __construct(
         public string $search = '',
         public DiagramListFacets $facets = new DiagramListFacets,
@@ -20,7 +27,7 @@ final readonly class DiagramListCriteria
         public bool $collaborator = false,
         public bool $locked = false,
         public bool $recent = false,
-        public DiagramListSort $sort = new DiagramListSort,
+        public ListSort $sort = new ListSort(self::SORT_COLUMNS, 'title', 'asc'),
     ) {}
 
     /**
@@ -46,7 +53,7 @@ final readonly class DiagramListCriteria
             collaborator: $request->boolean('collaborator'),
             locked: $request->boolean('locked'),
             recent: $request->boolean('recent'),
-            sort: DiagramListSort::fromRequest($request),
+            sort: ListSort::fromRequest($request, self::SORT_COLUMNS),
         );
     }
 

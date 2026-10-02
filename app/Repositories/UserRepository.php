@@ -10,6 +10,13 @@ use Illuminate\Support\Facades\DB;
 
 class UserRepository
 {
+    /**
+     * Sortable columns of the User list (header clicks) with their default direction.
+     *
+     * @var array<string, string>
+     */
+    public const SORT_COLUMNS = ['name' => 'asc', 'email' => 'asc', 'login_method' => 'asc'];
+
     public function find(int $id): ?User
     {
         return User::find($id);
@@ -56,11 +63,11 @@ class UserRepository
     }
 
     /**
-     * One page of Users, by name, narrowed by $filters.
+     * One page of Users ordered by $sort, narrowed by $filters.
      *
      * @return LengthAwarePaginator<int, User>
      */
-    public function search(UserListFilters $filters): LengthAwarePaginator
+    public function search(UserListFilters $filters, ListSort $sort): LengthAwarePaginator
     {
         return User::query()
             ->when($filters->name !== '', function (Builder $q) use ($filters) {
@@ -70,7 +77,7 @@ class UserRepository
             })
             ->when($filters->loginMethod !== null, fn (Builder $q) => $q->where('login_method', $filters->loginMethod))
             ->when($filters->admin !== null, fn (Builder $q) => $q->where('is_admin', $filters->admin))
-            ->orderBy('name')
+            ->orderBy($sort->column, $sort->direction)
             ->orderBy('id')
             ->paginate(20);
     }
