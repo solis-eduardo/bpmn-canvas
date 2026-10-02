@@ -185,6 +185,7 @@ return [
     'create_local_account' => 'Create local account',
     'edit_user' => 'Edit',
     'back_to_users' => 'Back to Users',
+    'back_to_workspaces' => 'Back to Workspaces',
     'set_new_password' => 'Set a new password (optional)',
     'leave_blank_to_keep_password' => 'Leave blank to keep the current password.',
     'keycloak_password_managed_externally' => 'This account password is managed by Keycloak.',

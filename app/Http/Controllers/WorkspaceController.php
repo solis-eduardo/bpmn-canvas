@@ -31,6 +31,15 @@ class WorkspaceController extends Controller
     }
 
     /**
+     * Empty create form, reached from the Create button beside the listing
+     * title (issue #131).
+     */
+    public function create(): View
+    {
+        return view('workspaces.create');
+    }
+
+    /**
      * Any User can create a Workspace and becomes its Workspace Owner (and a
      * Member) (CONTEXT.md, "Workspace", "Workspace Owner").
      */

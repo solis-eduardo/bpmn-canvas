@@ -1,32 +1,13 @@
 <x-layouts.app :title="__('messages.workspaces_heading')">
     <div class="flex items-center justify-between gap-4">
         <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.workspaces_heading') }}</h1>
-    </div>
-
-    <form method="POST" action="{{ route('workspaces.store') }}" class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-        @csrf
-        <input
-            type="text"
-            name="name"
-            placeholder="{{ __('messages.workspace_name') }}"
-            required
-            class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:flex-1"
-        >
-        <button
-            type="submit"
+        <a
+            href="{{ route('workspaces.create') }}"
             class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
         >
             {{ __('messages.create_workspace') }}
-        </button>
-    </form>
-
-    @if ($errors->any())
-        <ul class="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    @endif
+        </a>
+    </div>
 
     <div class="mt-8 flex flex-col gap-6">
         @forelse ($workspaces as $workspace)

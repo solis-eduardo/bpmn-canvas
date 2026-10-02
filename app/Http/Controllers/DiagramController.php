@@ -98,6 +98,15 @@ class DiagramController extends Controller
         ));
     }
 
+    /**
+     * Empty create form, reached from the Create button beside the listing
+     * title (issue #131); it never carries data from another Diagram.
+     */
+    public function create(): View
+    {
+        return view('diagrams.create');
+    }
+
     public function store(Request $request, VersionRepository $versions): RedirectResponse
     {
         $data = $request->validate([

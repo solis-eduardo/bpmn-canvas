@@ -185,6 +185,7 @@ return [
     'create_local_account' => 'Crear cuenta local',
     'edit_user' => 'Editar',
     'back_to_users' => 'Volver a Usuarios',
+    'back_to_workspaces' => 'Volver a Espacios de trabajo',
     'set_new_password' => 'Establecer nueva contraseña (opcional)',
     'leave_blank_to_keep_password' => 'Déjalo en blanco para conservar la contraseña actual.',
     'keycloak_password_managed_externally' => 'La contraseña de esta cuenta se gestiona en Keycloak.',
