@@ -34,16 +34,57 @@
                     </span>
                 </div>
             @endif
-            <button
-                type="submit"
-                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-            >
+            <x-button type="submit">
+                <x-icon name="save" />
                 {{ __('messages.save') }}
-            </button>
+            </x-button>
         </form>
+
+        <section class="mt-8">
+            <h2 class="text-lg font-semibold text-gray-900">{{ __('messages.notification_preferences_heading') }}</h2>
+
+            @if (session('status'))
+                <p class="mt-4 rounded-md bg-green-50 px-4 py-3 text-sm text-green-700" role="status">
+                    {{ session('status') }}
+                </p>
+            @endif
+
+            <form method="POST" action="{{ route('account.notifications.update') }}" class="mt-4 space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
+                @csrf
+                @method('PUT')
+
+                <label for="email_notifications_enabled" class="flex items-start gap-3">
+                    <input
+                        type="checkbox"
+                        id="email_notifications_enabled"
+                        name="email_notifications_enabled"
+                        value="1"
+                        @checked(old('email_notifications_enabled', $user->email_notifications_enabled))
+                        @error('email_notifications_enabled') aria-invalid="true" aria-describedby="email_notifications_enabled-error" @enderror
+                        class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    >
+                    <span>
+                        <span class="block font-medium text-gray-900">{{ __('messages.email_notifications') }}</span>
+                        <span class="mt-1 block text-sm text-gray-600">
+                            {{ __('messages.email_notifications_description', ['email' => $user->email]) }}
+                        </span>
+                    </span>
+                </label>
+
+                @error('email_notifications_enabled')
+                    <p id="email_notifications_enabled-error" role="alert" class="text-sm text-red-600">{{ $message }}</p>
+                @enderror
+
+                <x-button type="submit">
+                    <x-icon name="save" />
+                    {{ __('messages.save') }}
+                </x-button>
+            </form>
+        </section>
 
         @unless ($user->keycloak_id)
             <section class="mt-8">
+                <x-icon name="lock-closed" />
                 <h2 class="text-lg font-semibold text-gray-900">{{ __('messages.change_password') }}</h2>
                 <form method="POST" action="{{ route('account.password.update') }}" class="mt-4 space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
                     @csrf
@@ -81,12 +122,9 @@
                             class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                         />
                     </div>
-                    <button
-                        type="submit"
-                        class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-                    >
+                    <x-button type="submit">
                         {{ __('messages.change_password') }}
-                    </button>
+                    </x-button>
                 </form>
             </section>
         @endunless

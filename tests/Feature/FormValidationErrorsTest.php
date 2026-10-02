@@ -16,7 +16,7 @@ class FormValidationErrorsTest extends TestCase
         $user = User::factory()->create();
 
         $html = $this->actingAs($user)
-            ->from('/workspaces')
+            ->from('/workspaces/create')
             ->followingRedirects()
             ->post('/workspaces', ['name' => '', '_form' => 'workspace-create'])
             ->getContent();
@@ -28,16 +28,16 @@ class FormValidationErrorsTest extends TestCase
         $this->assertStringNotContainsString('bg-red-50', $html);
     }
 
-    public function test_workspace_row_forms_do_not_show_each_others_errors(): void
+    public function test_workspace_edit_error_is_scoped_to_its_form(): void
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $user->id, 'name' => 'Keep']);
         $workspace->members()->create(['user_id' => $user->id]);
 
         $html = $this->actingAs($user)
-            ->from('/workspaces')
+            ->from("/workspaces/{$workspace->id}/edit")
             ->followingRedirects()
-            ->put("/workspaces/{$workspace->id}", ['name' => '', '_form' => "workspace-rename-{$workspace->id}"])
+            ->put("/workspaces/{$workspace->id}", ['name' => '', '_form' => 'workspace-edit'])
             ->getContent();
 
         $this->assertSame(1, substr_count($html, 'aria-invalid="true"'));
