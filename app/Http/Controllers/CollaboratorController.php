@@ -8,7 +8,6 @@ use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Repositories\CollaboratorRepository;
-use App\Repositories\DiagramListCriteria;
 use App\Repositories\DiagramRepository;
 use App\Repositories\UserRepository;
 use App\Services\CollaboratorService;
@@ -89,12 +88,12 @@ class CollaboratorController extends Controller
 
     private function requestRedirect(Request $request): RedirectResponse
     {
-        $discoverySearch = DiagramListCriteria::discoverSearch($request);
+        $query = $request->query();
+        $search = trim((string) ($query['q'] ?? $query['discover'] ?? ''));
+        unset($query['discover'], $query['page'], $query['discovery_page']);
+        $query = $search === '' ? $query : ['q' => $search] + $query;
 
-        return redirect()->route(
-            'diagrams.index',
-            $discoverySearch === '' ? [] : ['discover' => $discoverySearch],
-        )->with('status', __('messages.access_request_sent'));
+        return redirect()->route('diagrams.index', $query)->with('status', __('messages.access_request_sent'));
     }
 
     /**

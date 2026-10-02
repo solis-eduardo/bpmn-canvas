@@ -34,11 +34,14 @@ class DiagramController extends Controller
      * Lists Diagrams visible to the current User (CONTEXT.md, "Workspace";
      * issue #28): only Diagrams the User can open (Diagram Owner, approved
      * Collaborator, or Member of its Workspace). An Administrator sees
-     * every Diagram. Other out-of-Workspace Diagrams are listed separately
-     * as searchable discovery results without Editor access.
+     * every Diagram. Other out-of-Workspace Diagrams appear in the unified
+     * results without Editor access.
      *
      * Accepts an optional "q" search term matching title, Slug (issue #38),
      * or the BPMN content's task/event/gateway/lane/pool names (issue #41).
+     * Out-of-Workspace Diagrams a User cannot open are searchable by title
+     * only; their results preserve the request-access path without exposing
+     * Editor or Diagram content.
      *
      * Also accepts, all combinable with each other and with search (issue
      * #39): "owner"/"collaborator"/"locked"/"recent" boolean filters ("I'm
@@ -50,28 +53,39 @@ class DiagramController extends Controller
      * Filters, search, and sorting are always composed with the visibility
      * rule above, so none of them ever surfaces a hidden Diagram.
      */
-    public function index(Request $request): View
+    public function index(Request $request): View|RedirectResponse
     {
+        if ($request->query->has('discover')) {
+            $query = $request->query();
+            $search = trim((string) ($query['q'] ?? $query['discover']));
+            unset($query['discover'], $query['page'], $query['discovery_page']);
+            $query = ['q' => $search] + $query;
+
+            return redirect()->route('diagrams.index', $query);
+        }
+
         $user = $request->user();
         $criteria = DiagramListCriteria::fromRequest($request);
-        $discoverySearch = DiagramListCriteria::discoverSearch($request);
         $workspaceFilter = (string) $request->query('workspace', 'all');
 
         $workspaces = $user->is_admin
             ? $this->workspaces->allOrderedByName()
             : $this->workspaces->forUserOrderedByName($user);
 
-        $diagrams = $this->diagrams->visibleListQuery($user, $criteria)
+        $diagrams = $this->diagrams->searchResultsQuery($user, $criteria)
             ->orderBy($criteria->sort->column, $criteria->sort->direction)
-            ->orderBy('id')
+            ->orderBy('diagrams.id')
             ->paginate(self::DIAGRAMS_PER_PAGE)
-            ->appends($request->query());
-
-        $discoveryDiagrams = $this->diagrams->discoveryQuery($user, $discoverySearch)
-            ->orderBy('title')
-            ->orderBy('id')
-            ->simplePaginate(self::DIAGRAMS_PER_PAGE, ['*'], 'discovery_page')
             ->appends($request->except(['page', 'discovery_page']));
+
+        $discoverableIds = $this->diagrams->discoveryQuery($user, $criteria->search)
+            ->whereIn('diagrams.id', $diagrams->getCollection()->modelKeys())
+            ->pluck('diagrams.id')
+            ->all();
+        $discoverableIdSet = array_fill_keys($discoverableIds, true);
+        $diagrams->getCollection()->each(
+            fn (Diagram $diagram) => $diagram->setAttribute('is_discoverable', isset($discoverableIdSet[$diagram->id]))
+        );
 
         $search = $criteria->search;
         $tag = $criteria->tag;
@@ -86,9 +100,7 @@ class DiagramController extends Controller
 
         return view('diagrams.index', compact(
             'diagrams',
-            'discoveryDiagrams',
             'search',
-            'discoverySearch',
             'tag',
             'filters',
             'sort',

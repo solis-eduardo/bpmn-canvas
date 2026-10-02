@@ -44,13 +44,4 @@ final readonly class DiagramListCriteria
             sort: DiagramListSort::fromRequest($request),
         );
     }
-
-    /**
-     * The "discover" query param: the term searched among Diagrams outside
-     * the User's reach, kept across the list and the access-request redirect.
-     */
-    public static function discoverSearch(Request $request): string
-    {
-        return trim((string) $request->query('discover', ''));
-    }
 }
