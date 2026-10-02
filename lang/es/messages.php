@@ -82,6 +82,7 @@ return [
     'unsaved_changes' => 'Cambios sin guardar',
     'save' => 'Guardar',
     'delete' => 'Eliminar',
+    'close' => 'Cerrar',
     'zoom_in' => 'Acercar',
     'zoom_out' => 'Alejar',
     'fit_to_screen' => 'Ajustar a la pantalla',

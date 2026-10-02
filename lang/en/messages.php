@@ -82,6 +82,7 @@ return [
     'unsaved_changes' => 'Unsaved changes',
     'save' => 'Save',
     'delete' => 'Delete',
+    'close' => 'Close',
     'zoom_in' => 'Zoom in',
     'zoom_out' => 'Zoom out',
     'fit_to_screen' => 'Fit to screen',

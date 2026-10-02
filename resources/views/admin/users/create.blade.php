@@ -1,9 +1,11 @@
+<x-icon name="user-plus" />
 <x-layouts.app :title="__('messages.create_local_account')">
     <div class="mx-auto max-w-xl">
         <div class="flex items-center justify-between gap-4">
             <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.create_local_account') }}</h1>
             <x-button :href="route('admin.users.index')" variant="secondary" size="sm">
-                &larr; {{ __('messages.back_to_users') }}
+                <x-icon name="arrow-left" />
+                {{ __('messages.back_to_users') }}
             </x-button>
         </div>
 

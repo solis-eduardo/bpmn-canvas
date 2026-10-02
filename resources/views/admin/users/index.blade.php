@@ -41,6 +41,7 @@
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap items-center gap-3 text-sm">
                                 <x-button :href="route('admin.users.edit', $user)" variant="secondary" size="sm">
+                                    <x-icon name="pencil" />
                                     {{ __('messages.edit_user') }}
                                 </x-button>
 
@@ -52,6 +53,7 @@
                                         @method('PUT')
                                         <input type="hidden" name="is_admin" value="{{ $user->is_admin ? 0 : 1 }}">
                                         <x-button type="submit" :variant="$user->is_admin ? 'destructive' : 'secondary'" size="sm">
+                                            <x-icon name="shield-check" />
                                             {{ $user->is_admin ? __('messages.revoke_administrator') : __('messages.grant_administrator') }}
                                         </x-button>
                                     </form>

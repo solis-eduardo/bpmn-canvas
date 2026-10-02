@@ -13,18 +13,22 @@
             class="min-w-[240px] flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
         <x-button type="submit">
+            <x-icon name="plus" />
             {{ __('messages.create_diagram') }}
         </x-button>
     </form>
 
     <form method="GET" action="{{ route('diagrams.index') }}" class="mt-4 flex flex-wrap items-center gap-4">
-        <input
-            type="search"
-            name="q"
-            value="{{ $search }}"
-            placeholder="{{ __('messages.search_diagrams_placeholder') }}"
-            class="w-full max-w-sm rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
+        <div class="relative w-full max-w-sm">
+            <x-icon name="search" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+                type="search"
+                name="q"
+                value="{{ $search }}"
+                placeholder="{{ __('messages.search_diagrams_placeholder') }}"
+                class="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+        </div>
 
         @foreach (['owner' => 'filter_owner', 'collaborator' => 'filter_collaborator', 'locked' => 'filter_locked', 'recent' => 'filter_recent'] as $filterKey => $filterLabel)
             <label class="flex items-center gap-1.5 text-sm text-gray-700">
@@ -66,8 +70,9 @@
 
         <button
             type="submit"
-            class="rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+            class="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
         >
+            <x-icon name="funnel" />
             {{ __('messages.apply_filters') }}
         </button>
     </form>
@@ -138,7 +143,7 @@
                                 <form method="POST" action="{{ route('diagrams.tags.destroy', [$diagram->slug, $diagramTag->id]) }}">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="text-gray-400 hover:text-red-600" aria-label="{{ __('messages.remove_tag') }}">&times;</button>
+                                    <button type="submit" class="text-gray-400 hover:text-red-600" aria-label="{{ __('messages.remove_tag') }}"><x-icon name="x-mark" class="h-3.5 w-3.5" /></button>
                                 </form>
                             @endif
                         </span>
@@ -153,13 +158,14 @@
                                 placeholder="{{ __('messages.add_tag_placeholder') }}"
                                 class="w-28 rounded border border-gray-300 px-1.5 py-0.5 text-xs shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             >
-                            <x-button type="submit" variant="secondary" size="sm">{{ __('messages.add_tag') }}</x-button>
+                            <x-button type="submit" variant="secondary" size="sm"><x-icon name="tag" class="h-3.5 w-3.5" />{{ __('messages.add_tag') }}</x-button>
                         </form>
                     @endif
                     </div>
                 </td>
                 <td class="whitespace-nowrap px-4 py-3">
                     <x-button :href="route('diagrams.show', $diagram->slug)" variant="secondary" size="sm">
+                        <x-icon name="arrow-right" />
                         {{ __('messages.open_diagram') }}
                     </x-button>
                 </td>

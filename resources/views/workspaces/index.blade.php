@@ -13,6 +13,7 @@
             class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:flex-1"
         >
         <x-button type="submit">
+            <x-icon name="plus" />
             {{ __('messages.create_workspace') }}
         </x-button>
     </form>
@@ -48,6 +49,7 @@
                                     class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 >
                                 <x-button type="submit" variant="secondary" size="sm">
+                                    <x-icon name="pencil" />
                                     {{ __('messages.rename') }}
                                 </x-button>
                             </form>
@@ -63,6 +65,7 @@
                                     class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 >
                                 <x-button type="submit" variant="secondary" size="sm">
+                                    <x-icon name="transfer" />
                                     {{ __('messages.transfer_ownership') }}
                                 </x-button>
                             </form>
@@ -71,6 +74,7 @@
                                 @csrf
                                 @method('DELETE')
                                 <x-button type="submit" variant="destructive" size="sm">
+                                    <x-icon name="trash" />
                                     {{ __('messages.delete_workspace') }}
                                 </x-button>
                             </form>
@@ -81,6 +85,7 @@
                                 @csrf
                                 @method('DELETE')
                                 <x-button type="submit" variant="destructive" size="sm">
+                                    <x-icon name="logout" />
                                     {{ __('messages.leave_workspace') }}
                                 </x-button>
                             </form>
@@ -104,6 +109,7 @@
                             class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:flex-1"
                         >
                         <x-button type="submit" variant="secondary" size="sm">
+                            <x-icon name="check" />
                             {{ __('messages.update_keycloak_group') }}
                         </x-button>
                     </form>
@@ -122,6 +128,7 @@
                                         @csrf
                                         @method('DELETE')
                                         <x-button type="submit" variant="destructive" size="sm">
+                                            <x-icon name="user-minus" />
                                             {{ __('messages.remove_member') }}
                                         </x-button>
                                     </form>
@@ -143,6 +150,7 @@
                                 class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:flex-1"
                             >
                             <x-button type="submit" variant="secondary" size="sm">
+                                <x-icon name="user-plus" />
                                 {{ __('messages.add_member') }}
                             </x-button>
                         </form>
