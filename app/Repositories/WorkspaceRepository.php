@@ -5,6 +5,8 @@ namespace App\Repositories;
 use App\Models\Member;
 use App\Models\User;
 use App\Models\Workspace;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -39,19 +41,40 @@ class WorkspaceRepository
     }
 
     /**
-     * @return Collection<int, Workspace>
+     * One page of Workspaces, by name, with owner and Members loaded: every
+     * Workspace for an Administrator, otherwise only those $user is
+     * a Member of; narrowed by $filters.
+     *
+     * @return LengthAwarePaginator<int, Workspace>
      */
-    public function allWithOwnerAndMembers(): Collection
+    public function search(User $user, WorkspaceListFilters $filters): LengthAwarePaginator
     {
-        return Workspace::with(['owner', 'members.user'])->orderBy('name')->get();
+        $query = $user->is_admin ? Workspace::query() : $user->workspaces();
+
+        return $query
+            ->with(['owner', 'members.user'])
+            ->when($filters->name !== '', fn (Builder $q) => $q->where('workspaces.name', 'like', self::like($filters->name)))
+            ->when($filters->owner !== '', fn (Builder $q) => $q->whereHas('owner', fn (Builder $u) => self::matchUser($u, $filters->owner)))
+            ->when($filters->member !== '', fn (Builder $q) => $q->whereHas('members.user', fn (Builder $u) => self::matchUser($u, $filters->member)))
+            ->when($filters->diagram !== '', fn (Builder $q) => $q->whereHas('diagrams', fn (Builder $d) => $d
+                ->where(fn (Builder $w) => $w
+                    ->where('title', 'like', self::like($filters->diagram))
+                    ->orWhere('slug', 'like', self::like($filters->diagram)))))
+            ->orderBy('workspaces.name')
+            ->orderBy('workspaces.id')
+            ->paginate(20);
     }
 
-    /**
-     * @return Collection<int, Workspace>
-     */
-    public function forUserWithOwnerAndMembers(User $user): Collection
+    private static function matchUser(Builder $users, string $term): void
     {
-        return $user->workspaces()->with(['owner', 'members.user'])->orderBy('name')->get();
+        $users->where(fn (Builder $w) => $w
+            ->where('name', 'like', self::like($term))
+            ->orWhere('email', 'like', self::like($term)));
+    }
+
+    private static function like(string $term): string
+    {
+        return '%'.$term.'%';
     }
 
     /**
