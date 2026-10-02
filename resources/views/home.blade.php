@@ -52,9 +52,10 @@
                 <x-icon name="bell" />
                 {{ __('messages.home_notifications_shortcut') }}
             </a>
-            <a href="{{ route('diagrams.index') }}#diagram-discovery-heading" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-4 font-medium text-blue-700 hover:bg-gray-50">
+            <a href="{{ route('diagrams.index') }}" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-4 font-medium text-blue-700 hover:bg-gray-50">
                 <x-icon name="search" />
-                {{ __('messages.home_discovery_shortcut') }}
+                <x-icon name="search" />
+                {{ __('messages.home_search_shortcut') }}
             </a>
         </nav>
     </div>

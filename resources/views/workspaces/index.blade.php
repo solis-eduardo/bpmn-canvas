@@ -12,13 +12,10 @@
             required
             class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:flex-1"
         >
-        <button
-            type="submit"
-            class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-        >
+        <x-button type="submit">
             <x-icon name="plus" />
             {{ __('messages.create_workspace') }}
-        </button>
+        </x-button>
     </form>
 
     @if ($errors->any())
@@ -51,10 +48,10 @@
                                     required
                                     class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 >
-                                <button type="submit" class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700">
+                                <x-button type="submit" variant="secondary" size="sm">
                                     <x-icon name="pencil" />
                                     {{ __('messages.rename') }}
-                                </button>
+                                </x-button>
                             </form>
 
                             <form method="POST" action="{{ route('workspaces.owner.transfer', $workspace) }}" class="flex items-center gap-2">
@@ -67,19 +64,19 @@
                                     required
                                     class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 >
-                                <button type="submit" class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700">
+                                <x-button type="submit" variant="secondary" size="sm">
                                     <x-icon name="transfer" />
                                     {{ __('messages.transfer_ownership') }}
-                                </button>
+                                </x-button>
                             </form>
 
                             <form method="POST" action="{{ route('workspaces.destroy', $workspace) }}">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="inline-flex items-center gap-1.5 text-sm font-medium text-red-600 hover:text-red-700">
+                                <x-button type="submit" variant="destructive" size="sm">
                                     <x-icon name="trash" />
                                     {{ __('messages.delete_workspace') }}
-                                </button>
+                                </x-button>
                             </form>
                         @endif
 
@@ -87,10 +84,10 @@
                             <form method="POST" action="{{ route('workspaces.leave', $workspace) }}">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="inline-flex items-center gap-1.5 text-sm font-medium text-red-600 hover:text-red-700">
+                                <x-button type="submit" variant="destructive" size="sm">
                                     <x-icon name="logout" />
                                     {{ __('messages.leave_workspace') }}
-                                </button>
+                                </x-button>
                             </form>
                         @endif
                     </div>
@@ -111,10 +108,10 @@
                             placeholder="{{ __('messages.keycloak_group_placeholder') }}"
                             class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:flex-1"
                         >
-                        <button type="submit" class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700">
+                        <x-button type="submit" variant="secondary" size="sm">
                             <x-icon name="check" />
                             {{ __('messages.update_keycloak_group') }}
-                        </button>
+                        </x-button>
                     </form>
                 @endif
 
@@ -130,10 +127,10 @@
                                     <form method="POST" action="{{ route('workspaces.members.destroy', [$workspace, $member->user]) }}">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="inline-flex items-center gap-1.5 text-sm font-medium text-red-600 hover:text-red-700">
+                                        <x-button type="submit" variant="destructive" size="sm">
                                             <x-icon name="user-minus" />
                                             {{ __('messages.remove_member') }}
-                                        </button>
+                                        </x-button>
                                     </form>
                                 @endif
                             </li>
@@ -152,10 +149,10 @@
                                 required
                                 class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:flex-1"
                             >
-                            <button type="submit" class="inline-flex items-center gap-1.5 rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200">
+                            <x-button type="submit" variant="secondary" size="sm">
                                 <x-icon name="user-plus" />
                                 {{ __('messages.add_member') }}
-                            </button>
+                            </x-button>
                         </form>
                     @endif
                 </div>

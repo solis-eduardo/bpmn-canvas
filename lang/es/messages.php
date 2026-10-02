@@ -25,7 +25,6 @@ return [
     'diagrams' => 'Diagramas',
     'workspaces' => 'Espacios de trabajo',
     'users' => 'Usuarios',
-    'notification_preferences' => 'Preferencias de correo',
 
     // Diagram list
     'home_greeting' => '¡Hola, :name!',
@@ -34,18 +33,14 @@ return [
     'home_shortcuts' => 'Accesos directos de Inicio',
     'home_workspace_shortcut' => 'Espacios de trabajo',
     'home_notifications_shortcut' => 'Historial de notificaciones',
-    'home_discovery_shortcut' => 'Descubrir diagramas',
+    'home_search_shortcut' => 'Buscar diagramas',
     'diagram_name' => 'Nombre del diagrama',
     'start_event_label' => 'Inicio',
     'create_diagram' => 'Crear diagrama',
     'no_diagrams_yet' => 'Todavía no se ha creado ningún diagrama.',
-    'search_diagrams_placeholder' => 'Buscar por título o Slug…',
+    'search_diagrams_placeholder' => 'Buscar por título, Slug o contenido…',
     'no_diagrams_match_search' => 'Ningún diagrama coincide con tu búsqueda.',
-    'diagram_discovery_heading' => 'Descubrir diagramas',
-    'diagram_discovery_description' => 'Encuentra diagramas para solicitar acceso. Solo se muestran el título y el Propietario del Diagrama.',
-    'diagram_discovery_search_label' => 'Buscar diagramas disponibles por título',
-    'diagram_discovery_search_placeholder' => 'Buscar por título…',
-    'no_discoverable_diagrams' => 'No se encontraron diagramas disponibles.',
+    'discoverable_diagram' => 'Puedes solicitar acceso',
     'request_access' => 'Solicitar acceso',
     'access_request_pending' => 'Acceso solicitado',
     'access_request_sent' => 'Solicitud de acceso enviada.',
@@ -239,5 +234,6 @@ return [
     'notification_diagram_ownership_transferred' => 'Ahora eres el Propietario del Diagrama :diagram.',
     'view_all_notifications' => 'Ver todas',
     'notification_history_heading' => 'Notificaciones',
+    'language' => 'Idioma',
 
 ];

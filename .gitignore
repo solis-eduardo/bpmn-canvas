@@ -43,6 +43,8 @@ Thumbs.db
 # Local SQLite (not used in production, but may show up in dev)
 /database/database.sqlite
 .scratch/
+/bootstrap/cache/*
+!/bootstrap/cache/.gitignore
 
 # Local agent skills (symlinks) and runtime data
 /.agents/

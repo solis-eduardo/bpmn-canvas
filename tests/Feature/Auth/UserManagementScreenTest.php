@@ -88,7 +88,7 @@ class UserManagementScreenTest extends TestCase
             ->assertSee('Regular Person')
             ->assertSee('person@example.com')
             ->assertSee('person-keycloak-id')
-            ->assertSee('disabled', false)
+            ->assertSee('readonly', false)
             ->assertDontSee('name="password"', false)
             ->assertDontSee('name="email"', false)
             ->assertDontSee('name="keycloak_id"', false);
@@ -104,7 +104,7 @@ class UserManagementScreenTest extends TestCase
             ->assertOk()
             ->assertSee('local@example.com')
             ->assertSee('name="password"', false)
-            ->assertSee('disabled', false);
+            ->assertSee('readonly', false);
     }
 
     public function test_non_admin_cannot_view_a_user_edit_screen(): void
