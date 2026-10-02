@@ -4,4 +4,4 @@ Tags used to be a hand-rolled `tags` table, a `diagram_tag` pivot and a `TagRepo
 
 Two consequences worth knowing. First, the package stores names/slugs as per-locale JSON, but our Tags are free-text user labels, not translated content: `App\Models\Tag` pins every lookup and creation to one locale (`en`), so the same label typed under two UI languages is one Tag. Second, the package does not enforce a unique name at the database level, so two simultaneous first uses of a brand-new label can create duplicate rows; we accepted that (the old unique-index race handling is gone) since a duplicate is cosmetic and harmless — both resolve by name when filtering.
 
-The migration `migrate_tags_to_spatie_laravel_tags` carries every existing Tag and Diagram association over and drops the old tables.
+The migration `migrate_tags_to_spatie_laravel_tags` reads the old rows into memory, drops the old tables (a Postgres table rename would keep the old primary-key/unique-index names and clash with the new `tags` table), recreates the schema and carries every existing Tag and Diagram association over. It was verified up/down/up against Postgres.

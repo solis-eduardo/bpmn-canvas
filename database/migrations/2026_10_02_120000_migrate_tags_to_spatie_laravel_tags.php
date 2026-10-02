@@ -17,9 +17,19 @@ return new class extends Migration
 {
     private const LOCALE = 'en';
 
+    // Frozen on purpose: a migration must not follow a later rename of the model.
+    private const DIAGRAM_MORPH_TYPE = 'App\\Models\\Diagram';
+
     public function up(): void
     {
-        Schema::rename('tags', 'legacy_tags');
+        // Read into memory and drop first: renaming a table in Postgres keeps
+        // its primary key, unique index and sequence names, which would clash
+        // with the new `tags` table's.
+        $legacyTags = DB::table('tags')->orderBy('id')->get();
+        $legacyLinks = DB::table('diagram_tag')->orderBy('id')->get();
+
+        Schema::drop('diagram_tag');
+        Schema::drop('tags');
 
         Schema::create('tags', function (Blueprint $table) {
             $table->id();
@@ -42,30 +52,33 @@ return new class extends Migration
 
         $idMap = [];
 
-        DB::table('legacy_tags')->orderBy('id')->each(function ($legacy) use (&$idMap) {
+        foreach ($legacyTags as $legacy) {
             $idMap[$legacy->id] = DB::table('tags')->insertGetId([
                 'name' => json_encode([self::LOCALE => $legacy->name]),
                 'slug' => json_encode([self::LOCALE => Str::slug($legacy->name)]),
                 'created_at' => $legacy->created_at,
                 'updated_at' => $legacy->created_at,
             ]);
-        });
+        }
 
-        DB::table('diagram_tag')->orderBy('id')->each(function ($row) use ($idMap) {
+        foreach ($legacyLinks as $link) {
             DB::table('taggables')->insert([
-                'tag_id' => $idMap[$row->tag_id],
-                'taggable_type' => 'App\\Models\\Diagram',
-                'taggable_id' => $row->diagram_id,
+                'tag_id' => $idMap[$link->tag_id],
+                'taggable_type' => self::DIAGRAM_MORPH_TYPE,
+                'taggable_id' => $link->diagram_id,
             ]);
-        });
-
-        Schema::drop('diagram_tag');
-        Schema::drop('legacy_tags');
+        }
     }
 
     public function down(): void
     {
-        Schema::create('legacy_tags', function (Blueprint $table) {
+        $tags = DB::table('tags')->orderBy('id')->get();
+        $links = DB::table('taggables')->where('taggable_type', self::DIAGRAM_MORPH_TYPE)->get();
+
+        Schema::drop('taggables');
+        Schema::drop('tags');
+
+        Schema::create('tags', function (Blueprint $table) {
             $table->id();
             $table->string('name')->unique();
             $table->timestamp('created_at')->useCurrent();
@@ -74,7 +87,7 @@ return new class extends Migration
         Schema::create('diagram_tag', function (Blueprint $table) {
             $table->id();
             $table->foreignId('diagram_id')->constrained('diagrams')->cascadeOnDelete();
-            $table->foreignId('tag_id')->constrained('legacy_tags')->cascadeOnDelete();
+            $table->foreignId('tag_id')->constrained('tags')->cascadeOnDelete();
             $table->timestamp('created_at')->useCurrent();
 
             $table->unique(['diagram_id', 'tag_id']);
@@ -82,24 +95,19 @@ return new class extends Migration
 
         $idMap = [];
 
-        DB::table('tags')->orderBy('id')->each(function ($tag) use (&$idMap) {
-            $name = json_decode($tag->name, true)[self::LOCALE] ?? (string) Arr::first(json_decode($tag->name, true));
-            $existing = DB::table('legacy_tags')->where('name', $name)->value('id');
-            $idMap[$tag->id] = $existing ?? DB::table('legacy_tags')->insertGetId([
-                'name' => $name,
-                'created_at' => $tag->created_at,
-            ]);
-        });
+        foreach ($tags as $tag) {
+            $names = json_decode($tag->name, true);
+            $name = $names[self::LOCALE] ?? (string) Arr::first($names);
 
-        DB::table('taggables')->where('taggable_type', 'App\\Models\\Diagram')->orderBy('tag_id')->orderBy('taggable_id')->each(function ($row) use ($idMap) {
+            $idMap[$tag->id] = DB::table('tags')->where('name', $name)->value('id')
+                ?? DB::table('tags')->insertGetId(['name' => $name, 'created_at' => $tag->created_at]);
+        }
+
+        foreach ($links as $link) {
             DB::table('diagram_tag')->insertOrIgnore([
-                'diagram_id' => $row->taggable_id,
-                'tag_id' => $idMap[$row->tag_id],
+                'diagram_id' => $link->taggable_id,
+                'tag_id' => $idMap[$link->tag_id],
             ]);
-        });
-
-        Schema::drop('taggables');
-        Schema::drop('tags');
-        Schema::rename('legacy_tags', 'tags');
+        }
     }
 };
