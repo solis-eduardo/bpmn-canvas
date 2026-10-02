@@ -43,3 +43,9 @@ Thumbs.db
 # Local SQLite (not used in production, but may show up in dev)
 /database/database.sqlite
 .scratch/
+
+# Local agent skills (symlinks) and runtime data
+/.agents/
+/.claude/skills/
+/skills-lock.json
+/storage/app/
