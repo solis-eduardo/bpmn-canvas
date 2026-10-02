@@ -17,7 +17,7 @@ class WorkspaceRepository
      *
      * @var array<string, string>
      */
-    public const SORT_COLUMNS = ['name' => 'asc', 'members_count' => 'desc'];
+    public const SORT_COLUMNS = ['name' => 'asc', 'members_count' => 'desc', 'updated_at' => 'desc'];
 
     public function __construct(private readonly MemberRepository $members) {}
 
@@ -65,7 +65,7 @@ class WorkspaceRepository
             ->when($filters->name !== '', fn (Builder $q) => $q->where('workspaces.name', 'like', self::like($filters->name)))
             ->when($filters->owner !== null, fn (Builder $q) => $q->where('workspaces.owner_id', $filters->owner))
             ->when($filters->member !== null, fn (Builder $q) => $q->whereHas('members', fn (Builder $m) => $m->where('user_id', $filters->member)))
-            ->orderBy($sort->column === 'name' ? 'workspaces.name' : $sort->column, $sort->direction)
+            ->orderBy(in_array($sort->column, ['name', 'updated_at'], true) ? 'workspaces.'.$sort->column : $sort->column, $sort->direction)
             ->orderBy('workspaces.id')
             ->paginate(20);
     }

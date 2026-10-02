@@ -285,7 +285,7 @@ class DiagramTagTest extends TestCase
 
         $response->assertOk();
         $response->assertDontSee(__('messages.add_tag_placeholder'), false);
-        $response->assertSee(__('messages.filter_by_tag_placeholder'), false);
+        $response->assertSee(__('messages.filter_tag'), false);
     }
 
     public function test_the_editor_links_to_the_tag_edit_screen_for_editors(): void

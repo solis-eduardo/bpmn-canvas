@@ -15,7 +15,7 @@ class UserRepository
      *
      * @var array<string, string>
      */
-    public const SORT_COLUMNS = ['name' => 'asc', 'email' => 'asc', 'login_method' => 'asc'];
+    public const SORT_COLUMNS = ['name' => 'asc', 'updated_at' => 'desc'];
 
     public function find(int $id): ?User
     {

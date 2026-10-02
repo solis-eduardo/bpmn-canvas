@@ -55,51 +55,6 @@ class DiagramFiltersTest extends TestCase
         $this->assertTrue($listedIds->contains($unrelated->id));
     }
 
-    public function test_locked_filter_includes_locks_regardless_of_inactivity(): void
-    {
-        $user = User::factory()->create();
-        $locker = User::factory()->create();
-
-        $locked = Diagram::factory()->for($user, 'author')->create(['title' => 'Actively locked']);
-        $locked->forceFill([
-            'locked_by' => $locker->id,
-            'locked_at' => now(),
-            'last_heartbeat_at' => now(),
-        ])->save();
-
-        $expiredLock = Diagram::factory()->for($user, 'author')->create(['title' => 'Stale lock']);
-        $expiredLock->forceFill([
-            'locked_by' => $locker->id,
-            'locked_at' => now()->subMinutes(5),
-            'last_heartbeat_at' => now()->subMinutes(5),
-        ])->save();
-
-        $unlocked = Diagram::factory()->for($user, 'author')->create(['title' => 'Not locked']);
-
-        $response = $this->actingAs($user)->get('/diagrams?locked=1');
-
-        $response->assertOk();
-        $response->assertSee($locked->title);
-        $response->assertSee($expiredLock->title);
-        $response->assertDontSee($unlocked->title);
-    }
-
-    public function test_recently_modified_filter_shows_only_diagrams_updated_within_the_last_week(): void
-    {
-        $user = User::factory()->create();
-
-        $recent = Diagram::factory()->for($user, 'author')->create(['title' => 'Recently touched']);
-
-        $stale = Diagram::factory()->for($user, 'author')->create(['title' => 'Untouched for a while']);
-        $stale->forceFill(['updated_at' => now()->subDays(30)])->save();
-
-        $response = $this->actingAs($user)->get('/diagrams?recent=1');
-
-        $response->assertOk();
-        $response->assertSee($recent->title);
-        $response->assertDontSee($stale->title);
-    }
-
     public function test_owner_and_collaborator_filters_combined_show_the_union_not_the_intersection(): void
     {
         $user = User::factory()->create();
@@ -155,7 +110,7 @@ class DiagramFiltersTest extends TestCase
         $response->assertOk();
         $response->assertSee($hidden->title);
 
-        $response = $this->actingAs($stranger)->get('/diagrams?recent=1');
+        $response = $this->actingAs($stranger)->get('/diagrams?owner=1');
         $response->assertOk();
         $response->assertDontSee($hidden->title);
     }

@@ -150,6 +150,23 @@ class HomeTest extends TestCase
             ->assertSee(__('messages.home_no_recent_diagrams'));
     }
 
+    public function test_a_search_hides_the_default_home_content_and_shows_only_the_results(): void
+    {
+        $user = User::factory()->create();
+        Diagram::factory()->create(['owner_id' => $user->id, 'title' => 'Billing flow']);
+
+        $this->actingAs($user)->get('/home?q=Billing')
+            ->assertOk()
+            ->assertSee(__('messages.search_results_heading'))
+            ->assertSee('Billing flow')
+            ->assertDontSee(__('messages.home_recent_diagrams'))
+            ->assertDontSee(__('messages.home_shortcuts'));
+
+        $this->actingAs($user)->get('/home')
+            ->assertSee(__('messages.home_recent_diagrams'))
+            ->assertSee(__('messages.home_shortcuts'));
+    }
+
     #[DataProvider('supportedLocales')]
     public function test_home_translates_its_navigation_greeting_heading_and_shortcuts(
         string $locale,

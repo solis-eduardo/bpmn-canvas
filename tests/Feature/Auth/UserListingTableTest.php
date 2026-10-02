@@ -48,7 +48,7 @@ class UserListingTableTest extends TestCase
         $this->get('/admin/users')
             ->assertOk()
             ->assertSee('<tbody ', false)
-            ->assertSee('colspan="5"', false)
+            ->assertSee('colspan="6"', false)
             ->assertSee(__('messages.no_users_yet'));
     }
 

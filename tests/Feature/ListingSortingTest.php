@@ -116,7 +116,7 @@ class ListingSortingTest extends TestCase
         $admin = User::factory()->create(['is_admin' => true]);
         User::factory()->count(25)->create();
 
-        $this->actingAs($admin)->get('/admin/users?sort=email&direction=desc')
-            ->assertSee('sort=email&amp;direction=desc&amp;page=2', false);
+        $this->actingAs($admin)->get('/admin/users?sort=updated_at&direction=desc')
+            ->assertSee('sort=updated_at&amp;direction=desc&amp;page=2', false);
     }
 }
