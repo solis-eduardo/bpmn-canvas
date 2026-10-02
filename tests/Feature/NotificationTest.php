@@ -349,7 +349,7 @@ class NotificationTest extends TestCase
         $owner = User::factory()->create();
         $newMember = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $this->actingAs($owner)->post("/workspaces/{$workspace->id}/members", [
             'email' => $newMember->email,
@@ -367,8 +367,8 @@ class NotificationTest extends TestCase
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner, notify: false);
-        $workspace->addMember($member, notify: false);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
 
         $this->actingAs($owner)->delete("/workspaces/{$workspace->id}/members/{$member->id}")
             ->assertRedirect();
@@ -385,7 +385,7 @@ class NotificationTest extends TestCase
         $owner = User::factory()->create();
         $newOwner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $this->actingAs($owner)->put("/workspaces/{$workspace->id}/owner", [
             'user_id' => $newOwner->id,

@@ -2,8 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Diagram;
-use App\Models\Workspace;
 use App\Notifications\DiagramAccessRequested;
 use App\Notifications\DiagramAccessRequestResolved;
 use App\Notifications\DiagramCollaboratorInvited;
@@ -12,6 +10,8 @@ use App\Notifications\DiagramOwnershipTransferred;
 use App\Notifications\WorkspaceMemberAdded;
 use App\Notifications\WorkspaceMemberRemoved;
 use App\Notifications\WorkspaceOwnershipTransferred;
+use App\Repositories\DiagramRepository;
+use App\Repositories\WorkspaceRepository;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -30,6 +30,11 @@ use Illuminate\View\View;
  */
 class NotificationController extends Controller
 {
+    public function __construct(
+        private readonly DiagramRepository $diagrams,
+        private readonly WorkspaceRepository $workspaces,
+    ) {}
+
     /**
      * Polled by the bell to keep the badge current.
      */
@@ -83,13 +88,13 @@ class NotificationController extends Controller
             return redirect()->route('diagrams.index');
         }
 
-        $diagram = Diagram::find($record->data['diagram_id'] ?? null);
+        $diagram = $this->diagrams->find($record->data['diagram_id'] ?? 0);
 
         if ($diagram) {
             return redirect(route('diagrams.show', $diagram->slug).'?open-panel=collaborators');
         }
 
-        $workspace = Workspace::find($record->data['workspace_id'] ?? null);
+        $workspace = $this->workspaces->find($record->data['workspace_id'] ?? 0);
 
         if ($workspace) {
             return redirect()->route('workspaces.index');

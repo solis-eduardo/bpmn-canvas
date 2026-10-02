@@ -64,7 +64,7 @@ class HomeTest extends TestCase
 
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
         $hidden = Diagram::factory()->for($owner, 'author')->create([
             'title' => 'Hidden workspace diagram',
             'workspace_id' => $workspace->id,
@@ -85,7 +85,7 @@ class HomeTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
         $hidden = Diagram::factory()->for($owner, 'author')->create([
             'title' => 'Administrator-visible diagram',
             'workspace_id' => $workspace->id,
@@ -115,8 +115,8 @@ class HomeTest extends TestCase
         ]);
 
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
-        $workspace->addMember($user);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $user);
         $memberDiagram = Diagram::factory()->for($owner, 'author')->create([
             'title' => 'Workspace membership',
             'workspace_id' => $workspace->id,

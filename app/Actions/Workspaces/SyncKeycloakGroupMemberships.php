@@ -2,13 +2,20 @@
 
 namespace App\Actions\Workspaces;
 
-use App\Models\Member;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Notifications\WorkspaceMemberAdded;
+use App\Repositories\MemberRepository;
+use App\Repositories\WorkspaceRepository;
 use Illuminate\Support\Facades\DB;
 
 class SyncKeycloakGroupMemberships
 {
+    public function __construct(
+        private readonly MemberRepository $members,
+        private readonly WorkspaceRepository $workspaces,
+    ) {}
+
     /**
      * Reconciles only group-managed memberships; manual grants are never
      * changed, even when they overlap with the User's Keycloak groups.
@@ -18,14 +25,14 @@ class SyncKeycloakGroupMemberships
     public function __invoke(User $user, array $groups): void
     {
         DB::transaction(function () use ($user, $groups) {
-            Member::where('user_id', $user->id)
-                ->where('origin', Member::ORIGIN_GROUP)
-                ->whereDoesntHave('workspace', fn ($query) => $query->whereIn('keycloak_group', $groups))
-                ->delete();
+            $this->members->removeGroupMembershipsOutside($user, $groups);
 
-            Workspace::whereIn('keycloak_group', $groups)
-                ->get()
-                ->each(fn (Workspace $workspace) => $workspace->addGroupMember($user));
+            $this->workspaces->linkedToKeycloakGroups($groups)
+                ->each(function (Workspace $workspace) use ($user) {
+                    if ($this->members->createGroupIfMissing($workspace, $user)->wasRecentlyCreated) {
+                        $user->notify(new WorkspaceMemberAdded($workspace));
+                    }
+                });
         });
     }
 }

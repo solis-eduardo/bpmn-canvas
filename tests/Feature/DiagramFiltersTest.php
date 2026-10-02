@@ -143,7 +143,7 @@ class DiagramFiltersTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
         $hidden = Diagram::factory()->for($owner, 'author')->create([
             'title' => 'Hidden Owned Diagram',
             'workspace_id' => $workspace->id,

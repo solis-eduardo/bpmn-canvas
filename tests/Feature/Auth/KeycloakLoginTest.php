@@ -186,7 +186,7 @@ class KeycloakLoginTest extends TestCase
             'owner_id' => $owner->id,
             'keycloak_group' => '/finance',
         ]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $this->mockSocialiteUser($this->fakeSocialiteUser(
             'keycloak-sub-8',
@@ -212,8 +212,8 @@ class KeycloakLoginTest extends TestCase
             'owner_id' => $owner->id,
             'keycloak_group' => '/finance',
         ]);
-        $workspace->addMember($owner);
-        $workspace->addGroupMember($member);
+        $this->addMember($workspace, $owner);
+        $this->addGroupMember($workspace, $member);
 
         $this->mockSocialiteUser($this->fakeSocialiteUser(
             'keycloak-sub-9',
@@ -237,8 +237,8 @@ class KeycloakLoginTest extends TestCase
             'owner_id' => $owner->id,
             'keycloak_group' => '/finance',
         ]);
-        $workspace->addMember($owner);
-        $workspace->addGroupMember($member);
+        $this->addMember($workspace, $owner);
+        $this->addGroupMember($workspace, $member);
 
         $this->mockSocialiteUser($this->fakeSocialiteUser(
             'keycloak-sub-12',
@@ -264,8 +264,8 @@ class KeycloakLoginTest extends TestCase
             'owner_id' => $owner->id,
             'keycloak_group' => '/finance',
         ]);
-        $workspace->addMember($owner);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
 
         $this->mockSocialiteUser($this->fakeSocialiteUser(
             'keycloak-sub-10',
@@ -305,9 +305,9 @@ class KeycloakLoginTest extends TestCase
             'owner_id' => $owner->id,
             'keycloak_group' => '/finance',
         ]);
-        $workspace->addMember($owner);
-        $workspace->addGroupMember($member);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $owner);
+        $this->addGroupMember($workspace, $member);
+        $this->addMember($workspace, $member);
 
         $this->mockSocialiteUser($this->fakeSocialiteUser(
             'keycloak-sub-11',

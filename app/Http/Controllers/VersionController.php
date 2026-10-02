@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Diagram;
-use App\Models\DiagramOldSlug;
+use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
+use App\Repositories\DiagramRepository;
 use App\Repositories\VersionRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,9 +11,15 @@ use RuntimeException;
 
 class VersionController extends Controller
 {
+    use ResolvesVisibleDiagram;
+
+    public function __construct(
+        private readonly DiagramRepository $diagrams,
+    ) {}
+
     public function versions(string $slug, VersionRepository $versions): JsonResponse
     {
-        [$diagram] = $this->resolve($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('view', $diagram);
 
@@ -43,7 +49,7 @@ class VersionController extends Controller
      */
     public function versionContent(string $slug, string $version, VersionRepository $versions): JsonResponse
     {
-        [$diagram] = $this->resolve($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('update', $diagram);
 
@@ -70,7 +76,7 @@ class VersionController extends Controller
      */
     public function compareVersions(Request $request, string $slug, VersionRepository $versions): JsonResponse
     {
-        [$diagram] = $this->resolve($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('update', $diagram);
 
@@ -113,7 +119,7 @@ class VersionController extends Controller
 
     public function restoreVersion(Request $request, string $slug, string $version, VersionRepository $versions): JsonResponse
     {
-        [$diagram] = $this->resolve($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('update', $diagram);
 
@@ -133,7 +139,7 @@ class VersionController extends Controller
      */
     public function renameVersion(Request $request, string $slug, string $version, VersionRepository $versions): JsonResponse
     {
-        [$diagram] = $this->resolve($slug);
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('update', $diagram);
 
@@ -155,37 +161,5 @@ class VersionController extends Controller
             'name' => $data['name'],
             'renamed' => true,
         ]);
-    }
-
-    /**
-     * @return array{0: Diagram, 1: bool}
-     */
-    private function resolve(string $slug): array
-    {
-        $diagram = Diagram::where('slug', $slug)->first();
-
-        if ($diagram) {
-            return [$this->ensureVisible($diagram), false];
-        }
-
-        $old = DiagramOldSlug::with('diagram')->where('old_slug', $slug)->first();
-
-        if ($old && $old->diagram) {
-            return [$this->ensureVisible($old->diagram), true];
-        }
-
-        abort(404);
-    }
-
-    /**
-     * A hidden Diagram (inside a Workspace the User can't see into) answers
-     * 404 to direct URL access — never 403, so its existence doesn't leak
-     * (CONTEXT.md, "Workspace"; issue #28).
-     */
-    private function ensureVisible(Diagram $diagram): Diagram
-    {
-        abort_unless($diagram->isVisibleTo(auth()->user()), 404);
-
-        return $diagram;
     }
 }

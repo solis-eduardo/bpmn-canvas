@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Diagrams\GrantOrRequestCollaborator;
+use App\Http\Controllers\Concerns\ResolvesTargetUser;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Collaborator;
 use App\Models\Diagram;
@@ -11,13 +12,23 @@ use App\Notifications\DiagramAccessRequested;
 use App\Notifications\DiagramAccessRequestResolved;
 use App\Notifications\DiagramCollaboratorInvited;
 use App\Notifications\DiagramCollaboratorRemoved;
+use App\Repositories\CollaboratorRepository;
+use App\Repositories\DiagramRepository;
+use App\Repositories\UserRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class DiagramCollaboratorController extends Controller
 {
+    use ResolvesTargetUser;
     use ResolvesVisibleDiagram;
+
+    public function __construct(
+        private readonly UserRepository $users,
+        private readonly DiagramRepository $diagrams,
+        private readonly CollaboratorRepository $collaborators,
+    ) {}
 
     /**
      * Author (or Administrator) lists a Diagram's Collaborators/requests.
@@ -28,7 +39,7 @@ class DiagramCollaboratorController extends Controller
 
         $this->authorize('manageCollaborators', $diagram);
 
-        $collaborators = $diagram->collaborators()->with('user')->get()->map(fn (Collaborator $collaborator) => [
+        $collaborators = $this->collaborators->listWithUser($diagram)->map(fn (Collaborator $collaborator) => [
             'user_id' => $collaborator->user_id,
             'name' => $collaborator->user->name,
             'email' => $collaborator->user->email,
@@ -95,15 +106,10 @@ class DiagramCollaboratorController extends Controller
      */
     private function grantAndNotify(GrantOrRequestCollaborator $grant, Diagram $diagram, User $requester, User $target): Collaborator
     {
-        $wasRequested = Collaborator::where('diagram_id', $diagram->id)
-            ->where('user_id', $target->id)
-            ->where('status', Collaborator::STATUS_REQUESTED)
-            ->exists();
-
         $collaborator = $grant($diagram, $requester, $target);
 
         if ($collaborator->status === Collaborator::STATUS_REQUESTED) {
-            if (! $wasRequested) {
+            if ($collaborator->wasRecentlyCreated) {
                 $diagram->owner->notify(new DiagramAccessRequested($diagram, $target));
             }
         } elseif ($collaborator->wasRecentlyCreated || $collaborator->wasChanged('status')) {
@@ -132,12 +138,9 @@ class DiagramCollaboratorController extends Controller
 
         $this->authorize('manageCollaborators', $diagram);
 
-        $collaborator = Collaborator::where('diagram_id', $diagram->id)
-            ->where('user_id', $user->id)
-            ->firstOrFail();
-
+        $collaborator = $this->collaborators->findForOrFail($diagram, $user);
         $isPendingRequest = $collaborator->status === Collaborator::STATUS_REQUESTED;
-        $collaborator->update(['status' => Collaborator::STATUS_APPROVED]);
+        $this->collaborators->approve($collaborator);
 
         if ($isPendingRequest) {
             $user->notify(new DiagramAccessRequestResolved($diagram, approved: true));
@@ -159,13 +162,9 @@ class DiagramCollaboratorController extends Controller
 
         $this->authorize('manageCollaborators', $diagram);
 
-        $collaborator = Collaborator::where('diagram_id', $diagram->id)
-            ->where('user_id', $user->id)
-            ->first();
+        $collaborator = $this->collaborators->removeFor($diagram, $user);
 
         if ($collaborator) {
-            $collaborator->delete();
-
             if ($collaborator->status === Collaborator::STATUS_REQUESTED) {
                 $user->notify(new DiagramAccessRequestResolved($diagram, approved: false));
             } elseif ($collaborator->status === Collaborator::STATUS_APPROVED) {

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Repositories\UserRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
@@ -13,11 +14,15 @@ use Illuminate\View\View;
 
 class UserController extends Controller
 {
+    public function __construct(
+        private readonly UserRepository $users,
+    ) {}
+
     public function index(): View
     {
         $this->authorize('manage-users');
 
-        $users = User::orderBy('name')->get();
+        $users = $this->users->allOrderedByName();
 
         return view('admin.users.index', compact('users'));
     }
@@ -46,7 +51,7 @@ class UserController extends Controller
             'password' => ['required', 'string', 'min:8'],
         ]);
 
-        User::create([
+        $this->users->create([
             'name' => $data['name'],
             'email' => $data['email'],
             'password' => Hash::make($data['password']),

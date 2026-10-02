@@ -18,14 +18,14 @@ class WorkspaceMemberTest extends TestCase
         $owner = User::factory()->create();
         $newMember = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $response = $this->actingAs($owner)->post("/workspaces/{$workspace->id}/members", [
             'email' => $newMember->email,
         ]);
 
         $response->assertRedirect();
-        $this->assertTrue($workspace->fresh()->hasMember($newMember));
+        $this->assertTrue($this->isMember($workspace, $newMember));
     }
 
     public function test_workspace_owner_can_remove_a_member(): void
@@ -33,13 +33,13 @@ class WorkspaceMemberTest extends TestCase
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
 
         $response = $this->actingAs($owner)->delete("/workspaces/{$workspace->id}/members/{$member->id}");
 
         $response->assertRedirect();
-        $this->assertFalse($workspace->fresh()->hasMember($member));
+        $this->assertFalse($this->isMember($workspace, $member));
     }
 
     public function test_administrator_can_add_a_member_to_any_workspace(): void
@@ -48,14 +48,14 @@ class WorkspaceMemberTest extends TestCase
         $owner = User::factory()->create();
         $newMember = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $response = $this->actingAs($admin)->post("/workspaces/{$workspace->id}/members", [
             'email' => $newMember->email,
         ]);
 
         $response->assertRedirect();
-        $this->assertTrue($workspace->fresh()->hasMember($newMember));
+        $this->assertTrue($this->isMember($workspace, $newMember));
     }
 
     public function test_administrator_can_remove_a_member_from_any_workspace(): void
@@ -64,13 +64,13 @@ class WorkspaceMemberTest extends TestCase
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
 
         $response = $this->actingAs($admin)->delete("/workspaces/{$workspace->id}/members/{$member->id}");
 
         $response->assertRedirect();
-        $this->assertFalse($workspace->fresh()->hasMember($member));
+        $this->assertFalse($this->isMember($workspace, $member));
     }
 
     public function test_plain_member_cannot_add_a_member(): void
@@ -79,15 +79,15 @@ class WorkspaceMemberTest extends TestCase
         $member = User::factory()->create();
         $someoneElse = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
 
         $response = $this->actingAs($member)->post("/workspaces/{$workspace->id}/members", [
             'email' => $someoneElse->email,
         ]);
 
         $response->assertForbidden();
-        $this->assertFalse($workspace->fresh()->hasMember($someoneElse));
+        $this->assertFalse($this->isMember($workspace, $someoneElse));
     }
 
     public function test_plain_member_cannot_remove_a_member(): void
@@ -96,14 +96,14 @@ class WorkspaceMemberTest extends TestCase
         $member = User::factory()->create();
         $anotherMember = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
-        $workspace->addMember($member);
-        $workspace->addMember($anotherMember);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
+        $this->addMember($workspace, $anotherMember);
 
         $response = $this->actingAs($member)->delete("/workspaces/{$workspace->id}/members/{$anotherMember->id}");
 
         $response->assertForbidden();
-        $this->assertTrue($workspace->fresh()->hasMember($anotherMember));
+        $this->assertTrue($this->isMember($workspace, $anotherMember));
     }
 
     public function test_unrelated_user_cannot_manage_members(): void
@@ -112,7 +112,7 @@ class WorkspaceMemberTest extends TestCase
         $stranger = User::factory()->create();
         $target = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $response = $this->actingAs($stranger)->post("/workspaces/{$workspace->id}/members", [
             'email' => $target->email,
@@ -125,12 +125,12 @@ class WorkspaceMemberTest extends TestCase
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $response = $this->actingAs($owner)->delete("/workspaces/{$workspace->id}/members/{$owner->id}");
 
         $response->assertStatus(422);
-        $this->assertTrue($workspace->fresh()->hasMember($owner));
+        $this->assertTrue($this->isMember($workspace, $owner));
     }
 
     public function test_a_plain_member_can_leave_the_workspace(): void
@@ -138,25 +138,25 @@ class WorkspaceMemberTest extends TestCase
         $owner = User::factory()->create();
         $member = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
-        $workspace->addMember($member);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
 
         $response = $this->actingAs($member)->delete("/workspaces/{$workspace->id}/leave");
 
         $response->assertRedirect();
-        $this->assertFalse($workspace->fresh()->hasMember($member));
+        $this->assertFalse($this->isMember($workspace, $member));
     }
 
     public function test_the_workspace_owner_is_refused_when_trying_to_leave_without_transferring_first(): void
     {
         $owner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $response = $this->actingAs($owner)->delete("/workspaces/{$workspace->id}/leave");
 
         $response->assertStatus(422);
-        $this->assertTrue($workspace->fresh()->hasMember($owner));
+        $this->assertTrue($this->isMember($workspace, $owner));
     }
 
     public function test_the_former_owner_can_leave_after_transferring_ownership(): void
@@ -164,7 +164,7 @@ class WorkspaceMemberTest extends TestCase
         $owner = User::factory()->create();
         $newOwner = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $this->actingAs($owner)->put("/workspaces/{$workspace->id}/owner", [
             'user_id' => $newOwner->id,
@@ -173,7 +173,7 @@ class WorkspaceMemberTest extends TestCase
         $response = $this->actingAs($owner)->delete("/workspaces/{$workspace->id}/leave");
 
         $response->assertRedirect();
-        $this->assertFalse($workspace->fresh()->hasMember($owner));
+        $this->assertFalse($this->isMember($workspace, $owner));
     }
 
     public function test_adding_by_email_returns_identical_response_for_existing_and_non_existing_email(): void
@@ -181,7 +181,7 @@ class WorkspaceMemberTest extends TestCase
         $owner = User::factory()->create();
         $existingUser = User::factory()->create();
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
-        $workspace->addMember($owner);
+        $this->addMember($workspace, $owner);
 
         $responseWithExistingEmail = $this->actingAs($owner)->post("/workspaces/{$workspace->id}/members", [
             'email' => $existingUser->email,

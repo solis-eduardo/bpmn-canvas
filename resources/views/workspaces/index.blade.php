@@ -79,7 +79,7 @@
                             </form>
                         @endif
 
-                        @if ($workspace->hasMember(auth()->user()) && ! $workspace->isOwnedBy(auth()->user()))
+                        @if ($workspace->members->contains('user_id', auth()->id()) && ! $workspace->isOwnedBy(auth()->user()))
                             <form method="POST" action="{{ route('workspaces.leave', $workspace) }}">
                                 @csrf
                                 @method('DELETE')
