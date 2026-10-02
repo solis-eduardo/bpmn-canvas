@@ -19,9 +19,10 @@
             <a
                 href="{{ route('diagrams.index') }}"
                 id="btn-back-to-list"
-                class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
             >
-                &larr; {{ __('messages.back_to_diagrams') }}
+                <x-icon name="arrow-left" />
+                {{ __('messages.back_to_diagrams') }}
             </a>
             @php($isHolder = (int) $diagram->locked_by === auth()->id())
             @if ($isHolder || (auth()->user()->is_admin && $diagram->locked_by !== null))
