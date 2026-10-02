@@ -53,7 +53,7 @@ class FormValidationErrorsTest extends TestCase
             ->put('/account', ['name' => ''])
             ->getContent();
 
-        $this->assertMatchesRegularExpression('/id="name"[^>]*aria-invalid="true"/s', $html);
+        $this->assertMatchesRegularExpression('/id="name"[^>]*aria-invalid="true"[^>]*>\s*<p[^>]*role="alert"/s', $html);
         $this->assertStringNotContainsString('bg-red-50', $html);
     }
 

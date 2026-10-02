@@ -39,6 +39,11 @@
                         <span class="ml-1">({{ $user->keycloak_id }})</span>
                     @endif
                 </span>
+                @if ($user->keycloak_id)
+                    @error('password')
+                        <p role="alert" class="text-sm text-red-600">{{ $message }}</p>
+                    @enderror
+                @endif
             </div>
             @unless ($user->keycloak_id)
                 <div class="flex flex-col gap-1">
