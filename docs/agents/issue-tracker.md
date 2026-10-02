@@ -49,10 +49,10 @@ git checkout -b issue/NNN-slug
 
 ```bash
 git push -u origin issue/NNN-slug
-gh pr create --title "..." --body "Fixes issue #NNN\n..."
+gh pr create --title "..." --body "Fixes #NNN\n..."
 ```
 
-Include "Fixes issue #NNN" in the PR body to auto-close the issue when merged.
+Include "Fixes #NNN" in the PR body to auto-close the issue when merged. The keyword must be directly followed by the number ("Fixes #NNN"); "Fixes issue #NNN" does not link or close the issue.
 
 ### 5. After merge
 
