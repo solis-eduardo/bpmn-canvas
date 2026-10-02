@@ -81,24 +81,8 @@ class UserController extends Controller
         ]);
 
         $loginMethod = $data['login_method'] ?? $user->login_method;
-        $password = $data['password'] ?? null;
 
-        if (filled($password) && $loginMethod === User::LOGIN_METHOD_KEYCLOAK) {
-            throw ValidationException::withMessages([
-                'password' => __('messages.keycloak_password_managed_externally'),
-            ]);
-        }
-
-        // Switching back to `local` restores the kept password; an account
-        // that never had one needs a new password in the same action.
-        if ($loginMethod === User::LOGIN_METHOD_LOCAL
-            && $user->login_method === User::LOGIN_METHOD_KEYCLOAK
-            && blank($password)
-            && blank($user->password)) {
-            throw ValidationException::withMessages([
-                'password' => __('messages.password_required_to_switch_to_local'),
-            ]);
-        }
+        $this->assertPasswordRulesForLoginMethod($user, $loginMethod, $data['password'] ?? null);
 
         if (array_key_exists('is_admin', $data) && ! $data['is_admin'] && $user->is_admin_via_keycloak_claim) {
             abort(403, 'This Administrator role was granted by the Keycloak claim and cannot be revoked here.');
@@ -114,6 +98,29 @@ class UserController extends Controller
         $user->save();
 
         return back();
+    }
+
+    /**
+     * @throws ValidationException
+     */
+    private function assertPasswordRulesForLoginMethod(User $user, string $loginMethod, ?string $password): void
+    {
+        if (filled($password) && $loginMethod === User::LOGIN_METHOD_KEYCLOAK) {
+            throw ValidationException::withMessages([
+                'password' => __('messages.keycloak_password_managed_externally'),
+            ]);
+        }
+
+        // Switching back to `local` restores the kept password; an account
+        // that never had one needs a new password in the same action.
+        $switchingToLocal = $loginMethod === User::LOGIN_METHOD_LOCAL
+            && $user->login_method === User::LOGIN_METHOD_KEYCLOAK;
+
+        if ($switchingToLocal && blank($password) && blank($user->password)) {
+            throw ValidationException::withMessages([
+                'password' => __('messages.password_required_to_switch_to_local'),
+            ]);
+        }
     }
 
     /**
