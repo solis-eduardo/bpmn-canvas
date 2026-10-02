@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Repositories\UserRepository;
+use App\Repositories\WorkspaceListFilters;
 use App\Repositories\WorkspaceRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
@@ -22,14 +23,19 @@ class WorkspaceController extends Controller
      * Lists the Workspaces the current User is a Member of (CONTEXT.md,
      * "Member"). An Administrator sees every Workspace instead, since they
      * "can manage any Workspace" (CONTEXT.md, "Administrator").
+     *
+     * Paginated, and narrowed by the "name", "owner", "member" and "diagram"
+     * query filters (issue #127), which are kept on the pagination links.
      */
     public function index(Request $request): View
     {
         $user = $request->user();
 
-        $workspaces = $user->is_admin
-            ? $this->workspaces->allWithOwnerAndMembers()
-            : $this->workspaces->forUserWithOwnerAndMembers($user);
+        $filters = WorkspaceListFilters::fromRequest($request);
+
+        $workspaces = $this->workspaces
+            ->search($user, $filters)
+            ->appends($request->query());
 
         $memberCandidates = [];
         $ownerCandidates = [];
@@ -49,7 +55,12 @@ class WorkspaceController extends Controller
             }
         }
 
-        return view('workspaces.index', compact('workspaces', 'memberCandidates', 'ownerCandidates'));
+        return view('workspaces.index', compact('workspaces', 'filters', 'memberCandidates', 'ownerCandidates'));
+    }
+
+    public function create(): View
+    {
+        return view('workspaces.create');
     }
 
     /**
@@ -80,6 +91,13 @@ class WorkspaceController extends Controller
         $this->workspaces->create($data['name'], $request->user());
 
         return redirect()->route('workspaces.index');
+    }
+
+    public function edit(Workspace $workspace): View
+    {
+        $this->authorize('update', $workspace);
+
+        return view('workspaces.edit', compact('workspace'));
     }
 
     /**

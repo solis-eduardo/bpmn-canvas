@@ -46,11 +46,17 @@ final readonly class DiagramListCriteria
     }
 
     /**
-     * The "discover" query param: the term searched among Diagrams outside
-     * the User's reach, kept across the list and the access-request redirect.
+     * The request's query string with the legacy "discover" param folded into
+     * "q" (discovery is part of the unified search) and paging dropped.
+     *
+     * @return array<string, mixed>
      */
-    public static function discoverSearch(Request $request): string
+    public static function unifiedSearchQuery(Request $request): array
     {
-        return trim((string) $request->query('discover', ''));
+        $query = $request->query();
+        $search = trim((string) ($query['q'] ?? $query['discover'] ?? ''));
+        unset($query['q'], $query['discover'], $query['page'], $query['discovery_page']);
+
+        return $search === '' ? $query : ['q' => $search] + $query;
     }
 }

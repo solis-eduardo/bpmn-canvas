@@ -35,7 +35,7 @@ class DiagramVisibilityTest extends TestCase
         $response->assertDontSee($hidden->title);
     }
 
-    public function test_the_main_list_only_shows_diagrams_the_user_can_open(): void
+    public function test_unified_results_include_openable_and_discoverable_but_not_workspace_hidden_diagrams(): void
     {
         $owner = User::factory()->create();
         $openable = Diagram::factory()->for($owner, 'author')->create(['title' => 'My openable diagram']);
@@ -48,10 +48,10 @@ class DiagramVisibilityTest extends TestCase
         $response->assertOk();
         $listedIds = $response->viewData('diagrams')->getCollection()->pluck('id');
         $this->assertTrue($listedIds->contains($openable->id));
-        $this->assertFalse($listedIds->contains($inaccessible->id));
+        $this->assertTrue($listedIds->contains($inaccessible->id));
     }
 
-    public function test_discovery_search_only_exposes_title_and_diagram_owner_for_out_of_workspace_diagrams(): void
+    public function test_unified_search_only_exposes_title_and_diagram_owner_for_discoverable_diagrams(): void
     {
         $owner = User::factory()->create(['name' => 'Diagram Owner Name']);
         $author = User::factory()->create(['name' => 'Original Author Name']);
@@ -68,21 +68,41 @@ class DiagramVisibilityTest extends TestCase
         ]);
         $stranger = User::factory()->create();
 
-        $response = $this->actingAs($stranger)->get('/diagrams?discover=discovery');
+        $response = $this->actingAs($stranger)->get('/diagrams?q=discovery');
 
         $response->assertOk();
-        $response->assertSee('id="diagram-discovery-table"', false);
+        $response->assertSee('id="diagram-search-results"', false);
         $response->assertSee('scope="col"', false);
         $response->assertSee($match->title);
         $response->assertSee($owner->name);
         $response->assertSee(__('messages.request_access'));
+        $response->assertDontSee('id="diagram-discovery-table"', false);
         $response->assertSee(route('diagrams.collaborators.store', [
             'slug' => $match->slug,
-            'discover' => 'discovery',
+            'q' => 'discovery',
         ]), false);
         $response->assertDontSee($author->name);
         $response->assertDontSee($hidden->title);
         $response->assertDontSee('href="'.route('diagrams.show', $match->slug).'"', false);
+    }
+
+    public function test_legacy_discovery_search_redirects_to_unified_search_and_preserves_filters(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get('/diagrams?'.http_build_query([
+                'discover' => 'loan',
+                'tag' => 'finance',
+                'owner' => '1',
+                'workspace' => 'none',
+            ]))
+            ->assertRedirect(route('diagrams.index', [
+                'q' => 'loan',
+                'tag' => 'finance',
+                'owner' => '1',
+                'workspace' => 'none',
+            ]));
     }
 
     public function test_the_list_still_shows_a_hidden_diagram_to_a_collaborator_who_is_not_a_member(): void
@@ -129,8 +149,7 @@ class DiagramVisibilityTest extends TestCase
         $response = $this->actingAs($stranger)->get('/diagrams');
 
         $response->assertOk();
-        $this->assertFalse($response->viewData('diagrams')->getCollection()->contains('id', $diagram->id));
-        $this->assertTrue($response->viewData('discoveryDiagrams')->getCollection()->contains('id', $diagram->id));
+        $this->assertTrue($response->viewData('diagrams')->getCollection()->contains('id', $diagram->id));
     }
 
     public function test_administrator_sees_a_hidden_diagram_in_the_list(): void

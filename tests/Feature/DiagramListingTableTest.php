@@ -25,7 +25,7 @@ class DiagramListingTableTest extends TestCase
             'locked_at' => now(),
             'last_heartbeat_at' => now(),
         ])->save();
-        $diagram->tags()->attach(Tag::create(['name' => 'Finance']));
+        $diagram->attachTag(Tag::findOrCreate('Finance'));
 
         $response = $this->actingAs($owner)->get('/diagrams');
 

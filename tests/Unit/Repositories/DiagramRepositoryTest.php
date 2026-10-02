@@ -147,7 +147,7 @@ class DiagramRepositoryTest extends TestCase
         $inWorkspace = Diagram::factory()->create(['owner_id' => $user->id, 'workspace_id' => $workspace->id, 'title' => 'Billing']);
         $locked = Diagram::factory()->create(['owner_id' => $user->id, 'locked_by' => $user->id]);
         $tagged = Diagram::factory()->create(['owner_id' => $user->id]);
-        $tagged->tags()->attach(Tag::create(['name' => 'hr']));
+        $tagged->attachTag(Tag::findOrCreate('hr'));
 
         $ids = fn (DiagramListCriteria $criteria) => $this->repository->visibleListQuery($user, $criteria)->pluck('id')->all();
 

@@ -40,10 +40,10 @@ class HomeTest extends TestCase
             ->assertSee(__('messages.create_diagram'))
             ->assertSee(__('messages.home_workspace_shortcut'))
             ->assertSee(__('messages.home_notifications_shortcut'))
-            ->assertSee(__('messages.home_discovery_shortcut'))
+            ->assertSee(__('messages.home_search_shortcut'))
             ->assertSee(route('workspaces.index'), false)
             ->assertSee(route('notifications.history'), false)
-            ->assertSee(route('diagrams.index').'#diagram-discovery-heading', false)
+            ->assertSee(route('diagrams.index'), false)
             ->assertSee('href="'.url('/home').'"', false);
     }
 
