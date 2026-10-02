@@ -152,7 +152,6 @@ class WorkspaceTest extends TestCase
 
         $response->assertOk();
         $response->assertSee($workspace->name);
-        $response->assertSee(route('workspaces.keycloak-group.update', $workspace));
     }
 
     public function test_workspace_owner_can_rename_the_workspace(): void
@@ -216,7 +215,7 @@ class WorkspaceTest extends TestCase
 
         $this->actingAs($admin)->put("/workspaces/{$workspace->id}/keycloak-group", [
             'keycloak_group' => '/finance',
-        ])->assertRedirect(route('workspaces.index'));
+        ])->assertRedirect(route('workspaces.edit', $workspace));
 
         $this->assertSame('/finance', $workspace->fresh()->keycloak_group);
     }
@@ -232,7 +231,7 @@ class WorkspaceTest extends TestCase
 
         $this->actingAs($admin)->put("/workspaces/{$workspace->id}/keycloak-group", [
             'keycloak_group' => '',
-        ])->assertRedirect(route('workspaces.index'));
+        ])->assertRedirect(route('workspaces.edit', $workspace));
 
         $this->assertNull($workspace->fresh()->keycloak_group);
     }
@@ -321,7 +320,7 @@ class WorkspaceTest extends TestCase
         $this->assertDatabaseMissing('workspaces', ['id' => $workspace->id]);
     }
 
-    public function test_workspace_owner_picks_candidates_from_existing_users_excluding_current_members(): void
+    public function test_workspace_form_offers_existing_users_excluding_current_members_and_owner(): void
     {
         $owner = User::factory()->create();
         $member = User::factory()->create();
@@ -330,28 +329,59 @@ class WorkspaceTest extends TestCase
         $this->addMember($workspace, $owner);
         $this->addMember($workspace, $member);
 
-        $response = $this->actingAs($owner)->get('/workspaces');
+        $response = $this->actingAs($owner)->get("/workspaces/{$workspace->id}/edit");
 
         $response->assertOk();
-        $response->assertViewHas('memberCandidates', function (array $byWorkspace) use ($workspace, $candidate, $owner, $member) {
-            $ids = collect($byWorkspace[$workspace->id])->pluck('id');
+        $response->assertSee(route('workspaces.members.store', $workspace));
+        $response->assertSee(route('workspaces.owner.transfer', $workspace));
+        $response->assertViewHas('memberCandidates', function (array $options) use ($candidate, $owner, $member) {
+            $ids = collect($options)->pluck('id');
 
-            return $ids->contains($candidate->id)
-                && ! $ids->contains($owner->id)
-                && ! $ids->contains($member->id);
+            return $ids->contains($candidate->id) && ! $ids->contains($owner->id) && ! $ids->contains($member->id);
         });
-        $response->assertViewHas('ownerCandidates', function (array $byWorkspace) use ($workspace, $candidate, $owner, $member) {
-            $ids = collect($byWorkspace[$workspace->id])->pluck('id');
+        $response->assertViewHas('ownerCandidates', function (array $options) use ($candidate, $owner, $member) {
+            $ids = collect($options)->pluck('id');
 
-            return $ids->contains($candidate->id)
-                && $ids->contains($member->id)
-                && ! $ids->contains($owner->id);
+            return $ids->contains($candidate->id) && $ids->contains($member->id) && ! $ids->contains($owner->id);
         });
         $response->assertSee('Candidate Person');
         $response->assertSee('candidate@example.test');
+        $response->assertDontSee(route('workspaces.keycloak-group.update', $workspace));
     }
 
-    public function test_a_plain_member_gets_no_candidate_list(): void
+    public function test_only_an_administrator_sees_the_keycloak_link_form_in_the_workspace_form(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $workspace = Workspace::factory()->create();
+        $this->addMember($workspace, $workspace->owner);
+
+        $this->actingAs($admin)->get("/workspaces/{$workspace->id}/edit")
+            ->assertOk()
+            ->assertSee(route('workspaces.keycloak-group.update', $workspace));
+    }
+
+    public function test_listing_is_read_only_for_keycloak_link_members_and_ownership(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id, 'keycloak_group' => '/finance']);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
+
+        $response = $this->actingAs($admin)->get('/workspaces');
+
+        $response->assertOk()
+            ->assertSee(__('messages.keycloak_group'))
+            ->assertSee('/finance')
+            ->assertDontSee(route('workspaces.keycloak-group.update', $workspace))
+            ->assertDontSee(route('workspaces.members.store', $workspace))
+            ->assertDontSee(route('workspaces.owner.transfer', $workspace))
+            ->assertDontSee('data-user-select', false);
+        $this->assertSame(2, $response->viewData('workspaces')->first()->members_count);
+    }
+
+    public function test_a_plain_member_cannot_open_the_workspace_form_or_see_other_users(): void
     {
         $owner = User::factory()->create();
         $member = User::factory()->create();
@@ -360,10 +390,7 @@ class WorkspaceTest extends TestCase
         $this->addMember($workspace, $owner);
         $this->addMember($workspace, $member);
 
-        $response = $this->actingAs($member)->get('/workspaces');
-
-        $response->assertOk();
-        $response->assertDontSee('hidden@example.test');
+        $this->actingAs($member)->get("/workspaces/{$workspace->id}/edit")->assertForbidden();
     }
 
     public function test_adding_or_transferring_to_a_user_id_that_does_not_exist_is_rejected(): void
@@ -392,7 +419,7 @@ class WorkspaceTest extends TestCase
             ->assertSessionHasErrors('user_id');
     }
 
-    public function test_listing_is_a_table_filterable_by_name_owner_member_and_diagram_and_keeps_filters_on_pagination(): void
+    public function test_listing_is_a_table_filterable_by_name_owner_and_member_and_keeps_filters_on_pagination(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
         $owner = User::factory()->create(['name' => 'Olivia Owner']);
@@ -401,14 +428,14 @@ class WorkspaceTest extends TestCase
         $finance = Workspace::factory()->create(['name' => 'Finance', 'owner_id' => $owner->id]);
         $this->addMember($finance, $owner);
         $this->addMember($finance, $member);
-        Diagram::factory()->create(['workspace_id' => $finance->id, 'title' => 'Invoice approval']);
         $other = Workspace::factory()->create(['name' => 'Logistics']);
         $this->addMember($other, $other->owner);
 
         $this->actingAs($admin)->get('/workspaces')
-            ->assertOk()->assertSee('<table', false)->assertSee('Finance')->assertSee('Logistics');
+            ->assertOk()->assertSee('<table', false)->assertSee('Finance')->assertSee('Logistics')
+            ->assertDontSee('name="diagram"', false);
 
-        foreach (['name' => 'Fin', 'owner' => 'Olivia', 'member' => 'Mark', 'diagram' => 'Invoice'] as $key => $value) {
+        foreach (['name' => 'Fin', 'owner' => $owner->id, 'member' => $member->id] as $key => $value) {
             $this->actingAs($admin)->get('/workspaces?'.$key.'='.$value)
                 ->assertOk()->assertSee('Finance')->assertDontSee('Logistics');
         }
@@ -418,10 +445,22 @@ class WorkspaceTest extends TestCase
             $this->addMember($w, $owner);
         }
 
-        $this->actingAs($admin)->get('/workspaces?owner=Olivia')
-            ->assertOk()->assertSee('owner=Olivia', false)->assertSee('page=2', false);
-        $this->actingAs($admin)->get('/workspaces?owner=Olivia&page=2')
+        $this->actingAs($admin)->get('/workspaces?owner='.$owner->id)
+            ->assertOk()->assertSee('owner='.$owner->id, false)->assertSee('page=2', false);
+        $this->actingAs($admin)->get('/workspaces?owner='.$owner->id.'&page=2')
             ->assertOk()->assertSee('Bulk 25')->assertDontSee('Logistics');
+    }
+
+    public function test_owner_and_member_filters_are_selects_of_existing_users(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $user = User::factory()->create(['name' => 'Pick Me', 'email' => 'pick@example.test']);
+
+        $this->actingAs($admin)->get('/workspaces?owner='.$user->id)
+            ->assertOk()
+            ->assertSee('<select', false)
+            ->assertSee('Pick Me (pick@example.test)')
+            ->assertSee('value="'.$user->id.'" selected', false);
     }
 
     public function test_non_admin_filters_stay_scoped_to_their_workspaces(): void

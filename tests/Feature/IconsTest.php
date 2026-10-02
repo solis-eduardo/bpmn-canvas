@@ -67,8 +67,12 @@ class IconsTest extends TestCase
         Workspace::factory()->create(['owner_id' => $user->id]);
 
         $this->actingAs($user)->get(route('workspaces.index'))
-            ->assertSee('data-icon="pencil"', false)
-            ->assertSee('data-icon="user-plus"', false);
+            ->assertSee('data-icon="pencil"', false);
+
+        $workspace = Workspace::first();
+        $this->actingAs($user)->get(route('workspaces.edit', $workspace))
+            ->assertSee('data-icon="user-plus"', false)
+            ->assertSee('data-icon="transfer"', false);
 
         $this->actingAs($user)->get(route('account.edit'))
             ->assertSee('data-icon="save"', false)

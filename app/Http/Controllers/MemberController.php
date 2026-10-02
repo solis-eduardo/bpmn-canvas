@@ -35,7 +35,7 @@ class MemberController extends Controller
 
         $this->actOnTargetUser($data, fn (User $member) => $this->members->add($workspace, $member));
 
-        return redirect()->route('workspaces.index');
+        return redirect()->route('workspaces.edit', $workspace);
     }
 
     /**
@@ -58,7 +58,7 @@ class MemberController extends Controller
 
         $this->members->remove($workspace, $user);
 
-        return redirect()->route('workspaces.index');
+        return redirect()->route('workspaces.edit', $workspace);
     }
 
     /**
