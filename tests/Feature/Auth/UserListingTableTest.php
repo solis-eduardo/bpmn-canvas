@@ -51,4 +51,49 @@ class UserListingTableTest extends TestCase
             ->assertSee('colspan="5"', false)
             ->assertSee(__('messages.no_users_yet'));
     }
+
+    public function test_listing_filters_by_name_or_email_login_method_and_administrator_and_keeps_them_on_pagination(): void
+    {
+        config([
+            'services.keycloak.client_id' => 'client-id',
+            'services.keycloak.client_secret' => 'client-secret',
+            'services.keycloak.base_url' => 'https://sso.example.test',
+        ]);
+        $admin = User::factory()->create(['name' => 'Root Admin', 'email' => 'root@example.com', 'is_admin' => true]);
+        User::factory()->create(['name' => 'Alice Local', 'email' => 'alice@example.com']);
+        User::factory()->create(['name' => 'Bob SSO', 'email' => 'bob@corp.test', 'login_method' => 'keycloak']);
+
+        $this->actingAs($admin)->get('/admin/users?name=corp.test')
+            ->assertOk()->assertSee('Bob SSO')->assertDontSee('Alice Local');
+        $this->get('/admin/users?name=alice')
+            ->assertOk()->assertSee('Alice Local')->assertDontSee('Bob SSO');
+        $this->get('/admin/users?login_method=keycloak')
+            ->assertOk()->assertSee('Bob SSO')->assertDontSee('Alice Local')->assertDontSee('Root Admin');
+        $this->get('/admin/users?admin=1')
+            ->assertOk()->assertSee('Root Admin')->assertDontSee('Alice Local');
+        $this->get('/admin/users?admin=0')
+            ->assertOk()->assertDontSee('Root Admin')->assertSee('Alice Local');
+        $this->get('/admin/users?name=nobody')
+            ->assertOk()->assertSee(__('messages.no_users_match_filters'));
+
+        User::factory()->count(25)->create(['login_method' => 'keycloak']);
+        $this->get('/admin/users?login_method=keycloak')
+            ->assertOk()->assertSee('login_method=keycloak', false)->assertSee('page=2', false);
+    }
+
+    public function test_keycloak_login_method_option_only_appears_when_keycloak_is_configured(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->get('/admin/users')
+            ->assertOk()->assertSee('<option value="local"', false)->assertDontSee('<option value="keycloak"', false);
+
+        config([
+            'services.keycloak.client_id' => 'client-id',
+            'services.keycloak.client_secret' => 'client-secret',
+            'services.keycloak.base_url' => 'https://sso.example.test',
+        ]);
+
+        $this->get('/admin/users')->assertOk()->assertSee('<option value="keycloak"', false);
+    }
 }

@@ -7,7 +7,7 @@
         </x-button>
     </div>
 
-    <form method="GET" action="{{ route('diagrams.index') }}" class="mt-4 flex flex-wrap items-center gap-4">
+    <form method="GET" action="{{ route('diagrams.index') }}" class="mt-6 flex flex-wrap items-center gap-3">
         <div class="relative w-full max-w-sm">
             <x-icon name="search" class="h-4 w-4 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -15,6 +15,7 @@
                 name="q"
                 value="{{ $search }}"
                 placeholder="{{ __('messages.search_diagrams_placeholder') }}"
+                aria-label="{{ __('messages.search_diagrams_placeholder') }}"
                 class="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
         </div>
@@ -39,7 +40,7 @@
             <select
                 name="{{ $field }}"
                 aria-label="{{ __('messages.'.$labelKey) }}"
-                class="rounded-md border border-gray-300 px-2 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                class="w-56 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
                 <option value="">{{ __('messages.'.$labelKey) }}</option>
                 @foreach ($users as $listedUser)
@@ -50,7 +51,7 @@
 
         <label class="flex items-center gap-1.5 text-sm text-gray-700">
             {{ __('messages.workspace_filter_label') }}
-            <select name="workspace" class="rounded-md border border-gray-300 px-2 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+            <select name="workspace" class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
                 <option value="all" @selected($workspaceFilter === 'all')>{{ __('messages.all_workspaces') }}</option>
                 <option value="none" @selected($workspaceFilter === 'none')>{{ __('messages.no_workspace') }}</option>
                 @foreach ($workspaces as $workspace)
@@ -61,23 +62,20 @@
 
         <label class="flex items-center gap-1.5 text-sm text-gray-700">
             {{ __('messages.sort_by') }}
-            <select name="sort" class="rounded-md border border-gray-300 px-2 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+            <select name="sort" class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
                 <option value="title" @selected($sort === 'title')>{{ __('messages.sort_title') }}</option>
                 <option value="updated_at" @selected($sort === 'updated_at')>{{ __('messages.sort_last_modified') }}</option>
             </select>
         </label>
-        <select name="direction" class="rounded-md border border-gray-300 px-2 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
+        <select name="direction" class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
             <option value="asc" @selected($direction === 'asc')>{{ __('messages.sort_ascending') }}</option>
             <option value="desc" @selected($direction === 'desc')>{{ __('messages.sort_descending') }}</option>
         </select>
 
-        <button
-            type="submit"
-            class="inline-flex items-center gap-2 rounded-md border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-        >
+        <x-button type="submit" variant="secondary">
             <x-icon name="funnel" />
             {{ __('messages.apply_filters') }}
-        </button>
+        </x-button>
     </form>
 
     <div class="mt-8 overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
