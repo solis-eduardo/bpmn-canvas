@@ -49,8 +49,8 @@
             <a href="{{ route('notifications.history') }}" class="rounded-lg border border-gray-200 bg-white p-4 font-medium text-blue-700 hover:bg-gray-50">
                 {{ __('messages.home_notifications_shortcut') }}
             </a>
-            <a href="{{ route('diagrams.index') }}#diagram-discovery-heading" class="rounded-lg border border-gray-200 bg-white p-4 font-medium text-blue-700 hover:bg-gray-50">
-                {{ __('messages.home_discovery_shortcut') }}
+            <a href="{{ route('diagrams.index') }}" class="rounded-lg border border-gray-200 bg-white p-4 font-medium text-blue-700 hover:bg-gray-50">
+                {{ __('messages.home_search_shortcut') }}
             </a>
         </nav>
     </div>
