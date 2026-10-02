@@ -1,18 +1,35 @@
-# Optional overlay for hosts that already run a shared reverse proxy
-# (e.g. another nginx/Traefik container terminating HTTPS for several apps).
+# Production overlay. Always use it for production hosts:
 #
-# Usage:
-#   docker network create nginx-network   # once per host, if it doesn't exist yet
 #   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 #
-# This attaches `web` to that external network so the reverse proxy can reach
-# it by container name. Drop the `ports` mapping from the base file yourself
-# (or set APP_PORT to a loopback-only value) if `web` shouldn't also be
-# reachable directly on the host.
+# - Layers `.env.prod` (non-secret production settings) over `.env`, so
+#   APP_ENV=production, APP_DEBUG=false, stderr logging and the entrypoint's
+#   `artisan optimize` apply. Secrets stay in `.env`.
+# - Attaches `web` to the shared `nginx-network` so an existing reverse proxy
+#   (e.g. nginx/Traefik terminating HTTPS) reaches it as `bpmn-studio`, and
+#   unpublishes `web`'s host port: it is only reachable through that proxy.
+#   Create the network once per host if it doesn't exist yet:
+#     docker network create nginx-network
+#
+# On a host without a shared proxy, drop the `ports: !reset []` and
+# `networks` entries below (or use your own overlay) to keep the host port.
+x-prod-env: &prod-env
+  env_file:
+    - .env
+    - .env.prod
+
 services:
+  app: *prod-env
+  queue: *prod-env
+  scheduler: *prod-env
   web:
+    ports: !reset []
     networks:
-      - nginx-network
+      default: {}
+      # Alias keeps the name existing proxy upstreams already point to.
+      nginx-network:
+        aliases:
+          - bpmn-studio
 
 networks:
   nginx-network:

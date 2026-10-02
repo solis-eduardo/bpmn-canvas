@@ -1,0 +1,9 @@
+{
+    "name": "bpmn-studio-vendor",
+    "private": true,
+    "description": "Browser libraries vendored into the web image (no CDN at runtime). Bump versions here.",
+    "dependencies": {
+        "bpmn-js": "18.30.0",
+        "bpmn-js-differ": "3.2.0"
+    }
+}

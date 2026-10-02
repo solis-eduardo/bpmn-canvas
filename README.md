@@ -57,17 +57,16 @@ See `.env.example` for the full list. Highlights:
 | `DB_*` | Postgres connection (`db` in docker-compose) |
 | `ADMIN_NAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD` | Administrator seeded on first deploy |
 | `KEYCLOAK_*` | Optional SSO integration (leave blank to use local login only) |
-| `BPMN_JS_VERSION` | Version of bpmn-js vendored in the build (no CDN at runtime) |
-| `BPMN_JS_DIFFER_VERSION` | Version of bpmn-js-differ vendored in the build, used to diff Versions on the canvas (no CDN at runtime) |
 | `APP_PORT` | Host port `web` publishes (default `80`) |
 | `MAIL_MAILER` | Mail transport (defaults to `log`; configure `smtp` and `MAIL_HOST`/credentials to send mail) |
 | `QUEUE_CONNECTION` | Queue backend used for queued mail (defaults to `database`) |
 
 ## Production
 
-- Use HTTPS. By default `web` publishes directly on `APP_PORT`; if this host already runs a shared reverse proxy on an external `nginx-network`, bring the app up with the extra overlay instead: `docker network create nginx-network` (once, if it doesn't exist) then `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`.
+- Use HTTPS. Bring the stack up with the production overlay: `docker network create nginx-network` (once, if it doesn't exist) then `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`. It layers `.env.prod` (non-secret production settings) over `.env`, attaches `web` to the shared reverse proxy's `nginx-network` and unpublishes its host port. Without a shared proxy, publish `web` yourself (drop the `ports: !reset []` line in the overlay).
 - `storage/app/diagrams` is bind-mounted to `./diagrams` on the host — include it in your backups.
-- Set `APP_ENV=production` and `APP_DEBUG=false` in your production `.env`.
+- `.env.prod` (loaded by the overlay) sets `APP_ENV=production`, `APP_DEBUG=false` and stderr logging; with `APP_ENV=production` the `app` entrypoint also runs `php artisan optimize` on boot. Keep secrets in `.env`.
+- Versions of the vendored browser libraries (bpmn-js, bpmn-js-differ) are pinned in `docker/vendor/package.json` / `package-lock.json`.
 - Configure a production mail transport using `MAIL_MAILER` and its `MAIL_*` settings; the default `log` mailer does not deliver messages.
 
 ## Backup and Restore
@@ -106,7 +105,8 @@ routes/web.php
 resources/views/
 public/assets/              # editor.js/viewer, adapted from the original nginx+WebDAV stack
 docker-compose.yml          # app (PHP-FPM) + web (nginx) + db (Postgres)
-docker-compose.prod.yml     # optional overlay: attaches web to a shared reverse-proxy network
+docker-compose.prod.yml     # production overlay: .env.prod + shared reverse-proxy network
+.env.prod                   # non-secret production overrides (layered over .env)
 Dockerfile                  # multi-stage: vendored bpmn-js + composer + app + web
 CONTEXT.md                  # domain glossary
 docs/GLOSSARY.md            # PT-BR -> English naming thesaurus
@@ -183,17 +183,16 @@ Ver `.env.example` para a lista completa. Destaques:
 | `DB_*` | Conexão com o Postgres (`db` no docker-compose) |
 | `ADMIN_NAME`/`ADMIN_EMAIL`/`ADMIN_PASSWORD` | Administrador semeado no primeiro deploy |
 | `KEYCLOAK_*` | Integração SSO opcional (deixe em branco para usar só login local) |
-| `BPMN_JS_VERSION` | Versão do bpmn-js vendorizada no build (sem CDN em runtime) |
-| `BPMN_JS_DIFFER_VERSION` | Versão do bpmn-js-differ vendorizada no build, usada para comparar Versões no canvas (sem CDN em runtime) |
 | `APP_PORT` | Porta do host publicada pelo `web` (default `80`) |
 | `MAIL_MAILER` | Transporte de e-mail (padrão `log`; configure `smtp` e `MAIL_HOST`/credenciais para enviar e-mails) |
 | `QUEUE_CONNECTION` | Backend da fila usada para os e-mails (padrão `database`) |
 
 ## Produção
 
-- Use HTTPS. Por padrão o `web` publica direto na `APP_PORT`; se este host já roda um reverse proxy compartilhado em uma rede externa `nginx-network`, suba a aplicação com o overlay extra: `docker network create nginx-network` (uma vez, se ainda não existir) e depois `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`.
+- Use HTTPS. Suba a stack com o overlay de produção: `docker network create nginx-network` (uma vez, se ainda não existir) e depois `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build`. Ele aplica o `.env.prod` (configurações de produção sem segredos) por cima do `.env`, liga o `web` à rede `nginx-network` do reverse proxy compartilhado e deixa de publicar a porta dele no host. Sem proxy compartilhado, publique o `web` você mesmo (remova a linha `ports: !reset []` do overlay).
 - `storage/app/diagrams` é bind-mounted em `./diagrams` no host — inclua no seu backup.
-- Ajuste `APP_ENV=production` e `APP_DEBUG=false` no `.env` de produção.
+- O `.env.prod` (carregado pelo overlay) define `APP_ENV=production`, `APP_DEBUG=false` e logs em stderr; com `APP_ENV=production` o entrypoint do `app` também roda `php artisan optimize` no boot. Mantenha os segredos no `.env`.
+- As versões das bibliotecas de navegador vendorizadas (bpmn-js, bpmn-js-differ) ficam fixadas em `docker/vendor/package.json` / `package-lock.json`.
 - Configure um transporte de e-mail de produção por `MAIL_MAILER` e as configurações `MAIL_*` correspondentes; o padrão `log` não entrega mensagens.
 
 ## Backup e Restauração
@@ -232,7 +231,8 @@ routes/web.php
 resources/views/
 public/assets/              # editor.js/viewer, adaptados do stack original nginx+WebDAV
 docker-compose.yml          # app (PHP-FPM) + web (nginx) + db (Postgres)
-docker-compose.prod.yml     # overlay opcional: liga o web a uma rede de reverse proxy compartilhada
+docker-compose.prod.yml     # overlay de produção: .env.prod + rede do reverse proxy compartilhado
+.env.prod                   # overrides de produção sem segredos (sobre o .env)
 Dockerfile                  # multi-stage: bpmn-js vendorizado + composer + app + web
 CONTEXT.md                  # glossário do domínio
 docs/GLOSSARY.md            # tesauro de nomenclatura PT-BR -> inglês

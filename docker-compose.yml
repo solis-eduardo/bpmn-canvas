@@ -1,13 +1,24 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "3"
+
+x-app: &app
+  build:
+    context: .
+    target: app
+  image: bpmn-studio-app:local
+  restart: unless-stopped
+  init: true
+  env_file: .env
+  security_opt:
+    - no-new-privileges:true
+  logging: *default-logging
+
 services:
   app:
-    build:
-      context: .
-      target: app
-      args:
-        BPMN_JS_VERSION: ${BPMN_JS_VERSION:-18.30.0}
-    image: bpmn-studio-app:local
-    restart: unless-stopped
-    env_file: .env
+    <<: *app
     volumes:
       # The .bpmn files live in this host folder (easy to version with Git / back up)
       - ./diagrams:/var/www/html/storage/app/diagrams
@@ -15,53 +26,52 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    mem_limit: 768m
     healthcheck:
       # Speaks FastCGI to php-fpm directly and re-runs the Laravel `/up`
       # route, which only answers 200 once PHP-FPM is serving requests and
       # the database connection succeeds (see docker/app/healthcheck.sh).
+      # Migrations run in the entrypoint before php-fpm starts, so healthy
+      # also means the schema is up to date.
       test: ["CMD", "/usr/local/bin/healthcheck.sh"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
-    networks:
-      - default
 
   # Delivers queued notifications and other background work.
   queue:
-    build:
-      context: .
-      target: app
-      args:
-        BPMN_JS_VERSION: ${BPMN_JS_VERSION:-18.30.0}
-    image: bpmn-studio-app:local
-    restart: unless-stopped
+    <<: *app
     entrypoint: ["php"]
-    command: ["artisan", "queue:work", "--sleep=3", "--tries=3", "--timeout=90"]
+    command: ["artisan", "queue:work", "--sleep=3", "--tries=3", "--timeout=90", "--max-time=3600"]
     user: www-data
-    env_file: .env
+    stop_grace_period: 90s
     volumes:
       - app-storage:/var/www/html/storage/framework
     depends_on:
       app:
         condition: service_healthy
-    networks:
-      - default
+    mem_limit: 256m
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'artisan queue:wor[k]' >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   # Runs Laravel's scheduler (`backup:run`, see bootstrap/app.php), so
   # backups happen on a schedule from within the compose stack instead of a
   # host cron entry.
+  #
+  # Runs as root (no `user:`): writing to the host-mounted backups/ volume as
+  # root avoids the host-UID-mismatch "Permission denied" class of problem.
+  # It waits for `app` to be healthy so the schema exists (migrations run
+  # there, never here, to avoid two containers migrating at once).
   scheduler:
-    build:
-      context: .
-      target: app
-      args:
-        BPMN_JS_VERSION: ${BPMN_JS_VERSION:-18.30.0}
-    image: bpmn-studio-app:local
-    restart: unless-stopped
-    entrypoint: ["/entrypoint-scheduler.sh"]
-    command: ["php", "artisan", "schedule:work"]
-    env_file: .env
+    <<: *app
+    entrypoint: ["php"]
+    command: ["artisan", "schedule:work"]
+    stop_grace_period: 30s
     volumes:
       - ./diagrams:/var/www/html/storage/app/diagrams:ro
       # Default destination for backup artifacts (see BACKUP_DESTINATION in
@@ -70,53 +80,60 @@ services:
       - ./backups:/var/www/html/storage/app/backup
       - app-storage:/var/www/html/storage/framework
     depends_on:
-      db:
+      app:
         condition: service_healthy
-    networks:
-      - default
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f 'artisan schedule:wor[k]' >/dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
 
   web:
     build:
       context: .
       target: web
-      args:
-        BPMN_JS_VERSION: ${BPMN_JS_VERSION:-18.30.0}
     image: bpmn-studio-web:local
-    container_name: bpmn-studio
     restart: unless-stopped
+    init: true
     ports:
       - "${APP_PORT:-80}:80"
     depends_on:
       app:
         condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    mem_limit: 128m
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/up"]
       interval: 30s
       timeout: 5s
       retries: 3
-    networks:
-      - default
+      start_period: 10s
 
   db:
-    image: postgres:16-alpine
+    image: postgres:16.15-alpine3.24
     restart: unless-stopped
+    init: true
     environment:
       POSTGRES_DB: ${DB_DATABASE:-bpmn}
       POSTGRES_USER: ${DB_USERNAME:-bpmn}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
     volumes:
       - db-data:/var/lib/postgresql/data
+    security_opt:
+      - no-new-privileges:true
+    logging: *default-logging
+    stop_grace_period: 30s
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-bpmn} -d ${DB_DATABASE:-bpmn}"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - default
+      start_period: 20s
 
 volumes:
   db-data: {}
   app-storage: {}
-
-networks:
-  default: {}
