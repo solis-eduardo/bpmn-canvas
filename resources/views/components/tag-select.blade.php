@@ -1,4 +1,4 @@
-@props(['name' => 'name', 'options', 'scope' => null, 'placeholder', 'multiple' => false, 'selected' => [], 'creatable' => true])
+@props(['name' => 'name', 'options', 'scope' => null, 'placeholder', 'multiple' => false, 'selected' => [], 'creatable' => true, 'wrapperClass' => 'min-w-36'])
 
 @php
     // Same error contract as components/form/input: `scope` ties the error to
@@ -10,7 +10,7 @@
 {{-- Tag picker (Tom Select, see resources/js/app.js): pick an existing Tag or
      create one by typing. Reused by the list filters, where `multiple` allows
      several Tags and `creatable` false limits the choice to existing ones. --}}
-<div class="flex min-w-36 flex-col gap-0.5">
+<div class="flex {{ $wrapperClass }} flex-col gap-0.5">
     @if ($scope)
         <input type="hidden" name="_form" value="{{ $scope }}">
     @endif

@@ -1,4 +1,4 @@
-<x-layouts.app :title="__('messages.diagrams')">
+<x-layouts.app :title="__('messages.diagrams')" :wide="true">
     <div class="flex items-center justify-between gap-4">
         <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.diagrams') }}</h1>
         <x-button :href="route('diagrams.create')">
@@ -33,6 +33,7 @@
             :selected="$selectedTags"
             multiple
             :creatable="false"
+            wrapper-class="w-56"
             placeholder="{{ __('messages.filter_by_tag_placeholder') }}"
         />
 
@@ -49,27 +50,16 @@
             </select>
         @endforeach
 
-        <label class="flex items-center gap-1.5 text-sm text-gray-700">
-            {{ __('messages.workspace_filter_label') }}
-            <select name="workspace" class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                <option value="all" @selected($workspaceFilter === 'all')>{{ __('messages.all_workspaces') }}</option>
-                <option value="none" @selected($workspaceFilter === 'none')>{{ __('messages.no_workspace') }}</option>
-                @foreach ($workspaces as $workspace)
-                    <option value="{{ $workspace->id }}" @selected((string) $workspace->id === $workspaceFilter)>{{ $workspace->name }}</option>
-                @endforeach
-            </select>
-        </label>
-
-        <label class="flex items-center gap-1.5 text-sm text-gray-700">
-            {{ __('messages.sort_by') }}
-            <select name="sort" class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                <option value="title" @selected($sort === 'title')>{{ __('messages.sort_title') }}</option>
-                <option value="updated_at" @selected($sort === 'updated_at')>{{ __('messages.sort_last_modified') }}</option>
-            </select>
-        </label>
-        <select name="direction" class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500">
-            <option value="asc" @selected($direction === 'asc')>{{ __('messages.sort_ascending') }}</option>
-            <option value="desc" @selected($direction === 'desc')>{{ __('messages.sort_descending') }}</option>
+        <select
+            name="workspace"
+            aria-label="{{ __('messages.workspace_filter_label') }}"
+            class="w-56 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+            <option value="all" data-placeholder @selected($workspaceFilter === 'all')>{{ __('messages.all_workspaces') }}</option>
+            <option value="none" @selected($workspaceFilter === 'none')>{{ __('messages.no_workspace') }}</option>
+            @foreach ($workspaces as $workspace)
+                <option value="{{ $workspace->id }}" @selected((string) $workspace->id === $workspaceFilter)>{{ $workspace->name }}</option>
+            @endforeach
         </select>
 
         <x-button type="submit" variant="secondary">
@@ -79,14 +69,14 @@
     </form>
 
     <div class="mt-8 overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
-        <table id="diagram-search-results" class="min-w-[1040px] w-full divide-y divide-gray-200 text-left text-sm">
+        <table id="diagram-search-results" class="min-w-[1200px] w-full divide-y divide-gray-200 text-left text-sm">
             <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
-                    <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_title') }}</th>
+                    <x-sortable-th column="title" :sort="$sort">{{ __('messages.diagram_column_title') }}</x-sortable-th>
                     <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_author') }}</th>
                     <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_owner') }}</th>
                     <th scope="col" class="px-4 py-3">{{ __('messages.workspace_filter_label') }}</th>
-                    <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_modified') }}</th>
+                    <x-sortable-th column="updated_at" :sort="$sort">{{ __('messages.diagram_column_modified') }}</x-sortable-th>
                     <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_lock') }}</th>
                     <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_tags') }}</th>
                     <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_actions') }}</th>
@@ -164,10 +154,12 @@
                     </div>
                 </td>
                 <td class="whitespace-nowrap px-4 py-3">
-                    <x-button :href="route('diagrams.show', $diagram->slug)" variant="secondary" size="sm">
-                        <x-icon name="arrow-right" />
-                        {{ __('messages.open_diagram') }}
-                    </x-button>
+                    <div class="flex flex-nowrap items-center gap-2">
+                        <x-button :href="route('diagrams.show', $diagram->slug)" variant="secondary" size="sm">
+                            <x-icon name="arrow-right" />
+                            {{ __('messages.open_diagram') }}
+                        </x-button>
+                    </div>
                 </td>
             </tr>
             @endif

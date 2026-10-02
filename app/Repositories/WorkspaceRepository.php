@@ -12,6 +12,13 @@ use Illuminate\Support\Facades\DB;
 
 class WorkspaceRepository
 {
+    /**
+     * Sortable columns of the Workspace list (header clicks) with their default direction.
+     *
+     * @var array<string, string>
+     */
+    public const SORT_COLUMNS = ['name' => 'asc', 'members_count' => 'desc'];
+
     public function __construct(private readonly MemberRepository $members) {}
 
     public function find(int $id): ?Workspace
@@ -41,13 +48,13 @@ class WorkspaceRepository
     }
 
     /**
-     * One page of Workspaces, by name, with owner loaded and Members counted: every
+     * One page of Workspaces ordered by $sort, with owner loaded and Members counted: every
      * Workspace for an Administrator, otherwise only those $user is
      * a Member of; narrowed by $filters.
      *
      * @return LengthAwarePaginator<int, Workspace>
      */
-    public function search(User $user, WorkspaceListFilters $filters): LengthAwarePaginator
+    public function search(User $user, WorkspaceListFilters $filters, ListSort $sort): LengthAwarePaginator
     {
         $query = $user->is_admin ? Workspace::query() : $user->workspaces();
 
@@ -58,7 +65,7 @@ class WorkspaceRepository
             ->when($filters->name !== '', fn (Builder $q) => $q->where('workspaces.name', 'like', self::like($filters->name)))
             ->when($filters->owner !== null, fn (Builder $q) => $q->where('workspaces.owner_id', $filters->owner))
             ->when($filters->member !== null, fn (Builder $q) => $q->whereHas('members', fn (Builder $m) => $m->where('user_id', $filters->member)))
-            ->orderBy('workspaces.name')
+            ->orderBy($sort->column === 'name' ? 'workspaces.name' : $sort->column, $sort->direction)
             ->orderBy('workspaces.id')
             ->paginate(20);
     }
