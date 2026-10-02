@@ -19,13 +19,16 @@
     </form>
 
     <form method="GET" action="{{ route('diagrams.index') }}" class="mt-4 flex flex-wrap items-center gap-4">
-        <input
-            type="search"
-            name="q"
-            value="{{ $search }}"
-            placeholder="{{ __('messages.search_diagrams_placeholder') }}"
-            class="w-full max-w-sm rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
+        <div class="relative w-full max-w-sm">
+            <x-icon name="search" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+                type="search"
+                name="q"
+                value="{{ $search }}"
+                placeholder="{{ __('messages.search_diagrams_placeholder') }}"
+                class="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+        </div>
 
         @foreach (['owner' => 'filter_owner', 'collaborator' => 'filter_collaborator', 'locked' => 'filter_locked', 'recent' => 'filter_recent'] as $filterKey => $filterLabel)
             <label class="flex items-center gap-1.5 text-sm text-gray-700">
