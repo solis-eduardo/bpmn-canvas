@@ -1,3 +1,5 @@
 # Deliberate Lock Transfer
 
 ADR-0003 and ADR-0009 ruled out *automatic* Lock transfer (on request, on timeout, on inactivity) to avoid silently taking a Diagram away from an active holder. That restriction stays, but it left no way to hand off a Lock without a separate release followed by someone else racing to acquire it — awkward when the holder already knows who should take over. We're adding a deliberate Transfer: the current holder or an Administrator can explicitly hand the Lock to a specific eligible User, either in response to an existing request or spontaneously. It's still never time-based or implicit — it always requires a human picking the recipient — so it doesn't reopen the risk ADR-0003 guarded against, it just adds an explicit action alongside release+request.
+
+The new holder is not sent a persisted notification. Lock events already reach the Editor through state and the heartbeat poll (see "Lock request" in CONTEXT.md), so a User waiting for the Lock learns it became theirs from the Lock state (`GET /diagrams/{slug}/lock`) on their next poll. A dedicated notification class would add a second channel for the same signal.
