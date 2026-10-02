@@ -2,9 +2,9 @@
     <div class="mx-auto max-w-xl">
         <div class="flex items-center justify-between gap-4">
             <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.create_local_account') }}</h1>
-            <a href="{{ route('admin.users.index') }}" class="text-sm font-medium text-blue-600 hover:text-blue-700">
-                {{ __('messages.back_to_users') }}
-            </a>
+            <x-button :href="route('admin.users.index')" variant="secondary" size="sm">
+                &larr; {{ __('messages.back_to_users') }}
+            </x-button>
         </div>
 
         @if ($errors->any())
@@ -50,12 +50,9 @@
                     class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 >
             </div>
-            <button
-                type="submit"
-                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-            >
+            <x-button type="submit">
                 {{ __('messages.create_local_account') }}
-            </button>
+            </x-button>
         </form>
     </div>
 </x-layouts.app>
