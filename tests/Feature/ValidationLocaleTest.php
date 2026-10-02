@@ -16,7 +16,7 @@ class ValidationLocaleTest extends TestCase
     public static function localizedMessages(): array
     {
         return [
-            'pt_BR' => ['pt_BR', 'O campo e-mail é obrigatório.', 'O campo senha é obrigatório.'],
+            'pt_BR' => ['pt_BR', 'É obrigatória a indicação de um valor para o campo e-mail.', 'É obrigatória a indicação de um valor para o campo senha.'],
             'es' => ['es', 'El campo correo electrónico es obligatorio.', 'El campo contraseña es obligatorio.'],
             'en' => ['en', 'The email field is required.', 'The password field is required.'],
         ];

@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Models\Concerns\FiltersDiagramList;
-use App\Models\Concerns\HasTags;
 use App\Rules\BpmnXml;
 use Database\Factories\DiagramFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -13,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
+use Spatie\Tags\HasTags;
 
 #[Fillable(['slug', 'title', 'author_id', 'owner_id', 'workspace_id', 'disk_path', 'forked_from_id'])]
 class Diagram extends Model

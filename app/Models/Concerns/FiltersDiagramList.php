@@ -58,6 +58,6 @@ trait FiltersDiagramList
      */
     public function scopeTaggedWith(Builder $query, string $tagName): Builder
     {
-        return $query->whereHas('tags', fn ($tags) => $tags->where('name', $tagName));
+        return $this->scopeWithAnyTags($query, [$tagName]);
     }
 }
