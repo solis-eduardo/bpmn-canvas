@@ -98,13 +98,11 @@
                         @if ($canManage)
                             <form method="POST" action="{{ route('workspaces.members.store', $workspace) }}" class="mt-2 flex items-center gap-2">
                                 @csrf
-                                <input
-                                    type="email"
-                                    name="email"
-                                    placeholder="{{ __('messages.member_email') }}"
-                                    required
-                                    class="rounded-md border border-gray-300 px-2 py-1 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                >
+                                <x-user-select
+                                    :options="$memberCandidates[$workspace->id] ?? []"
+                                    :label="__('messages.select_member')"
+                                    :search-placeholder="__('messages.search_users')"
+                                />
                                 <x-button type="submit" variant="secondary" size="sm">
                                     <x-icon name="user-plus" />
                                     {{ __('messages.add_member') }}
@@ -123,13 +121,11 @@
                                 <form method="POST" action="{{ route('workspaces.owner.transfer', $workspace) }}" class="flex items-center gap-2">
                                     @csrf
                                     @method('PUT')
-                                    <input
-                                        type="email"
-                                        name="email"
-                                        placeholder="{{ __('messages.new_owner_email') }}"
-                                        required
-                                        class="rounded-md border border-gray-300 px-2 py-1 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                    >
+                                    <x-user-select
+                                        :options="$ownerCandidates[$workspace->id] ?? []"
+                                        :label="__('messages.select_new_owner')"
+                                        :search-placeholder="__('messages.search_users')"
+                                    />
                                     <x-button type="submit" variant="secondary" size="sm">
                                         <x-icon name="transfer" />
                                         {{ __('messages.transfer_ownership') }}
