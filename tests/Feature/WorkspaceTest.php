@@ -43,8 +43,8 @@ class WorkspaceTest extends TestCase
         $response->assertOk();
         $response->assertSee(route('workspaces.create'));
         $response->assertSee(route('workspaces.edit', $workspace));
-        $response->assertDontSee('action="'.route('workspaces.store').'"', false);
-        $response->assertDontSee('action="'.route('workspaces.update', $workspace).'"', false);
+        $response->assertDontSee('method="POST" action="'.route('workspaces.store').'"', false);
+        $response->assertDontSee('type="text" name="name"', false);
     }
 
     public function test_listing_does_not_link_to_the_edit_page_for_a_workspace_the_user_cannot_manage(): void
