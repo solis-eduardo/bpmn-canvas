@@ -86,7 +86,7 @@ class DiagramController extends Controller
             fn (Diagram $diagram) => $diagram->setAttribute('is_discoverable', isset($discoverableIdSet[$diagram->id]))
         );
 
-        $tagNames = Tag::query()->get()->map(fn (Tag $t) => $t->name)->sort(SORT_NATURAL | SORT_FLAG_CASE)->values();
+        $tagNames = Tag::sortedNames();
 
         $users = $this->users->allOrderedByName()->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name])->all();
         $search = $criteria->search;

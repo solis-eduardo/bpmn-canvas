@@ -28,7 +28,7 @@ class DiagramTagController extends Controller
 
         $this->authorize('manageTags', $diagram);
 
-        $tagNames = Tag::query()->get()->map(fn (Tag $tag) => $tag->name)->sort(SORT_NATURAL | SORT_FLAG_CASE)->values();
+        $tagNames = Tag::sortedNames();
 
         return view('diagrams.edit', ['diagram' => $diagram->load('tags'), 'tagNames' => $tagNames]);
     }

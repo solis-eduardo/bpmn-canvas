@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Support\Collection;
 use Spatie\Tags\Tag as SpatieTag;
 
 /**
@@ -18,5 +19,15 @@ class Tag extends SpatieTag
     public static function getLocale(): string
     {
         return self::LOCALE;
+    }
+
+    /**
+     * Every Tag name, naturally sorted: the options of the Tag pickers.
+     *
+     * @return Collection<int, string>
+     */
+    public static function sortedNames(): Collection
+    {
+        return static::query()->get()->map(fn (self $tag) => $tag->name)->sort(SORT_NATURAL | SORT_FLAG_CASE)->values();
     }
 }
