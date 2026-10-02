@@ -42,14 +42,14 @@ class WorkspaceRepository
 
     /**
      * One page of Workspaces, by name, with owner and Members loaded: every
-     * Workspace when $all (an Administrator), otherwise only those $user is
+     * Workspace for an Administrator, otherwise only those $user is
      * a Member of; narrowed by $filters.
      *
      * @return LengthAwarePaginator<int, Workspace>
      */
-    public function search(User $user, WorkspaceListFilters $filters, bool $all, int $perPage = 20): LengthAwarePaginator
+    public function search(User $user, WorkspaceListFilters $filters): LengthAwarePaginator
     {
-        $query = $all ? Workspace::query() : $user->workspaces();
+        $query = $user->is_admin ? Workspace::query() : $user->workspaces();
 
         return $query
             ->with(['owner', 'members.user'])
@@ -62,7 +62,7 @@ class WorkspaceRepository
                     ->orWhere('slug', 'like', self::like($filters->diagram)))))
             ->orderBy('workspaces.name')
             ->orderBy('workspaces.id')
-            ->paginate($perPage);
+            ->paginate(20);
     }
 
     private static function matchUser(Builder $users, string $term): void

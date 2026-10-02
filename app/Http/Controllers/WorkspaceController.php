@@ -30,7 +30,7 @@ class WorkspaceController extends Controller
         $filters = WorkspaceListFilters::fromRequest($request);
 
         $workspaces = $this->workspaces
-            ->search($user, $filters, (bool) $user->is_admin)
+            ->search($user, $filters)
             ->appends($request->query());
 
         return view('workspaces.index', compact('workspaces', 'filters'));

@@ -59,8 +59,9 @@ class WorkspaceRepositoryTest extends TestCase
         $repository->create('Alpha', $user);
         Workspace::factory()->create(['name' => 'Foreign']);
 
-        $all = $repository->search($user, new WorkspaceListFilters, true)->getCollection();
-        $mine = $repository->search($user, new WorkspaceListFilters, false)->getCollection();
+        $admin = User::factory()->create(['is_admin' => true]);
+        $all = $repository->search($admin, new WorkspaceListFilters)->getCollection();
+        $mine = $repository->search($user, new WorkspaceListFilters)->getCollection();
 
         $this->assertCount(2, $all);
         $this->assertCount(1, $mine);
@@ -70,7 +71,7 @@ class WorkspaceRepositoryTest extends TestCase
 
     public function test_search_filters_by_name_owner_member_and_diagram(): void
     {
-        $admin = User::factory()->create();
+        $admin = User::factory()->create(['is_admin' => true]);
         $repository = $this->repository();
         $ann = User::factory()->create(['name' => 'Ann Owner', 'email' => 'ann@example.test']);
         $bob = User::factory()->create(['name' => 'Bob Member', 'email' => 'bob@example.test']);
@@ -78,9 +79,9 @@ class WorkspaceRepositoryTest extends TestCase
         $finance = $repository->create('Finance', $ann);
         $repository->addMember($finance, $bob);
         Diagram::factory()->create(['workspace_id' => $finance->id, 'title' => 'Invoice approval', 'slug' => 'invoice-approval']);
-        $hr = $repository->create('Human Resources', $bob);
+        $repository->create('Human Resources', $bob);
 
-        $names = fn (WorkspaceListFilters $f) => $repository->search($admin, $f, true)->pluck('name')->all();
+        $names = fn (WorkspaceListFilters $f) => $repository->search($admin, $f)->pluck('name')->all();
 
         $this->assertSame(['Finance'], $names(new WorkspaceListFilters(name: 'fin')));
         $this->assertSame(['Finance'], $names(new WorkspaceListFilters(owner: 'ann@')));
@@ -89,7 +90,6 @@ class WorkspaceRepositoryTest extends TestCase
         $this->assertSame(['Finance'], $names(new WorkspaceListFilters(diagram: 'invoice')));
         $this->assertSame(['Finance'], $names(new WorkspaceListFilters(diagram: 'invoice-approval')));
         $this->assertSame([], $names(new WorkspaceListFilters(name: 'fin', owner: 'Bob')));
-        $this->assertNotNull($hr);
     }
 
     public function test_add_and_remove_member(): void
