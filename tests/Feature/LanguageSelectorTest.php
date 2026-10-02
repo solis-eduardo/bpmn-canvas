@@ -27,9 +27,9 @@ class LanguageSelectorTest extends TestCase
     public function test_selector_has_an_accessible_label_translated_to_the_locale(): void
     {
         $this->withSession(['locale' => 'pt_BR'])->get('/login')
-            ->assertSee('aria-label="Idioma"', false);
+            ->assertSee('aria-label="Idioma: Português (Brasil)"', false);
         $this->withSession(['locale' => 'en'])->get('/login')
-            ->assertSee('aria-label="Language"', false);
+            ->assertSee('aria-label="Language: English"', false);
     }
 
     public function test_flags_are_decorative_and_hidden_from_assistive_tech(): void
