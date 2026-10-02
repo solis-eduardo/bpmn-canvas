@@ -40,14 +40,12 @@ class WorkspaceController extends Controller
         $memberCandidates = [];
         $ownerCandidates = [];
 
-        if ($workspaces->contains(fn (Workspace $workspace) => $workspace->isManagedBy($user))) {
+        $managed = collect($workspaces->items())->filter(fn (Workspace $workspace) => $workspace->isManagedBy($user));
+
+        if ($managed->isNotEmpty()) {
             $everyone = $this->users->allOrderedByName();
 
-            foreach ($workspaces as $workspace) {
-                if (! $workspace->isManagedBy($user)) {
-                    continue;
-                }
-
+            foreach ($managed as $workspace) {
                 $memberIds = $workspace->members->pluck('user_id');
 
                 $memberCandidates[$workspace->id] = $this->asOptions($everyone->reject(fn (User $candidate) => $memberIds->contains($candidate->id)));
