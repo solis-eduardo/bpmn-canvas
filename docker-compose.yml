@@ -8,7 +8,7 @@ x-app: &app
   build:
     context: .
     target: app
-  image: bpmn-studio-app:local
+  image: bpmn-canvas-app:local
   restart: unless-stopped
   init: true
   env_file: .env
@@ -94,7 +94,7 @@ services:
     build:
       context: .
       target: web
-    image: bpmn-studio-web:local
+    image: bpmn-canvas-web:local
     restart: unless-stopped
     init: true
     ports:

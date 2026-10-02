@@ -1,6 +1,6 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "bpmn-studio/bpmn-studio",
+    "name": "bpmn-canvas/bpmn-canvas",
     "type": "project",
     "description": "Self-hosted BPMN 2.0 process modeling tool with Keycloak auth, collaboration, and Git-backed versioning.",
     "keywords": ["laravel", "bpmn", "diagram-editor"],

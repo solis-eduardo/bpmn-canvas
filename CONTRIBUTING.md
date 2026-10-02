@@ -1,4 +1,4 @@
-# Contributing to BPMN Studio
+# Contributing to BPMN Canvas
 
 Thanks for your interest in contributing! This is a small project, so the process is intentionally lightweight.
 
@@ -57,7 +57,7 @@ Open a GitHub issue with steps to reproduce, expected vs. actual behavior, and r
 
 ---
 
-# Contribuindo com o BPMN Studio (Português)
+# Contribuindo com o BPMN Canvas (Português)
 
 Obrigado pelo interesse em contribuir! Este é um projeto pequeno, então o processo é propositalmente enxuto.
 

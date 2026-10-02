@@ -1,4 +1,4 @@
-# BPMN Studio
+# BPMN Canvas
 
 Self-hosted Laravel application for modeling and sharing BPMN 2.0 Diagrams, with real User accounts, per-Diagram authorship/collaboration, an Editing Lock, and automatic Versioning.
 
@@ -124,7 +124,7 @@ MIT — see `LICENSE`.
 
 ---
 
-# BPMN Studio (Português)
+# BPMN Canvas (Português)
 
 Aplicação Laravel self-hosted para modelar e compartilhar Diagramas BPMN 2.0, com contas de Usuário reais, autoria/colaboração por Diagrama, Trava de Edição e Versionamento automático.
 

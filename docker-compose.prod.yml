@@ -6,7 +6,7 @@
 #   APP_ENV=production, APP_DEBUG=false, stderr logging and the entrypoint's
 #   `artisan optimize` apply. Secrets stay in `.env`.
 # - Attaches `web` to the shared `nginx-network` so an existing reverse proxy
-#   (e.g. nginx/Traefik terminating HTTPS) reaches it as `bpmn-studio`, and
+#   (e.g. nginx/Traefik terminating HTTPS) reaches it as `bpmn-canvas`, and
 #   unpublishes `web`'s host port: it is only reachable through that proxy.
 #   Create the network once per host if it doesn't exist yet:
 #     docker network create nginx-network
@@ -29,7 +29,7 @@ services:
       # Alias keeps the name existing proxy upstreams already point to.
       nginx-network:
         aliases:
-          - bpmn-studio
+          - bpmn-canvas
 
 networks:
   nginx-network:

@@ -98,7 +98,7 @@ return [
     'email_notifications' => 'Send notifications to my email',
     'email_notifications_description' => 'When enabled, notifications are also sent to :email.',
     'notification_preferences_saved' => 'Email notification preferences saved.',
-    'notification_email_subject' => 'BPMN Studio notification',
+    'notification_email_subject' => 'BPMN Canvas notification',
     'notification_email_greeting' => 'Hello :name,',
     'notification_email_action' => 'Open notification',
     'notification_share_expiring' => 'The Share for :diagram expires on :date.',

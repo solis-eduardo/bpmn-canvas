@@ -1,4 +1,4 @@
-# BPMN Studio
+# BPMN Canvas
 
 Internal, self-hosted BPMN 2.0 process modeling tool, with Keycloak authentication, per-user authorship/collaboration, and public sharing via signed, expiring links.
 

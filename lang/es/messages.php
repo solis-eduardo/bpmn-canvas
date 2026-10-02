@@ -98,7 +98,7 @@ return [
     'email_notifications' => 'Enviar notificaciones a mi correo electrónico',
     'email_notifications_description' => 'Al activarlo, también recibirás notificaciones en :email.',
     'notification_preferences_saved' => 'Se guardaron las preferencias de notificaciones por correo.',
-    'notification_email_subject' => 'Notificación de BPMN Studio',
+    'notification_email_subject' => 'Notificación de BPMN Canvas',
     'notification_email_greeting' => 'Hola :name:',
     'notification_email_action' => 'Abrir notificación',
     'notification_share_expiring' => 'El enlace compartido para :diagram vence el :date.',

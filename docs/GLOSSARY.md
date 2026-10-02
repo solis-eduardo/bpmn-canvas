@@ -1,6 +1,6 @@
 # Glossary / Thesaurus
 
-Canonical PT-BR → English term mapping for BPMN Studio. This is the single
+Canonical PT-BR → English term mapping for BPMN Canvas. This is the single
 source of truth for renaming code, database schema, routes, and translating
 docs — every rename in the codebase follows this table. Definitions are kept
 short here; full domain definitions live in `CONTEXT.md`.
