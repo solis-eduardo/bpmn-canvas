@@ -132,15 +132,15 @@
                                 placeholder="{{ __('messages.add_tag_placeholder') }}"
                                 class="w-28 rounded border border-gray-300 px-1.5 py-0.5 text-xs shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             >
-                            <button type="submit" class="text-xs font-medium text-blue-600 hover:underline">{{ __('messages.add_tag') }}</button>
+                            <x-button type="submit" variant="secondary" size="sm">{{ __('messages.add_tag') }}</x-button>
                         </form>
                     @endif
                     </div>
                 </td>
                 <td class="whitespace-nowrap px-4 py-3">
-                    <a href="{{ route('diagrams.show', $diagram->slug) }}" class="font-medium text-blue-600 hover:text-blue-700 hover:underline">
+                    <x-button :href="route('diagrams.show', $diagram->slug)" variant="secondary" size="sm">
                         {{ __('messages.open_diagram') }}
-                    </a>
+                    </x-button>
                 </td>
             </tr>
         @empty
@@ -213,12 +213,9 @@
                         >
                             @csrf
                             <input type="hidden" name="user_id" value="{{ auth()->id() }}">
-                            <button
-                                type="submit"
-                                class="rounded-md border border-blue-600 px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50"
-                            >
+                            <x-button type="submit" variant="secondary" size="sm">
                                 {{ __('messages.request_access') }}
-                            </button>
+                            </x-button>
                         </form>
                     @endif
                     </td>
