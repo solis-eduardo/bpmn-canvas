@@ -12,11 +12,14 @@ use App\Notifications\WorkspaceMemberRemoved;
 use App\Notifications\WorkspaceOwnershipTransferred;
 use App\Repositories\DiagramRepository;
 use App\Repositories\WorkspaceRepository;
+use App\Services\Notifications\NotificationSearch;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
 use Illuminate\View\View;
 
 /**
@@ -65,13 +68,26 @@ class NotificationController extends Controller
      * the bell's dropdown uses — so clicking it marks it read and jumps to
      * the relevant screen.
      */
-    public function history(Request $request): View
+    public function history(Request $request, NotificationSearch $search): View
     {
-        $notifications = $request->user()->notifications()->latest()
-            ->paginate(20)
-            ->through(fn (DatabaseNotification $notification) => $this->present($notification));
+        $term = trim((string) $request->query('q', ''));
 
-        return view('notifications.history', compact('notifications'));
+        if ($term === '') {
+            $notifications = $request->user()->notifications()->latest()->paginate(20);
+        } else {
+            $matches = $search->matching($request->user(), $term);
+            $notifications = (new LengthAwarePaginator(
+                $matches->forPage(Paginator::resolveCurrentPage(), 20)->values(),
+                $matches->count(),
+                20,
+                Paginator::resolveCurrentPage(),
+                ['path' => Paginator::resolveCurrentPath()],
+            ))->appends($request->except('page'));
+        }
+
+        $notifications = $notifications->through(fn (DatabaseNotification $notification) => $this->present($notification));
+
+        return view('notifications.history', compact('notifications', 'term'));
     }
 
     /**
