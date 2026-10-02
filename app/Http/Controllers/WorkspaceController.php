@@ -10,7 +10,6 @@ use App\Repositories\WorkspaceRepository;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 class WorkspaceController extends Controller
@@ -73,7 +72,7 @@ class WorkspaceController extends Controller
         $data = $request->validate($this->rules());
 
         if ($request->has('keycloak_group')) {
-            Gate::authorize('manageKeycloakGroup', new Workspace);
+            $this->authorize('manageKeycloakGroup', new Workspace);
         }
 
         $this->workspaces->create($data['name'], $request->user(), $data['keycloak_group'] ?? null);
