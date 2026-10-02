@@ -1,6 +1,6 @@
 # Local↔Keycloak account linking by email, and an Administrator role that only turns on, never off automatically
 
-Status: accepted
+Status: accepted — the linking part is superseded by ADR-0015 (a verified Keycloak login now converts the account's login method)
 
 When enabling Keycloak login (ticket 08), two questions required a choice that isn't obvious and is expensive to reverse once real accounts already exist in production: (1) what to do when someone logs in via Keycloak and a local account with the same email already exists, and (2) how the Keycloak Administrator claim interacts with the existing manual flag.
 

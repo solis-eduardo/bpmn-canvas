@@ -10,9 +10,7 @@ use App\Support\KeycloakResolution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialiteUserContract;
 use Laravel\Socialite\Facades\Socialite;
 use Symfony\Component\HttpFoundation\RedirectResponse as BaseRedirectResponse;
@@ -83,6 +81,8 @@ class KeycloakLoginController extends Controller
         $user = $this->users->findByKeycloakId($keycloakId);
 
         if ($user) {
+            $user->login_method = User::LOGIN_METHOD_KEYCLOAK;
+
             return KeycloakResolution::resolved($user);
         }
 
@@ -92,13 +92,16 @@ class KeycloakLoginController extends Controller
             return KeycloakResolution::rejected();
         }
 
-        // A pre-existing local account with the same email is linked to the Keycloak
-        // identity (same person) instead of creating a duplicate account, which would
-        // also collide with the unique constraint on `email`.
+        // A pre-existing account with the same email (a `local` one, or a
+        // `keycloak` one an Administrator created and that is still pending) is
+        // linked to the Keycloak identity (same person) instead of creating a
+        // duplicate account, which would also collide with the unique constraint
+        // on `email`. Its login method becomes `keycloak` (ADR-0015).
         $user = $this->users->findUnlinkedByEmail($email);
 
         if ($user) {
             $user->keycloak_id = $keycloakId;
+            $user->login_method = User::LOGIN_METHOD_KEYCLOAK;
 
             return KeycloakResolution::resolved($user);
         }
@@ -112,9 +115,9 @@ class KeycloakLoginController extends Controller
         $user = new User([
             'name' => $socialiteUser->getName() ?: $socialiteUser->getNickname(),
             'email' => $email,
-            'password' => Hash::make(Str::random(40)),
         ]);
         $user->keycloak_id = $keycloakId;
+        $user->login_method = User::LOGIN_METHOD_KEYCLOAK;
 
         return KeycloakResolution::resolved($user);
     }

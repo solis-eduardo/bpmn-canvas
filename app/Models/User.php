@@ -12,13 +12,18 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 
 // keycloak_id is only ever assigned internally by the OAuth flow (KeycloakLoginController),
-// never from a user request payload — no route exposes it.
-#[Fillable(['name', 'email', 'password', 'keycloak_id', 'email_notifications_enabled'])]
+// never from a user request payload — no route exposes it. login_method is set only from
+// validated Administrator input or by the OAuth flow.
+#[Fillable(['name', 'email', 'password', 'keycloak_id', 'login_method', 'email_notifications_enabled'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
+
+    public const LOGIN_METHOD_LOCAL = 'local';
+
+    public const LOGIN_METHOD_KEYCLOAK = 'keycloak';
 
     /**
      * Get the attributes that should be cast.
@@ -34,6 +39,15 @@ class User extends Authenticatable
             'is_admin_via_keycloak_claim' => 'boolean',
             'email_notifications_enabled' => 'boolean',
         ];
+    }
+
+    /**
+     * Whether this User signs in through Keycloak (ADR-0015); their local
+     * password, if any, is kept but not valid for login.
+     */
+    public function usesKeycloak(): bool
+    {
+        return $this->login_method === self::LOGIN_METHOD_KEYCLOAK;
     }
 
     /**

@@ -47,7 +47,7 @@ class KeycloakIdentityResolverTest extends TestCase
 
     public function test_returns_the_user_already_linked_to_the_keycloak_id(): void
     {
-        $user = User::factory()->create(['keycloak_id' => 'kc-1']);
+        $user = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'kc-1']);
 
         $this->assertTrue($this->resolver->resolveUser($this->identity())->is($user));
     }
@@ -70,7 +70,7 @@ class KeycloakIdentityResolverTest extends TestCase
         $this->assertFalse($resolved->exists);
         $this->assertSame('Ana', $resolved->name);
         $this->assertSame('kc-1', $resolved->keycloak_id);
-        $this->assertNotEmpty($resolved->password);
+        $this->assertSame('keycloak', $resolved->login_method);
     }
 
     public function test_falls_back_to_the_nickname_when_there_is_no_name(): void
@@ -80,7 +80,7 @@ class KeycloakIdentityResolverTest extends TestCase
 
     public function test_an_account_linked_to_another_keycloak_identity_is_not_hijacked(): void
     {
-        $other = User::factory()->create(['email' => 'ana@example.com', 'keycloak_id' => 'kc-other']);
+        $other = User::factory()->create(['email' => 'ana@example.com', 'login_method' => 'keycloak', 'keycloak_id' => 'kc-other']);
 
         $resolved = $this->resolver->resolveUser($this->identity());
 
@@ -122,7 +122,7 @@ class KeycloakIdentityResolverTest extends TestCase
 
     public function test_only_keycloak_linked_users_have_an_externally_managed_password(): void
     {
-        $this->assertTrue($this->resolver->passwordIsManagedExternally(User::factory()->make(['keycloak_id' => 'kc'])));
+        $this->assertTrue($this->resolver->passwordIsManagedExternally(User::factory()->make(['login_method' => 'keycloak', 'keycloak_id' => 'kc'])));
         $this->assertFalse($this->resolver->passwordIsManagedExternally(User::factory()->make(['keycloak_id' => null])));
     }
 }
