@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Repositories\DiagramRepository;
 use App\Repositories\VersionRepository;
+use App\Rules\BpmnXml;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -40,7 +41,7 @@ class DiagramContentController extends Controller
         $this->authorize('update', $diagram);
 
         $data = $request->validate([
-            'content' => ['required', 'string'],
+            'content' => ['required', 'string', new BpmnXml],
         ]);
 
         $this->versions->save($diagram, $request->user(), $data['content']);

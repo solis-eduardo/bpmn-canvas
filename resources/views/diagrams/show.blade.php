@@ -4,7 +4,7 @@
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-js.css') }}">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-font/css/bpmn-embedded.css') }}">
         <link rel="stylesheet" href="{{ asset('assets/app.css') }}">
-        <script type="importmap">
+        <script type="importmap" nonce="{{ $cspNonce }}">
             {
                 "imports": {
                     "bpmn-js-differ": "{{ asset('vendor/bpmn-js-differ/index.esm.js') }}",

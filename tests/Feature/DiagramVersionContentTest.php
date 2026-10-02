@@ -33,11 +33,11 @@ class DiagramVersionContentTest extends TestCase
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>first version</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">first version</bpmn:definitions>',
         ])->assertOk();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>second version</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">second version</bpmn:definitions>',
         ])->assertOk();
 
         $history = collect(
@@ -65,7 +65,7 @@ class DiagramVersionContentTest extends TestCase
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>latest content</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">latest content</bpmn:definitions>',
         ])->assertOk();
 
         $history = collect(
@@ -79,7 +79,7 @@ class DiagramVersionContentTest extends TestCase
         );
 
         $response->assertOk();
-        $this->assertSame('<bpmn:definitions>latest content</bpmn:definitions>', $response->json('content'));
+        $this->assertSame('<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">latest content</bpmn:definitions>', $response->json('content'));
     }
 
     public function test_it_returns_404_for_an_unknown_version(): void
@@ -105,7 +105,7 @@ class DiagramVersionContentTest extends TestCase
         ]);
 
         $this->actingAs($author)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>content</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">content</bpmn:definitions>',
         ])->assertOk();
 
         $history = collect(
@@ -126,7 +126,7 @@ class DiagramVersionContentTest extends TestCase
         $diagram = Diagram::factory()->for($author, 'author')->create();
 
         $this->actingAs($author)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>content</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">content</bpmn:definitions>',
         ])->assertOk();
 
         $history = collect(
@@ -146,7 +146,7 @@ class DiagramVersionContentTest extends TestCase
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>content</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">content</bpmn:definitions>',
         ])->assertOk();
 
         $history = collect(

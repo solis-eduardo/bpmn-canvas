@@ -139,7 +139,7 @@ class ShareTest extends TestCase
     public function test_guest_can_view_diagram_with_valid_share(): void
     {
         $author = User::factory()->create();
-        $diagram = $this->createDiagram($author, '<bpmn>content</bpmn>');
+        $diagram = $this->createDiagram($author, '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">content</bpmn:definitions>');
         $share = Share::factory()->for($diagram)->for($author, 'author')->create([
             'expires_at' => now()->addDays(7),
         ]);
@@ -153,7 +153,7 @@ class ShareTest extends TestCase
     public function test_public_viewer_shows_download_buttons_when_share_allows_download(): void
     {
         $author = User::factory()->create();
-        $diagram = $this->createDiagram($author, '<bpmn>content</bpmn>');
+        $diagram = $this->createDiagram($author, '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">content</bpmn:definitions>');
         $share = Share::factory()->for($diagram)->for($author, 'author')->create([
             'expires_at' => now()->addDays(7),
             'allow_download' => true,
@@ -170,7 +170,7 @@ class ShareTest extends TestCase
     public function test_public_viewer_hides_download_buttons_when_share_disallows_download(): void
     {
         $author = User::factory()->create();
-        $diagram = $this->createDiagram($author, '<bpmn>content</bpmn>');
+        $diagram = $this->createDiagram($author, '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">content</bpmn:definitions>');
         $share = Share::factory()->for($diagram)->for($author, 'author')->create([
             'expires_at' => now()->addDays(7),
             'allow_download' => false,
@@ -222,7 +222,7 @@ class ShareTest extends TestCase
     public function test_download_allowed_serves_the_bpmn_file(): void
     {
         $author = User::factory()->create();
-        $diagram = $this->createDiagram($author, '<bpmn>content-to-download</bpmn>');
+        $diagram = $this->createDiagram($author, '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">content-to-download</bpmn:definitions>');
         $share = Share::factory()->for($diagram)->for($author, 'author')->create([
             'expires_at' => now()->addDays(7),
             'allow_download' => true,
@@ -325,7 +325,7 @@ class ShareTest extends TestCase
     public function test_diagram_can_have_multiple_active_shares_with_different_permissions(): void
     {
         $author = User::factory()->create();
-        $diagram = $this->createDiagram($author, '<bpmn>content</bpmn>');
+        $diagram = $this->createDiagram($author, '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">content</bpmn:definitions>');
 
         $withDownload = Share::factory()->for($diagram)->for($author, 'author')->create([
             'allow_download' => true,
@@ -413,7 +413,7 @@ class ShareTest extends TestCase
     public function test_share_created_without_a_version_follows_the_latest_version_by_default(): void
     {
         $author = User::factory()->create();
-        $diagram = $this->createDiagram($author, '<bpmn>initial</bpmn>');
+        $diagram = $this->createDiagram($author, '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">initial</bpmn:definitions>');
 
         $response = $this->actingAs($author)->postJson("/diagrams/{$diagram->slug}/shares", []);
 
@@ -425,10 +425,10 @@ class ShareTest extends TestCase
     public function test_share_can_be_created_pinned_to_a_chosen_version(): void
     {
         $author = User::factory()->create();
-        $diagram = $this->createDiagram($author, '<bpmn>version one</bpmn>');
+        $diagram = $this->createDiagram($author, '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">version one</bpmn:definitions>');
 
         $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
-            'content' => '<bpmn>version two</bpmn>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">version two</bpmn:definitions>',
         ])->assertOk();
 
         $versions = $this->versionsOf($author, $diagram);
@@ -468,7 +468,7 @@ class ShareTest extends TestCase
         // Save "old content" as its own Version, and capture the id the
         // Share will be pinned to.
         $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
-            'content' => '<bpmn>old content</bpmn>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">old content</bpmn:definitions>',
         ])->assertOk();
         $pinnedVersion = collect($this->versionsOf($author, $diagram))->first();
 
@@ -478,7 +478,7 @@ class ShareTest extends TestCase
 
         // A new save happens after the Share was pinned.
         $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
-            'content' => '<bpmn>new content</bpmn>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">new content</bpmn:definitions>',
         ])->assertOk();
 
         $response = $this->get($share->showUrl());
@@ -494,13 +494,13 @@ class ShareTest extends TestCase
         $diagram = $this->createDiagram($author);
 
         $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
-            'content' => '<bpmn>old content</bpmn>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">old content</bpmn:definitions>',
         ])->assertOk();
 
         $share = Share::factory()->for($diagram)->for($author, 'author')->create();
 
         $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
-            'content' => '<bpmn>new content</bpmn>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">new content</bpmn:definitions>',
         ])->assertOk();
 
         $response = $this->get($share->showUrl());
@@ -516,7 +516,7 @@ class ShareTest extends TestCase
         $diagram = $this->createDiagram($author);
 
         $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
-            'content' => '<bpmn>old download content</bpmn>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">old download content</bpmn:definitions>',
         ])->assertOk();
         $pinnedVersion = collect($this->versionsOf($author, $diagram))->first();
 
@@ -526,7 +526,7 @@ class ShareTest extends TestCase
         ]);
 
         $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
-            'content' => '<bpmn>new download content</bpmn>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">new download content</bpmn:definitions>',
         ])->assertOk();
 
         $response = $this->get($share->downloadUrl());
@@ -542,7 +542,7 @@ class ShareTest extends TestCase
         $diagram = $this->createDiagram($author);
 
         $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
-            'content' => '<bpmn>content</bpmn>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">content</bpmn:definitions>',
         ])->assertOk();
         $pinnedVersion = collect($this->versionsOf($author, $diagram))->first();
 
@@ -570,7 +570,7 @@ class ShareTest extends TestCase
         $diagram = $this->createDiagram($author);
 
         $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/content", [
-            'content' => '<bpmn>content</bpmn>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">content</bpmn:definitions>',
         ])->assertOk();
         $pinnedVersion = collect($this->versionsOf($author, $diagram))->first();
 
@@ -583,5 +583,56 @@ class ShareTest extends TestCase
         $body = $response->getContent();
         $this->assertStringNotContainsStringIgnoringCase('commit', $body);
         $this->assertStringNotContainsStringIgnoringCase('branch', $body);
+    }
+
+    public function test_share_page_embeds_diagram_xml_escaped_so_it_cannot_break_out_of_the_script_tag(): void
+    {
+        $author = User::factory()->create();
+        // Well-formed XML (and so accepted at save time) that still carries a
+        // `</script>` inside an attribute value.
+        $payload = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" name="</script><script>alert(1)</script>"/>';
+        $diagram = $this->createDiagram($author, $payload);
+        $share = Share::factory()->for($diagram)->for($author, 'author')->create([
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        $response = $this->get($share->showUrl());
+
+        $response->assertOk();
+        $response->assertDontSee('</script><script>alert(1)', false);
+        $response->assertDontSee('<script>alert(1)', false);
+        $response->assertSee('\u003C\/script\u003E\u003Cscript\u003Ealert(1)', false);
+    }
+
+    public function test_share_page_carries_a_content_security_policy_header(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author, Diagram::emptyBpmn());
+        $share = Share::factory()->for($diagram)->for($author, 'author')->create([
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        $csp = $this->get($share->showUrl())->headers->get('Content-Security-Policy');
+
+        $this->assertStringContainsString("script-src 'self'", $csp);
+        $this->assertStringContainsString("object-src 'none'", $csp);
+        $this->assertStringContainsString("base-uri 'self'", $csp);
+        $this->assertStringContainsString("form-action 'self'", $csp);
+        $this->assertStringContainsString("frame-ancestors 'none'", $csp);
+    }
+
+    public function test_the_content_security_policy_nonce_is_unique_per_request_and_used_by_inline_scripts(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author, Diagram::emptyBpmn());
+
+        $first = $this->actingAs($author)->get("/diagrams/{$diagram->slug}");
+        $second = $this->actingAs($author)->get("/diagrams/{$diagram->slug}");
+
+        $nonceOf = fn ($response) => preg_match("/'nonce-([^']+)'/", $response->headers->get('Content-Security-Policy'), $m) ? $m[1] : null;
+
+        $this->assertNotNull($nonceOf($first));
+        $this->assertNotSame($nonceOf($first), $nonceOf($second));
+        $first->assertSee('<script type="importmap" nonce="'.$nonceOf($first).'">', false);
     }
 }

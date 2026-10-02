@@ -47,7 +47,7 @@ class DiagramCompareVersionsTest extends TestCase
 
         foreach (['v1', 'v2', 'v3'] as $content) {
             $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-                'content' => '<bpmn:definitions>'.$content.'</bpmn:definitions>',
+                'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">'.$content.'</bpmn:definitions>',
             ])->assertOk();
         }
 
@@ -77,7 +77,7 @@ class DiagramCompareVersionsTest extends TestCase
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>second</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">second</bpmn:definitions>',
         ])->assertOk();
 
         $history = $this->history($user, $diagram)->sortBy('number')->values();
@@ -127,7 +127,7 @@ class DiagramCompareVersionsTest extends TestCase
         // cross-Diagram leak, since VersionRepository::get() always reads
         // from the given Diagram's own repository).
         $this->actingAs($user)->putJson('/diagrams/'.$otherDiagram->slug.'/content', [
-            'content' => '<bpmn:definitions>only in the other diagram</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">only in the other diagram</bpmn:definitions>',
         ])->assertOk();
 
         $otherHistory = $this->history($user, $otherDiagram);
@@ -164,7 +164,7 @@ class DiagramCompareVersionsTest extends TestCase
         ]);
 
         $this->actingAs($author)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>content</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">content</bpmn:definitions>',
         ])->assertOk();
 
         $history = $this->history($author, $diagram)->sortBy('number')->values();
@@ -181,7 +181,7 @@ class DiagramCompareVersionsTest extends TestCase
         $diagram = Diagram::factory()->for($author, 'author')->create();
 
         $this->actingAs($author)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>content</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">content</bpmn:definitions>',
         ])->assertOk();
 
         $history = $this->history($author, $diagram)->sortBy('number')->values();
@@ -197,7 +197,7 @@ class DiagramCompareVersionsTest extends TestCase
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>content</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">content</bpmn:definitions>',
         ])->assertOk();
 
         $history = $this->history($user, $diagram)->sortBy('number')->values();

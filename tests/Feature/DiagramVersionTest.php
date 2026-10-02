@@ -41,15 +41,15 @@ class DiagramVersionTest extends TestCase
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>version one</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">version one</bpmn:definitions>',
         ])->assertOk();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>version two</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">version two</bpmn:definitions>',
         ])->assertOk();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>version three</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">version three</bpmn:definitions>',
         ])->assertOk();
 
         $response = $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions');
@@ -67,7 +67,7 @@ class DiagramVersionTest extends TestCase
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>same content</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">same content</bpmn:definitions>',
         ])->assertOk();
 
         $before = collect(
@@ -75,7 +75,7 @@ class DiagramVersionTest extends TestCase
         )->flatMap(fn ($day) => $day['items']);
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>same content</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">same content</bpmn:definitions>',
         ])->assertOk();
 
         $after = collect(
@@ -94,12 +94,12 @@ class DiagramVersionTest extends TestCase
 
         Carbon::setTestNow(Carbon::parse('2026-09-20 11:00:00'));
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>day 1 - first</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">day 1 - first</bpmn:definitions>',
         ])->assertOk();
 
         Carbon::setTestNow(Carbon::parse('2026-09-21 09:00:00'));
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>day 2</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">day 2</bpmn:definitions>',
         ])->assertOk();
 
         $response = $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions');
@@ -123,11 +123,11 @@ class DiagramVersionTest extends TestCase
         $originalContent = Storage::disk('diagrams')->get($diagram->disk_path);
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>intermediate version</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">intermediate version</bpmn:definitions>',
         ])->assertOk();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>most recent version</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">most recent version</bpmn:definitions>',
         ])->assertOk();
 
         $history = $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions');
@@ -176,11 +176,11 @@ class DiagramVersionTest extends TestCase
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>second</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">second</bpmn:definitions>',
         ])->assertOk();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>third</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">third</bpmn:definitions>',
         ])->assertOk();
 
         $items = $this->versionItems($user, $diagram);
@@ -198,7 +198,7 @@ class DiagramVersionTest extends TestCase
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>second</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">second</bpmn:definitions>',
         ])->assertOk();
 
         $oldestVersionId = $this->versionItems($user, $diagram)->last()['id'];
@@ -219,7 +219,7 @@ class DiagramVersionTest extends TestCase
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>second</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">second</bpmn:definitions>',
         ])->assertOk();
 
         $this->actingAs($user)->postJson('/diagrams/'.$diagram->slug.'/fork')->assertRedirect();
@@ -263,7 +263,7 @@ class DiagramVersionTest extends TestCase
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>second</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">second</bpmn:definitions>',
         ])->assertOk();
 
         $items = $this->versionItems($user, $diagram);
@@ -313,7 +313,7 @@ class DiagramVersionTest extends TestCase
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
-            'content' => '<bpmn:definitions>another version</bpmn:definitions>',
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">another version</bpmn:definitions>',
         ])->assertOk();
 
         $response = $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions');
