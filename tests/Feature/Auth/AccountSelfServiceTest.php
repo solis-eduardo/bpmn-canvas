@@ -16,7 +16,7 @@ class AccountSelfServiceTest extends TestCase
     {
         $user = User::factory()->create([
             'email' => 'person@example.com',
-            'keycloak_id' => 'person-keycloak-id',
+            'login_method' => 'keycloak', 'keycloak_id' => 'person-keycloak-id',
         ]);
 
         $this->actingAs($user)
@@ -39,14 +39,14 @@ class AccountSelfServiceTest extends TestCase
         $user = User::factory()->create([
             'name' => 'Original Name',
             'email' => 'person@example.com',
-            'keycloak_id' => 'person-keycloak-id',
+            'login_method' => 'keycloak', 'keycloak_id' => 'person-keycloak-id',
         ]);
         $other = User::factory()->create(['name' => 'Other User']);
 
         $this->actingAs($user)->put('/account', [
             'name' => 'Updated Name',
             'email' => 'attacker@example.com',
-            'keycloak_id' => 'other-keycloak-id',
+            'login_method' => 'keycloak', 'keycloak_id' => 'other-keycloak-id',
             'user_id' => $other->id,
         ])->assertRedirect('/account');
 
@@ -122,7 +122,7 @@ class AccountSelfServiceTest extends TestCase
     public function test_keycloak_user_cannot_change_password_in_the_application(): void
     {
         $user = User::factory()->create([
-            'keycloak_id' => 'keycloak-person',
+            'login_method' => 'keycloak', 'keycloak_id' => 'keycloak-person',
             'password' => 'random-password',
         ]);
         $passwordHash = $user->password;

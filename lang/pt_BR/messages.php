@@ -184,6 +184,8 @@ return [
     'set_new_password' => 'Definir nova senha (opcional)',
     'leave_blank_to_keep_password' => 'Deixe em branco para manter a senha atual.',
     'keycloak_password_managed_externally' => 'A senha desta conta é gerenciada pelo Keycloak.',
+    'password_required_to_switch_to_local' => 'Defina uma nova senha para mudar esta conta para login local, pois ela não tem senha local.',
+    'password_optional_for_keycloak' => 'Opcional para contas Keycloak. Obrigatória para contas locais.',
     'no_users_yet' => 'Nenhum usuário ainda.',
 
     // Public share viewer

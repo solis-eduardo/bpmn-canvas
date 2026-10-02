@@ -24,7 +24,7 @@
                         <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{{ $user->email }}</td>
                         <td class="whitespace-nowrap px-4 py-3">
                             <span class="rounded-full bg-gray-100 px-2.5 py-1 text-sm text-gray-600">
-                                {{ $user->keycloak_id ? __('messages.login_method_keycloak') : __('messages.login_method_local') }}
+                                {{ $user->usesKeycloak() ? __('messages.login_method_keycloak') : __('messages.login_method_local') }}
                             </span>
                         </td>
                         <td class="whitespace-nowrap px-4 py-3">

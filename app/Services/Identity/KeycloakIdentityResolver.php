@@ -4,8 +4,6 @@ namespace App\Services\Identity;
 
 use App\Models\User;
 use App\Repositories\UserRepository;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 
 /**
@@ -28,6 +26,8 @@ class KeycloakIdentityResolver
         $user = $this->users->findByKeycloakId($keycloakId);
 
         if ($user) {
+            $user->login_method = User::LOGIN_METHOD_KEYCLOAK;
+
             return $user;
         }
 
@@ -35,9 +35,9 @@ class KeycloakIdentityResolver
             ?? new User([
                 'name' => $socialiteUser->getName() ?: $socialiteUser->getNickname(),
                 'email' => $socialiteUser->getEmail(),
-                'password' => Hash::make(Str::random(40)),
             ]);
         $user->keycloak_id = $keycloakId;
+        $user->login_method = User::LOGIN_METHOD_KEYCLOAK;
 
         return $user;
     }
@@ -101,7 +101,7 @@ class KeycloakIdentityResolver
      */
     public function passwordIsManagedExternally(User $user): bool
     {
-        return $user->keycloak_id !== null;
+        return $user->usesKeycloak();
     }
 
     private function base64UrlDecode(string $data): string|false

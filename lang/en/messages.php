@@ -184,6 +184,8 @@ return [
     'set_new_password' => 'Set a new password (optional)',
     'leave_blank_to_keep_password' => 'Leave blank to keep the current password.',
     'keycloak_password_managed_externally' => 'This account password is managed by Keycloak.',
+    'password_required_to_switch_to_local' => 'A new password is required to switch this account to local login, because it has no local password.',
+    'password_optional_for_keycloak' => 'Optional for Keycloak accounts. Required for local accounts.',
     'no_users_yet' => 'No users yet.',
 
     // Public share viewer

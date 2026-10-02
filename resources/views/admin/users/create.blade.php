@@ -33,16 +33,31 @@
                     class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
             </div>
+            @if ($keycloakConfigured)
+                <div class="flex flex-col gap-1">
+                    <label for="login_method" class="text-sm font-medium text-gray-700">{{ __('messages.login_method') }}</label>
+                    <select
+                        id="login_method"
+                        name="login_method"
+                        class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    >
+                        <option value="local" @selected(old('login_method', 'local') === 'local')>{{ __('messages.login_method_local') }}</option>
+                        <option value="keycloak" @selected(old('login_method') === 'keycloak')>{{ __('messages.login_method_keycloak') }}</option>
+                    </select>
+                </div>
+            @endif
             <div class="flex flex-col gap-1">
                 <label for="password" class="text-sm font-medium text-gray-700">{{ __('messages.password') }}</label>
                 <x-form.input
                     type="password"
                     id="password"
                     name="password"
-                    required
                     autocomplete="new-password"
                     class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
+                @if ($keycloakConfigured)
+                    <span class="text-xs text-gray-500">{{ __('messages.password_optional_for_keycloak') }}</span>
+                @endif
             </div>
             <x-button type="submit">
                 {{ __('messages.create_local_account') }}
