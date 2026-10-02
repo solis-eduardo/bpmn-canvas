@@ -189,6 +189,8 @@ return [
     'password_required_to_switch_to_local' => 'Defina uma nova senha para mudar esta conta para login local, pois ela não tem senha local.',
     'password_optional_for_keycloak' => 'Opcional para contas Keycloak. Obrigatória para contas locais.',
     'no_users_yet' => 'Nenhum usuário ainda.',
+    'filter_user_name_or_email' => 'Nome ou e-mail',
+    'no_users_match_filters' => 'Nenhum usuário corresponde aos filtros.',
 
     // Public share viewer
     'download' => 'Baixar',

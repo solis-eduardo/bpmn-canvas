@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Repositories\UserListFilters;
 use App\Repositories\UserRepository;
 use App\Services\Identity\UserSessionRevoker;
 use App\Support\KeycloakConfig;
@@ -23,13 +24,22 @@ class UserController extends Controller
         private readonly UserSessionRevoker $sessionRevoker,
     ) {}
 
-    public function index(): View
+    /**
+     * Paginated, and narrowed by the "name", "login_method" and "admin"
+     * query filters (issue #151), which are kept on the pagination links.
+     */
+    public function index(Request $request): View
     {
         $this->authorize('manage-users');
 
-        $users = $this->users->allOrderedByName();
+        $filters = UserListFilters::fromRequest($request);
+        $users = $this->users->search($filters)->appends($request->query());
 
-        return view('admin.users.index', compact('users'));
+        return view('admin.users.index', [
+            'users' => $users,
+            'filters' => $filters,
+            'keycloakConfigured' => KeycloakConfig::isConfigured(),
+        ]);
     }
 
     public function create(): View

@@ -6,7 +6,48 @@
         </x-button>
     </div>
 
-    <div class="mt-6 overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+    <form method="GET" action="{{ route('admin.users.index') }}" class="mt-6 flex flex-wrap items-center gap-3">
+        <div class="relative w-full max-w-sm">
+            <x-icon name="search" class="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+                type="search"
+                name="name"
+                value="{{ $filters->name }}"
+                placeholder="{{ __('messages.filter_user_name_or_email') }}"
+                aria-label="{{ __('messages.filter_user_name_or_email') }}"
+                class="w-full rounded-md border border-gray-300 py-2 pl-9 pr-3 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+        </div>
+
+        <select
+            name="login_method"
+            aria-label="{{ __('messages.login_method') }}"
+            class="w-56 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+            <option value="">{{ __('messages.login_method') }}</option>
+            <option value="local" @selected($filters->loginMethod === 'local')>{{ __('messages.login_method_local') }}</option>
+            @if ($keycloakConfigured)
+                <option value="keycloak" @selected($filters->loginMethod === 'keycloak')>{{ __('messages.login_method_keycloak') }}</option>
+            @endif
+        </select>
+
+        <select
+            name="admin"
+            aria-label="{{ __('messages.administrator_status') }}"
+            class="w-56 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        >
+            <option value="">{{ __('messages.administrator_status') }}</option>
+            <option value="1" @selected($filters->admin === true)>{{ __('messages.administrator_status') }}</option>
+            <option value="0" @selected($filters->admin === false)>{{ __('messages.not_administrator') }}</option>
+        </select>
+
+        <x-button type="submit" variant="secondary">
+            <x-icon name="funnel" />
+            {{ __('messages.apply_filters') }}
+        </x-button>
+    </form>
+
+    <div class="mt-8 overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
                 <tr>
@@ -63,10 +104,14 @@
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500">{{ __('messages.no_users_yet') }}</td>
+                        <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500">{{ $filters->isActive() ? __('messages.no_users_match_filters') : __('messages.no_users_yet') }}</td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
+    </div>
+
+    <div class="mt-4">
+        {{ $users->links() }}
     </div>
 </x-layouts.app>

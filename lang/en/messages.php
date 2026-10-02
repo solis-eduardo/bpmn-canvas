@@ -189,6 +189,8 @@ return [
     'password_required_to_switch_to_local' => 'A new password is required to switch this account to local login, because it has no local password.',
     'password_optional_for_keycloak' => 'Optional for Keycloak accounts. Required for local accounts.',
     'no_users_yet' => 'No users yet.',
+    'filter_user_name_or_email' => 'Name or email',
+    'no_users_match_filters' => 'No users match the filters.',
 
     // Public share viewer
     'download' => 'Download',
