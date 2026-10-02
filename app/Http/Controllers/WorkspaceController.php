@@ -86,7 +86,7 @@ class WorkspaceController extends Controller
     {
         $this->authorize('update', $workspace);
 
-        $workspace->load('members.user', 'owner');
+        $workspace->load('members.user');
 
         $everyone = $this->users->allOrderedByName();
         $memberIds = $workspace->members->pluck('user_id');
