@@ -46,7 +46,7 @@ Route::middleware('signed')->group(function () {
 });
 
 Route::middleware('auth')->group(function () {
-    Route::get('/account/notifications', [AccountNotificationController::class, 'edit'])->name('account.notifications.edit');
+    Route::get('/account/notifications', fn () => redirect()->route('account.edit'))->name('account.notifications.edit');
     Route::put('/account/notifications', [AccountNotificationController::class, 'update'])->name('account.notifications.update');
     Route::get('/home', HomeController::class)->name('home');
 
