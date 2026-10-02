@@ -52,8 +52,8 @@ class ListingPolishTest extends TestCase
     public function test_grant_and_revoke_buttons_reserve_the_width_of_both_labels(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
-        $other = User::factory()->create(['is_admin' => false]);
-        $promoted = User::factory()->create(['is_admin' => true]);
+        User::factory()->create(['is_admin' => false]);
+        User::factory()->create(['is_admin' => true]);
 
         foreach (['en', 'pt_BR', 'es'] as $locale) {
             $html = $this->actingAs($admin)->withSession(['locale' => $locale])->get('/admin/users')->getContent();
@@ -67,9 +67,6 @@ class ListingPolishTest extends TestCase
                 $this->assertStringContainsString('invisible', $cell);
             }
         }
-
-        $this->assertNotNull($other);
-        $this->assertNotNull($promoted);
     }
 
     public function test_administrator_action_labels_use_sentence_case_in_every_locale(): void
@@ -109,7 +106,7 @@ class ListingPolishTest extends TestCase
     public function test_last_modified_is_the_penultimate_column_of_every_table(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
-        $workspace = Workspace::factory()->create(['owner_id' => $admin->id]);
+        Workspace::factory()->create(['owner_id' => $admin->id]);
         Diagram::factory()->for($admin, 'author')->create();
 
         foreach (['/diagrams' => 'diagram_column_actions', '/workspaces' => 'workspace_column_actions', '/admin/users' => 'user_actions'] as $url => $actions) {
@@ -123,7 +120,6 @@ class ListingPolishTest extends TestCase
             $this->assertStringContainsString('data-sort-column="updated_at"', $last[0], $url);
             $this->assertStringContainsString('<time datetime=', $html, $url);
         }
-        $this->assertNotNull($workspace);
     }
 
     public function test_removed_filters_are_gone_from_the_diagram_filter_bar(): void
