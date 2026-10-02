@@ -1,24 +1,11 @@
 <x-layouts.app :title="__('messages.diagrams')">
     <div class="flex items-center justify-between gap-4">
         <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.diagrams') }}</h1>
-    </div>
-
-    <form method="POST" action="{{ route('diagrams.store') }}" class="mt-6 flex flex-wrap items-center gap-3">
-        @csrf
-        <x-form.input
-            type="text"
-            name="title"
-            scope="diagram-create"
-            wrapper-class="flex min-w-[240px] flex-1 flex-col gap-1"
-            placeholder="{{ __('messages.diagram_name') }}"
-            required
-            class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-        <x-button type="submit">
+        <x-button :href="route('diagrams.create')">
             <x-icon name="plus" />
             {{ __('messages.create_diagram') }}
         </x-button>
-    </form>
+    </div>
 
     <form method="GET" action="{{ route('diagrams.index') }}" class="mt-4 flex flex-wrap items-center gap-4">
         <div class="relative w-full max-w-sm">
