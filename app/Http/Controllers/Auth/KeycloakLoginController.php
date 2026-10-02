@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Repositories\UserRepository;
 use App\Services\MemberService;
+use App\Support\KeycloakResolution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -38,10 +39,20 @@ class KeycloakLoginController extends Controller
             return redirect('/login')->with('error', __('messages.keycloak_login_failed'));
         }
 
-        $user = $this->resolveUser($socialiteUser);
         $tokenPayload = $this->tokenPayload($socialiteUser);
+        $emailVerified = ($tokenPayload['email_verified'] ?? null) === true;
 
-        if ($this->hasAdminRoleClaim($tokenPayload)) {
+        $resolution = $this->resolveVerifiedUser($socialiteUser, $emailVerified);
+
+        if ($resolution->isRejected()) {
+            return redirect('/login')->with('error', __('messages.keycloak_email_not_verified'));
+        }
+
+        $user = $resolution->user;
+
+        // Only a verified identity may be elevated: the claim is trusted, the
+        // unverified email behind it is not.
+        if ($emailVerified && $this->hasAdminRoleClaim($tokenPayload)) {
             $user->is_admin = true;
             $user->is_admin_via_keycloak_claim = true;
         }
@@ -57,35 +68,55 @@ class KeycloakLoginController extends Controller
         return redirect()->intended(route('diagrams.index'));
     }
 
-    private function resolveUser(SocialiteUserContract $socialiteUser): User
+    /**
+     * Rejected when the identity can't be tied to a local account safely:
+     * linking or provisioning by email requires the IdP to vouch for that
+     * email (`email_verified` strictly true), otherwise anyone able to
+     * register the victim's email at the IdP could take over the victim's
+     * local account.
+     */
+    private function resolveVerifiedUser(SocialiteUserContract $socialiteUser, bool $emailVerified): KeycloakResolution
     {
         $keycloakId = $socialiteUser->getId();
 
+        // The stable `sub` always wins over email.
         $user = $this->users->findByKeycloakId($keycloakId);
 
         if ($user) {
-            return $user;
+            return KeycloakResolution::resolved($user);
+        }
+
+        $email = $socialiteUser->getEmail();
+
+        if (! $emailVerified || ! is_string($email) || $email === '') {
+            return KeycloakResolution::rejected();
         }
 
         // A pre-existing local account with the same email is linked to the Keycloak
         // identity (same person) instead of creating a duplicate account, which would
         // also collide with the unique constraint on `email`.
-        $user = $this->users->findUnlinkedByEmail($socialiteUser->getEmail());
+        $user = $this->users->findUnlinkedByEmail($email);
 
         if ($user) {
             $user->keycloak_id = $keycloakId;
 
-            return $user;
+            return KeycloakResolution::resolved($user);
+        }
+
+        // The email belongs to an account already linked to a different Keycloak
+        // identity: never re-link it, and don't collide with the unique constraint.
+        if ($this->users->findByEmail($email)) {
+            return KeycloakResolution::rejected();
         }
 
         $user = new User([
             'name' => $socialiteUser->getName() ?: $socialiteUser->getNickname(),
-            'email' => $socialiteUser->getEmail(),
+            'email' => $email,
             'password' => Hash::make(Str::random(40)),
         ]);
         $user->keycloak_id = $keycloakId;
 
-        return $user;
+        return KeycloakResolution::resolved($user);
     }
 
     /**
