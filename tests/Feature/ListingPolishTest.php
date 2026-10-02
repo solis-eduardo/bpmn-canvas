@@ -14,7 +14,7 @@ class ListingPolishTest extends TestCase
     {
         $response = $this->actingAs(User::factory()->create())->get('/home');
 
-        $this->assertMatchesRegularExpression('/data-icon="search"[^>]*class="[^"]*h-4 w-4[^"]*absolute/s', $response->getContent());
+        $this->assertMatchesRegularExpression('/data-icon="search"[^>]*class="[^"]*absolute[^"]*h-4 w-4/s', $response->getContent());
     }
 
     public function test_diagrams_page_uses_the_wide_layout(): void

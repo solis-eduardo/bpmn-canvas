@@ -4,6 +4,7 @@ namespace Tests\Unit\Repositories;
 
 use App\Models\User;
 use App\Models\Workspace;
+use App\Repositories\ListSort;
 use App\Repositories\MemberRepository;
 use App\Repositories\WorkspaceListFilters;
 use App\Repositories\WorkspaceRepository;
@@ -58,9 +59,10 @@ class WorkspaceRepositoryTest extends TestCase
         $repository->create('Alpha', $user);
         Workspace::factory()->create(['name' => 'Foreign']);
 
+        $sort = new ListSort(WorkspaceRepository::SORT_COLUMNS, 'name', 'asc');
         $admin = User::factory()->create(['is_admin' => true]);
-        $all = $repository->search($admin, new WorkspaceListFilters)->getCollection();
-        $mine = $repository->search($user, new WorkspaceListFilters)->getCollection();
+        $all = $repository->search($admin, new WorkspaceListFilters, $sort)->getCollection();
+        $mine = $repository->search($user, new WorkspaceListFilters, $sort)->getCollection();
 
         $this->assertCount(2, $all);
         $this->assertCount(1, $mine);
@@ -80,7 +82,8 @@ class WorkspaceRepositoryTest extends TestCase
         $repository->addMember($finance, $bob);
         $repository->create('Human Resources', $bob);
 
-        $names = fn (WorkspaceListFilters $f) => $repository->search($admin, $f)->pluck('name')->all();
+        $sort = new ListSort(WorkspaceRepository::SORT_COLUMNS, 'name', 'asc');
+        $names = fn (WorkspaceListFilters $f) => $repository->search($admin, $f, $sort)->pluck('name')->all();
 
         $this->assertSame(['Finance'], $names(new WorkspaceListFilters(name: 'fin')));
         $this->assertSame(['Finance'], $names(new WorkspaceListFilters(owner: $ann->id)));
