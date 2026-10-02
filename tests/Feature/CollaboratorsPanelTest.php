@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -47,10 +47,10 @@ class CollaboratorsPanelTest extends TestCase
         $collaborator = User::factory()->create();
         $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
 
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $diagram->id,
             'user_id' => $collaborator->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
 
         $response = $this->actingAs($collaborator)->get("/diagrams/{$diagram->slug}");

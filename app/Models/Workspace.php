@@ -31,10 +31,10 @@ class Workspace extends Model
         return $this->belongsTo(User::class, 'owner_id');
     }
 
-    /** @return HasMany<WorkspaceMember, $this> */
+    /** @return HasMany<Member, $this> */
     public function members(): HasMany
     {
-        return $this->hasMany(WorkspaceMember::class);
+        return $this->hasMany(Member::class);
     }
 
     /**
@@ -81,7 +81,7 @@ class Workspace extends Model
     {
         $member = $this->members()->updateOrCreate(
             ['user_id' => $user->id],
-            ['origin' => WorkspaceMember::ORIGIN_MANUAL],
+            ['origin' => Member::ORIGIN_MANUAL],
         );
 
         if ($notify && $member->wasRecentlyCreated) {
@@ -100,7 +100,7 @@ class Workspace extends Model
 
         $this->members()->create([
             'user_id' => $user->id,
-            'origin' => WorkspaceMember::ORIGIN_GROUP,
+            'origin' => Member::ORIGIN_GROUP,
         ]);
 
         if ($notify) {

@@ -6,8 +6,8 @@ use App\Actions\Diagrams\ReleaseLock;
 use App\Actions\Diagrams\RequestLock;
 use App\Actions\Diagrams\TransferOwnership;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
+use App\Models\Collaborator;
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\DiagramOldSlug;
 use App\Models\Workspace;
 use App\Repositories\DiagramRepository;
@@ -121,7 +121,7 @@ class DiagramController extends Controller
                 ->where('owner_id', '!=', $user->id)
                 ->whereDoesntHave('collaborators', fn ($collaborators) => $collaborators
                     ->where('user_id', $user->id)
-                    ->where('status', DiagramCollaborator::STATUS_APPROVED)))
+                    ->where('status', Collaborator::STATUS_APPROVED)))
             ->when($user->is_admin, fn ($query) => $query->whereRaw('1 = 0'))
             ->when($discoverySearch !== '', fn ($query) => $query->where('title', 'like', '%'.$discoverySearch.'%'))
             ->orderBy('title')

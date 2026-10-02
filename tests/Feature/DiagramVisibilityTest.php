@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\Share;
 use App\Models\User;
 use App\Models\Workspace;
@@ -95,7 +95,7 @@ class DiagramVisibilityTest extends TestCase
         $collaborator = User::factory()->create();
         $hidden->collaborators()->create([
             'user_id' => $collaborator->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
 
         $response = $this->actingAs($collaborator)->get('/diagrams');
