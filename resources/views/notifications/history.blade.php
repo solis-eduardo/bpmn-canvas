@@ -3,6 +3,10 @@
         <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.notification_history_heading') }}</h1>
     </div>
 
+    @if ($term !== '')
+        <p class="mt-4 text-sm text-gray-600">{{ __('messages.search_results_for', ['term' => $term]) }}</p>
+    @endif
+
     <ul class="mt-8 divide-y divide-gray-200 rounded-lg border border-gray-200 bg-white shadow-sm">
         @forelse ($notifications as $notification)
             <li>

@@ -249,4 +249,13 @@ return [
     'filter_workspace_member' => 'Member',
     'filter_workspace_diagram' => 'Diagram',
     'no_workspaces_match_filters' => 'No Workspaces match the filters.',
+    'search_placeholder' => 'Search diagrams, workspaces and notifications',
+    'search_button' => 'Search',
+    'search_results_for' => 'Results for ":term"',
+    'search_results_heading' => 'Search results',
+    'search_no_results' => 'No results.',
+    'search_diagrams' => 'Diagrams',
+    'search_workspaces' => 'Workspaces',
+    'search_notifications' => 'Notifications',
+    'search_see_all' => 'See all (:count)',
 ];
