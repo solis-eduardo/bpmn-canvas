@@ -102,6 +102,8 @@ class DiagramTest extends TestCase
 
         $response->assertOk();
         $response->assertSee($diagram->title);
+        $response->assertSee('flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2', false);
+        $response->assertSee('flex w-full min-w-0 flex-wrap items-center gap-1 sm:w-auto sm:flex-1', false);
     }
 
     public function test_user_can_fetch_the_current_content_of_a_diagram(): void
