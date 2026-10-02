@@ -5,13 +5,15 @@
 
     <form method="POST" action="{{ route('diagrams.store') }}" class="mt-6 flex flex-wrap items-center gap-3">
         @csrf
-        <input
+        <x-form.input
             type="text"
             name="title"
+            scope="diagram-create"
+            wrapper-class="flex min-w-[240px] flex-1 flex-col gap-1"
             placeholder="{{ __('messages.diagram_name') }}"
             required
-            class="min-w-[240px] flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
+            class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
         <x-button type="submit">
             <x-icon name="plus" />
             {{ __('messages.create_diagram') }}
@@ -152,12 +154,14 @@
                     @if ($canManageTags)
                         <form method="POST" action="{{ route('diagrams.tags.store', $diagram->slug) }}" class="flex items-center gap-1">
                             @csrf
-                            <input
+                            <x-form.input
                                 type="text"
                                 name="name"
+                                scope="diagram-tag-{{ $diagram->id }}"
+                                wrapper-class="flex flex-col gap-0.5"
                                 placeholder="{{ __('messages.add_tag_placeholder') }}"
                                 class="w-28 rounded border border-gray-300 px-1.5 py-0.5 text-xs shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            >
+                            />
                             <x-button type="submit" variant="secondary" size="sm"><x-icon name="tag" class="h-3.5 w-3.5" />{{ __('messages.add_tag') }}</x-button>
                         </form>
                     @endif

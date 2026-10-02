@@ -57,14 +57,16 @@
                                 <label for="keycloak-group-{{ $workspace->id }}" class="text-xs font-medium text-gray-700">
                                     {{ __('messages.keycloak_group') }}
                                 </label>
-                                <input
+                                <x-form.input
                                     id="keycloak-group-{{ $workspace->id }}"
                                     type="text"
                                     name="keycloak_group"
-                                    value="{{ $workspace->keycloak_group }}"
+                                    scope="workspace-keycloak-{{ $workspace->id }}"
+                                    wrapper-class="flex flex-col gap-1"
+                                    value="{{ old('keycloak_group', $workspace->keycloak_group) }}"
                                     placeholder="{{ __('messages.keycloak_group_placeholder') }}"
                                     class="w-36 rounded-md border border-gray-300 px-2 py-1 text-xs font-normal shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                >
+                                />
                                 <x-button type="submit" variant="secondary" size="sm">
                                     <x-icon name="check" />
                                     {{ __('messages.update_keycloak_group') }}
