@@ -91,6 +91,35 @@ class DiagramRepository
     }
 
     /**
+     * Search results combine Diagrams the User can open with out-of-Workspace
+     * Diagrams they can discover. Filters narrow openable Diagrams; discovery
+     * remains title-only and never grants access.
+     *
+     * @return Builder<Diagram>
+     */
+    public function searchResultsQuery(User $user, DiagramListCriteria $criteria): Builder
+    {
+        $openableIds = $this->visibleListQuery($user, $criteria)
+            ->reorder()
+            ->select('diagrams.id');
+        $discoverableIds = $this->discoveryQuery($user, $criteria->search)
+            ->reorder()
+            ->select('diagrams.id');
+        $resultIds = $openableIds->union($discoverableIds);
+
+        return Diagram::query()
+            ->with([
+                'author',
+                'owner',
+                'lockedBy',
+                'tags',
+                'workspace',
+                'collaborators' => fn ($collaborators) => $collaborators->where('user_id', $user->id),
+            ])
+            ->joinSub($resultIds, 'search_results', fn ($join) => $join->on('search_results.id', '=', 'diagrams.id'));
+    }
+
+    /**
      * Diagrams outside any Workspace that $user can see exist but can't
      * open (not theirs, not collaborated on) — the "discover" list. An
      * Administrator already sees everything in the main list, so gets none.
