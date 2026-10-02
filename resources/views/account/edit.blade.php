@@ -84,7 +84,6 @@
 
         @unless ($user->keycloak_id)
             <section class="mt-8">
-                <x-icon name="lock-closed" />
                 <h2 class="text-lg font-semibold text-gray-900">{{ __('messages.change_password') }}</h2>
                 <form method="POST" action="{{ route('account.password.update') }}" class="mt-4 space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
                     @csrf

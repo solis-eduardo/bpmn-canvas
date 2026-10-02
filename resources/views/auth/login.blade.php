@@ -4,7 +4,6 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <x-icon name="login" />
     <title>{{ __('messages.log_in') }} | {{ config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
@@ -52,12 +51,10 @@
                             >
                         </div>
 
-                        <button
-                            type="submit"
-                            class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-                        >
+                        <x-button type="submit">
+                            <x-icon name="login" />
                             {{ __('messages.log_in') }}
-                        </button>
+                        </x-button>
                     </form>
                 </section>
 
