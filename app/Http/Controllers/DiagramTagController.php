@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Tag;
 use App\Repositories\DiagramRepository;
-use App\Repositories\TagRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -15,7 +14,6 @@ class DiagramTagController extends Controller
 
     public function __construct(
         private readonly DiagramRepository $diagrams,
-        private readonly TagRepository $tags,
     ) {}
 
     /**
@@ -34,9 +32,7 @@ class DiagramTagController extends Controller
             'name' => ['required', 'string', 'max:255'],
         ]);
 
-        $tag = $this->tags->findOrCreateByName(trim($data['name']));
-
-        $diagram->tags()->syncWithoutDetaching($tag);
+        $diagram->attachTag(Tag::findOrCreate(trim($data['name'])));
 
         return back();
     }
@@ -52,7 +48,7 @@ class DiagramTagController extends Controller
 
         $this->authorize('manageTags', $diagram);
 
-        $diagram->tags()->detach($tag);
+        $diagram->detachTag($tag);
 
         return back();
     }

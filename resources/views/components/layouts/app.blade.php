@@ -19,33 +19,31 @@
                 <nav class="flex flex-1 items-center gap-1">
                     <a
                         href="{{ url('/home') }}"
-                        class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->is('home') ? 'bg-gray-100 text-gray-900' : '' }}"
+                        class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->is('home') ? 'bg-gray-100 text-gray-900' : '' }}"
                     >
+                        <x-icon name="home" />
                         {{ __('messages.home') }}
                     </a>
                     <a
                         href="{{ route('diagrams.index') }}"
-                        class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('diagrams.*') ? 'bg-gray-100 text-gray-900' : '' }}"
+                        class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('diagrams.*') ? 'bg-gray-100 text-gray-900' : '' }}"
                     >
+                        <x-icon name="diagrams" />
                         {{ __('messages.diagrams') }}
                     </a>
                     <a
                         href="{{ route('workspaces.index') }}"
-                        class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('workspaces.*') ? 'bg-gray-100 text-gray-900' : '' }}"
+                        class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('workspaces.*') ? 'bg-gray-100 text-gray-900' : '' }}"
                     >
+                        <x-icon name="workspaces" />
                         {{ __('messages.workspaces') }}
-                    </a>
-                    <a
-                        href="{{ route('account.notifications.edit') }}"
-                        class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('account.notifications.*') ? 'bg-gray-100 text-gray-900' : '' }}"
-                    >
-                        {{ __('messages.notification_preferences') }}
                     </a>
                     @if (auth()->check() && auth()->user()->is_admin)
                         <a
                             href="{{ route('admin.users.index') }}"
-                            class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('admin.users.*') ? 'bg-gray-100 text-gray-900' : '' }}"
+                            class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('admin.users.*') ? 'bg-gray-100 text-gray-900' : '' }}"
                         >
+                            <x-icon name="users" />
                             {{ __('messages.users') }}
                         </a>
                     @endif
@@ -60,8 +58,9 @@
                         @include('partials.notification-bell')
                         <a
                             href="{{ route('account.edit') }}"
-                            class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('account.*') ? 'bg-gray-100 text-gray-900' : '' }}"
+                            class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('account.*') ? 'bg-gray-100 text-gray-900' : '' }}"
                         >
+                            <x-icon name="user-circle" />
                             {{ __('messages.profile') }}
                         </a>
                     @else
@@ -73,7 +72,10 @@
                     @auth
                         <form method="POST" action="{{ route('logout') }}">
                             @csrf
-                            <button type="submit" class="text-sm font-medium text-gray-600 hover:text-gray-900">{{ __('messages.log_out') }}</button>
+                            <button type="submit" class="inline-flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-gray-900">
+                                <x-icon name="logout" />
+                                {{ __('messages.log_out') }}
+                            </button>
                         </form>
                     @endauth
                 </div>
