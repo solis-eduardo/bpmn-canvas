@@ -9,6 +9,7 @@ use App\Repositories\UserRepository;
 use App\Services\WorkspaceOwnerService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class WorkspaceOwnerController extends Controller
 {
@@ -29,6 +30,10 @@ class WorkspaceOwnerController extends Controller
         $this->authorize('workspace-owner.transfer', $workspace);
 
         $data = $request->validate($this->userIdentifierRules());
+
+        if (isset($data['user_id']) && (int) $data['user_id'] === $workspace->owner_id) {
+            throw ValidationException::withMessages(['user_id' => __('messages.user_already_owner')]);
+        }
 
         $this->actOnTargetUser($data, fn (User $owner) => $this->owners->transfer($workspace, $owner));
 
