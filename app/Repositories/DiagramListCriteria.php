@@ -25,15 +25,13 @@ final readonly class DiagramListCriteria
         public bool $withoutWorkspace = false,
         public bool $owner = false,
         public bool $collaborator = false,
-        public bool $locked = false,
-        public bool $recent = false,
         public ListSort $sort = new ListSort(self::SORT_COLUMNS, 'title', 'asc'),
     ) {}
 
     /**
      * Reads the list's query string: "q", "tags[]" (a Diagram must carry every
      * Tag), "owner_id" and "author_id" (one User each), "workspace" ("none" or
-     * a Workspace id) and the "owner"/"collaborator"/"locked"/"recent" flags, and
+     * a Workspace id) and the "owner"/"collaborator" flags, and
      * "sort"/"direction" (falling back to the title, ascending).
      */
     public static function fromRequest(Request $request): self
@@ -51,8 +49,6 @@ final readonly class DiagramListCriteria
             withoutWorkspace: $workspace === 'none',
             owner: $request->boolean('owner'),
             collaborator: $request->boolean('collaborator'),
-            locked: $request->boolean('locked'),
-            recent: $request->boolean('recent'),
             sort: ListSort::fromRequest($request, self::SORT_COLUMNS),
         );
     }

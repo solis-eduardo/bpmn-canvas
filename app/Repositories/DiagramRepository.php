@@ -85,8 +85,6 @@ class DiagramRepository
                     ->when($criteria->owner, fn (Builder $query) => $query->orWhere(fn (Builder $query) => $query->ownedBy($user)))
                     ->when($criteria->collaborator, fn (Builder $query) => $query->orWhere(fn (Builder $query) => $query->collaboratedBy($user)))
             ))
-            ->when($criteria->locked, fn (Builder $query) => $query->lockedNow())
-            ->when($criteria->recent, fn (Builder $query) => $query->recentlyModified())
             ->when($criteria->facets->tags !== [], fn (Builder $query) => $query->taggedWithAll($criteria->facets->tags))
             ->when($criteria->facets->ownerId !== null, fn (Builder $query) => $query->where('diagrams.owner_id', $criteria->facets->ownerId))
             ->when($criteria->facets->authorId !== null, fn (Builder $query) => $query->where('diagrams.author_id', $criteria->facets->authorId));

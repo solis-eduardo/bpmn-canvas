@@ -53,18 +53,18 @@
                         @if (count($result['items']) === 0)
                             <p class="rounded-lg border border-gray-200 bg-white px-4 py-4 text-sm text-gray-600">{{ __('messages.search_no_results') }}</p>
                         @else
-                            <ul class="divide-y divide-gray-200 overflow-hidden rounded-lg border border-gray-200 bg-white">
-                                @foreach ($result['items'] as $item)
-                                    <li class="px-4 py-3">
-                                        @if ($group['key'] === 'diagrams')
-                                            <a
-                                                href="{{ $item->is_discoverable ? route('diagrams.index', ['q' => $item->title]) : route('diagrams.show', $item->slug) }}"
-                                                class="font-medium text-blue-700 hover:text-blue-900"
-                                            >{{ $item->title }}</a>
-                                        @elseif ($group['key'] === 'workspaces')
-                                            <a href="{{ route('workspaces.index', ['name' => $item->name]) }}" class="font-medium text-blue-700 hover:text-blue-900">{{ $item->name }}</a>
-                                        @else
-                                            <a href="{{ $item['url'] }}" class="font-medium text-blue-700 hover:text-blue-900">{{ $item['message'] }}</a>
+                                <ul class="divide-y divide-gray-200 overflow-hidden rounded-lg border border-gray-200 bg-white">
+                                    @foreach ($result['items'] as $item)
+                                        <li class="px-4 py-3">
+                                            @if ($group['key'] === 'diagrams')
+                                                <a
+                                                    href="{{ $item->is_discoverable ? route('diagrams.index', ['q' => $item->title]) : route('diagrams.show', $item->slug) }}"
+                                                    class="font-medium text-blue-700 hover:text-blue-900"
+                                                >{{ $item->title }}</a>
+                                            @elseif ($group['key'] === 'workspaces')
+                                                <a href="{{ route('workspaces.index', ['name' => $item->name]) }}" class="font-medium text-blue-700 hover:text-blue-900">{{ $item->name }}</a>
+                                            @else
+                                                <a href="{{ $item['url'] }}" class="font-medium text-blue-700 hover:text-blue-900">{{ $item['message'] }}</a>
                                         @endif
                                     </li>
                                 @endforeach
@@ -73,8 +73,7 @@
                     </div>
                 @endforeach
             </section>
-        @endif
-
+        @else
         <section aria-labelledby="home-recent-diagrams-heading">
             <div class="mb-4 flex items-center justify-between gap-4">
                 <h2 id="home-recent-diagrams-heading" class="text-xl font-semibold text-gray-900">
@@ -126,5 +125,6 @@
                 {{ __('messages.home_search_shortcut') }}
             </a>
         </nav>
+        @endif
     </div>
 </x-layouts.app>

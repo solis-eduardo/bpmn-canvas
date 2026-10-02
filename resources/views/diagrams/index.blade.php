@@ -1,4 +1,4 @@
-<x-layouts.app :title="__('messages.diagrams')" :wide="true">
+<x-layouts.app :title="__('messages.diagrams')">
     <div class="flex items-center justify-between gap-4">
         <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.diagrams') }}</h1>
         <x-button :href="route('diagrams.create')">
@@ -20,7 +20,7 @@
             >
         </div>
 
-        @foreach (['owner' => 'filter_owner', 'collaborator' => 'filter_collaborator', 'locked' => 'filter_locked', 'recent' => 'filter_recent'] as $filterKey => $filterLabel)
+        @foreach (['owner' => 'filter_owner', 'collaborator' => 'filter_collaborator'] as $filterKey => $filterLabel)
             <label class="flex items-center gap-1.5 text-sm text-gray-700">
                 <input type="checkbox" name="{{ $filterKey }}" value="1" @checked($filters[$filterKey])>
                 {{ __('messages.'.$filterLabel) }}
@@ -34,10 +34,10 @@
             multiple
             :creatable="false"
             wrapper-class="w-56"
-            placeholder="{{ __('messages.filter_by_tag_placeholder') }}"
+            placeholder="{{ __('messages.filter_tag') }}"
         />
 
-        @foreach (['owner_id' => ['filter_by_diagram_owner', $ownerId], 'author_id' => ['filter_by_author', $authorId]] as $field => [$labelKey, $selectedId])
+        @foreach (['owner_id' => ['filter_diagram_owner', $ownerId], 'author_id' => ['filter_author', $authorId]] as $field => [$labelKey, $selectedId])
             <select
                 name="{{ $field }}"
                 aria-label="{{ __('messages.'.$labelKey) }}"
@@ -69,17 +69,17 @@
     </form>
 
     <div class="mt-8 overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
-        <table id="diagram-search-results" class="min-w-[1200px] w-full divide-y divide-gray-200 text-left text-sm">
+        <table id="diagram-search-results" class="min-w-[1100px] w-full divide-y divide-gray-200 text-left text-sm">
             <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
                     <x-sortable-th column="title" :sort="$sort">{{ __('messages.diagram_column_title') }}</x-sortable-th>
                     <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_author') }}</th>
                     <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_owner') }}</th>
                     <th scope="col" class="px-4 py-3">{{ __('messages.workspace_filter_label') }}</th>
-                    <x-sortable-th column="updated_at" :sort="$sort">{{ __('messages.diagram_column_modified') }}</x-sortable-th>
                     <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_lock') }}</th>
-                    <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_tags') }}</th>
-                    <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_actions') }}</th>
+                    <th scope="col" class="px-4 py-3 text-center">{{ __('messages.diagram_column_tags') }}</th>
+                    <x-sortable-th column="updated_at" :sort="$sort">{{ __('messages.diagram_column_modified') }}</x-sortable-th>
+                    <th scope="col" class="w-px whitespace-nowrap px-4 py-3">{{ __('messages.diagram_column_actions') }}</th>
                 </tr>
             </thead>
             <tbody class="divide-y divide-gray-200 bg-white">
@@ -90,7 +90,7 @@
                 <td class="px-4 py-3 text-gray-500">—</td>
                 <td class="px-4 py-3 text-gray-600">{{ $diagram->owner->name }}</td>
                 <td colspan="4" class="px-4 py-3 text-gray-500">{{ __('messages.discoverable_diagram') }}</td>
-                <td class="whitespace-nowrap px-4 py-3">
+                <td class="w-px whitespace-nowrap px-4 py-3">
                     @if ($diagram->collaborators->first()?->status === \App\Models\Collaborator::STATUS_REQUESTED)
                         <span class="text-sm text-gray-500">{{ __('messages.access_request_pending') }}</span>
                     @else
@@ -113,9 +113,6 @@
                 <td class="px-4 py-3 text-gray-600">{{ $diagram->author->name }}</td>
                 <td class="px-4 py-3 text-gray-600">{{ $diagram->owner->name }}</td>
                 <td class="px-4 py-3 text-gray-600">{{ $diagram->workspace?->name ?? __('messages.no_workspace') }}</td>
-                <td class="whitespace-nowrap px-4 py-3 text-gray-600" title="{{ $diagram->updated_at }}">
-                    {{ $diagram->updated_at->diffForHumans() }}
-                </td>
                 <td class="px-4 py-3">
                     @if ($diagram->hasActiveLock())
                         <span class="text-amber-600">{{ __('messages.being_edited_by', ['name' => $diagram->lockedBy->name]) }}</span>
@@ -124,7 +121,7 @@
                     @endif
                 </td>
                 <td class="px-4 py-3">
-                    <div class="flex min-w-40 flex-wrap items-center gap-1.5">
+                    <div class="flex min-w-40 flex-wrap items-center justify-center gap-1.5">
                     @php($canManageTags = auth()->user()->can('manageTags', $diagram))
 
                     @foreach ($diagram->tags as $diagramTag)
@@ -153,7 +150,8 @@
                     @endif
                     </div>
                 </td>
-                <td class="whitespace-nowrap px-4 py-3">
+                <td class="whitespace-nowrap px-4 py-3 text-gray-600"><x-timestamp :at="$diagram->updated_at" /></td>
+                <td class="w-px whitespace-nowrap px-4 py-3">
                     <div class="flex flex-nowrap items-center gap-2">
                         <x-button :href="route('diagrams.show', $diagram->slug)" variant="secondary" size="sm">
                             <x-icon name="arrow-right" />

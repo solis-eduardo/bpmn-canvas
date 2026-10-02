@@ -8,8 +8,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Diagram list filter scopes (issue #39, "Filters and pagination on the
- * Diagram list"): "I'm the Diagram Owner", "I'm a Collaborator", "locked
- * right now", and "recently modified".
+ * Diagram list"): "I'm the Diagram Owner", "I'm a Collaborator".
  */
 trait FiltersDiagramList
 {
@@ -31,26 +30,6 @@ trait FiltersDiagramList
         return $query->whereHas('collaborators', fn ($collaborators) => $collaborators
             ->where('user_id', $user->id)
             ->where('status', Collaborator::STATUS_APPROVED));
-    }
-
-    /**
-     * Filters to Diagrams currently under an active Editing Lock (issue #39,
-     * "locked right now") — the query-level equivalent of hasActiveLock(),
-     * since that method needs a loaded model to evaluate in PHP. Editing
-     * Locks remain held until explicitly released, regardless of activity.
-     */
-    public function scopeLockedNow(Builder $query): Builder
-    {
-        return $query->whereNotNull('locked_by');
-    }
-
-    /**
-     * Filters to Diagrams modified within the last $days days (issue #39,
-     * "recently modified").
-     */
-    public function scopeRecentlyModified(Builder $query, int $days = 7): Builder
-    {
-        return $query->where('updated_at', '>=', now()->subDays($days));
     }
 
     /**
