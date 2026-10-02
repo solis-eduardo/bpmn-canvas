@@ -56,12 +56,7 @@ class DiagramController extends Controller
     public function index(Request $request): View|RedirectResponse
     {
         if ($request->query->has('discover')) {
-            $query = $request->query();
-            $search = trim((string) ($query['q'] ?? $query['discover']));
-            unset($query['discover'], $query['page'], $query['discovery_page']);
-            $query = ['q' => $search] + $query;
-
-            return redirect()->route('diagrams.index', $query);
+            return redirect()->route('diagrams.index', DiagramListCriteria::unifiedSearchQuery($request));
         }
 
         $user = $request->user();

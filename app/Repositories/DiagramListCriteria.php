@@ -44,4 +44,19 @@ final readonly class DiagramListCriteria
             sort: DiagramListSort::fromRequest($request),
         );
     }
+
+    /**
+     * The request's query string with the legacy "discover" param folded into
+     * "q" (discovery is part of the unified search) and paging dropped.
+     *
+     * @return array<string, mixed>
+     */
+    public static function unifiedSearchQuery(Request $request): array
+    {
+        $query = $request->query();
+        $search = trim((string) ($query['q'] ?? $query['discover'] ?? ''));
+        unset($query['q'], $query['discover'], $query['page'], $query['discovery_page']);
+
+        return $search === '' ? $query : ['q' => $search] + $query;
+    }
 }
