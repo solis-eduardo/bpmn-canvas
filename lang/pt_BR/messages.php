@@ -25,7 +25,6 @@ return [
     'diagrams' => 'Diagramas',
     'workspaces' => 'Ambientes',
     'users' => 'Usuários',
-    'notification_preferences' => 'Preferências de e-mail',
 
     // Diagram list
     'home_greeting' => 'Olá, :name!',
