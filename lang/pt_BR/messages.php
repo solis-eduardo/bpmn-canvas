@@ -218,7 +218,6 @@ return [
     'add_member' => 'Adicionar membro',
     'remove_member' => 'Remover',
     'no_members_yet' => 'Nenhum Membro ainda.',
-    'rename' => 'Renomear',
     'cannot_remove_workspace_owner' => 'O dono do workspace não pode ser removido como Membro.',
     'transfer_ownership' => 'Transferir propriedade',
     'new_owner_email' => 'E-mail do novo dono',

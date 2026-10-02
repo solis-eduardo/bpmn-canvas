@@ -218,7 +218,6 @@ return [
     'add_member' => 'Añadir miembro',
     'remove_member' => 'Quitar',
     'no_members_yet' => 'Todavía no hay Miembros.',
-    'rename' => 'Renombrar',
     'cannot_remove_workspace_owner' => 'El Propietario del espacio de trabajo no puede ser quitado como Miembro.',
     'transfer_ownership' => 'Transferir propiedad',
     'new_owner_email' => 'Correo del nuevo propietario',
