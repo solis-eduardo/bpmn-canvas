@@ -238,5 +238,6 @@ return [
     'notification_diagram_ownership_transferred' => 'Agora você é o Proprietário do Diagrama :diagram.',
     'view_all_notifications' => 'Ver todas',
     'notification_history_heading' => 'Notificações',
+    'language' => 'Idioma',
 
 ];
