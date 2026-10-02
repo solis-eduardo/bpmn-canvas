@@ -102,6 +102,24 @@ class IconsTest extends TestCase
             ->assertSeeInOrder(['data-icon="search"', 'h-4 w-4 pointer-events-none'], false);
     }
 
+    public function test_workspace_search_icon_is_sized_like_other_inline_icons(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('workspaces.index'))
+            ->assertOk()
+            ->assertSeeInOrder(['data-icon="search"', 'h-4 w-4 pointer-events-none'], false);
+    }
+
+    public function test_users_search_icon_is_sized_like_other_inline_icons(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->get(route('admin.users.index'))
+            ->assertOk()
+            ->assertSeeInOrder(['data-icon="search"', 'h-4 w-4 pointer-events-none'], false);
+    }
+
     public function test_account_change_password_title_has_no_icon(): void
     {
         $user = User::factory()->create();
