@@ -143,7 +143,10 @@ class DiagramController extends Controller
 
         $versions->initialize($diagram, $request->user());
 
-        return redirect()->route('diagrams.show', $diagram->slug);
+        // "Save" opens the new Diagram in the Editor, "Save and exit" goes back to the list.
+        return $request->input('submit_action') === 'exit'
+            ? redirect()->route('diagrams.index')
+            : redirect()->route('diagrams.show', $diagram->slug);
     }
 
     public function show(Request $request, string $slug): View|RedirectResponse

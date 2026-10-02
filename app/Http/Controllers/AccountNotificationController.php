@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\RedirectsAfterSave;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
 class AccountNotificationController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function update(Request $request): RedirectResponse
     {
         $request->validate([
@@ -17,7 +20,6 @@ class AccountNotificationController extends Controller
             'email_notifications_enabled' => $request->boolean('email_notifications_enabled'),
         ]);
 
-        return redirect()->route('account.edit')
-            ->with('status', __('messages.notification_preferences_saved'));
+        return $this->afterSave($request, 'home', 'account.edit', status: __('messages.notification_preferences_saved'));
     }
 }

@@ -236,7 +236,68 @@ class DiagramTagTest extends TestCase
             ->assertSee($first->title)->assertSee($second->title);
     }
 
-    public function test_the_listing_offers_existing_tags_in_the_tom_select_picker(): void
+    public function test_the_edit_screen_lists_the_diagrams_tags_with_remove_actions_and_the_picker(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+        $tag = Tag::findOrCreate('Onboarding');
+        $diagram->attachTag($tag);
+        Tag::findOrCreate('Finance');
+
+        $response = $this->actingAs($owner)->get(route('diagrams.edit', $diagram->slug));
+
+        $response->assertOk();
+        $response->assertSee('Onboarding');
+        $response->assertSee(route('diagrams.tags.destroy', [$diagram->slug, $tag->id]), false);
+        $response->assertSee(route('diagrams.tags.store', $diagram->slug), false);
+        $response->assertSee('data-tag-select', false);
+        $response->assertSee('<option value="Finance">Finance</option>', false);
+        $response->assertSee('href="'.route('diagrams.show', $diagram->slug).'"', false);
+    }
+
+    public function test_the_edit_screen_is_refused_to_a_user_who_cannot_edit_the_diagram(): void
+    {
+        $diagram = Diagram::factory()->for(User::factory()->create(), 'author')->create();
+
+        $this->actingAs(User::factory()->create())->get(route('diagrams.edit', $diagram->slug))
+            ->assertForbidden();
+    }
+
+    public function test_applying_and_removing_a_tag_returns_to_the_edit_screen(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+
+        $this->actingAs($owner)->post("/diagrams/{$diagram->slug}/tags", ['name' => 'Back'])
+            ->assertRedirect(route('diagrams.edit', $diagram->slug));
+
+        $this->actingAs($owner)->delete("/diagrams/{$diagram->slug}/tags/".Tag::findFromString('Back')->id)
+            ->assertRedirect(route('diagrams.edit', $diagram->slug));
+    }
+
+    public function test_the_listing_no_longer_registers_tags_but_keeps_the_tag_filter(): void
+    {
+        $owner = User::factory()->create();
+        Diagram::factory()->for($owner, 'author')->create();
+        Tag::findOrCreate('Finance');
+
+        $response = $this->actingAs($owner)->get('/diagrams');
+
+        $response->assertOk();
+        $response->assertDontSee(__('messages.add_tag_placeholder'), false);
+        $response->assertSee(__('messages.filter_by_tag_placeholder'), false);
+    }
+
+    public function test_the_editor_links_to_the_tag_edit_screen_for_editors(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+
+        $this->actingAs($owner)->get(route('diagrams.show', $diagram->slug))
+            ->assertSee('href="'.route('diagrams.edit', $diagram->slug).'"', false);
+    }
+
+    public function test_the_listing_filter_offers_existing_tags_in_the_tom_select_picker(): void
     {
         $owner = User::factory()->create();
         $diagram = Diagram::factory()->for($owner, 'author')->create();
@@ -257,7 +318,7 @@ class DiagramTagTest extends TestCase
         $diagram = Diagram::factory()->for($owner, 'author')->create();
 
         $response = $this->actingAs($owner)
-            ->from('/diagrams')
+            ->from(route('diagrams.edit', $diagram->slug))
             ->followingRedirects()
             ->post("/diagrams/{$diagram->slug}/tags", ['name' => '', '_form' => "diagram-tag-{$diagram->id}"]);
 

@@ -125,32 +125,9 @@
                 </td>
                 <td class="px-4 py-3">
                     <div class="flex min-w-40 flex-wrap items-center gap-1.5">
-                    @php($canManageTags = auth()->user()->can('manageTags', $diagram))
-
                     @foreach ($diagram->tags as $diagramTag)
-                        <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">
-                            {{ $diagramTag->name }}
-                            @if ($canManageTags)
-                                <form method="POST" action="{{ route('diagrams.tags.destroy', [$diagram->slug, $diagramTag->id]) }}">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="text-gray-400 hover:text-red-600" aria-label="{{ __('messages.remove_tag') }}"><x-icon name="x-mark" class="h-3.5 w-3.5" /></button>
-                                </form>
-                            @endif
-                        </span>
+                        <span class="inline-flex items-center rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-700">{{ $diagramTag->name }}</span>
                     @endforeach
-
-                    @if ($canManageTags)
-                        <form method="POST" action="{{ route('diagrams.tags.store', $diagram->slug) }}" class="flex items-center gap-1">
-                            @csrf
-                            <x-tag-select
-                                :options="$tagNames"
-                                scope="diagram-tag-{{ $diagram->id }}"
-                                placeholder="{{ __('messages.add_tag_placeholder') }}"
-                            />
-                            <x-button type="submit" variant="secondary" size="sm"><x-icon name="tag" class="h-3.5 w-3.5" />{{ __('messages.add_tag') }}</x-button>
-                        </form>
-                    @endif
                     </div>
                 </td>
                 <td class="whitespace-nowrap px-4 py-3">

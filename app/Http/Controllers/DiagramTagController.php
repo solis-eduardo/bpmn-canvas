@@ -7,6 +7,7 @@ use App\Models\Tag;
 use App\Repositories\DiagramRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\View\View;
 
 class DiagramTagController extends Controller
 {
@@ -15,6 +16,22 @@ class DiagramTagController extends Controller
     public function __construct(
         private readonly DiagramRepository $diagrams,
     ) {}
+
+    /**
+     * The Diagram's edit screen, where its Tags are managed: the current Tags
+     * with a remove action, and the picker to apply one (issue #40). Same
+     * eligibility as applying a Tag.
+     */
+    public function edit(string $slug): View
+    {
+        $diagram = $this->resolveDiagram($slug);
+
+        $this->authorize('manageTags', $diagram);
+
+        $tagNames = Tag::query()->get()->map(fn (Tag $tag) => $tag->name)->sort(SORT_NATURAL | SORT_FLAG_CASE)->values();
+
+        return view('diagrams.edit', ['diagram' => $diagram->load('tags'), 'tagNames' => $tagNames]);
+    }
 
     /**
      * Applies a Tag to a Diagram: Diagram Owner, Collaborator, or Member of
@@ -34,7 +51,7 @@ class DiagramTagController extends Controller
 
         $diagram->attachTag(Tag::findOrCreate(trim($data['name'])));
 
-        return back();
+        return redirect()->route('diagrams.edit', $diagram->slug);
     }
 
     /**
@@ -50,6 +67,6 @@ class DiagramTagController extends Controller
 
         $diagram->detachTag($tag);
 
-        return back();
+        return redirect()->route('diagrams.edit', $diagram->slug);
     }
 }

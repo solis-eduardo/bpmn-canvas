@@ -68,6 +68,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/diagrams', [DiagramController::class, 'index'])->name('diagrams.index');
     Route::get('/diagrams/create', [DiagramController::class, 'create'])->name('diagrams.create');
     Route::post('/diagrams', [DiagramController::class, 'store'])->name('diagrams.store');
+    Route::get('/diagrams/{slug}/edit', [DiagramTagController::class, 'edit'])->name('diagrams.edit');
     Route::get('/diagrams/{slug}/content', [DiagramContentController::class, 'show'])->name('diagrams.content');
     Route::put('/diagrams/{slug}/content', [DiagramContentController::class, 'update'])->name('diagrams.save');
     Route::put('/diagrams/{slug}', [DiagramController::class, 'update'])->name('diagrams.rename');

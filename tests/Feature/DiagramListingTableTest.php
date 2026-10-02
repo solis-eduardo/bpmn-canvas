@@ -12,7 +12,7 @@ class DiagramListingTableTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_diagram_listing_is_a_semantic_table_with_all_record_details_and_tag_actions(): void
+    public function test_diagram_listing_is_a_semantic_table_with_all_record_details_and_read_only_tags(): void
     {
         $author = User::factory()->create(['name' => 'Original Diagram Author']);
         $owner = User::factory()->create(['name' => 'Current Diagram Owner']);
@@ -47,7 +47,8 @@ class DiagramListingTableTest extends TestCase
         $response->assertSee($editor->name);
         $response->assertSee('Finance');
         $response->assertSee(route('diagrams.show', $diagram->slug), false);
-        $response->assertSee(route('diagrams.tags.destroy', [$diagram->slug, $diagram->tags()->first()->id]), false);
+        $response->assertDontSee(route('diagrams.tags.destroy', [$diagram->slug, $diagram->tags()->first()->id]), false);
+        $response->assertDontSee(route('diagrams.tags.store', $diagram->slug), false);
         $response->assertSee('overflow-x-auto', false);
     }
 

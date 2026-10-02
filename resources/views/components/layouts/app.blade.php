@@ -12,7 +12,7 @@
 <body class="h-full font-sans text-gray-900 antialiased">
     <div class="{{ ($fluid ?? false) ? 'flex h-screen flex-col overflow-hidden' : 'min-h-full' }}">
         <header class="shrink-0 border-b border-gray-200 bg-white">
-            <div class="{{ ($fluid ?? false) ? 'mx-auto flex w-full max-w-6xl flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:px-6' : 'mx-auto flex '.$maxWidth.' items-center gap-4 px-4 py-3 sm:px-6' }}">
+            <div class="{{ ($fluid ?? false) ? 'flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:flex-nowrap sm:px-6' : 'mx-auto flex '.$maxWidth.' items-center gap-4 px-4 py-3 sm:px-6' }}">
                 <a href="{{ url('/home') }}" class="text-lg font-semibold text-gray-900">
                     {{ config('app.name') }}
                 </a>

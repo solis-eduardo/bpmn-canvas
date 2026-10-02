@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Http\Controllers\Concerns\RedirectsAfterSave;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Repositories\ListSort;
@@ -20,6 +21,8 @@ use Illuminate\View\View;
 
 class UserController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function __construct(
         private readonly UserRepository $users,
         private readonly UserSessionRevoker $sessionRevoker,
@@ -71,14 +74,14 @@ class UserController extends Controller
 
         // Created Users always start with local login; the Administrator can
         // switch the method afterwards, on the edit form (ADR-0015).
-        $this->users->create([
+        $created = $this->users->create([
             'name' => $data['name'],
             'email' => $data['email'],
             'login_method' => User::LOGIN_METHOD_LOCAL,
             'password' => Hash::make($data['password']),
         ]);
 
-        return back();
+        return $this->afterSave($request, 'admin.users.index', 'admin.users.edit', [$created]);
     }
 
     public function update(Request $request, User $user): RedirectResponse
@@ -110,7 +113,9 @@ class UserController extends Controller
 
         $user->save();
 
-        return $methodChanged ? $this->endSessionsAfterMethodChange($request, $user) : back();
+        return $methodChanged
+            ? $this->endSessionsAfterMethodChange($request, $user)
+            : $this->afterSave($request, 'admin.users.index', 'admin.users.edit', [$user]);
     }
 
     /**
@@ -122,7 +127,7 @@ class UserController extends Controller
         $this->sessionRevoker->revoke($user);
 
         if (! $user->is($request->user())) {
-            return back();
+            return $this->afterSave($request, 'admin.users.index', 'admin.users.edit', [$user]);
         }
 
         Auth::guard()->logout();
