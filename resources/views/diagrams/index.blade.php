@@ -12,12 +12,9 @@
             required
             class="min-w-[240px] flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
         >
-        <button
-            type="submit"
-            class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
-        >
+        <x-button type="submit">
             {{ __('messages.create_diagram') }}
-        </button>
+        </x-button>
     </form>
 
     <form method="GET" action="{{ route('diagrams.index') }}" class="mt-4 flex flex-wrap items-center gap-4">
@@ -156,15 +153,15 @@
                                 placeholder="{{ __('messages.add_tag_placeholder') }}"
                                 class="w-28 rounded border border-gray-300 px-1.5 py-0.5 text-xs shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             >
-                            <button type="submit" class="text-xs font-medium text-blue-600 hover:underline">{{ __('messages.add_tag') }}</button>
+                            <x-button type="submit" variant="secondary" size="sm">{{ __('messages.add_tag') }}</x-button>
                         </form>
                     @endif
                     </div>
                 </td>
                 <td class="whitespace-nowrap px-4 py-3">
-                    <a href="{{ route('diagrams.show', $diagram->slug) }}" class="font-medium text-blue-600 hover:text-blue-700 hover:underline">
+                    <x-button :href="route('diagrams.show', $diagram->slug)" variant="secondary" size="sm">
                         {{ __('messages.open_diagram') }}
-                    </a>
+                    </x-button>
                 </td>
             </tr>
             @endif
