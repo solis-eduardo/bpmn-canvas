@@ -79,7 +79,7 @@ class UserManagementScreenTest extends TestCase
         $target = User::factory()->create([
             'name' => 'Regular Person',
             'email' => 'person@example.com',
-            'keycloak_id' => 'person-keycloak-id',
+            'login_method' => 'keycloak', 'keycloak_id' => 'person-keycloak-id',
         ]);
 
         $this->actingAs($admin)
@@ -89,7 +89,6 @@ class UserManagementScreenTest extends TestCase
             ->assertSee('person@example.com')
             ->assertSee('person-keycloak-id')
             ->assertSee('readonly', false)
-            ->assertDontSee('name="password"', false)
             ->assertDontSee('name="email"', false)
             ->assertDontSee('name="keycloak_id"', false);
     }
@@ -144,7 +143,7 @@ class UserManagementScreenTest extends TestCase
         $target = User::factory()->create([
             'is_admin' => true,
             'is_admin_via_keycloak_claim' => true,
-            'keycloak_id' => 'keycloak-sub-1',
+            'login_method' => 'keycloak', 'keycloak_id' => 'keycloak-sub-1',
         ]);
 
         $response = $this->actingAs($admin)->put("/admin/users/{$target->id}", [

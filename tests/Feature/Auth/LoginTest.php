@@ -125,4 +125,30 @@ class LoginTest extends TestCase
         $response->assertOk();
         $response->assertDontSee(route('login.keycloak'), false);
     }
+
+    public function test_keycloak_user_cannot_log_in_locally_and_gets_the_generic_error(): void
+    {
+        $user = User::factory()->create([
+            'login_method' => 'keycloak',
+            'keycloak_id' => 'kc-sub',
+            'password' => 'kept-password',
+        ]);
+
+        $response = $this->from('/login')->post('/login', [
+            'email' => $user->email,
+            'password' => 'kept-password',
+        ]);
+
+        $response->assertSessionHasErrors(['email' => __('messages.invalid_credentials')]);
+        $this->assertGuest();
+    }
+
+    public function test_user_without_a_local_password_cannot_log_in_locally(): void
+    {
+        $user = User::factory()->create(['login_method' => 'keycloak', 'password' => null]);
+
+        $this->post('/login', ['email' => $user->email, 'password' => 'anything-at-all'])
+            ->assertSessionHasErrors('email');
+        $this->assertGuest();
+    }
 }

@@ -102,7 +102,7 @@ class KeycloakLoginTest extends TestCase
         $this->get('/login/keycloak/callback');
 
         $this->assertDatabaseHas('users', [
-            'keycloak_id' => 'keycloak-sub-2',
+            'login_method' => 'keycloak', 'keycloak_id' => 'keycloak-sub-2',
             'name' => 'Bruno Costa',
             'email' => 'bruno@example.com',
         ]);
@@ -156,7 +156,7 @@ class KeycloakLoginTest extends TestCase
     public function test_absence_of_admin_role_claim_never_revokes_a_manually_granted_admin_flag(): void
     {
         $user = User::factory()->create([
-            'keycloak_id' => 'keycloak-sub-6',
+            'login_method' => 'keycloak', 'keycloak_id' => 'keycloak-sub-6',
             'is_admin' => true,
         ]);
 
@@ -241,7 +241,7 @@ class KeycloakLoginTest extends TestCase
 
     public function test_login_by_linked_sub_works_even_when_email_is_unverified_but_gets_no_admin_elevation(): void
     {
-        $user = User::factory()->create(['keycloak_id' => 'linked-sub']);
+        $user = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'linked-sub']);
 
         $this->mockSocialiteUser($this->fakeSocialiteUser(
             'linked-sub', $user->name, $user->email, ['bpmn-admin'], emailVerified: false,
@@ -255,7 +255,7 @@ class KeycloakLoginTest extends TestCase
 
     public function test_email_of_an_account_linked_to_another_keycloak_identity_is_never_relinked(): void
     {
-        $owner = User::factory()->create(['email' => 'taken@example.com', 'keycloak_id' => 'original-sub']);
+        $owner = User::factory()->create(['email' => 'taken@example.com', 'login_method' => 'keycloak', 'keycloak_id' => 'original-sub']);
 
         $this->mockSocialiteUser($this->fakeSocialiteUser('other-sub', 'Other', 'taken@example.com'));
 
@@ -269,7 +269,7 @@ class KeycloakLoginTest extends TestCase
     public function test_keycloak_login_adds_the_user_to_a_workspace_linked_to_one_of_their_groups(): void
     {
         $owner = User::factory()->create();
-        $member = User::factory()->create(['keycloak_id' => 'keycloak-sub-8']);
+        $member = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'keycloak-sub-8']);
         $workspace = Workspace::factory()->create([
             'owner_id' => $owner->id,
             'keycloak_group' => '/finance',
@@ -295,7 +295,7 @@ class KeycloakLoginTest extends TestCase
     public function test_keycloak_login_removes_group_membership_when_the_user_no_longer_has_the_linked_group(): void
     {
         $owner = User::factory()->create();
-        $member = User::factory()->create(['keycloak_id' => 'keycloak-sub-9']);
+        $member = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'keycloak-sub-9']);
         $workspace = Workspace::factory()->create([
             'owner_id' => $owner->id,
             'keycloak_group' => '/finance',
@@ -320,7 +320,7 @@ class KeycloakLoginTest extends TestCase
     public function test_keycloak_login_preserves_group_membership_when_the_groups_claim_is_missing(): void
     {
         $owner = User::factory()->create();
-        $member = User::factory()->create(['keycloak_id' => 'keycloak-sub-12']);
+        $member = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'keycloak-sub-12']);
         $workspace = Workspace::factory()->create([
             'owner_id' => $owner->id,
             'keycloak_group' => '/finance',
@@ -347,7 +347,7 @@ class KeycloakLoginTest extends TestCase
     public function test_keycloak_group_reconciliation_preserves_a_manual_membership_even_when_the_user_is_in_the_group(): void
     {
         $owner = User::factory()->create();
-        $member = User::factory()->create(['keycloak_id' => 'keycloak-sub-10']);
+        $member = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'keycloak-sub-10']);
         $workspace = Workspace::factory()->create([
             'owner_id' => $owner->id,
             'keycloak_group' => '/finance',
@@ -388,7 +388,7 @@ class KeycloakLoginTest extends TestCase
     public function test_manually_adding_a_group_member_preserves_the_membership_after_they_leave_the_group(): void
     {
         $owner = User::factory()->create();
-        $member = User::factory()->create(['keycloak_id' => 'keycloak-sub-11']);
+        $member = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'keycloak-sub-11']);
         $workspace = Workspace::factory()->create([
             'owner_id' => $owner->id,
             'keycloak_group' => '/finance',
@@ -410,5 +410,54 @@ class KeycloakLoginTest extends TestCase
             'user_id' => $member->id,
             'origin' => 'manual',
         ]);
+    }
+
+    public function test_verified_keycloak_login_converts_a_local_account_to_keycloak(): void
+    {
+        $local = User::factory()->create(['email' => 'lia@example.com', 'login_method' => 'local']);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser('sub-convert', $local->name, 'lia@example.com'));
+
+        $this->get('/login/keycloak/callback');
+
+        $this->assertAuthenticatedAs($local->fresh());
+        $this->assertSame('keycloak', $local->fresh()->login_method);
+        $this->assertSame('sub-convert', $local->fresh()->keycloak_id);
+    }
+
+    public function test_first_verified_login_links_a_keycloak_account_created_by_an_administrator(): void
+    {
+        $pending = User::factory()->create([
+            'email' => 'pending@example.com', 'login_method' => 'keycloak', 'password' => null,
+        ]);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser('sub-pending', $pending->name, 'pending@example.com'));
+
+        $this->get('/login/keycloak/callback');
+
+        $this->assertDatabaseCount('users', 1);
+        $this->assertAuthenticatedAs($pending->fresh());
+        $this->assertSame('sub-pending', $pending->fresh()->keycloak_id);
+    }
+
+    public function test_unverified_email_does_not_convert_a_local_account(): void
+    {
+        $local = User::factory()->create(['email' => 'lia@example.com', 'login_method' => 'local']);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser('sub-x', 'X', 'lia@example.com', emailVerified: false));
+
+        $this->get('/login/keycloak/callback')->assertRedirect('/login');
+
+        $this->assertGuest();
+        $this->assertSame('local', $local->fresh()->login_method);
+    }
+
+    public function test_provisioned_account_records_the_keycloak_login_method(): void
+    {
+        $this->mockSocialiteUser($this->fakeSocialiteUser('sub-new', 'New Person', 'newbie@example.com'));
+
+        $this->get('/login/keycloak/callback');
+
+        $this->assertDatabaseHas('users', ['email' => 'newbie@example.com', 'login_method' => 'keycloak']);
     }
 }

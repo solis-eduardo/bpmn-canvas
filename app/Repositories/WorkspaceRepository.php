@@ -41,7 +41,7 @@ class WorkspaceRepository
     }
 
     /**
-     * One page of Workspaces, by name, with owner and Members loaded: every
+     * One page of Workspaces, by name, with owner loaded and Members counted: every
      * Workspace for an Administrator, otherwise only those $user is
      * a Member of; narrowed by $filters.
      *
@@ -52,24 +52,33 @@ class WorkspaceRepository
         $query = $user->is_admin ? Workspace::query() : $user->workspaces();
 
         return $query
-            ->with(['owner', 'members.user'])
+            ->with('owner')
+            ->withCount('members')
+            ->withExists(['members as is_member' => fn (Builder $m) => $m->where('user_id', $user->id)])
             ->when($filters->name !== '', fn (Builder $q) => $q->where('workspaces.name', 'like', self::like($filters->name)))
-            ->when($filters->owner !== '', fn (Builder $q) => $q->whereHas('owner', fn (Builder $u) => self::matchUser($u, $filters->owner)))
-            ->when($filters->member !== '', fn (Builder $q) => $q->whereHas('members.user', fn (Builder $u) => self::matchUser($u, $filters->member)))
-            ->when($filters->diagram !== '', fn (Builder $q) => $q->whereHas('diagrams', fn (Builder $d) => $d
-                ->where(fn (Builder $w) => $w
-                    ->where('title', 'like', self::like($filters->diagram))
-                    ->orWhere('slug', 'like', self::like($filters->diagram)))))
+            ->when($filters->owner !== null, fn (Builder $q) => $q->where('workspaces.owner_id', $filters->owner))
+            ->when($filters->member !== null, fn (Builder $q) => $q->whereHas('members', fn (Builder $m) => $m->where('user_id', $filters->member)))
             ->orderBy('workspaces.name')
             ->orderBy('workspaces.id')
             ->paginate(20);
     }
 
-    private static function matchUser(Builder $users, string $term): void
+    /**
+     * Workspaces whose name contains $term, by name: every Workspace for an
+     * Administrator, otherwise only those $user is a Member of. Returns the
+     * first $limit plus the total number of matches.
+     *
+     * @return array{items: Collection<int, Workspace>, total: int}
+     */
+    public function matchingName(User $user, string $term, int $limit): array
     {
-        $users->where(fn (Builder $w) => $w
-            ->where('name', 'like', self::like($term))
-            ->orWhere('email', 'like', self::like($term)));
+        $query = ($user->is_admin ? Workspace::query() : $user->workspaces())
+            ->where('workspaces.name', 'like', self::like($term));
+
+        return [
+            'items' => (clone $query)->orderBy('workspaces.name')->orderBy('workspaces.id')->limit($limit)->get(),
+            'total' => $query->count(),
+        ];
     }
 
     private static function like(string $term): string

@@ -35,7 +35,7 @@ class AccountController extends Controller
     {
         $user = $request->user();
 
-        if ($user->keycloak_id) {
+        if ($user->usesKeycloak()) {
             abort(403, __('messages.keycloak_password_managed_externally'));
         }
 

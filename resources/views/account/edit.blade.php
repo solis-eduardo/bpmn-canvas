@@ -26,11 +26,11 @@
                     class="rounded-md border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500"
                 >
             </div>
-            @if ($user->keycloak_id)
+            @if ($user->usesKeycloak())
                 <div class="flex flex-col gap-1">
                     <span class="text-sm font-medium text-gray-700">{{ __('messages.login_method') }}</span>
                     <span class="text-sm text-gray-600">
-                        {{ __('messages.login_method_keycloak') }} ({{ $user->keycloak_id }})
+                        {{ __('messages.login_method_keycloak') }}@if ($user->keycloak_id) ({{ $user->keycloak_id }})@endif
                     </span>
                 </div>
             @endif
@@ -82,9 +82,8 @@
             </form>
         </section>
 
-        @unless ($user->keycloak_id)
+        @unless ($user->usesKeycloak())
             <section class="mt-8">
-                <x-icon name="lock-closed" />
                 <h2 class="text-lg font-semibold text-gray-900">{{ __('messages.change_password') }}</h2>
                 <form method="POST" action="{{ route('account.password.update') }}" class="mt-4 space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
                     @csrf

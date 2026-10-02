@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
+use App\Models\User;
+use App\Support\KeycloakConfig;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,20 +16,8 @@ class LoginController extends Controller
     public function create(): View
     {
         return view('auth.login', [
-            'keycloakConfigured' => $this->keycloakConfigured(),
+            'keycloakConfigured' => KeycloakConfig::isConfigured(),
         ]);
-    }
-
-    /**
-     * Keycloak is considered configured once the OAuth client credentials and
-     * the realm base URL it redirects to are all present (see
-     * config/services.php, sourced from KEYCLOAK_* env vars).
-     */
-    private function keycloakConfigured(): bool
-    {
-        return filled(config('services.keycloak.client_id'))
-            && filled(config('services.keycloak.client_secret'))
-            && filled(config('services.keycloak.base_url'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -36,6 +26,10 @@ class LoginController extends Controller
             'email' => ['required', 'email'],
             'password' => ['required'],
         ]);
+
+        // A `keycloak` User never signs in locally (ADR-0015); the same
+        // generic error as a wrong password avoids revealing the method.
+        $credentials['login_method'] = User::LOGIN_METHOD_LOCAL;
 
         if (! Auth::attempt($credentials)) {
             throw ValidationException::withMessages([
