@@ -66,7 +66,7 @@
                         id="email_notifications_enabled"
                         name="email_notifications_enabled"
                         value="1"
-                        @checked(old('email_notifications_enabled', $emailNotificationsEnabled))
+                        @checked(old('email_notifications_enabled', $user->email_notifications_enabled))
                         class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                     >
                     <span>

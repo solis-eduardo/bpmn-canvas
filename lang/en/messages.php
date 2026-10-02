@@ -25,6 +25,7 @@ return [
     'diagrams' => 'Diagrams',
     'workspaces' => 'Workspaces',
     'users' => 'Users',
+
     // Diagram list
     'home_greeting' => 'Welcome, :name!',
     'home_recent_diagrams' => 'Recently modified diagrams',
