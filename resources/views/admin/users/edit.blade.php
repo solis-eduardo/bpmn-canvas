@@ -1,5 +1,5 @@
 <x-layouts.app :title="__('messages.edit_user')">
-    <x-form.page :title="__('messages.edit_user').': '.$user->name" :back-href="route('admin.users.index')" :back-label="__('messages.back_to_users')">
+    <x-form.page :title="__('messages.edit_user').': '.$user->name" :back-href="route('admin.users.index')">
         <x-form.card :action="route('admin.users.update', $user)" method="PUT">
             <x-form.field name="name" :label="__('messages.name')" value="{{ old('name', $user->name) }}" required />
             <div class="flex flex-col gap-1">
@@ -35,10 +35,7 @@
                 @endif
             </div>
             <x-form.field name="password" type="password" :label="__('messages.set_new_password')" :hint="__('messages.leave_blank_to_keep_password')" autocomplete="new-password" />
-            <x-button type="submit">
-                <x-icon name="save" />
-                {{ __('messages.save') }}
-            </x-button>
+            <x-form.actions />
         </x-form.card>
     </x-form.page>
 </x-layouts.app>

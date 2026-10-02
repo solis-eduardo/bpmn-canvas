@@ -3,7 +3,7 @@
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/diagram-js.css') }}">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-js.css') }}">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-font/css/bpmn-embedded.css') }}">
-        <link rel="stylesheet" href="{{ asset('assets/app.css') }}">
+        @vite('resources/css/editor.css')
         <script type="importmap" nonce="{{ $cspNonce }}">
             {
                 "imports": {
@@ -18,7 +18,7 @@
         <div class="flex flex-wrap items-center gap-2">
             <x-button :href="route('diagrams.index')" id="btn-back-to-list" variant="secondary">
                 <x-icon name="arrow-left" />
-                {{ __('messages.back_to_diagrams') }}
+                {{ __('messages.back') }}
             </x-button>
             @php($isHolder = (int) $diagram->locked_by === auth()->id())
             @if ($isHolder || (auth()->user()->is_admin && $diagram->locked_by !== null))
@@ -31,6 +31,18 @@
                     {{ __($isHolder ? 'messages.release_lock' : 'messages.force_release_lock') }}
                 </button>
             @endif
+
+            @can('manageTags', $diagram)
+                <a
+                    href="{{ route('diagrams.edit', $diagram->slug) }}"
+                    id="btn-edit-tags"
+                    class="flex h-8 w-8 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    title="{{ __('messages.edit_diagram_tags') }}"
+                    aria-label="{{ __('messages.edit_diagram_tags') }}"
+                >
+                    <x-icon name="tag" class="h-5 w-5" />
+                </a>
+            @endcan
 
             {{-- Entry point for the Version history panel (see #10). --}}
             <button

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\RedirectsAfterSave;
 use App\Repositories\UserRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -9,6 +10,8 @@ use Illuminate\View\View;
 
 class AccountController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function __construct(
         private readonly UserRepository $users,
     ) {}
@@ -28,7 +31,7 @@ class AccountController extends Controller
 
         $request->user()->update($data);
 
-        return redirect()->route('account.edit');
+        return $this->afterSave($request, 'home', 'account.edit');
     }
 
     public function updatePassword(Request $request): RedirectResponse
@@ -48,6 +51,6 @@ class AccountController extends Controller
 
         $this->users->invalidateOtherSessions($user, $request->session()->getId());
 
-        return redirect()->route('account.edit');
+        return $this->afterSave($request, 'home', 'account.edit');
     }
 }

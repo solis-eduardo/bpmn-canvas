@@ -217,7 +217,7 @@ class WorkspaceTest extends TestCase
         $this->actingAs($admin)->put("/workspaces/{$workspace->id}", [
             'name' => 'Renamed',
             'keycloak_group' => '/finance',
-        ])->assertRedirect(route('workspaces.index'));
+        ])->assertRedirect(route('workspaces.edit', $workspace));
 
         $this->assertSame('/finance', $workspace->fresh()->keycloak_group);
         $this->assertSame('Renamed', $workspace->fresh()->name);
@@ -230,7 +230,7 @@ class WorkspaceTest extends TestCase
         $this->addMember($workspace, $owner);
 
         $this->actingAs($owner)->put("/workspaces/{$workspace->id}", ['name' => 'Renamed'])
-            ->assertRedirect(route('workspaces.index'));
+            ->assertRedirect(route('workspaces.edit', $workspace));
 
         $this->assertSame('/finance', $workspace->fresh()->keycloak_group);
     }
@@ -247,7 +247,7 @@ class WorkspaceTest extends TestCase
         $this->actingAs($admin)->put("/workspaces/{$workspace->id}", [
             'name' => $workspace->name,
             'keycloak_group' => '',
-        ])->assertRedirect(route('workspaces.index'));
+        ])->assertRedirect(route('workspaces.edit', $workspace));
 
         $this->assertNull($workspace->fresh()->keycloak_group);
     }
@@ -268,7 +268,7 @@ class WorkspaceTest extends TestCase
         $admin = User::factory()->create(['is_admin' => true]);
 
         $this->actingAs($admin)->post('/workspaces', ['name' => 'Linked', 'keycloak_group' => '/finance'])
-            ->assertRedirect(route('workspaces.index'));
+            ->assertRedirect(route('workspaces.edit', Workspace::where('name', 'Linked')->firstOrFail()));
 
         $this->assertDatabaseHas('workspaces', ['name' => 'Linked', 'keycloak_group' => '/finance']);
     }
@@ -535,5 +535,30 @@ class WorkspaceTest extends TestCase
 
         $this->actingAs($user)->get('/workspaces?name=Mine')
             ->assertOk()->assertSee('Mine')->assertDontSee('Foreign Mine');
+    }
+
+    public function test_save_and_exit_returns_to_the_listing_after_creating_and_updating(): void
+    {
+        $owner = User::factory()->create();
+
+        $this->actingAs($owner)->post('/workspaces', ['name' => 'Exited', 'submit_action' => 'exit'])
+            ->assertRedirect(route('workspaces.index'))
+            ->assertSessionHas('status');
+
+        $workspace = Workspace::where('name', 'Exited')->firstOrFail();
+
+        $this->actingAs($owner)->put("/workspaces/{$workspace->id}", ['name' => 'Exited again', 'submit_action' => 'exit'])
+            ->assertRedirect(route('workspaces.index'));
+
+        $this->assertSame('Exited again', $workspace->fresh()->name);
+    }
+
+    public function test_plain_save_stays_on_the_workspace_form_with_a_flash(): void
+    {
+        $owner = User::factory()->create();
+
+        $this->actingAs($owner)->post('/workspaces', ['name' => 'Stayed', 'submit_action' => 'save'])
+            ->assertRedirect(route('workspaces.edit', Workspace::where('name', 'Stayed')->firstOrFail()))
+            ->assertSessionHas('status', __('messages.saved'));
     }
 }

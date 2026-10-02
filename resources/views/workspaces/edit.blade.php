@@ -1,5 +1,5 @@
 <x-layouts.app :title="__('messages.edit_workspace')">
-    <x-form.page :title="__('messages.edit_workspace')" :back-href="route('workspaces.index')" :back-label="__('messages.back_to_workspaces')">
+    <x-form.page :title="__('messages.edit_workspace')" :back-href="route('workspaces.index')">
         <x-form.card :action="route('workspaces.update', $workspace)" method="PUT">
             <x-form.field name="name" :label="__('messages.workspace_name')" value="{{ old('name', $workspace->name) }}" required />
             @can('manageKeycloakGroup', $workspace)
@@ -10,10 +10,7 @@
                     value="{{ old('keycloak_group', $workspace->keycloak_group) }}"
                 />
             @endcan
-            <x-button type="submit">
-                <x-icon name="save" />
-                {{ __('messages.save') }}
-            </x-button>
+            <x-form.actions />
         </x-form.card>
 
         <section class="mt-8">

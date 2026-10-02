@@ -1,5 +1,5 @@
 <x-layouts.app :title="__('messages.profile')">
-    <x-form.page :title="__('messages.profile')" :back-href="route('home')" :back-label="__('messages.back_to_home')">
+    <x-form.page :title="__('messages.profile')" :back-href="route('home')">
         <x-form.card :action="route('account.update')" method="PUT">
             <x-form.field name="name" :label="__('messages.name')" value="{{ old('name', $user->name) }}" required />
             <div class="flex flex-col gap-1">
@@ -20,17 +20,8 @@
                     </span>
                 </div>
             @endif
-            <x-button type="submit">
-                <x-icon name="save" />
-                {{ __('messages.save') }}
-            </x-button>
+            <x-form.actions />
         </x-form.card>
-
-        @if (session('status'))
-            <p class="mt-6 rounded-md bg-green-50 px-4 py-3 text-sm text-green-700" role="status">
-                {{ session('status') }}
-            </p>
-        @endif
 
         <x-form.card :action="route('account.notifications.update')" method="PUT" :heading="__('messages.notification_preferences_heading')">
             <label for="email_notifications_enabled" class="flex items-start gap-3">
@@ -55,10 +46,7 @@
                 <p id="email_notifications_enabled-error" role="alert" class="text-sm text-red-600">{{ $message }}</p>
             @enderror
 
-            <x-button type="submit">
-                <x-icon name="save" />
-                {{ __('messages.save') }}
-            </x-button>
+            <x-form.actions />
         </x-form.card>
 
         @unless ($user->usesKeycloak())
@@ -66,10 +54,7 @@
                 <x-form.field name="current_password" type="password" :label="__('messages.current_password')" required autocomplete="current-password" />
                 <x-form.field name="password" type="password" :label="__('messages.new_password')" required autocomplete="new-password" />
                 <x-form.field name="password_confirmation" type="password" :label="__('messages.confirm_new_password')" required autocomplete="new-password" />
-                <x-button type="submit">
-                    <x-icon name="save" />
-                    {{ __('messages.change_password') }}
-                </x-button>
+                <x-form.actions label="{{ __('messages.change_password') }}" />
             </x-form.card>
         @endunless
     </x-form.page>

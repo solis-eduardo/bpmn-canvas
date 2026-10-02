@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\RedirectsAfterSave;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Repositories\ListSort;
@@ -15,6 +16,8 @@ use Illuminate\View\View;
 
 class WorkspaceController extends Controller
 {
+    use RedirectsAfterSave;
+
     public function __construct(
         private readonly WorkspaceRepository $workspaces,
         private readonly UserRepository $users,
@@ -77,9 +80,9 @@ class WorkspaceController extends Controller
             $this->authorize('manageKeycloakGroup', new Workspace);
         }
 
-        $this->workspaces->create($data['name'], $request->user(), $data['keycloak_group'] ?? null);
+        $workspace = $this->workspaces->create($data['name'], $request->user(), $data['keycloak_group'] ?? null);
 
-        return redirect()->route('workspaces.index');
+        return $this->afterSave($request, 'workspaces.index', 'workspaces.edit', [$workspace]);
     }
 
     /**
@@ -133,7 +136,7 @@ class WorkspaceController extends Controller
 
         $workspace->update(['name' => $data['name']]);
 
-        return redirect()->route('workspaces.index');
+        return $this->afterSave($request, 'workspaces.index', 'workspaces.edit', [$workspace]);
     }
 
     /**

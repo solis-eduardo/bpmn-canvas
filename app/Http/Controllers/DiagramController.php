@@ -85,7 +85,7 @@ class DiagramController extends Controller
             fn (Diagram $diagram) => $diagram->setAttribute('is_discoverable', isset($discoverableIdSet[$diagram->id]))
         );
 
-        $tagNames = Tag::query()->get()->map(fn (Tag $t) => $t->name)->sort(SORT_NATURAL | SORT_FLAG_CASE)->values();
+        $tagNames = Tag::sortedNames();
 
         $users = $this->users->allOrderedByName()->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name])->all();
         $search = $criteria->search;
@@ -140,7 +140,10 @@ class DiagramController extends Controller
 
         $versions->initialize($diagram, $request->user());
 
-        return redirect()->route('diagrams.show', $diagram->slug);
+        // "Save" opens the new Diagram in the Editor, "Save and exit" goes back to the list.
+        return $request->input('submit_action') === 'exit'
+            ? redirect()->route('diagrams.index')
+            : redirect()->route('diagrams.show', $diagram->slug);
     }
 
     public function show(Request $request, string $slug): View|RedirectResponse
