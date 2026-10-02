@@ -12,7 +12,7 @@ class LanguageSelectorTest extends TestCase
 
         $response->assertOk()
             ->assertSee('🇺🇸', false)->assertSee('English')
-            ->assertSee('🇧🇷', false)->assertSee('Português (Brasil)')
+            ->assertSee('🇧🇷', false)->assertSee('Português')
             ->assertSee('🇪🇸', false)->assertSee('Español');
     }
 
@@ -27,7 +27,7 @@ class LanguageSelectorTest extends TestCase
     public function test_selector_has_an_accessible_label_translated_to_the_locale(): void
     {
         $this->withSession(['locale' => 'pt_BR'])->get('/login')
-            ->assertSee('aria-label="Idioma: Português (Brasil)"', false);
+            ->assertSee('aria-label="Idioma: Português"', false);
         $this->withSession(['locale' => 'en'])->get('/login')
             ->assertSee('aria-label="Language: English"', false);
     }

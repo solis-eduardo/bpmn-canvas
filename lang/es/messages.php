@@ -249,4 +249,13 @@ return [
     'filter_workspace_member' => 'Miembro',
     'filter_workspace_diagram' => 'Diagrama',
     'no_workspaces_match_filters' => 'Ningún Workspace coincide con los filtros.',
+    'search_placeholder' => 'Buscar diagramas, espacios de trabajo y notificaciones',
+    'search_button' => 'Buscar',
+    'search_results_for' => 'Resultados para ":term"',
+    'search_results_heading' => 'Resultados de la búsqueda',
+    'search_no_results' => 'Sin resultados.',
+    'search_diagrams' => 'Diagramas',
+    'search_workspaces' => 'Espacios de trabajo',
+    'search_notifications' => 'Notificaciones',
+    'search_see_all' => 'Ver todos (:count)',
 ];

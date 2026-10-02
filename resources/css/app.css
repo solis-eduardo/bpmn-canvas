@@ -19,3 +19,7 @@ select[aria-invalid='true']:focus,
 textarea[aria-invalid='true']:focus {
     --tw-ring-color: var(--color-red-500);
 }
+
+.ts-wrapper.ts-invalid .ts-control {
+    border-color: var(--color-red-500);
+}

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Diagram;
+use App\Models\Tag;
 use App\Repositories\DiagramListCriteria;
 use App\Repositories\DiagramRepository;
 use App\Repositories\VersionRepository;
@@ -82,6 +83,8 @@ class DiagramController extends Controller
             fn (Diagram $diagram) => $diagram->setAttribute('is_discoverable', isset($discoverableIdSet[$diagram->id]))
         );
 
+        $tagNames = Tag::query()->get()->map(fn (Tag $t) => $t->name)->sort(SORT_NATURAL | SORT_FLAG_CASE)->values();
+
         $search = $criteria->search;
         $tag = $criteria->tag;
         $sort = $criteria->sort->column;
@@ -102,6 +105,7 @@ class DiagramController extends Controller
             'direction',
             'workspaceFilter',
             'workspaces',
+            'tagNames',
         ));
     }
 

@@ -63,6 +63,24 @@ class WorkspaceRepository
             ->paginate(20);
     }
 
+    /**
+     * Workspaces whose name contains $term, by name: every Workspace for an
+     * Administrator, otherwise only those $user is a Member of. Returns the
+     * first $limit plus the total number of matches.
+     *
+     * @return array{items: Collection<int, Workspace>, total: int}
+     */
+    public function matchingName(User $user, string $term, int $limit): array
+    {
+        $query = ($user->is_admin ? Workspace::query() : $user->workspaces())
+            ->where('workspaces.name', 'like', self::like($term));
+
+        return [
+            'items' => (clone $query)->orderBy('workspaces.name')->orderBy('workspaces.id')->limit($limit)->get(),
+            'total' => $query->count(),
+        ];
+    }
+
     private static function like(string $term): string
     {
         return '%'.$term.'%';

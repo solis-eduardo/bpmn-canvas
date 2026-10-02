@@ -75,10 +75,47 @@ class IconsTest extends TestCase
             ->assertSee('data-icon="transfer"', false);
 
         $this->actingAs($user)->get(route('account.edit'))
-            ->assertSee('data-icon="save"', false)
-            ->assertSee('data-icon="lock-closed"', false);
+            ->assertSee('data-icon="save"', false);
 
         $this->actingAs($user)->get('/home')
             ->assertSee('data-icon="search"', false);
+    }
+
+    public function test_home_search_shortcut_shows_a_single_search_icon(): void
+    {
+        $user = User::factory()->create();
+
+        $html = $this->actingAs($user)->get('/home')->assertOk()->getContent();
+
+        preg_match('#<a href="'.preg_quote(route('diagrams.index'), '#').'".*?</a>#s', $html, $shortcut);
+
+        $this->assertNotEmpty($shortcut);
+        $this->assertSame(1, substr_count($shortcut[0], 'data-icon="search"'));
+    }
+
+    public function test_diagram_search_icon_is_sized_like_other_inline_icons(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('diagrams.index'))
+            ->assertOk()
+            ->assertSeeInOrder(['data-icon="search"', 'h-4 w-4 pointer-events-none'], false);
+    }
+
+    public function test_account_change_password_title_has_no_icon(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get(route('account.edit'))
+            ->assertOk()
+            ->assertDontSee('data-icon="lock-closed"', false);
+    }
+
+    public function test_login_button_displays_an_icon_inside_the_form_only(): void
+    {
+        $html = $this->get('/login')->assertOk()->getContent();
+
+        $this->assertSame(1, substr_count($html, 'data-icon="login"'));
+        $this->assertGreaterThan(strpos($html, '<body'), strpos($html, 'data-icon="login"'));
     }
 }

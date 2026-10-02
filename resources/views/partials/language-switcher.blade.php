@@ -1,7 +1,7 @@
 @php
     $languages = [
         'en' => ['flag' => '🇺🇸', 'name' => 'English'],
-        'pt_BR' => ['flag' => '🇧🇷', 'name' => 'Português (Brasil)'],
+        'pt_BR' => ['flag' => '🇧🇷', 'name' => 'Português'],
         'es' => ['flag' => '🇪🇸', 'name' => 'Español'],
     ];
     $current = $languages[app()->getLocale()] ?? $languages['en'];
