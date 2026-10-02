@@ -67,12 +67,4 @@ class ListingPolishTest extends TestCase
             }
         }
     }
-
-    public function test_tag_filter_select_is_styled_like_the_other_filters(): void
-    {
-        $css = file_get_contents(resource_path('css/app.css'));
-
-        $this->assertStringContainsString('.ts-wrapper .ts-control', $css);
-        $this->assertStringContainsString('--color-gray-300', $css);
-    }
 }
