@@ -11,9 +11,16 @@ use Illuminate\Http\Request;
  */
 final readonly class DiagramListCriteria
 {
+    /**
+     * @param  list<string>  $tags  Tag names a Diagram must all carry
+     * @param  ?int  $ownerId  the Diagram Owner to narrow to, if any
+     * @param  ?int  $authorId  the Author to narrow to, if any
+     */
     public function __construct(
         public string $search = '',
-        public string $tag = '',
+        public array $tags = [],
+        public ?int $ownerId = null,
+        public ?int $authorId = null,
         public ?int $workspaceId = null,
         public bool $withoutWorkspace = false,
         public bool $owner = false,
@@ -24,8 +31,9 @@ final readonly class DiagramListCriteria
     ) {}
 
     /**
-     * Reads the list's query string: "q", "tag", "workspace" ("none" or a
-     * Workspace id) and the "owner"/"collaborator"/"locked"/"recent" flags, and
+     * Reads the list's query string: "q", "tags[]" (a Diagram must carry every
+     * Tag), "owner_id" and "author_id" (one User each), "workspace" ("none" or
+     * a Workspace id) and the "owner"/"collaborator"/"locked"/"recent" flags, and
      * "sort"/"direction" (falling back to the title, ascending).
      */
     public static function fromRequest(Request $request): self
@@ -34,7 +42,9 @@ final readonly class DiagramListCriteria
 
         return new self(
             search: trim((string) $request->query('q', '')),
-            tag: trim((string) $request->query('tag', '')),
+            tags: self::tagsFrom($request),
+            ownerId: self::userIdFrom($request, 'owner_id'),
+            authorId: self::userIdFrom($request, 'author_id'),
             workspaceId: ctype_digit($workspace) && (int) $workspace > 0 ? (int) $workspace : null,
             withoutWorkspace: $workspace === 'none',
             owner: $request->boolean('owner'),
@@ -43,6 +53,29 @@ final readonly class DiagramListCriteria
             recent: $request->boolean('recent'),
             sort: DiagramListSort::fromRequest($request),
         );
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function tagsFrom(Request $request): array
+    {
+        $tags = $request->query('tags', []);
+
+        return collect(is_array($tags) ? $tags : [$tags])
+            ->filter(fn ($tag) => is_string($tag))
+            ->map(fn (string $tag) => trim($tag))
+            ->filter(fn (string $tag) => $tag !== '')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    private static function userIdFrom(Request $request, string $key): ?int
+    {
+        $value = $request->query($key);
+
+        return is_string($value) && ctype_digit($value) && (int) $value > 0 ? (int) $value : null;
     }
 
     /**

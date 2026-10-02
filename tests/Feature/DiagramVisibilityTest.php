@@ -8,6 +8,7 @@ use App\Models\Share;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
@@ -81,7 +82,9 @@ class DiagramVisibilityTest extends TestCase
             'slug' => $match->slug,
             'q' => 'discovery',
         ]), false);
-        $response->assertDontSee($author->name);
+        // The author's name is listed in the Author filter; it must not leak
+        // into the result rows.
+        $this->assertStringNotContainsString($author->name, Str::between($response->getContent(), 'id="diagram-search-results"', '</table>'));
         $response->assertDontSee($hidden->title);
         $response->assertDontSee('href="'.route('diagrams.show', $match->slug).'"', false);
     }
@@ -93,13 +96,13 @@ class DiagramVisibilityTest extends TestCase
         $this->actingAs($user)
             ->get('/diagrams?'.http_build_query([
                 'discover' => 'loan',
-                'tag' => 'finance',
+                'tags' => ['finance'],
                 'owner' => '1',
                 'workspace' => 'none',
             ]))
             ->assertRedirect(route('diagrams.index', [
                 'q' => 'loan',
-                'tag' => 'finance',
+                'tags' => ['finance'],
                 'owner' => '1',
                 'workspace' => 'none',
             ]));

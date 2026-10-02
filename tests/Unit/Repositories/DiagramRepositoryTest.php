@@ -154,7 +154,7 @@ class DiagramRepositoryTest extends TestCase
         $this->assertSame([$inWorkspace->id], $ids(new DiagramListCriteria(search: 'bill', workspaceId: $workspace->id)));
         $this->assertEqualsCanonicalizing([$plain->id, $locked->id, $tagged->id], $ids(new DiagramListCriteria(withoutWorkspace: true)));
         $this->assertSame([$locked->id], $ids(new DiagramListCriteria(locked: true)));
-        $this->assertSame([$tagged->id], $ids(new DiagramListCriteria(tag: 'hr')));
+        $this->assertSame([$tagged->id], $ids(new DiagramListCriteria(tags: ['hr'])));
         $this->assertCount(4, $ids(new DiagramListCriteria(recent: true)));
     }
 
@@ -200,11 +200,11 @@ class DiagramRepositoryTest extends TestCase
 
     public function test_criteria_are_read_from_the_query_string(): void
     {
-        $request = Request::create('/diagrams', 'GET', ['q' => ' bill ', 'tag' => 'hr', 'workspace' => '7', 'owner' => '1', 'recent' => '1']);
+        $request = Request::create('/diagrams', 'GET', ['q' => ' bill ', 'tags' => [' hr ', 'hr', 'ops', ''], 'owner_id' => '3', 'author_id' => 'x', 'workspace' => '7', 'owner' => '1', 'recent' => '1']);
 
         $criteria = DiagramListCriteria::fromRequest($request);
 
-        $this->assertEquals(new DiagramListCriteria(search: 'bill', tag: 'hr', workspaceId: 7, owner: true, recent: true), $criteria);
+        $this->assertEquals(new DiagramListCriteria(search: 'bill', tags: ['hr', 'ops'], ownerId: 3, workspaceId: 7, owner: true, recent: true), $criteria);
         $this->assertTrue(DiagramListCriteria::fromRequest(Request::create('/diagrams', 'GET', ['workspace' => 'none']))->withoutWorkspace);
         $this->assertNull(DiagramListCriteria::fromRequest(Request::create('/diagrams', 'GET', ['workspace' => 'all']))->workspaceId);
     }

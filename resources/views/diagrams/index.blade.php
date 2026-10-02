@@ -26,13 +26,27 @@
             </label>
         @endforeach
 
-        <input
-            type="text"
-            name="tag"
-            value="{{ $tag }}"
+        <x-tag-select
+            name="tags[]"
+            :options="$tagNames"
+            :selected="$selectedTags"
+            multiple
+            :creatable="false"
             placeholder="{{ __('messages.filter_by_tag_placeholder') }}"
-            class="w-40 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
+        />
+
+        @foreach (['owner_id' => ['filter_by_diagram_owner', $ownerId], 'author_id' => ['filter_by_author', $authorId]] as $field => [$labelKey, $selectedId])
+            <select
+                name="{{ $field }}"
+                aria-label="{{ __('messages.'.$labelKey) }}"
+                class="rounded-md border border-gray-300 px-2 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+                <option value="">{{ __('messages.'.$labelKey) }}</option>
+                @foreach ($users as $listedUser)
+                    <option value="{{ $listedUser['id'] }}" @selected($selectedId === $listedUser['id'])>{{ $listedUser['name'] }}</option>
+                @endforeach
+            </select>
+        @endforeach
 
         <label class="flex items-center gap-1.5 text-sm text-gray-700">
             {{ __('messages.workspace_filter_label') }}
@@ -162,7 +176,7 @@
         @empty
             <tr>
                 <td colspan="8" class="px-4 py-6 text-center text-sm text-gray-500">
-                {{ ($search !== '' || $tag !== '' || in_array(true, $filters, true)) ? __('messages.no_diagrams_match_search') : __('messages.no_diagrams_yet') }}
+                {{ ($search !== '' || $selectedTags !== [] || $ownerId !== null || $authorId !== null || in_array(true, $filters, true)) ? __('messages.no_diagrams_match_search') : __('messages.no_diagrams_yet') }}
                 </td>
             </tr>
         @endforelse
