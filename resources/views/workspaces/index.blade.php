@@ -5,13 +5,15 @@
 
     <form method="POST" action="{{ route('workspaces.store') }}" class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
         @csrf
-        <input
+        <x-form.input
             type="text"
             name="name"
+            scope="workspace-create"
+            wrapper-class="flex flex-col gap-1 sm:flex-1"
             placeholder="{{ __('messages.workspace_name') }}"
             required
-            class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:flex-1"
-        >
+            class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+        />
         <button
             type="submit"
             class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
@@ -19,14 +21,6 @@
             {{ __('messages.create_workspace') }}
         </button>
     </form>
-
-    @if ($errors->any())
-        <ul class="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            @foreach ($errors->all() as $error)
-                <li>{{ $error }}</li>
-            @endforeach
-        </ul>
-    @endif
 
     <div class="mt-8 flex flex-col gap-6">
         @forelse ($workspaces as $workspace)
@@ -43,13 +37,15 @@
                             <form method="POST" action="{{ route('workspaces.update', $workspace) }}" class="flex items-center gap-2">
                                 @csrf
                                 @method('PUT')
-                                <input
+                                <x-form.input
                                     type="text"
                                     name="name"
-                                    value="{{ $workspace->name }}"
+                                    scope="workspace-rename-{{ $workspace->id }}"
+                                    wrapper-class="flex flex-col gap-1"
+                                    value="{{ old('name', $workspace->name) }}"
                                     required
                                     class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                >
+                                />
                                 <button type="submit" class="text-sm font-medium text-blue-600 hover:text-blue-700">
                                     {{ __('messages.rename') }}
                                 </button>
@@ -58,13 +54,15 @@
                             <form method="POST" action="{{ route('workspaces.owner.transfer', $workspace) }}" class="flex items-center gap-2">
                                 @csrf
                                 @method('PUT')
-                                <input
+                                <x-form.input
                                     type="email"
                                     name="email"
+                                    scope="workspace-owner-{{ $workspace->id }}"
+                                    wrapper-class="flex flex-col gap-1"
                                     placeholder="{{ __('messages.new_owner_email') }}"
                                     required
                                     class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                >
+                                />
                                 <button type="submit" class="text-sm font-medium text-blue-600 hover:text-blue-700">
                                     {{ __('messages.transfer_ownership') }}
                                 </button>
@@ -98,14 +96,16 @@
                         <label for="keycloak-group-{{ $workspace->id }}" class="text-sm font-medium text-gray-700">
                             {{ __('messages.keycloak_group') }}
                         </label>
-                        <input
+                        <x-form.input
                             id="keycloak-group-{{ $workspace->id }}"
                             type="text"
                             name="keycloak_group"
-                            value="{{ $workspace->keycloak_group }}"
+                            scope="workspace-keycloak-{{ $workspace->id }}"
+                            wrapper-class="flex flex-col gap-1"
+                            value="{{ old('keycloak_group', $workspace->keycloak_group) }}"
                             placeholder="{{ __('messages.keycloak_group_placeholder') }}"
-                            class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:flex-1"
-                        >
+                            class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
                         <button type="submit" class="text-sm font-medium text-blue-600 hover:text-blue-700">
                             {{ __('messages.update_keycloak_group') }}
                         </button>
@@ -138,13 +138,15 @@
                     @if ($canManage)
                         <form method="POST" action="{{ route('workspaces.members.store', $workspace) }}" class="mt-4 flex flex-col gap-2 sm:flex-row">
                             @csrf
-                            <input
+                            <x-form.input
                                 type="email"
                                 name="email"
+                                scope="workspace-member-{{ $workspace->id }}"
+                                wrapper-class="flex flex-col gap-1"
                                 placeholder="{{ __('messages.member_email') }}"
                                 required
-                                class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:flex-1"
-                            >
+                                class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
                             <button type="submit" class="rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200">
                                 {{ __('messages.add_member') }}
                             </button>

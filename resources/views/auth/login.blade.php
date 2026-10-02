@@ -29,7 +29,7 @@
                         @csrf
                         <div class="flex flex-col gap-1">
                             <label for="email" class="text-xs font-medium text-gray-500">{{ __('messages.email') }}</label>
-                            <input
+                            <x-form.input
                                 type="email"
                                 id="email"
                                 name="email"
@@ -37,10 +37,7 @@
                                 required
                                 autofocus
                                 class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            >
-                            @error('email')
-                                <p role="alert" class="text-sm text-red-600">{{ $message }}</p>
-                            @enderror
+                            />
                         </div>
 
                         <div class="flex flex-col gap-1">

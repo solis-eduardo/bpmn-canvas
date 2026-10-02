@@ -11,10 +11,6 @@
         @csrf
         @method('PUT')
 
-        @error('email_notifications_enabled')
-            <p class="mb-4 text-sm text-red-700" role="alert">{{ $message }}</p>
-        @enderror
-
         <label for="email_notifications_enabled" class="flex items-start gap-3">
             <input
                 type="checkbox"
@@ -22,6 +18,7 @@
                 name="email_notifications_enabled"
                 value="1"
                 @checked($emailNotificationsEnabled)
+                @error('email_notifications_enabled') aria-invalid="true" aria-describedby="email_notifications_enabled-error" @enderror
                 class="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
             >
             <span>
@@ -31,6 +28,9 @@
                 </span>
             </span>
         </label>
+        @error('email_notifications_enabled')
+            <p id="email_notifications_enabled-error" role="alert" class="mt-2 text-sm text-red-600">{{ $message }}</p>
+        @enderror
 
         <button
             type="submit"
