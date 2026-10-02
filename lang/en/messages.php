@@ -233,5 +233,6 @@ return [
     'notification_diagram_ownership_transferred' => 'You are now the Diagram Owner of :diagram.',
     'view_all_notifications' => 'View all',
     'notification_history_heading' => 'Notifications',
+    'language' => 'Language',
 
 ];
