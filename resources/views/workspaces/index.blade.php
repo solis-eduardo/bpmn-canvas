@@ -58,13 +58,11 @@
                             <form method="POST" action="{{ route('workspaces.owner.transfer', $workspace) }}" class="flex items-center gap-2">
                                 @csrf
                                 @method('PUT')
-                                <input
-                                    type="email"
-                                    name="email"
-                                    placeholder="{{ __('messages.new_owner_email') }}"
-                                    required
-                                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                >
+                                <x-user-select
+                                    :options="$ownerCandidates[$workspace->id] ?? []"
+                                    :label="__('messages.select_new_owner')"
+                                    :search-placeholder="__('messages.search_users')"
+                                />
                                 <button type="submit" class="text-sm font-medium text-blue-600 hover:text-blue-700">
                                     {{ __('messages.transfer_ownership') }}
                                 </button>
@@ -138,13 +136,11 @@
                     @if ($canManage)
                         <form method="POST" action="{{ route('workspaces.members.store', $workspace) }}" class="mt-4 flex flex-col gap-2 sm:flex-row">
                             @csrf
-                            <input
-                                type="email"
-                                name="email"
-                                placeholder="{{ __('messages.member_email') }}"
-                                required
-                                class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:flex-1"
-                            >
+                            <x-user-select
+                                :options="$memberCandidates[$workspace->id] ?? []"
+                                :label="__('messages.select_member')"
+                                :search-placeholder="__('messages.search_users')"
+                            />
                             <button type="submit" class="rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200">
                                 {{ __('messages.add_member') }}
                             </button>

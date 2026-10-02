@@ -252,4 +252,61 @@ class WorkspaceTest extends TestCase
         $response->assertRedirect();
         $this->assertDatabaseMissing('workspaces', ['id' => $workspace->id]);
     }
+
+    public function test_workspace_owner_picks_candidates_from_existing_users_excluding_current_members(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $candidate = User::factory()->create(['name' => 'Candidate Person', 'email' => 'candidate@example.test']);
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
+
+        $response = $this->actingAs($owner)->get('/workspaces');
+
+        $response->assertOk();
+        $response->assertViewHas('memberCandidates', function (array $byWorkspace) use ($workspace, $candidate, $owner, $member) {
+            $ids = collect($byWorkspace[$workspace->id])->pluck('id');
+
+            return $ids->contains($candidate->id)
+                && ! $ids->contains($owner->id)
+                && ! $ids->contains($member->id);
+        });
+        $response->assertViewHas('ownerCandidates', function (array $byWorkspace) use ($workspace, $candidate, $owner, $member) {
+            $ids = collect($byWorkspace[$workspace->id])->pluck('id');
+
+            return $ids->contains($candidate->id)
+                && $ids->contains($member->id)
+                && ! $ids->contains($owner->id);
+        });
+        $response->assertSee('Candidate Person');
+        $response->assertSee('candidate@example.test');
+    }
+
+    public function test_a_plain_member_gets_no_candidate_list(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        User::factory()->create(['email' => 'hidden@example.test']);
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
+
+        $response = $this->actingAs($member)->get('/workspaces');
+
+        $response->assertOk();
+        $response->assertDontSee('hidden@example.test');
+    }
+
+    public function test_adding_or_transferring_to_a_user_id_that_does_not_exist_is_rejected(): void
+    {
+        $owner = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $this->addMember($workspace, $owner);
+
+        $this->actingAs($owner)->post("/workspaces/{$workspace->id}/members", ['user_id' => 999999])
+            ->assertSessionHasErrors('user_id');
+        $this->actingAs($owner)->put("/workspaces/{$workspace->id}/owner", ['user_id' => 999999])
+            ->assertSessionHasErrors('user_id');
+    }
 }
