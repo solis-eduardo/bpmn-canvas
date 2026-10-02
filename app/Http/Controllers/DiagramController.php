@@ -90,9 +90,9 @@ class DiagramController extends Controller
 
         $users = $this->users->allOrderedByName()->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name])->all();
         $search = $criteria->search;
-        $selectedTags = $criteria->tags;
-        $ownerId = $criteria->ownerId;
-        $authorId = $criteria->authorId;
+        $selectedTags = $criteria->facets->tags;
+        $ownerId = $criteria->facets->ownerId;
+        $authorId = $criteria->facets->authorId;
         $sort = $criteria->sort->column;
         $direction = $criteria->sort->direction;
         $filters = [

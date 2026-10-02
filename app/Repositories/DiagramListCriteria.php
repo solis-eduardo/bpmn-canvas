@@ -11,16 +11,9 @@ use Illuminate\Http\Request;
  */
 final readonly class DiagramListCriteria
 {
-    /**
-     * @param  list<string>  $tags  Tag names a Diagram must all carry
-     * @param  ?int  $ownerId  the Diagram Owner to narrow to, if any
-     * @param  ?int  $authorId  the Author to narrow to, if any
-     */
     public function __construct(
         public string $search = '',
-        public array $tags = [],
-        public ?int $ownerId = null,
-        public ?int $authorId = null,
+        public DiagramListFacets $facets = new DiagramListFacets,
         public ?int $workspaceId = null,
         public bool $withoutWorkspace = false,
         public bool $owner = false,
@@ -42,9 +35,11 @@ final readonly class DiagramListCriteria
 
         return new self(
             search: trim((string) $request->query('q', '')),
-            tags: self::tagsFrom($request),
-            ownerId: self::userIdFrom($request, 'owner_id'),
-            authorId: self::userIdFrom($request, 'author_id'),
+            facets: new DiagramListFacets(
+                tags: self::tagsFrom($request),
+                ownerId: self::userIdFrom($request, 'owner_id'),
+                authorId: self::userIdFrom($request, 'author_id'),
+            ),
             workspaceId: ctype_digit($workspace) && (int) $workspace > 0 ? (int) $workspace : null,
             withoutWorkspace: $workspace === 'none',
             owner: $request->boolean('owner'),

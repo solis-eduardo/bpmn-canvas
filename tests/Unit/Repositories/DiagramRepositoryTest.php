@@ -9,6 +9,7 @@ use App\Models\Tag;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Repositories\DiagramListCriteria;
+use App\Repositories\DiagramListFacets;
 use App\Repositories\DiagramRepository;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -154,7 +155,7 @@ class DiagramRepositoryTest extends TestCase
         $this->assertSame([$inWorkspace->id], $ids(new DiagramListCriteria(search: 'bill', workspaceId: $workspace->id)));
         $this->assertEqualsCanonicalizing([$plain->id, $locked->id, $tagged->id], $ids(new DiagramListCriteria(withoutWorkspace: true)));
         $this->assertSame([$locked->id], $ids(new DiagramListCriteria(locked: true)));
-        $this->assertSame([$tagged->id], $ids(new DiagramListCriteria(tags: ['hr'])));
+        $this->assertSame([$tagged->id], $ids(new DiagramListCriteria(facets: new DiagramListFacets(tags: ['hr']))));
         $this->assertCount(4, $ids(new DiagramListCriteria(recent: true)));
     }
 
@@ -204,7 +205,7 @@ class DiagramRepositoryTest extends TestCase
 
         $criteria = DiagramListCriteria::fromRequest($request);
 
-        $this->assertEquals(new DiagramListCriteria(search: 'bill', tags: ['hr', 'ops'], ownerId: 3, workspaceId: 7, owner: true, recent: true), $criteria);
+        $this->assertEquals(new DiagramListCriteria(search: 'bill', facets: new DiagramListFacets(tags: ['hr', 'ops'], ownerId: 3), workspaceId: 7, owner: true, recent: true), $criteria);
         $this->assertTrue(DiagramListCriteria::fromRequest(Request::create('/diagrams', 'GET', ['workspace' => 'none']))->withoutWorkspace);
         $this->assertNull(DiagramListCriteria::fromRequest(Request::create('/diagrams', 'GET', ['workspace' => 'all']))->workspaceId);
     }
