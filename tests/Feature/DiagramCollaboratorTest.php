@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -57,7 +57,7 @@ class DiagramCollaboratorTest extends TestCase
         ]);
 
         $response->assertCreated();
-        $response->assertJsonPath('status', DiagramCollaborator::STATUS_APPROVED);
+        $response->assertJsonPath('status', Collaborator::STATUS_APPROVED);
     }
 
     public function test_the_author_alone_cannot_invite_a_collaborator_directly_once_ownership_diverges(): void
@@ -84,10 +84,10 @@ class DiagramCollaboratorTest extends TestCase
         $requester = User::factory()->create();
         $diagram = Diagram::factory()->for($author, 'author')->for($owner, 'owner')->create();
 
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $diagram->id,
             'user_id' => $requester->id,
-            'status' => DiagramCollaborator::STATUS_REQUESTED,
+            'status' => Collaborator::STATUS_REQUESTED,
         ]);
 
         $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/collaborators/{$requester->id}")
@@ -95,7 +95,7 @@ class DiagramCollaboratorTest extends TestCase
 
         $response = $this->actingAs($owner)->putJson("/diagrams/{$diagram->slug}/collaborators/{$requester->id}");
         $response->assertOk();
-        $response->assertJsonPath('status', DiagramCollaborator::STATUS_APPROVED);
+        $response->assertJsonPath('status', Collaborator::STATUS_APPROVED);
     }
 
     public function test_only_the_diagram_owner_or_an_admin_removes_a_collaborator(): void
@@ -105,19 +105,19 @@ class DiagramCollaboratorTest extends TestCase
         $collaborator = User::factory()->create();
         $diagram = Diagram::factory()->for($author, 'author')->for($owner, 'owner')->create();
 
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $diagram->id,
             'user_id' => $collaborator->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
 
         $this->actingAs($author)->deleteJson("/diagrams/{$diagram->slug}/collaborators/{$collaborator->id}")
             ->assertForbidden();
-        $this->assertDatabaseHas('diagram_collaborators', ['user_id' => $collaborator->id]);
+        $this->assertDatabaseHas('collaborators', ['user_id' => $collaborator->id]);
 
         $this->actingAs($owner)->deleteJson("/diagrams/{$diagram->slug}/collaborators/{$collaborator->id}")
             ->assertOk();
-        $this->assertDatabaseMissing('diagram_collaborators', ['user_id' => $collaborator->id]);
+        $this->assertDatabaseMissing('collaborators', ['user_id' => $collaborator->id]);
     }
 
     public function test_inviting_by_email_returns_identical_response_for_existing_and_non_existing_email(): void

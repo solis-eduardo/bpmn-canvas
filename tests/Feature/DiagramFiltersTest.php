@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -31,17 +31,17 @@ class DiagramFiltersTest extends TestCase
         $user = User::factory()->create();
 
         $approved = Diagram::factory()->create(['title' => 'Approved collaboration']);
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $approved->id,
             'user_id' => $user->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
 
         $requested = Diagram::factory()->create(['title' => 'Pending collaboration']);
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $requested->id,
             'user_id' => $user->id,
-            'status' => DiagramCollaborator::STATUS_REQUESTED,
+            'status' => Collaborator::STATUS_REQUESTED,
         ]);
 
         $unrelated = Diagram::factory()->create(['title' => 'Unrelated diagram']);
@@ -107,10 +107,10 @@ class DiagramFiltersTest extends TestCase
         $owned = Diagram::factory()->for($user, 'author')->create(['title' => 'Owned by me']);
 
         $collaborated = Diagram::factory()->create(['title' => 'Collaborating on this']);
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $collaborated->id,
             'user_id' => $user->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
 
         $unrelated = Diagram::factory()->create(['title' => 'Neither owned nor collaborated']);

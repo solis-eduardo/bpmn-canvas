@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -31,7 +31,7 @@ class CollaborationTest extends TestCase
         ]);
 
         $response->assertCreated();
-        $this->assertDatabaseHas('diagram_collaborators', [
+        $this->assertDatabaseHas('collaborators', [
             'diagram_id' => $diagram->id,
             'user_id' => $collaborator->id,
             'status' => 'approved',
@@ -51,7 +51,7 @@ class CollaborationTest extends TestCase
         ]);
 
         $response->assertCreated();
-        $this->assertDatabaseHas('diagram_collaborators', [
+        $this->assertDatabaseHas('collaborators', [
             'diagram_id' => $diagram->id,
             'user_id' => $collaborator->id,
             'status' => 'approved',
@@ -69,7 +69,7 @@ class CollaborationTest extends TestCase
         ]);
 
         $response->assertCreated();
-        $this->assertDatabaseHas('diagram_collaborators', [
+        $this->assertDatabaseHas('collaborators', [
             'diagram_id' => $diagram->id,
             'user_id' => $requester->id,
             'status' => 'requested',
@@ -99,7 +99,7 @@ class CollaborationTest extends TestCase
         $requester = User::factory()->create();
         $diagram = Diagram::factory()->for($author, 'author')->create();
 
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $diagram->id,
             'user_id' => $requester->id,
             'status' => 'requested',
@@ -112,7 +112,7 @@ class CollaborationTest extends TestCase
         $approve = $this->actingAs($author)->putJson("/diagrams/{$diagram->slug}/collaborators/{$requester->id}");
         $approve->assertOk();
 
-        $this->assertDatabaseHas('diagram_collaborators', [
+        $this->assertDatabaseHas('collaborators', [
             'diagram_id' => $diagram->id,
             'user_id' => $requester->id,
             'status' => 'approved',
@@ -127,7 +127,7 @@ class CollaborationTest extends TestCase
         $requester = User::factory()->create();
         $diagram = Diagram::factory()->for($author, 'author')->create();
 
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $diagram->id,
             'user_id' => $requester->id,
             'status' => 'requested',
@@ -136,7 +136,7 @@ class CollaborationTest extends TestCase
         $response = $this->actingAs($author)->deleteJson("/diagrams/{$diagram->slug}/collaborators/{$requester->id}");
         $response->assertOk();
 
-        $this->assertDatabaseMissing('diagram_collaborators', [
+        $this->assertDatabaseMissing('collaborators', [
             'diagram_id' => $diagram->id,
             'user_id' => $requester->id,
         ]);
@@ -156,7 +156,7 @@ class CollaborationTest extends TestCase
         ]);
 
         $response->assertCreated();
-        $this->assertDatabaseHas('diagram_collaborators', [
+        $this->assertDatabaseHas('collaborators', [
             'diagram_id' => $diagram->id,
             'user_id' => $collaborator->id,
             'status' => 'approved',
@@ -169,7 +169,7 @@ class CollaborationTest extends TestCase
         $collaborator = User::factory()->create();
         $diagram = Diagram::factory()->for($author, 'author')->create();
 
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $diagram->id,
             'user_id' => $collaborator->id,
             'status' => 'approved',
@@ -180,7 +180,7 @@ class CollaborationTest extends TestCase
         $response = $this->actingAs($author)->deleteJson("/diagrams/{$diagram->slug}/collaborators/{$collaborator->id}");
         $response->assertOk();
 
-        $this->assertDatabaseMissing('diagram_collaborators', [
+        $this->assertDatabaseMissing('collaborators', [
             'diagram_id' => $diagram->id,
             'user_id' => $collaborator->id,
         ]);
@@ -224,7 +224,7 @@ class CollaborationTest extends TestCase
         ]);
 
         $response->assertForbidden();
-        $this->assertDatabaseMissing('diagram_collaborators', [
+        $this->assertDatabaseMissing('collaborators', [
             'diagram_id' => $diagram->id,
             'user_id' => $someoneElse->id,
         ]);
@@ -237,7 +237,7 @@ class CollaborationTest extends TestCase
         $collaborator = User::factory()->create();
         $diagram = Diagram::factory()->for($author, 'author')->create();
 
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $diagram->id,
             'user_id' => $collaborator->id,
             'status' => 'requested',
@@ -256,20 +256,20 @@ class CollaborationTest extends TestCase
         $collaborator = User::factory()->create();
         $diagram = Diagram::factory()->for($author, 'author')->create();
 
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $diagram->id,
             'user_id' => $collaborator->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
 
         $this->actingAs($collaborator)->postJson("/diagrams/{$diagram->slug}/collaborators", [
             'user_id' => $collaborator->id,
-        ])->assertCreated()->assertJson(['status' => DiagramCollaborator::STATUS_APPROVED]);
+        ])->assertCreated()->assertJson(['status' => Collaborator::STATUS_APPROVED]);
 
-        $this->assertDatabaseHas('diagram_collaborators', [
+        $this->assertDatabaseHas('collaborators', [
             'diagram_id' => $diagram->id,
             'user_id' => $collaborator->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
     }
 }

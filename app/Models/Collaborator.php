@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable(['diagram_id', 'user_id', 'status'])]
-class DiagramCollaborator extends Model
+class Collaborator extends Model
 {
-    protected $table = 'diagram_collaborators';
+    protected $table = 'collaborators';
 
     public const STATUS_APPROVED = 'approved';
 

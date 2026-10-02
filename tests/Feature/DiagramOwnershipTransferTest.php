@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -46,10 +46,10 @@ class DiagramOwnershipTransferTest extends TestCase
         $this->assertSame($newOwner->id, $diagram->owner_id);
         $this->assertSame($owner->id, $diagram->author_id, 'the Author never changes');
 
-        $this->assertDatabaseHas('diagram_collaborators', [
+        $this->assertDatabaseHas('collaborators', [
             'diagram_id' => $diagram->id,
             'user_id' => $owner->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
 
         $this->assertNewOwnerIsNotified($newOwner, $diagram);
@@ -76,7 +76,7 @@ class DiagramOwnershipTransferTest extends TestCase
         $diagram->refresh();
         $this->assertSame($newOwner->id, $diagram->owner_id);
 
-        $this->assertDatabaseMissing('diagram_collaborators', [
+        $this->assertDatabaseMissing('collaborators', [
             'diagram_id' => $diagram->id,
             'user_id' => $owner->id,
         ]);
@@ -100,10 +100,10 @@ class DiagramOwnershipTransferTest extends TestCase
         $diagram->refresh();
         $this->assertSame($newOwner->id, $diagram->owner_id);
 
-        $this->assertDatabaseHas('diagram_collaborators', [
+        $this->assertDatabaseHas('collaborators', [
             'diagram_id' => $diagram->id,
             'user_id' => $owner->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
 
         $this->assertNewOwnerIsNotified($newOwner, $diagram);
@@ -123,7 +123,7 @@ class DiagramOwnershipTransferTest extends TestCase
 
         $response->assertOk();
 
-        $this->assertDatabaseMissing('diagram_collaborators', [
+        $this->assertDatabaseMissing('collaborators', [
             'diagram_id' => $diagram->id,
             'user_id' => $owner->id,
         ]);
@@ -170,10 +170,10 @@ class DiagramOwnershipTransferTest extends TestCase
         $newOwner = User::factory()->create();
         $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
 
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $diagram->id,
             'user_id' => $collaborator->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
 
         $response = $this->actingAs($collaborator)->putJson("/diagrams/{$diagram->slug}/owner", [
@@ -189,10 +189,10 @@ class DiagramOwnershipTransferTest extends TestCase
         $newOwner = User::factory()->create();
         $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
 
-        DiagramCollaborator::create([
+        Collaborator::create([
             'diagram_id' => $diagram->id,
             'user_id' => $newOwner->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
 
         $response = $this->actingAs($owner)->putJson("/diagrams/{$diagram->slug}/owner", [
@@ -201,7 +201,7 @@ class DiagramOwnershipTransferTest extends TestCase
 
         $response->assertOk();
 
-        $this->assertDatabaseMissing('diagram_collaborators', [
+        $this->assertDatabaseMissing('collaborators', [
             'diagram_id' => $diagram->id,
             'user_id' => $newOwner->id,
         ]);

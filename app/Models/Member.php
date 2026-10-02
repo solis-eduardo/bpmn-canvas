@@ -7,9 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 #[Fillable(['workspace_id', 'user_id', 'origin'])]
-class WorkspaceMember extends Model
+class Member extends Model
 {
-    protected $table = 'workspace_members';
+    protected $table = 'members';
 
     public const ORIGIN_MANUAL = 'manual';
 

@@ -38,8 +38,16 @@ Authenticated interface for creating/editing a Diagram (bpmn-js Modeler). Access
 Read-only interface for viewing a Diagram by anyone with a valid Share link (not expired, not revoked), without authentication. Exports PNG/SVG/BPMN only if the Share allows download (`allow_download`).
 _Avoid_: Viewer (without qualifying "public")
 
-**Editing Lock**:
-State of a Diagram while it's held for editing by someone who can edit it, which prevents anyone else from opening the Editor at the same time. One User can hold Editing Locks on multiple Diagrams. Shown as an indicator in the Diagram listing (indication only, doesn't block the listing itself). Navigation, closing the Editor, and inactivity do not release the Lock: only the holder can explicitly release it, or an Administrator can explicitly force-release it. Anyone who tries to open the Editor of a locked Diagram is blocked, sees who holds the Lock, and is offered the option to create a copy (Fork). Anyone eligible to edit can request the Lock; the holder is notified, but the request never transfers the Lock automatically, including after 30 seconds. The requester remains blocked until the holder or an Administrator explicitly releases it.
+**Lock**:
+State of a Diagram while it's held for editing by someone who can edit it, which prevents anyone else from opening the Editor at the same time. One User can hold Locks on multiple Diagrams. Shown as an indicator in the Diagram listing (indication only, doesn't block the listing itself). Navigation, closing the Editor, and inactivity do not release the Lock: only the holder can explicitly release it, or an Administrator can explicitly force-release it. Anyone who tries to open the Editor of a locked Diagram is blocked, sees who holds the Lock, and is offered the option to create a copy (Fork). Anyone eligible to edit can request the Lock; the holder is notified, but the request never transfers the Lock automatically on its own, including after 30 seconds — the holder or an Administrator may deliberately act on it with a Transfer. The requester remains blocked until the holder or an Administrator explicitly releases or transfers it.
+_Avoid_: Editing Lock (just "Lock")
+
+**Heartbeat**:
+A periodic renewal of a Lock, sent by its holder's open Editor to signal it's still in use. Purely a technical/implementation mechanism, not a decision point: it never changes who holds the Lock, grants it, or releases it.
+
+**Transfer (of a Lock)**:
+A deliberate act by the current holder or an Administrator that hands the Lock directly to a chosen User eligible to edit the Diagram, skipping separate release+acquire steps. May respond to an existing request from that User, or be spontaneous (no prior request). Never automatic and never triggered by elapsed time — it always requires the holder or an Administrator to explicitly pick the recipient.
+_Avoid_: Lock request (a request only notifies; only a Transfer changes the holder)
 
 **Fork**:
 A new, independent Diagram created from another one's content at the moment someone runs into an Editing Lock. Has its own Slug, and the Author and Diagram Owner become whoever forked it; whoever forks chooses which Workspace (among those they're a Member of) the Fork is created in, or none; the origin can be kept as informational metadata, with no functional link (there's no merge between a Fork and the original).

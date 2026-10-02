@@ -197,7 +197,7 @@ class KeycloakLoginTest extends TestCase
 
         $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
 
-        $this->assertDatabaseHas('workspace_members', [
+        $this->assertDatabaseHas('members', [
             'workspace_id' => $workspace->id,
             'user_id' => $member->id,
             'origin' => 'group',
@@ -223,7 +223,7 @@ class KeycloakLoginTest extends TestCase
 
         $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
 
-        $this->assertDatabaseMissing('workspace_members', [
+        $this->assertDatabaseMissing('members', [
             'workspace_id' => $workspace->id,
             'user_id' => $member->id,
         ]);
@@ -249,7 +249,7 @@ class KeycloakLoginTest extends TestCase
 
         $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
 
-        $this->assertDatabaseHas('workspace_members', [
+        $this->assertDatabaseHas('members', [
             'workspace_id' => $workspace->id,
             'user_id' => $member->id,
             'origin' => 'group',
@@ -276,7 +276,7 @@ class KeycloakLoginTest extends TestCase
 
         $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
 
-        $this->assertDatabaseHas('workspace_members', [
+        $this->assertDatabaseHas('members', [
             'workspace_id' => $workspace->id,
             'user_id' => $member->id,
             'origin' => 'manual',
@@ -290,7 +290,7 @@ class KeycloakLoginTest extends TestCase
         ));
         $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
 
-        $this->assertDatabaseHas('workspace_members', [
+        $this->assertDatabaseHas('members', [
             'workspace_id' => $workspace->id,
             'user_id' => $member->id,
             'origin' => 'manual',
@@ -317,7 +317,7 @@ class KeycloakLoginTest extends TestCase
 
         $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
 
-        $this->assertDatabaseHas('workspace_members', [
+        $this->assertDatabaseHas('members', [
             'workspace_id' => $workspace->id,
             'user_id' => $member->id,
             'origin' => 'manual',

@@ -204,7 +204,7 @@
                     <td class="px-4 py-3 text-gray-600">{{ $discoveryDiagram->owner->name }}</td>
                     <td class="px-4 py-3">
 
-                    @if ($discoveryDiagram->collaborators->first()?->status === \App\Models\DiagramCollaborator::STATUS_REQUESTED)
+                    @if ($discoveryDiagram->collaborators->first()?->status === \App\Models\Collaborator::STATUS_REQUESTED)
                         <span class="text-sm text-gray-500">{{ __('messages.access_request_pending') }}</span>
                     @else
                         <form

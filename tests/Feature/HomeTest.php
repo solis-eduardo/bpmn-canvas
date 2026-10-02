@@ -2,8 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
-use App\Models\DiagramCollaborator;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -111,7 +111,7 @@ class HomeTest extends TestCase
         ]);
         $collaborated->collaborators()->create([
             'user_id' => $user->id,
-            'status' => DiagramCollaborator::STATUS_APPROVED,
+            'status' => Collaborator::STATUS_APPROVED,
         ]);
 
         $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
@@ -127,7 +127,7 @@ class HomeTest extends TestCase
         ]);
         $pending->collaborators()->create([
             'user_id' => $user->id,
-            'status' => DiagramCollaborator::STATUS_REQUESTED,
+            'status' => Collaborator::STATUS_REQUESTED,
         ]);
 
         $response = $this->actingAs($user)->get('/home');
