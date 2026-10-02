@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Diagram;
 use App\Models\Tag;
+use App\Models\User;
 use App\Repositories\DiagramListCriteria;
 use App\Repositories\DiagramRepository;
+use App\Repositories\UserRepository;
 use App\Repositories\VersionRepository;
 use App\Repositories\WorkspaceRepository;
 use App\Services\LockService;
@@ -29,6 +31,7 @@ class DiagramController extends Controller
         private readonly DiagramRepository $diagrams,
         private readonly WorkspaceRepository $workspaces,
         private readonly LockService $locks,
+        private readonly UserRepository $users,
     ) {}
 
     /**
@@ -85,8 +88,11 @@ class DiagramController extends Controller
 
         $tagNames = Tag::query()->get()->map(fn (Tag $t) => $t->name)->sort(SORT_NATURAL | SORT_FLAG_CASE)->values();
 
+        $users = $this->users->allOrderedByName()->map(fn (User $u) => ['id' => $u->id, 'name' => $u->name])->all();
         $search = $criteria->search;
-        $tag = $criteria->tag;
+        $selectedTags = $criteria->facets->tags;
+        $ownerId = $criteria->facets->ownerId;
+        $authorId = $criteria->facets->authorId;
         $sort = $criteria->sort->column;
         $direction = $criteria->sort->direction;
         $filters = [
@@ -99,7 +105,10 @@ class DiagramController extends Controller
         return view('diagrams.index', compact(
             'diagrams',
             'search',
-            'tag',
+            'selectedTags',
+            'ownerId',
+            'authorId',
+            'users',
             'filters',
             'sort',
             'direction',

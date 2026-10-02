@@ -87,7 +87,9 @@ class DiagramRepository
             ))
             ->when($criteria->locked, fn (Builder $query) => $query->lockedNow())
             ->when($criteria->recent, fn (Builder $query) => $query->recentlyModified())
-            ->when($criteria->tag !== '', fn (Builder $query) => $query->taggedWith($criteria->tag));
+            ->when($criteria->facets->tags !== [], fn (Builder $query) => $query->taggedWithAll($criteria->facets->tags))
+            ->when($criteria->facets->ownerId !== null, fn (Builder $query) => $query->where('diagrams.owner_id', $criteria->facets->ownerId))
+            ->when($criteria->facets->authorId !== null, fn (Builder $query) => $query->where('diagrams.author_id', $criteria->facets->authorId));
     }
 
     /**

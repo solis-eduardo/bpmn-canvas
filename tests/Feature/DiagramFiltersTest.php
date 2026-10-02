@@ -204,4 +204,37 @@ class DiagramFiltersTest extends TestCase
         $response->assertSee('q=Paged', false);
         $response->assertSee('owner=1', false);
     }
+
+    public function test_diagram_owner_and_author_filters_take_one_user_each(): void
+    {
+        $viewer = User::factory()->create(['is_admin' => true]);
+        $ann = User::factory()->create();
+        $bob = User::factory()->create();
+        Diagram::factory()->create(['title' => 'Ann owns Bob wrote', 'owner_id' => $ann->id, 'author_id' => $bob->id]);
+        Diagram::factory()->create(['title' => 'Bob owns Ann wrote', 'owner_id' => $bob->id, 'author_id' => $ann->id]);
+
+        $byOwner = $this->actingAs($viewer)->get('/diagrams?owner_id='.$ann->id);
+        $byOwner->assertSee('Ann owns Bob wrote');
+        $byOwner->assertDontSee('Bob owns Ann wrote');
+
+        $byAuthor = $this->actingAs($viewer)->get('/diagrams?author_id='.$ann->id);
+        $byAuthor->assertSee('Bob owns Ann wrote');
+        $byAuthor->assertDontSee('Ann owns Bob wrote');
+
+        $both = $this->actingAs($viewer)->get("/diagrams?owner_id={$ann->id}&author_id={$ann->id}");
+        $both->assertDontSee('Ann owns Bob wrote');
+        $both->assertDontSee('Bob owns Ann wrote');
+    }
+
+    public function test_filters_survive_pagination_and_the_search_placeholder_omits_slug(): void
+    {
+        $viewer = User::factory()->create(['is_admin' => true]);
+        $owner = User::factory()->create();
+        Diagram::factory()->count(21)->create(['owner_id' => $owner->id])->each->attachTag('Bulk');
+
+        $response = $this->actingAs($viewer)->get('/diagrams?'.http_build_query(['owner_id' => $owner->id, 'tags' => ['Bulk']]));
+
+        $response->assertSee('owner_id='.$owner->id.'&amp;tags%5B0%5D=Bulk&amp;page=2', false);
+        $response->assertDontSee('Slug');
+    }
 }

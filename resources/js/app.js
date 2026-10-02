@@ -35,8 +35,9 @@ document.querySelectorAll('select[data-tag-select]').forEach((select) => {
     const describedBy = select.getAttribute('aria-describedby');
 
     new TomSelect(select, {
-        create: true,
-        maxItems: 1,
+        create: !('noCreate' in select.dataset),
+        maxItems: select.multiple ? null : 1,
+        plugins: select.multiple ? ['remove_button'] : [],
         persist: false,
         createOnBlur: false,
         placeholder: select.dataset.placeholder,

@@ -1,4 +1,4 @@
-@props(['name' => 'name', 'options', 'scope' => null, 'placeholder'])
+@props(['name' => 'name', 'options', 'scope' => null, 'placeholder', 'multiple' => false, 'selected' => [], 'creatable' => true])
 
 @php
     // Same error contract as components/form/input: `scope` ties the error to
@@ -8,7 +8,8 @@
 @endphp
 
 {{-- Tag picker (Tom Select, see resources/js/app.js): pick an existing Tag or
-     create one by typing. Reusable by the list filters. --}}
+     create one by typing. Reused by the list filters, where `multiple` allows
+     several Tags and `creatable` false limits the choice to existing ones. --}}
 <div class="flex min-w-36 flex-col gap-0.5">
     @if ($scope)
         <input type="hidden" name="_form" value="{{ $scope }}">
@@ -17,13 +18,17 @@
         name="{{ $name }}"
         data-tag-select
         data-placeholder="{{ $placeholder }}"
+        @if ($multiple) multiple @endif
+        @unless ($creatable) data-no-create @endunless
         aria-label="{{ $placeholder }}"
         {{ $attributes }}
         @if ($invalid) aria-invalid="true" aria-describedby="{{ $errorId }}" @endif
     >
-        <option value=""></option>
+        @unless ($multiple)
+            <option value=""></option>
+        @endunless
         @foreach ($options as $option)
-            <option value="{{ $option }}">{{ $option }}</option>
+            <option value="{{ $option }}"{{ in_array($option, $selected, true) ? ' selected' : '' }}>{{ $option }}</option>
         @endforeach
     </select>
     @if ($invalid)

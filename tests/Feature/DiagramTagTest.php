@@ -172,11 +172,34 @@ class DiagramTagTest extends TestCase
         $tagged->attachTag(Tag::findOrCreate('Payroll'));
         $untagged = Diagram::factory()->for($user, 'author')->create(['title' => 'Untagged Diagram']);
 
-        $response = $this->actingAs($user)->get('/diagrams?'.http_build_query(['tag' => 'Payroll']));
+        $response = $this->actingAs($user)->get('/diagrams?'.http_build_query(['tags' => ['Payroll']]));
 
         $response->assertOk();
         $response->assertSee($tagged->title);
         $response->assertDontSee($untagged->title);
+    }
+
+    public function test_multiple_tags_narrow_the_list_with_and(): void
+    {
+        $user = User::factory()->create();
+        $both = Diagram::factory()->for($user, 'author')->create(['title' => 'Has both']);
+        $both->attachTags(['Payroll', 'Urgent']);
+        $one = Diagram::factory()->for($user, 'author')->create(['title' => 'Has one']);
+        $one->attachTag('Payroll');
+
+        $response = $this->actingAs($user)->get('/diagrams?'.http_build_query(['tags' => ['Payroll', 'Urgent']]));
+
+        $response->assertSee('Has both');
+        $response->assertDontSee('Has one');
+    }
+
+    public function test_an_unknown_tag_matches_nothing(): void
+    {
+        $user = User::factory()->create();
+        Diagram::factory()->for($user, 'author')->create(['title' => 'Plain diagram']);
+
+        $this->actingAs($user)->get('/diagrams?'.http_build_query(['tags' => ['Nope']]))
+            ->assertDontSee('Plain diagram');
     }
 
     public function test_the_tag_filter_never_surfaces_a_hidden_diagram_the_user_cannot_see(): void
@@ -192,7 +215,7 @@ class DiagramTagTest extends TestCase
 
         $stranger = User::factory()->create();
 
-        $response = $this->actingAs($stranger)->get('/diagrams?'.http_build_query(['tag' => 'Payroll']));
+        $response = $this->actingAs($stranger)->get('/diagrams?'.http_build_query(['tags' => ['Payroll']]));
 
         $response->assertOk();
         $response->assertDontSee($hidden->title);
@@ -209,7 +232,7 @@ class DiagramTagTest extends TestCase
         $this->actingAs($user)->post("/diagrams/{$second->slug}/tags", ['name' => 'Shared'])->assertRedirect();
 
         $this->assertSame(1, Tag::count());
-        $this->actingAs($user)->get('/diagrams?'.http_build_query(['tag' => 'Shared']))
+        $this->actingAs($user)->get('/diagrams?'.http_build_query(['tags' => ['Shared']]))
             ->assertSee($first->title)->assertSee($second->title);
     }
 

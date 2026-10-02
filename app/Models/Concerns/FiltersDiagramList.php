@@ -54,10 +54,13 @@ trait FiltersDiagramList
     }
 
     /**
-     * Filters to Diagrams carrying the given Tag name (issue #40).
+     * Filters to Diagrams carrying every one of the given Tag names (issues
+     * #40 and #150). A name no Tag has matches nothing.
+     *
+     * @param  list<string>  $tagNames
      */
-    public function scopeTaggedWith(Builder $query, string $tagName): Builder
+    public function scopeTaggedWithAll(Builder $query, array $tagNames): Builder
     {
-        return $this->scopeWithAnyTags($query, [$tagName]);
+        return $this->scopeWithAllTags($query, $tagNames);
     }
 }
