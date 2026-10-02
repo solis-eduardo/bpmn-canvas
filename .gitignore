@@ -45,3 +45,9 @@ Thumbs.db
 .scratch/
 /bootstrap/cache/*
 !/bootstrap/cache/.gitignore
+
+# Local agent skills (symlinks) and runtime data
+/.agents/
+/.claude/
+/skills-lock.json
+/storage/app/
