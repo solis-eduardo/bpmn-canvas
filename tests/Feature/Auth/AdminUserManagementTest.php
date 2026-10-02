@@ -4,6 +4,7 @@ namespace Tests\Feature\Auth;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -342,5 +343,74 @@ class AdminUserManagementTest extends TestCase
         ])->assertForbidden();
 
         $this->assertSame('local', $target->fresh()->login_method);
+    }
+
+    public function test_changing_a_login_method_revokes_the_users_sessions_and_remember_token(): void
+    {
+        $this->configureKeycloak();
+        config(['session.driver' => 'database']);
+        $admin = User::factory()->create(['is_admin' => true]);
+        $target = User::factory()->create(['login_method' => 'local', 'remember_token' => 'old-token']);
+        $other = User::factory()->create();
+        $this->insertSessionFor($target, 'target-1');
+        $this->insertSessionFor($target, 'target-2');
+        $this->insertSessionFor($other, 'other-1');
+
+        $this->actingAs($admin)->put(route('admin.users.update', $target), [
+            'login_method' => 'keycloak',
+        ]);
+
+        $this->assertDatabaseMissing('sessions', ['user_id' => $target->id]);
+        $this->assertDatabaseHas('sessions', ['id' => 'other-1']);
+        $this->assertNotSame('old-token', $target->fresh()->remember_token);
+    }
+
+    public function test_updating_without_a_method_change_keeps_sessions_and_remember_token(): void
+    {
+        config(['session.driver' => 'database']);
+        $admin = User::factory()->create(['is_admin' => true]);
+        $target = User::factory()->create(['login_method' => 'local', 'remember_token' => 'old-token']);
+        $this->insertSessionFor($target, 'target-1');
+
+        $this->actingAs($admin)->put(route('admin.users.update', $target), [
+            'name' => 'Renamed',
+            'login_method' => 'local',
+        ]);
+
+        $this->assertDatabaseHas('sessions', ['id' => 'target-1']);
+        $this->assertSame('old-token', $target->fresh()->remember_token);
+    }
+
+    public function test_admin_changing_their_own_method_is_logged_out(): void
+    {
+        $this->configureKeycloak();
+        $admin = User::factory()->create(['is_admin' => true, 'login_method' => 'local']);
+
+        $this->actingAs($admin)->put(route('admin.users.update', $admin), [
+            'login_method' => 'keycloak',
+        ])->assertRedirect(route('login'));
+
+        $this->assertGuest();
+    }
+
+    public function test_admin_editing_themselves_without_a_method_change_stays_logged_in(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true, 'login_method' => 'local']);
+
+        $this->actingAs($admin)->put(route('admin.users.update', $admin), [
+            'name' => 'Renamed Admin',
+        ]);
+
+        $this->assertAuthenticatedAs($admin);
+    }
+
+    private function insertSessionFor(User $user, string $id): void
+    {
+        DB::table('sessions')->insert([
+            'id' => $id,
+            'user_id' => $user->id,
+            'payload' => '',
+            'last_activity' => time(),
+        ]);
     }
 }

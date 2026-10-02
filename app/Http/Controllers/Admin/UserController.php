@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Repositories\UserRepository;
+use App\Services\Identity\UserSessionRevoker;
 use App\Support\KeycloakConfig;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -18,6 +20,7 @@ class UserController extends Controller
 {
     public function __construct(
         private readonly UserRepository $users,
+        private readonly UserSessionRevoker $sessionRevoker,
     ) {}
 
     public function index(): View
@@ -89,6 +92,7 @@ class UserController extends Controller
         }
 
         $user->fill(array_filter(Arr::only($data, ['name', 'password']), filled(...)));
+        $methodChanged = $user->login_method !== $loginMethod;
         $user->login_method = $loginMethod;
 
         if (array_key_exists('is_admin', $data)) {
@@ -97,7 +101,26 @@ class UserController extends Controller
 
         $user->save();
 
-        return back();
+        return $methodChanged ? $this->endSessionsAfterMethodChange($request, $user) : back();
+    }
+
+    /**
+     * A changed login method invalidates the User's sessions and remember-me
+     * token; an Administrator who changed their own method is signed out too.
+     */
+    private function endSessionsAfterMethodChange(Request $request, User $user): RedirectResponse
+    {
+        $this->sessionRevoker->revoke($user);
+
+        if (! $user->is($request->user())) {
+            return back();
+        }
+
+        Auth::guard()->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('login');
     }
 
     /**
