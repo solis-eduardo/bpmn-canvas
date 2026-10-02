@@ -13,15 +13,11 @@
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 
-.app {
-  display: grid; height: 100%; grid-template-rows: auto 1fr;
+.app, .locked-page {
   background: var(--bg); color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 14px;
 }
-.locked-page {
-  background: var(--bg); color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; font-size: 14px;
-}
+.app { display: grid; height: 100%; grid-template-rows: auto 1fr; }
 .app.with-sidebar { grid-template-columns: 300px 1fr; }
 .app.with-sidebar header { grid-column: 1 / -1; }
 
@@ -88,7 +84,7 @@ html, body { margin: 0; height: 100%; }
 .toast {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
   background: #1f2933; color: #fff; padding: 10px 16px; border-radius: 6px;
-  opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 100; max-width: 90vw;
+  opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 100; max-width: 90vw; font-size: 14px;
 }
 .toast.show { opacity: 1; }
 .toast.error { background: var(--danger); }
