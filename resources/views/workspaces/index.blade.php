@@ -1,22 +1,11 @@
 <x-layouts.app :title="__('messages.workspaces_heading')">
     <div class="flex items-center justify-between gap-4">
         <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.workspaces_heading') }}</h1>
-    </div>
-
-    <form method="POST" action="{{ route('workspaces.store') }}" class="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-        @csrf
-        <input
-            type="text"
-            name="name"
-            placeholder="{{ __('messages.workspace_name') }}"
-            required
-            class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:flex-1"
-        >
-        <x-button type="submit">
+        <x-button :href="route('workspaces.create')">
             <x-icon name="plus" />
             {{ __('messages.create_workspace') }}
         </x-button>
-    </form>
+    </div>
 
     @if ($errors->any())
         <ul class="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -38,21 +27,10 @@
 
                     <div class="flex flex-col gap-3 sm:flex-row sm:items-center">
                         @if ($canManage)
-                            <form method="POST" action="{{ route('workspaces.update', $workspace) }}" class="flex items-center gap-2">
-                                @csrf
-                                @method('PUT')
-                                <input
-                                    type="text"
-                                    name="name"
-                                    value="{{ $workspace->name }}"
-                                    required
-                                    class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                                >
-                                <x-button type="submit" variant="secondary" size="sm">
-                                    <x-icon name="pencil" />
-                                    {{ __('messages.rename') }}
-                                </x-button>
-                            </form>
+                            <x-button :href="route('workspaces.edit', $workspace)" variant="secondary" size="sm">
+                                <x-icon name="pencil" />
+                                {{ __('messages.edit_workspace_link') }}
+                            </x-button>
 
                             <form method="POST" action="{{ route('workspaces.owner.transfer', $workspace) }}" class="flex items-center gap-2">
                                 @csrf
