@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Repositories\DiagramRepository;
 use App\Repositories\VersionRepository;
+use App\Services\DiagramVersionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use RuntimeException;
@@ -74,7 +75,7 @@ class VersionController extends Controller
      * always diffs "older -> newer" no matter which order the User picked
      * them in.
      */
-    public function compareVersions(Request $request, string $slug, VersionRepository $versions): JsonResponse
+    public function compareVersions(Request $request, string $slug, DiagramVersionService $service): JsonResponse
     {
         $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
@@ -85,36 +86,11 @@ class VersionController extends Controller
             'to' => ['required', 'string'],
         ]);
 
-        $history = collect($versions->list($diagram))->keyBy('id');
-
-        $fromMeta = $history->get($data['from']);
-        $toMeta = $history->get($data['to']);
-
-        if (! $fromMeta || ! $toMeta) {
-            abort(404);
-        }
-
-        [$olderMeta, $newerMeta] = $fromMeta['number'] <= $toMeta['number']
-            ? [$fromMeta, $toMeta]
-            : [$toMeta, $fromMeta];
-
         try {
-            $content = $versions->getMany($diagram, [$olderMeta['id'], $newerMeta['id']]);
+            return response()->json($service->compare($diagram, $data['from'], $data['to']));
         } catch (RuntimeException $e) {
             abort(404);
         }
-
-        $describe = fn (array $meta): array => [
-            'id' => $meta['id'],
-            'number' => $meta['number'],
-            'name' => $meta['name'],
-            'content' => $content[$meta['id']],
-        ];
-
-        return response()->json([
-            'older' => $describe($olderMeta),
-            'newer' => $describe($newerMeta),
-        ]);
     }
 
     public function restoreVersion(Request $request, string $slug, string $version, VersionRepository $versions): JsonResponse

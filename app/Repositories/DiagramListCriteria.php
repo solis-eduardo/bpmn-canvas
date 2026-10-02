@@ -20,11 +20,13 @@ final readonly class DiagramListCriteria
         public bool $collaborator = false,
         public bool $locked = false,
         public bool $recent = false,
+        public DiagramListSort $sort = new DiagramListSort,
     ) {}
 
     /**
      * Reads the list's query string: "q", "tag", "workspace" ("none" or a
-     * Workspace id) and the "owner"/"collaborator"/"locked"/"recent" flags.
+     * Workspace id) and the "owner"/"collaborator"/"locked"/"recent" flags, and
+     * "sort"/"direction" (falling back to the title, ascending).
      */
     public static function fromRequest(Request $request): self
     {
@@ -39,6 +41,16 @@ final readonly class DiagramListCriteria
             collaborator: $request->boolean('collaborator'),
             locked: $request->boolean('locked'),
             recent: $request->boolean('recent'),
+            sort: DiagramListSort::fromRequest($request),
         );
+    }
+
+    /**
+     * The "discover" query param: the term searched among Diagrams outside
+     * the User's reach, kept across the list and the access-request redirect.
+     */
+    public static function discoverSearch(Request $request): string
+    {
+        return trim((string) $request->query('discover', ''));
     }
 }

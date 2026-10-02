@@ -2,10 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Actions\Workspaces\TransferOwnership;
-use App\Http\Controllers\Concerns\ResolvesTargetUser;
 use App\Models\Workspace;
-use App\Repositories\UserRepository;
 use App\Repositories\WorkspaceRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,10 +10,7 @@ use Illuminate\View\View;
 
 class WorkspaceController extends Controller
 {
-    use ResolvesTargetUser;
-
     public function __construct(
-        private readonly UserRepository $users,
         private readonly WorkspaceRepository $workspaces,
     ) {}
 
@@ -63,46 +57,6 @@ class WorkspaceController extends Controller
         ]);
 
         $workspace->update(['name' => $data['name']]);
-
-        return redirect()->route('workspaces.index');
-    }
-
-    /**
-     * Links or unlinks a Workspace's Keycloak group. Administrators only.
-     */
-    public function updateKeycloakGroup(Request $request, Workspace $workspace): RedirectResponse
-    {
-        $this->authorize('manageKeycloakGroup', $workspace);
-
-        $data = $request->validate([
-            'keycloak_group' => ['nullable', 'string', 'max:255'],
-        ]);
-
-        $workspace->update(['keycloak_group' => $data['keycloak_group'] ?? null]);
-
-        return redirect()->route('workspaces.index');
-    }
-
-    /**
-     * Transfers the Workspace Owner role to another User: current Workspace
-     * Owner or Administrator only (CONTEXT.md, "Workspace Owner"; ADR-0006;
-     * issue #29). No acceptance step — takes effect immediately, and the
-     * recipient becomes a Member too if they weren't one already.
-     *
-     * Returns silently regardless of whether the email matches an existing
-     * User (avoiding email enumeration), same as WorkspaceMemberController.
-     */
-    public function transferOwnership(Request $request, Workspace $workspace, TransferOwnership $transfer): RedirectResponse
-    {
-        $this->authorize('transferOwnership', $workspace);
-
-        $data = $request->validate($this->userIdentifierRules());
-
-        $newOwner = $this->resolveUserFrom($data);
-
-        if ($newOwner) {
-            $transfer($workspace, $newOwner);
-        }
 
         return redirect()->route('workspaces.index');
     }

@@ -86,6 +86,11 @@ class WorkspaceRepository
         return $workspace;
     }
 
+    public function linkKeycloakGroup(Workspace $workspace, ?string $group): void
+    {
+        $workspace->update(['keycloak_group' => $group]);
+    }
+
     public function addMember(Workspace $workspace, User $user): Member
     {
         return $this->members->upsertManual($workspace, $user);

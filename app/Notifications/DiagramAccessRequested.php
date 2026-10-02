@@ -7,7 +7,7 @@ use App\Models\User;
 
 /**
  * Sent to a Diagram's Owner when a User requests Collaborator access
- * (DiagramCollaboratorController::store, via GrantOrRequestCollaborator —
+ * (CollaboratorController::store, via CollaboratorService::requestAccess —
  * only fired for a self-request, never a direct invite; see issue #15).
  */
 class DiagramAccessRequested extends PreferenceAwareNotification
