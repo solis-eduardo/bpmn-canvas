@@ -1,0 +1,7 @@
+# Tags are stored through spatie/laravel-tags
+
+Tags used to be a hand-rolled `tags` table, a `diagram_tag` pivot and a `TagRepository` doing its own find-or-create with race handling. We replaced them with [spatie/laravel-tags](https://github.com/spatie/laravel-tags) (the `HasTags` trait on `Diagram`, `tags` + polymorphic `taggables` tables) because it is the maintained, widely used tagging package for Laravel, it covers exactly our needs (attach, detach, find-or-create, filter by tag) and it leaves room to tag other models later. The alternatives we passed on were `rtconner/laravel-tagging` (older, less actively maintained) and keeping the custom code (no benefit, and we'd carry the maintenance).
+
+Two consequences worth knowing. First, the package stores names/slugs as per-locale JSON, but our Tags are free-text user labels, not translated content: `App\Models\Tag` pins every lookup and creation to one locale (`en`), so the same label typed under two UI languages is one Tag. Second, the package does not enforce a unique name at the database level, so two simultaneous first uses of a brand-new label can create duplicate rows; we accepted that (the old unique-index race handling is gone) since a duplicate is cosmetic and harmless — both resolve by name when filtering.
+
+The migration `migrate_tags_to_spatie_laravel_tags` carries every existing Tag and Diagram association over and drops the old tables.

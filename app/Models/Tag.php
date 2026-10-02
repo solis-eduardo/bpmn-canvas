@@ -2,18 +2,21 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Spatie\Tags\Tag as SpatieTag;
 
-#[Fillable(['name'])]
-class Tag extends Model
+/**
+ * A global, free-text Tag (CONTEXT.md, "Tag"), backed by spatie/laravel-tags
+ * (ADR-0014). Tags are user-typed labels, not translated content, so every
+ * lookup and creation is pinned to a single locale instead of following the
+ * request's — otherwise the same label typed under two UI languages would
+ * become two Tags.
+ */
+class Tag extends SpatieTag
 {
-    public const UPDATED_AT = null;
+    public const LOCALE = 'en';
 
-    /** @return BelongsToMany<Diagram, $this> */
-    public function diagrams(): BelongsToMany
+    public static function getLocale(): string
     {
-        return $this->belongsToMany(Diagram::class);
+        return self::LOCALE;
     }
 }
