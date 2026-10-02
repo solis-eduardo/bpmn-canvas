@@ -22,18 +22,22 @@
                     <button
                         type="button"
                         id="btn-download"
-                        class="rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+                        class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
                     >
-                        {{ __('messages.download') }} ▾
+                        <x-icon name="download" />
+                        {{ __('messages.download') }}
                     </button>
                     <div class="dropdown-menu absolute right-0 top-full z-20 mt-1 min-w-[170px] rounded-md border border-gray-200 bg-white p-1 shadow-lg">
-                        <button type="button" data-export="png" class="block w-full rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
+                        <button type="button" data-export="png" class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
+                            <x-icon name="download" />
                             {{ __('messages.png_image') }}
                         </button>
-                        <button type="button" data-export="svg" class="block w-full rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
+                        <button type="button" data-export="svg" class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
+                            <x-icon name="download" />
                             {{ __('messages.svg_image') }}
                         </button>
-                        <button type="button" data-export="bpmn" class="block w-full rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
+                        <button type="button" data-export="bpmn" class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
+                            <x-icon name="download" />
                             {{ __('messages.bpmn_file') }}
                         </button>
                     </div>

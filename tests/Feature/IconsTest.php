@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Diagram;
 use App\Models\User;
+use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -58,5 +59,22 @@ class IconsTest extends TestCase
         foreach (['save', 'trash', 'x-mark', 'fit'] as $icon) {
             $response->assertSee('data-icon="'.$icon.'"', false);
         }
+    }
+
+    public function test_secondary_buttons_display_an_icon(): void
+    {
+        $user = User::factory()->create(['is_admin' => true]);
+        Workspace::factory()->create(['owner_id' => $user->id]);
+
+        $this->actingAs($user)->get(route('workspaces.index'))
+            ->assertSee('data-icon="pencil"', false)
+            ->assertSee('data-icon="user-plus"', false);
+
+        $this->actingAs($user)->get(route('account.edit'))
+            ->assertSee('data-icon="save"', false)
+            ->assertSee('data-icon="lock-closed"', false);
+
+        $this->actingAs($user)->get('/home')
+            ->assertSee('data-icon="search"', false);
     }
 }

@@ -119,7 +119,7 @@
                                 <form method="POST" action="{{ route('diagrams.tags.destroy', [$diagram->slug, $diagramTag->id]) }}">
                                     @csrf
                                     @method('DELETE')
-                                    <button type="submit" class="text-gray-400 hover:text-red-600" aria-label="{{ __('messages.remove_tag') }}">&times;</button>
+                                    <button type="submit" class="text-gray-400 hover:text-red-600" aria-label="{{ __('messages.remove_tag') }}"><x-icon name="x-mark" class="h-3.5 w-3.5" /></button>
                                 </form>
                             @endif
                         </span>
@@ -134,13 +134,14 @@
                                 placeholder="{{ __('messages.add_tag_placeholder') }}"
                                 class="w-28 rounded border border-gray-300 px-1.5 py-0.5 text-xs shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                             >
-                            <button type="submit" class="text-xs font-medium text-blue-600 hover:underline">{{ __('messages.add_tag') }}</button>
+                            <button type="submit" class="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:underline"><x-icon name="tag" class="h-3.5 w-3.5" />{{ __('messages.add_tag') }}</button>
                         </form>
                     @endif
                     </div>
                 </td>
                 <td class="whitespace-nowrap px-4 py-3">
-                    <a href="{{ route('diagrams.show', $diagram->slug) }}" class="font-medium text-blue-600 hover:text-blue-700 hover:underline">
+                    <a href="{{ route('diagrams.show', $diagram->slug) }}" class="inline-flex items-center gap-1.5 font-medium text-blue-600 hover:text-blue-700 hover:underline">
+                        <x-icon name="arrow-right" />
                         {{ __('messages.open_diagram') }}
                     </a>
                 </td>
@@ -197,6 +198,7 @@
                     <tr>
                         <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_title') }}</th>
                         <th scope="col" class="px-4 py-3">{{ __('messages.diagram_column_owner') }}</th>
+                        <x-icon name="key" />
                         <th scope="col" class="px-4 py-3">{{ __('messages.request_access') }}</th>
                     </tr>
                 </thead>

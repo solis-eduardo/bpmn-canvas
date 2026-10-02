@@ -51,7 +51,8 @@
                                     required
                                     class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 >
-                                <button type="submit" class="text-sm font-medium text-blue-600 hover:text-blue-700">
+                                <button type="submit" class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700">
+                                    <x-icon name="pencil" />
                                     {{ __('messages.rename') }}
                                 </button>
                             </form>
@@ -66,7 +67,8 @@
                                     required
                                     class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 >
-                                <button type="submit" class="text-sm font-medium text-blue-600 hover:text-blue-700">
+                                <button type="submit" class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700">
+                                    <x-icon name="transfer" />
                                     {{ __('messages.transfer_ownership') }}
                                 </button>
                             </form>
@@ -74,7 +76,8 @@
                             <form method="POST" action="{{ route('workspaces.destroy', $workspace) }}">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="text-sm font-medium text-red-600 hover:text-red-700">
+                                <button type="submit" class="inline-flex items-center gap-1.5 text-sm font-medium text-red-600 hover:text-red-700">
+                                    <x-icon name="trash" />
                                     {{ __('messages.delete_workspace') }}
                                 </button>
                             </form>
@@ -84,7 +87,8 @@
                             <form method="POST" action="{{ route('workspaces.leave', $workspace) }}">
                                 @csrf
                                 @method('DELETE')
-                                <button type="submit" class="text-sm font-medium text-red-600 hover:text-red-700">
+                                <button type="submit" class="inline-flex items-center gap-1.5 text-sm font-medium text-red-600 hover:text-red-700">
+                                    <x-icon name="logout" />
                                     {{ __('messages.leave_workspace') }}
                                 </button>
                             </form>
@@ -107,7 +111,8 @@
                             placeholder="{{ __('messages.keycloak_group_placeholder') }}"
                             class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:flex-1"
                         >
-                        <button type="submit" class="text-sm font-medium text-blue-600 hover:text-blue-700">
+                        <button type="submit" class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700">
+                            <x-icon name="check" />
                             {{ __('messages.update_keycloak_group') }}
                         </button>
                     </form>
@@ -125,7 +130,8 @@
                                     <form method="POST" action="{{ route('workspaces.members.destroy', [$workspace, $member->user]) }}">
                                         @csrf
                                         @method('DELETE')
-                                        <button type="submit" class="text-sm font-medium text-red-600 hover:text-red-700">
+                                        <button type="submit" class="inline-flex items-center gap-1.5 text-sm font-medium text-red-600 hover:text-red-700">
+                                            <x-icon name="user-minus" />
                                             {{ __('messages.remove_member') }}
                                         </button>
                                     </form>
@@ -146,7 +152,8 @@
                                 required
                                 class="rounded-md border border-gray-300 px-3 py-1.5 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 sm:flex-1"
                             >
-                            <button type="submit" class="rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200">
+                            <button type="submit" class="inline-flex items-center gap-1.5 rounded-md bg-gray-100 px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-200">
+                                <x-icon name="user-plus" />
                                 {{ __('messages.add_member') }}
                             </button>
                         </form>

@@ -44,14 +44,16 @@
             @endif
             <button
                 type="submit"
-                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
+                class="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
             >
+                <x-icon name="save" />
                 {{ __('messages.save') }}
             </button>
         </form>
 
         @unless ($user->keycloak_id)
             <section class="mt-8">
+                <x-icon name="lock-closed" />
                 <h2 class="text-lg font-semibold text-gray-900">{{ __('messages.change_password') }}</h2>
                 <form method="POST" action="{{ route('account.password.update') }}" class="mt-4 space-y-4 rounded-lg border border-gray-200 bg-white p-6 shadow-sm">
                     @csrf

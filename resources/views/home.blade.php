@@ -13,8 +13,9 @@
                 </h2>
                 <a
                     href="{{ route('diagrams.index') }}"
-                    class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
+                    class="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
                 >
+                    <x-icon name="plus" />
                     {{ __('messages.create_diagram') }}
                 </a>
             </div>
@@ -43,13 +44,16 @@
         </section>
 
         <nav aria-label="{{ __('messages.home_shortcuts') }}" class="grid gap-3 sm:grid-cols-3">
-            <a href="{{ route('workspaces.index') }}" class="rounded-lg border border-gray-200 bg-white p-4 font-medium text-blue-700 hover:bg-gray-50">
+            <a href="{{ route('workspaces.index') }}" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-4 font-medium text-blue-700 hover:bg-gray-50">
+                <x-icon name="workspaces" />
                 {{ __('messages.home_workspace_shortcut') }}
             </a>
-            <a href="{{ route('notifications.history') }}" class="rounded-lg border border-gray-200 bg-white p-4 font-medium text-blue-700 hover:bg-gray-50">
+            <a href="{{ route('notifications.history') }}" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-4 font-medium text-blue-700 hover:bg-gray-50">
+                <x-icon name="bell" />
                 {{ __('messages.home_notifications_shortcut') }}
             </a>
-            <a href="{{ route('diagrams.index') }}#diagram-discovery-heading" class="rounded-lg border border-gray-200 bg-white p-4 font-medium text-blue-700 hover:bg-gray-50">
+            <a href="{{ route('diagrams.index') }}#diagram-discovery-heading" class="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white p-4 font-medium text-blue-700 hover:bg-gray-50">
+                <x-icon name="search" />
                 {{ __('messages.home_discovery_shortcut') }}
             </a>
         </nav>

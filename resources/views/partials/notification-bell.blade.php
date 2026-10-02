@@ -34,15 +34,17 @@
     >
         <div class="flex items-center justify-between px-3 pb-2">
             <span class="text-sm font-semibold text-gray-900">{{ __('messages.notifications') }}</span>
-            <button type="button" id="btn-notification-mark-all-read" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">
+            <button type="button" id="btn-notification-mark-all-read" class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800">
+                <x-icon name="check" class="h-3.5 w-3.5" />
                 {{ __('messages.mark_all_as_read') }}
             </button>
         </div>
         <ul id="notification-list" class="max-h-96 divide-y divide-gray-100 overflow-y-auto"></ul>
 
         <div class="border-t border-gray-100 px-3 pt-2 text-center">
-            <a href="{{ route('notifications.history') }}" id="link-notification-history" class="text-xs font-medium text-indigo-600 hover:text-indigo-800">
+            <a href="{{ route('notifications.history') }}" id="link-notification-history" class="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 hover:text-indigo-800">
                 {{ __('messages.view_all_notifications') }}
+                <x-icon name="arrow-right" class="h-3.5 w-3.5" />
             </a>
         </div>
     </div>

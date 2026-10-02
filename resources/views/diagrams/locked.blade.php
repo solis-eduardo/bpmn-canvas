@@ -16,7 +16,7 @@
             @endif
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
-                <button type="submit">{{ __('messages.log_out') }}</button>
+                <button type="submit"><x-icon name="logout" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.log_out') }}</button>
             </form>
         </nav>
     @endauth
@@ -42,7 +42,7 @@
         data-request-url="{{ route('diagrams.lock.store', $diagram->slug) }}"
         data-show-url="{{ route('diagrams.show', $diagram->slug) }}"
     >
-        <button type="button" id="btn-request-lock">{{ __('messages.request_the_lock') }}</button>
+        <button type="button" id="btn-request-lock"><x-icon name="key" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.request_the_lock') }}</button>
         <p id="lock-request-waiting" hidden>{{ __('messages.lock_request_waiting') }}</p>
     </div>
 
@@ -59,7 +59,8 @@
             </select>
         </label>
 
-        <button type="submit" class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
+        <button type="submit" class="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700">
+            <x-icon name="copy" />
             {{ __('messages.create_a_copy_to_continue') }}
         </button>
     </form>

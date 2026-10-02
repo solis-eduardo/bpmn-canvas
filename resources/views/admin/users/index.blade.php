@@ -43,7 +43,8 @@
                         </td>
                         <td class="px-4 py-3">
                             <div class="flex flex-wrap items-center gap-3 text-sm">
-                                <a href="{{ route('admin.users.edit', $user) }}" class="font-medium text-blue-600 hover:text-blue-700">
+                                <a href="{{ route('admin.users.edit', $user) }}" class="inline-flex items-center gap-1.5 font-medium text-blue-600 hover:text-blue-700">
+                                    <x-icon name="pencil" />
                                     {{ __('messages.edit_user') }}
                                 </a>
 
@@ -54,7 +55,8 @@
                                         @csrf
                                         @method('PUT')
                                         <input type="hidden" name="is_admin" value="{{ $user->is_admin ? 0 : 1 }}">
-                                        <button type="submit" class="font-medium {{ $user->is_admin ? 'text-red-600 hover:text-red-700' : 'text-blue-600 hover:text-blue-700' }}">
+                                        <button type="submit" class="inline-flex items-center gap-1.5 font-medium {{ $user->is_admin ? 'text-red-600 hover:text-red-700' : 'text-blue-600 hover:text-blue-700' }}">
+                                            <x-icon name="shield-check" />
                                             {{ $user->is_admin ? __('messages.revoke_administrator') : __('messages.grant_administrator') }}
                                         </button>
                                     </form>

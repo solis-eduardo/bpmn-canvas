@@ -29,8 +29,9 @@
                 <button
                     type="button"
                     id="btn-release-lock"
-                    class="rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
                 >
+                    <x-icon name="key" />
                     {{ __($isHolder ? 'messages.release_lock' : 'messages.force_release_lock') }}
                 </button>
             @endif
@@ -153,7 +154,7 @@
                 <ul id="version-list"></ul>
                 <div class="version-compare-bar">
                     <span id="version-compare-count">0/2</span>
-                    <button type="button" id="btn-compare-selected" disabled>{{ __('messages.compare_selected') }}</button>
+                    <button type="button" id="btn-compare-selected" disabled><x-icon name="transfer" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.compare_selected') }}</button>
                 </div>
             </aside>
             @can('manageCollaborators', $diagram)
@@ -167,7 +168,7 @@
                             <h3>{{ __('messages.collaborators') }}</h3>
                             <form id="collab-invite-form">
                                 <input type="email" id="collab-invite-email" placeholder="{{ __('messages.invite_by_email') }}" autocomplete="off" required>
-                                <button type="submit" class="primary">{{ __('messages.invite') }}</button>
+                                <button type="submit" class="primary"><x-icon name="user-plus" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.invite') }}</button>
                             </form>
                             <ul id="collab-list"></ul>
                         </section>
@@ -186,7 +187,7 @@
                                         <option value="">{{ __('messages.follow_latest_version') }}</option>
                                     </select>
                                 </label>
-                                <button type="submit" class="primary">{{ __('messages.create_share') }}</button>
+                                <button type="submit" class="primary"><x-icon name="plus" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.create_share') }}</button>
                             </form>
                             <ul id="share-list"></ul>
                         </section>
@@ -205,7 +206,7 @@
                     <span class="legend"><span class="swatch added"></span>{{ __('messages.diff_added') }}</span>
                     <span class="legend"><span class="swatch changed"></span>{{ __('messages.diff_changed') }}</span>
                     <span class="legend"><span class="swatch removed"></span>{{ __('messages.diff_removed') }}</span>
-                    <button type="button" id="btn-diff-exit">{{ __('messages.exit_comparison') }}</button>
+                    <button type="button" id="btn-diff-exit"><x-icon name="x-mark" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.exit_comparison') }}</button>
                 </div>
                 <div class="diff-removed-panel" id="diff-removed-panel" hidden>
                     <div class="head">{{ __('messages.diff_removed_elements') }}</div>

@@ -1,8 +1,10 @@
+<x-icon name="user-plus" />
 <x-layouts.app :title="__('messages.create_local_account')">
     <div class="mx-auto max-w-xl">
         <div class="flex items-center justify-between gap-4">
             <h1 class="text-2xl font-semibold text-gray-900">{{ __('messages.create_local_account') }}</h1>
-            <a href="{{ route('admin.users.index') }}" class="text-sm font-medium text-blue-600 hover:text-blue-700">
+            <a href="{{ route('admin.users.index') }}" class="inline-flex items-center gap-1.5 text-sm font-medium text-blue-600 hover:text-blue-700">
+                <x-icon name="arrow-left" />
                 {{ __('messages.back_to_users') }}
             </a>
         </div>
@@ -52,7 +54,7 @@
             </div>
             <button
                 type="submit"
-                class="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
+                class="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
             >
                 {{ __('messages.create_local_account') }}
             </button>
