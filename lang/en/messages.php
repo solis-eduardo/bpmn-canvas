@@ -218,6 +218,8 @@ return [
     'transfer_ownership' => 'Transfer ownership',
     'select_new_owner' => 'Select the new owner',
     'select_member' => 'Select a user to add',
+    'user_already_member' => 'That user is already a Member.',
+    'user_already_owner' => 'That user is already the Workspace Owner.',
     'search_users' => 'Search users by name or email',
     'delete_workspace' => 'Delete',
     'leave_workspace' => 'Leave',

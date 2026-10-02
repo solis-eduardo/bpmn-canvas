@@ -218,6 +218,8 @@ return [
     'transfer_ownership' => 'Transferir propriedade',
     'select_new_owner' => 'Selecione o novo dono',
     'select_member' => 'Selecione um usuário para adicionar',
+    'user_already_member' => 'Esse usuário já é membro.',
+    'user_already_owner' => 'Esse usuário já é o dono do Workspace.',
     'search_users' => 'Buscar usuários por nome ou e-mail',
     'delete_workspace' => 'Excluir',
     'leave_workspace' => 'Sair',

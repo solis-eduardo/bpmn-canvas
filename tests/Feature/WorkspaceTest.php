@@ -309,4 +309,18 @@ class WorkspaceTest extends TestCase
         $this->actingAs($owner)->put("/workspaces/{$workspace->id}/owner", ['user_id' => 999999])
             ->assertSessionHasErrors('user_id');
     }
+
+    public function test_picking_an_existing_member_or_the_current_owner_by_user_id_is_rejected(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
+
+        $this->actingAs($owner)->post("/workspaces/{$workspace->id}/members", ['user_id' => $member->id])
+            ->assertSessionHasErrors('user_id');
+        $this->actingAs($owner)->put("/workspaces/{$workspace->id}/owner", ['user_id' => $owner->id])
+            ->assertSessionHasErrors('user_id');
+    }
 }

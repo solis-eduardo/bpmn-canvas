@@ -5,6 +5,7 @@
 document.querySelectorAll('[data-user-select]').forEach((root) => {
     const filter = root.querySelector('[data-user-select-filter]');
     const select = root.querySelector('select');
+    // The first option is the placeholder; it is never filtered out.
     const options = Array.from(select.options).slice(1);
 
     filter.addEventListener('input', () => {
@@ -13,9 +14,7 @@ document.querySelectorAll('[data-user-select]').forEach((root) => {
 
         select.replaceChildren(select.options[0], ...matches);
 
-        if (term !== '' && matches.length === 1) {
-            select.value = matches[0].value;
-        } else if (!matches.some((option) => option.value === select.value)) {
+        if (!matches.some((option) => option.value === select.value)) {
             select.value = '';
         }
     });
