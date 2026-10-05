@@ -26,7 +26,7 @@ class FormScreensTest extends TestCase
             'user create' => [fn () => route('admin.users.create'), 'admin.users.index', ['name', 'email', 'password']],
             'user edit' => [fn (self $t) => route('admin.users.edit', $t->target), 'admin.users.index', ['name', 'email', 'login_method', 'password']],
             'workspace create' => [fn () => route('workspaces.create'), 'workspaces.index', ['name', 'keycloak_group']],
-            'workspace edit' => [fn (self $t) => route('workspaces.edit', $t->workspace), 'workspaces.index', ['name', 'keycloak_group', 'members-members', 'transfer-owner-user_id']],
+            'workspace edit' => [fn (self $t) => route('workspaces.edit', $t->workspace), 'workspaces.index', ['name', 'keycloak_group', 'members-members', 'user_id-user_id']],
             'diagram create' => [fn () => route('diagrams.create'), 'diagrams.index', ['title']],
             'account' => [fn () => route('account.edit'), 'home', ['name', 'email', 'email_notifications_enabled', 'current_password', 'password', 'password_confirmation']],
         ];

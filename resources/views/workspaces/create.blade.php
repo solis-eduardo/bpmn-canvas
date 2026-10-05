@@ -10,6 +10,16 @@
                     value="{{ old('keycloak_group') }}"
                 />
             @endcan
+
+            <x-user-select
+                name="members"
+                :options="$memberOptions"
+                :selected="array_map('intval', (array) old('members', []))"
+                multiple
+                :label="__('messages.members')"
+                :placeholder="__('messages.select_user_placeholder')"
+            />
+
             <x-form.actions icon="plus" label="{{ __('messages.create_workspace') }}" />
         </x-form.card>
     </x-form.page>

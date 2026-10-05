@@ -11,6 +11,7 @@ use App\Repositories\DiagramRepository;
 use App\Repositories\UserRepository;
 use App\Repositories\VersionRepository;
 use App\Repositories\WorkspaceRepository;
+use App\Services\CollaboratorService;
 use App\Services\LockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -123,10 +124,11 @@ class DiagramController extends Controller
         return view('diagrams.create', [
             'workspaces' => $this->workspaces->forUserOrderedByName($request->user()),
             'tagNames' => Tag::sortedNames(),
+            'collaboratorOptions' => $this->userOptions($this->users->allOrderedByName(), $request->user()),
         ]);
     }
 
-    public function store(Request $request, VersionRepository $versions): RedirectResponse
+    public function store(Request $request, VersionRepository $versions, CollaboratorService $collaborators): RedirectResponse
     {
         // Only Workspaces the User is a Member of may be chosen (the same rule
         // as DiagramWorkspacePolicy::assign); anything else is a field error.
@@ -137,6 +139,8 @@ class DiagramController extends Controller
             'workspace_id' => ['nullable', 'integer', Rule::in($memberWorkspaceIds)],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string', 'max:255'],
+            'collaborators' => ['nullable', 'array'],
+            'collaborators.*' => ['integer', 'exists:users,id'],
         ]);
 
         $slug = $this->diagrams->uniqueSlug($data['title']);
@@ -156,6 +160,10 @@ class DiagramController extends Controller
         foreach (array_unique(array_filter(array_map('trim', $data['tags'] ?? []))) as $name) {
             $diagram->attachTag(Tag::findOrCreate($name));
         }
+
+        // The creator is the Diagram Owner, so the picked Users are granted access directly.
+        $this->users->findMany(collect($data['collaborators'] ?? [])->unique()->reject(fn ($id) => (int) $id === $request->user()->id)->all())
+            ->each(fn (User $user) => $collaborators->grant($diagram, $user));
 
         // "Save" opens the new Diagram in the Editor, "Save and exit" goes back to the list.
         return $request->input('submit_action') === 'exit'

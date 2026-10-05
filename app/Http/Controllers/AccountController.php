@@ -25,11 +25,39 @@ class AccountController extends Controller
 
     public function update(Request $request): RedirectResponse
     {
-        $data = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-        ]);
+        $user = $request->user();
 
-        $request->user()->update($data);
+        // One form: name, email notification preference and, for local
+        // accounts, an optional password change (only when a new one is typed).
+        $rules = [
+            'name' => ['required', 'string', 'max:255'],
+            'email_notifications_enabled' => ['sometimes', 'boolean'],
+        ];
+
+        if (! $user->usesKeycloak()) {
+            $rules['password'] = ['nullable', 'string', 'min:8', 'confirmed'];
+            $rules['current_password'] = ['nullable', 'required_with:password', 'current_password'];
+        }
+
+        $data = $request->validate($rules);
+
+        $attributes = ['name' => $data['name']];
+
+        if ($request->has('email_notifications_enabled')) {
+            $attributes['email_notifications_enabled'] = $request->boolean('email_notifications_enabled');
+        }
+
+        $changesPassword = ! $user->usesKeycloak() && filled($data['password'] ?? null);
+
+        if ($changesPassword) {
+            $attributes['password'] = $data['password'];
+        }
+
+        $user->update($attributes);
+
+        if ($changesPassword) {
+            $this->users->invalidateOtherSessions($user, $request->session()->getId());
+        }
 
         return $this->afterSave($request, 'home', 'account.edit');
     }

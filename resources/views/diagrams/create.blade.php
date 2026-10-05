@@ -8,10 +8,14 @@
                 <select
                     id="workspace_id"
                     name="workspace_id"
-                    class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    data-tag-select
+                    data-no-create
+                    data-clearable
+                    data-placeholder="{{ __('messages.no_workspace') }}"
+                    aria-label="{{ __('messages.workspace_filter_label') }}"
                     @error('workspace_id') aria-invalid="true" aria-describedby="workspace_id-error" @enderror
                 >
-                    <option value="">{{ __('messages.no_workspace') }}</option>
+                    <option value=""></option>
                     @foreach ($workspaces as $workspace)
                         <option value="{{ $workspace->id }}" @selected((string) old('workspace_id') === (string) $workspace->id)>{{ $workspace->name }}</option>
                     @endforeach
@@ -33,6 +37,15 @@
                     placeholder="{{ __('messages.add_tag_placeholder') }}"
                 />
             </div>
+
+            <x-user-select
+                name="collaborators"
+                :options="$collaboratorOptions"
+                :selected="array_map('intval', (array) old('collaborators', []))"
+                multiple
+                :label="__('messages.collaborators')"
+                :placeholder="__('messages.select_user_placeholder')"
+            />
 
             <x-form.actions icon="plus" label="{{ __('messages.create_diagram') }}" />
         </x-form.card>

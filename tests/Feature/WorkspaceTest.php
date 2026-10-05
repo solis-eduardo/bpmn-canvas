@@ -388,8 +388,9 @@ class WorkspaceTest extends TestCase
         $response = $this->actingAs($owner)->get("/workspaces/{$workspace->id}/edit");
 
         $response->assertOk();
-        $response->assertSee(route('workspaces.members.sync', $workspace));
-        $response->assertSee(route('workspaces.owner.transfer', $workspace));
+        $response->assertSee('action="'.route('workspaces.update', $workspace).'"', false);
+        $response->assertDontSee(route('workspaces.members.sync', $workspace));
+        $response->assertDontSee(route('workspaces.owner.transfer', $workspace));
         $response->assertViewHas('memberOptions', function (array $options) use ($candidate, $owner, $member) {
             $ids = collect($options)->pluck('id');
 
@@ -408,7 +409,7 @@ class WorkspaceTest extends TestCase
         $response->assertDontSee('type="search"', false);
         $response->assertSee('data-tag-select', false);
         $response->assertSee('for="members-members"', false);
-        $response->assertSee('for="transfer-owner-user_id"', false);
+        $response->assertSee('for="user_id-user_id"', false);
     }
 
     public function test_only_an_administrator_sees_the_keycloak_field_in_the_main_workspace_form(): void

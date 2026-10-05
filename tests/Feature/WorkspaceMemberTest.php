@@ -98,7 +98,9 @@ class WorkspaceMemberTest extends TestCase
         $response->assertSee('name="members[]"', false);
         $response->assertSee('<option value="'.$member->id.'" selected>', false);
         $response->assertSee('<option value="'.$other->id.'">', false);
-        $response->assertSee(route('workspaces.members.sync', $workspace), false);
+        // Members are part of the single Workspace form.
+        $response->assertSee('action="'.route('workspaces.update', $workspace).'"', false);
+        $response->assertDontSee(route('workspaces.members.sync', $workspace), false);
     }
 
     public function test_workspace_owner_can_remove_a_member(): void

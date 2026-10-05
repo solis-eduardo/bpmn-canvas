@@ -71,8 +71,8 @@ class IconsTest extends TestCase
 
         $workspace = Workspace::first();
         $this->actingAs($user)->get(route('workspaces.edit', $workspace))
-            ->assertSee('data-icon="user-plus"', false)
-            ->assertSee('data-icon="transfer"', false);
+            ->assertSee('data-icon="save"', false)
+            ->assertSee('data-icon="arrow-right"', false);
 
         $this->actingAs($user)->get(route('account.edit'))
             ->assertSee('data-icon="save"', false);
