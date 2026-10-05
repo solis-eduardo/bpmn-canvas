@@ -192,4 +192,21 @@ class DiagramFiltersTest extends TestCase
         $response->assertSee('owner_id='.$owner->id.'&amp;tags%5B0%5D=Bulk&amp;page=2', false);
         $response->assertDontSee('Slug');
     }
+
+    public function test_owner_author_and_workspace_filters_are_searchable_selects_keeping_their_values(): void
+    {
+        $user = User::factory()->create(['name' => 'Searchable Person', 'is_admin' => true]);
+        $workspace = Workspace::factory()->create(['name' => 'Searchable Space']);
+
+        $html = $this->actingAs($user)
+            ->get('/diagrams?owner_id='.$user->id.'&workspace='.$workspace->id)
+            ->assertOk()
+            ->getContent();
+
+        foreach (['owner_id', 'author_id', 'workspace'] as $name) {
+            $this->assertMatchesRegularExpression('/<select\s+name="'.$name.'"\s+data-tag-select/', $html);
+        }
+        $this->assertStringContainsString('<option value="'.$user->id.'" selected>Searchable Person</option>', $html);
+        $this->assertStringContainsString('<option value="'.$workspace->id.'" selected>Searchable Space</option>', $html);
+    }
 }
