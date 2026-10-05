@@ -18,7 +18,7 @@ document.querySelectorAll('select[data-tag-select]').forEach((select) => {
     new TomSelect(select, {
         create: !('noCreate' in select.dataset),
         maxItems: select.multiple ? null : 1,
-        plugins: select.multiple ? ['remove_button'] : [],
+        plugins: select.multiple ? ['remove_button'] : ('clearable' in select.dataset ? ['clear_button'] : []),
         persist: false,
         createOnBlur: false,
         placeholder: select.dataset.placeholder,
