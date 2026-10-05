@@ -290,13 +290,15 @@ class DiagramTagTest extends TestCase
         $response->assertSee(__('messages.filter_tag'), false);
     }
 
-    public function test_the_editor_links_to_the_tag_edit_screen_for_editors(): void
+    public function test_the_editor_offers_the_tags_form_in_a_side_panel_for_editors(): void
     {
         $owner = User::factory()->create();
         $diagram = Diagram::factory()->for($owner, 'author')->create();
 
         $this->actingAs($owner)->get(route('diagrams.show', $diagram->slug))
-            ->assertSee('href="'.route('diagrams.edit', $diagram->slug).'"', false);
+            ->assertSee('id="data-panel"', false)
+            ->assertSee('data-panel-toggle="data-panel"', false)
+            ->assertSee('action="'.route('diagrams.tags.sync', $diagram->slug).'"', false);
     }
 
     public function test_the_listing_filter_offers_existing_tags_in_the_tom_select_picker(): void
@@ -322,7 +324,7 @@ class DiagramTagTest extends TestCase
         Tag::findOrCreate('Existing');
 
         $this->actingAs($owner)->put("/diagrams/{$diagram->slug}/tags", ['tags' => ['Keep', 'Existing', ' Brand new ']])
-            ->assertRedirect(route('diagrams.edit', $diagram->slug));
+            ->assertRedirect(route('diagrams.show', $diagram->slug));
 
         $names = $diagram->fresh()->tags->pluck('name')->sort()->values()->all();
         $this->assertSame(['Brand new', 'Existing', 'Keep'], $names);

@@ -80,5 +80,39 @@
     on('zoom-fit', () => canvas.zoom('fit-viewport', 'auto'));
   }
 
-  window.BpmnCommon = { toast, download, exportBpmn, exportSvg, exportPng, setupDropdowns, setupZoom, baseName };
+  // Left side panels of the Editor (data, versions, collaborators, shares):
+  // one is open at a time, opened by [data-panel-toggle="<panel id>"] buttons
+  // and closed by [data-panel-close] ones.
+  function togglePanel(id, open) {
+    const app = document.getElementById('app');
+    if (!app) return;
+    document.querySelectorAll('#app > aside').forEach(aside => { aside.hidden = !(open && aside.id === id); });
+    app.classList.toggle('with-sidebar', !!open);
+    document.querySelectorAll('[data-panel-toggle]').forEach(button => {
+      const active = !!open && button.dataset.panelToggle === id;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    });
+  }
+
+  function setupPanels() {
+    if (!document.getElementById('app')) return;
+    document.querySelectorAll('[data-panel-toggle]').forEach(button => {
+      const id = button.dataset.panelToggle;
+      button.addEventListener('click', () => togglePanel(id, document.getElementById(id).hidden));
+    });
+    document.querySelectorAll('[data-panel-close]').forEach(button =>
+      button.addEventListener('click', () => togglePanel(null, false)));
+
+    // A rejected Tags submission comes back to this screen: show its errors.
+    if (document.querySelector('#data-panel [aria-invalid="true"]')) togglePanel('data-panel', true);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', setupPanels);
+  } else {
+    setupPanels();
+  }
+
+  window.BpmnCommon = { toast, download, exportBpmn, exportSvg, exportPng, setupDropdowns, setupZoom, baseName, togglePanel };
 })();

@@ -36,7 +36,6 @@
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   padding: 12px 16px; background: var(--panel); border-bottom: 1px solid var(--border);
 }
-.app > header .credit { color: var(--muted); }
 .app > header .brand { font-weight: 600; margin-right: 8px; white-space: nowrap; }
 .app > header .spacer { flex: 1; }
 .app > header .title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -93,8 +92,23 @@
 .dropdown.open .dropdown-menu { display: block; }
 .dropdown-menu button { display: block; width: 100%; text-align: left; border: 0; }
 
+.app { position: relative; }
+
+/* Bar of side-panel buttons: always at the bottom-left corner, so the buttons
+   keep their position. It spans the bottom of the side panel when it is open
+   and floats over the canvas when it is closed. */
+.panel-bar {
+  position: absolute; left: 0; bottom: 0; z-index: 15; display: flex; gap: 4px; padding: 8px;
+  background: var(--panel); border: solid var(--border); border-width: 1px 1px 0 0;
+  border-radius: 0 var(--radius-md) 0 0; box-shadow: 0 6px 18px rgba(0,0,0,.12);
+}
+.app.with-sidebar .panel-bar { width: 300px; border-radius: 0; box-shadow: none; }
+.app.with-sidebar aside { padding-bottom: 53px; }
+.panel-toggle { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; }
+.app button.panel-toggle.active { background: var(--selected); border-color: var(--accent); color: var(--accent); }
+
 .zoom { position: absolute; right: 16px; bottom: 64px; display: flex; flex-direction: column; gap: 4px; z-index: 10; }
-.zoom button { width: 36px; height: 36px; padding: 0; font-size: 18px; }
+.zoom button { display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; font-size: 18px; }
 
 .toast {
   position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
@@ -148,6 +162,7 @@
 .djs-element.diff-added .djs-visual > :first-child { stroke: #52c41a !important; fill: #52c41a !important; fill-opacity: .15; }
 .djs-element.diff-changed .djs-visual > :first-child { stroke: #faad14 !important; fill: #faad14 !important; fill-opacity: .15; }
 
+
 @media (min-width: 640px) {
   .app > header { padding-inline: 24px; }
 }
@@ -159,8 +174,11 @@
   .app input[type=text] { min-width: 140px; }
 }
 
-/* Collaborators & Shares panel (issue #11). */
-#collaborators-panel .collab-body { overflow-y: auto; flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 20px; }
+/* Side panels with a form body: data (tags), collaborators and shares. */
+.app aside .collab-body { overflow-y: auto; flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 20px; }
+.app .info-list { margin: 0; gap: 14px; }
+.app .info-list dt { font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
+.app .info-list dd { margin: 2px 0 0; }
 .app .collab-section h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
 .app .collab-section form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
 .app .collab-section form input[type=email],

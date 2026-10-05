@@ -195,9 +195,14 @@ class DiagramController extends Controller
             ]);
         }
 
-        $diagram->loadMissing(['author', 'owner']);
+        $diagram->loadMissing(['author', 'owner', 'tags', 'workspace', 'lockedBy']);
+        $diagram->loadCount(['collaborators as approved_collaborators_count' => fn ($query) => $query->where('status', 'approved')]);
+        $tagNames = Tag::sortedNames();
+        $collaboratorOptions = Gate::allows('manageCollaborators', $diagram)
+            ? $this->userOptions($this->users->allOrderedByName(), $diagram->owner)
+            : [];
 
-        return view('diagrams.show', compact('diagram'));
+        return view('diagrams.show', compact('diagram', 'tagNames', 'collaboratorOptions'));
     }
 
     public function update(Request $request, string $slug): JsonResponse

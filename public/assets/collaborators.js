@@ -20,20 +20,15 @@
   const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
   const $ = id => document.getElementById(id);
-  const app = $('app');
-  const panel = $('collaborators-panel');
   const collabList = $('collab-list');
   const shareList = $('share-list');
   const sharesSection = $('shares-section');
   const inviteForm = $('collab-invite-form');
-  const inviteEmail = $('collab-invite-email');
+  const inviteUser = $('collab-invite-user_id');
   const shareForm = $('share-create-form');
   const shareDays = $('share-days');
   const shareAllowDownload = $('share-allow-download');
   const sharePinVersion = $('share-pin-version');
-
-  const versionPanel = $('version-panel');
-  const versionEntryBtn = $('btn-version-history-entry');
 
   function toast(msg, isError) {
     if (window.BpmnCommon && window.BpmnCommon.toast) {
@@ -50,13 +45,15 @@
   }
 
   async function requestJson(url, options) {
+    // `headers` must come after the spread: otherwise the caller's headers
+    // (e.g. Content-Type) replace the merged ones and drop the CSRF token (HTTP 419).
     const res = await fetch(url, {
       credentials: 'same-origin',
+      ...options,
       headers: Object.assign({
         Accept: 'application/json',
         'X-CSRF-TOKEN': csrfToken,
       }, (options && options.headers) || {}),
-      ...options,
     });
 
     if (!res.ok) {
@@ -73,21 +70,6 @@
     if (res.status === 204) return null;
 
     return res.json();
-  }
-
-  function togglePanel(open) {
-    panel.hidden = !open;
-    app.classList.toggle('with-sidebar', open || !versionPanel.hidden);
-
-    if (open) {
-      versionPanel.hidden = true;
-    }
-  }
-
-  if (versionEntryBtn) {
-    versionEntryBtn.addEventListener('click', () => {
-      if (!panel.hidden) panel.hidden = true;
-    });
   }
 
   // --- Collaborators -------------------------------------------------
@@ -195,16 +177,16 @@
   inviteForm.addEventListener('submit', async event => {
     event.preventDefault();
 
-    const email = inviteEmail.value.trim();
-    if (!email) return;
+    const userId = parseInt(inviteUser.value, 10);
+    if (!userId) return;
 
     try {
       await requestJson(collaboratorsUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ user_id: userId }),
       });
-      inviteEmail.value = '';
+      inviteUser.tomselect.clear();
       toast(body.dataset.invitedNotice || 'Collaborator invited.');
       await loadCollaborators();
     } catch (e) {
@@ -335,9 +317,32 @@
     });
   }
 
+  // navigator.clipboard only exists in secure contexts (HTTPS or localhost);
+  // over plain HTTP, fall back to selecting a throwaway field and copying it.
+  async function writeToClipboard(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+
+    const field = document.createElement('textarea');
+    field.value = text;
+    field.setAttribute('readonly', '');
+    field.style.position = 'fixed';
+    field.style.opacity = '0';
+    document.body.appendChild(field);
+    field.select();
+
+    try {
+      if (!document.execCommand('copy')) throw new Error('Copy command was refused');
+    } finally {
+      field.remove();
+    }
+  }
+
   async function copyShareLink(share) {
     try {
-      await navigator.clipboard.writeText(share.url);
+      await writeToClipboard(share.url);
       toast(body.dataset.linkCopiedNotice || 'Link copied to clipboard.');
     } catch (e) {
       console.error(e);
@@ -388,16 +393,15 @@
     sharesSection.hidden = true;
   }
 
-  $('btn-collaborators-entry').addEventListener('click', () => togglePanel(panel.hidden));
-  $('btn-collaborators-close').addEventListener('click', () => togglePanel(false));
-
   loadCollaborators();
   loadShares();
   loadVersionsForPinSelect();
+  // A save adds a Version, which can then be pinned to (see editor.js).
+  document.addEventListener('diagram:saved', loadVersionsForPinSelect);
 
   // Deep link from the notification bell (issue #15): clicking a
   // "requested access" notification lands here with ?open-panel=collaborators.
   if (new URLSearchParams(window.location.search).get('open-panel') === 'collaborators') {
-    togglePanel(true);
+    window.BpmnCommon.togglePanel('collaborators-panel', true);
   }
 })();
