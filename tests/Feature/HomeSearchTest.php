@@ -21,6 +21,21 @@ class HomeSearchTest extends TestCase
             ->assertDontSee('data-search-group', false);
     }
 
+    public function test_results_show_a_clear_link_back_to_the_initial_home(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get('/home?q=zebra')
+            ->assertOk()
+            ->assertSee('data-search-clear', false)
+            ->assertSee('href="'.route('home').'"', false)
+            ->assertSee('Clear');
+
+        $this->actingAs($user)->get('/home')
+            ->assertOk()
+            ->assertDontSee('data-search-clear', false);
+    }
+
     public function test_results_are_grouped_by_type_and_link_to_their_items(): void
     {
         $user = User::factory()->create();
