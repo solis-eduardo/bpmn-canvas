@@ -14,6 +14,7 @@ use App\Services\WorkspaceOwnerService;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -149,29 +150,8 @@ class WorkspaceController extends Controller
             'user_id' => ['nullable', 'integer', 'exists:users,id'],
         ]);
 
-        $newOwnerId = filled($data['user_id'] ?? null) ? (int) $data['user_id'] : null;
-
-        if ($newOwnerId !== null) {
-            $this->authorize('workspace-owner.transfer', $workspace);
-
-            if ($newOwnerId === $workspace->owner_id) {
-                throw ValidationException::withMessages(['user_id' => __('messages.user_already_owner')]);
-            }
-        }
-
-        $wanted = null;
-
-        if ($request->has('members')) {
-            $this->authorize('member.add', $workspace);
-
-            // The Workspace Owner can't be dropped, and a transfer keeps the
-            // previous Owner as a Member and makes the new one a Member.
-            $wanted = collect($data['members'] ?? [])->map(fn ($id) => (int) $id)->unique();
-
-            if ($newOwnerId === null && ! $wanted->contains($workspace->owner_id)) {
-                throw ValidationException::withMessages(['members' => __('messages.cannot_remove_workspace_owner')]);
-            }
-        }
+        $newOwnerId = $this->requestedNewOwnerId($data, $workspace);
+        $wanted = $request->has('members') ? $this->wantedMemberIds($data, $workspace, $newOwnerId) : null;
 
         if ($request->has('keycloak_group')) {
             $this->authorize('manageKeycloakGroup', $workspace);
@@ -181,17 +161,7 @@ class WorkspaceController extends Controller
         $workspace->update(['name' => $data['name']]);
 
         if ($wanted !== null) {
-            if ($newOwnerId !== null) {
-                $wanted = $wanted->push($workspace->owner_id, $newOwnerId)->unique();
-            }
-
-            $current = $workspace->members()->pluck('user_id');
-
-            $this->users->findMany($wanted->diff($current)->all())
-                ->each(fn (User $user) => $this->members->add($workspace, $user));
-
-            $this->users->findMany($current->diff($wanted)->all())
-                ->each(fn (User $user) => $this->members->remove($workspace, $user));
+            $this->syncMembers($workspace, $wanted);
         }
 
         if ($newOwnerId !== null) {
@@ -202,6 +172,66 @@ class WorkspaceController extends Controller
         }
 
         return $this->afterSave($request, 'workspaces.index', 'workspaces.edit', [$workspace]);
+    }
+
+    /**
+     * The User picked to become Workspace Owner, if any: only who may transfer
+     * the Workspace can ask, and it can't be its current Owner.
+     */
+    private function requestedNewOwnerId(array $data, Workspace $workspace): ?int
+    {
+        if (! filled($data['user_id'] ?? null)) {
+            return null;
+        }
+
+        $this->authorize('workspace-owner.transfer', $workspace);
+
+        if ((int) $data['user_id'] === $workspace->owner_id) {
+            throw ValidationException::withMessages(['user_id' => __('messages.user_already_owner')]);
+        }
+
+        return (int) $data['user_id'];
+    }
+
+    /**
+     * The ids the Members picker asks for. The Workspace Owner can't be
+     * dropped; a transfer keeps the previous Owner as a Member and makes the
+     * new one a Member.
+     *
+     * @return SupportCollection<int, int>
+     */
+    private function wantedMemberIds(array $data, Workspace $workspace, ?int $newOwnerId): SupportCollection
+    {
+        $this->authorize('member.add', $workspace);
+
+        $wanted = collect($data['members'] ?? [])->map(fn ($id) => (int) $id)->unique();
+
+        if ($newOwnerId !== null) {
+            return $wanted->push($workspace->owner_id, $newOwnerId)->unique();
+        }
+
+        if (! $wanted->contains($workspace->owner_id)) {
+            throw ValidationException::withMessages(['members' => __('messages.cannot_remove_workspace_owner')]);
+        }
+
+        return $wanted;
+    }
+
+    /**
+     * Adds the new Members and removes the ones no longer wanted, each with
+     * its notification.
+     *
+     * @param  SupportCollection<int, int>  $wanted
+     */
+    private function syncMembers(Workspace $workspace, SupportCollection $wanted): void
+    {
+        $current = $workspace->members()->pluck('user_id');
+
+        $this->users->findMany($wanted->diff($current)->all())
+            ->each(fn (User $user) => $this->members->add($workspace, $user));
+
+        $this->users->findMany($current->diff($wanted)->all())
+            ->each(fn (User $user) => $this->members->remove($workspace, $user));
     }
 
     /**
