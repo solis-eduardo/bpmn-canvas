@@ -3,8 +3,10 @@
 @php
     // Same error contract as components/form/input: `scope` ties the error to
     // one form on pages that repeat the field across several forms.
-    $invalid = $errors->has($name) && ($scope === null || old('_form') === $scope);
-    $errorId = $name.'-'.($scope ?? 'field').'-error';
+    // A multi-value name like "tags[]" reports errors under "tags" and "tags.N".
+    $errorKey = rtrim($name, '[]');
+    $invalid = ($errors->has($errorKey) || $errors->has($errorKey.'.*')) && ($scope === null || old('_form') === $scope);
+    $errorId = $errorKey.'-'.($scope ?? 'field').'-error';
 @endphp
 
 {{-- Tag picker (Tom Select, see resources/js/app.js): pick an existing Tag or
@@ -32,6 +34,6 @@
         @endforeach
     </select>
     @if ($invalid)
-        <p id="{{ $errorId }}" role="alert" class="text-sm text-red-600">{{ $errors->first($name) }}</p>
+        <p id="{{ $errorId }}" role="alert" class="text-sm text-red-600">{{ $errors->first($errorKey) ?: $errors->first($errorKey.'.*') }}</p>
     @endif
 </div>
