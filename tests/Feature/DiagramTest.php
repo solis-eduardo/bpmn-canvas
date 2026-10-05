@@ -102,12 +102,13 @@ class DiagramTest extends TestCase
 
         $response->assertOk();
         $response->assertSee($diagram->title);
-        $response->assertSee('flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:flex-nowrap', false);
-        $response->assertDontSee('max-w-6xl flex-wrap', false);
+        // The Editor shares the header of the other screens.
+        $response->assertSee('mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6', false);
+        $response->assertDontSee('flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:flex-nowrap', false);
         // The Editor chrome comes from the Vite-built, layered stylesheet, not the legacy unlayered one.
         $response->assertDontSee('assets/app.css', false);
         $response->assertSee('build/assets/editor-', false);
-        $response->assertSee('flex w-full min-w-0 flex-wrap items-center gap-1 sm:w-auto sm:flex-1', false);
+        $response->assertSee('flex flex-1 items-center gap-1', false);
     }
 
     public function test_user_can_fetch_the_current_content_of_a_diagram(): void

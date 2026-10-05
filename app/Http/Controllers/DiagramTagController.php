@@ -59,7 +59,7 @@ class DiagramTagController extends Controller
         // syncTags() creates the missing Tags itself.
         $diagram->syncTags($names);
 
-        return redirect()->route('diagrams.edit', $diagram->slug);
+        return redirect()->route('diagrams.show', $diagram->slug);
     }
 
     /**

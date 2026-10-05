@@ -25,6 +25,7 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
   const versionRestoredNotice = body.dataset.versionRestoredNotice;
   const versionRestoreFailedNotice = body.dataset.versionRestoreFailedNotice;
   const restoreLabel = body.dataset.restoreLabel || 'Restore';
+  const compareWithCurrentLabel = body.dataset.compareWithCurrentLabel || 'Compare with current';
   const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
   // editor.js runs as a classic (non-module) script earlier in the document
@@ -33,8 +34,6 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
   const { modeler, versionsUrl, contentUrl } = window.BpmnEditor || {};
 
   const $ = id => document.getElementById(id);
-  const app = $('app');
-  const panel = $('version-panel');
   const list = $('version-list');
   const diffBanner = $('diff-banner');
   const diffBannerLabel = $('diff-banner-label');
@@ -77,13 +76,17 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
     });
   }
 
-  function versionLabel(version) {
-    return version.name + ' — ' + formatVersion(version);
+  // The day headers arrive as "YYYY-MM-DD"; show them in the page's locale.
+  // Built from its parts so the day isn't shifted by the time zone.
+  function formatDay(day) {
+    const [year, month, date] = day.split('-').map(Number);
+    const locale = (document.documentElement.lang || '').replace('_', '-') || undefined;
+
+    return new Date(year, month - 1, date).toLocaleDateString(locale, { dateStyle: 'long' });
   }
 
-  function togglePanel(open) {
-    panel.hidden = !open;
-    app.classList.toggle('with-sidebar', open);
+  function versionLabel(version) {
+    return version.name + ' — ' + formatVersion(version);
   }
 
   async function loadVersions() {
@@ -122,7 +125,7 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
     days.forEach(day => {
       const header = document.createElement('li');
       header.className = 'empty';
-      header.textContent = day.day;
+      header.textContent = formatDay(day.day);
       list.appendChild(header);
 
       day.items.forEach(version => {
@@ -147,22 +150,27 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
 
         li.appendChild(row);
 
-        const actions = document.createElement('div');
-        actions.className = 'version-actions';
+        // The current Version is what's on the canvas: nothing to restore or
+        // compare it against.
+        if (!version.is_current) {
+          const actions = document.createElement('div');
+          actions.className = 'version-actions';
 
-        const compareBtn = document.createElement('button');
-        compareBtn.type = 'button';
-        compareBtn.textContent = 'Compare with current';
-        compareBtn.addEventListener('click', () => compareWithCurrent(version));
-        actions.appendChild(compareBtn);
+          const compareBtn = document.createElement('button');
+          compareBtn.type = 'button';
+          compareBtn.textContent = compareWithCurrentLabel;
+          compareBtn.addEventListener('click', () => compareWithCurrent(version));
+          actions.appendChild(compareBtn);
 
-        const restoreBtn = document.createElement('button');
-        restoreBtn.type = 'button';
-        restoreBtn.textContent = restoreLabel;
-        restoreBtn.addEventListener('click', () => restoreVersion(version));
-        actions.appendChild(restoreBtn);
+          const restoreBtn = document.createElement('button');
+          restoreBtn.type = 'button';
+          restoreBtn.textContent = restoreLabel;
+          restoreBtn.addEventListener('click', () => restoreVersion(version));
+          actions.appendChild(restoreBtn);
 
-        li.appendChild(actions);
+          li.appendChild(actions);
+        }
+
         list.appendChild(li);
       });
     });
@@ -394,10 +402,11 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
     }
   }
 
-  $('btn-version-history-entry').addEventListener('click', () => togglePanel(panel.hidden));
-  $('btn-history-close').addEventListener('click', () => togglePanel(false));
   $('btn-diff-exit').addEventListener('click', exitComparison);
   btnCompareSelected.addEventListener('click', compareSelectedVersions);
+
+  // Saving the diagram adds a Version: refresh the history (see editor.js).
+  document.addEventListener('diagram:saved', loadVersions);
 
   loadVersions();
 })();

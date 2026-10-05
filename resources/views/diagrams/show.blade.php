@@ -1,4 +1,4 @@
-<x-layouts.app :title="$diagram->title . ' | ' . __('messages.bpmn_editor')" :fluid="true">
+<x-layouts.app :title="$diagram->title . ' | ' . __('messages.bpmn_editor')" :fluid="true" :standard-header="true">
     <x-slot:head>
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/diagram-js.css') }}">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-js.css') }}">
@@ -14,71 +14,14 @@
         </script>
     </x-slot:head>
 
-    <x-slot:headerActions>
-        <div class="flex flex-wrap items-center gap-2">
-            <x-button :href="route('diagrams.index')" id="btn-back-to-list" variant="secondary">
-                <x-icon name="arrow-left" />
-                {{ __('messages.back') }}
-            </x-button>
-            @php($isHolder = (int) $diagram->locked_by === auth()->id())
-            @if ($isHolder || (auth()->user()->is_admin && $diagram->locked_by !== null))
-                <button
-                    type="button"
-                    id="btn-release-lock"
-                    class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                >
-                    <x-icon name="key" />
-                    {{ __($isHolder ? 'messages.release_lock' : 'messages.force_release_lock') }}
-                </button>
-            @endif
-
-            @can('manageTags', $diagram)
-                <a
-                    href="{{ route('diagrams.edit', $diagram->slug) }}"
-                    id="btn-edit-tags"
-                    class="flex h-8 w-8 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                    title="{{ __('messages.edit_diagram_tags') }}"
-                    aria-label="{{ __('messages.edit_diagram_tags') }}"
-                >
-                    <x-icon name="tag" class="h-5 w-5" />
-                </a>
-            @endcan
-
-            {{-- Entry point for the Version history panel (see #10). --}}
-            <button
-                type="button"
-                id="btn-version-history-entry"
-                data-slot="version-history-entry"
-                class="flex h-8 w-8 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                title="{{ __('messages.version_history') }}"
-                aria-label="{{ __('messages.version_history') }}"
-            >
-                <x-icon name="clock" class="h-5 w-5" />
-            </button>
-
-            {{-- Entry point for the Collaborators / Shares panel (see #11). --}}
-            <div data-slot="collaborators-entry">
-                @can('manageCollaborators', $diagram)
-                    <button
-                        type="button"
-                        id="btn-collaborators-entry"
-                        class="flex h-8 w-8 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                        title="{{ __('messages.collaborators') }}"
-                        aria-label="{{ __('messages.collaborators') }}"
-                    >
-                        <x-icon name="users" class="h-5 w-5" />
-                    </button>
-                @else
-                    <div class="h-8 w-8" aria-hidden="true"></div>
-                @endcan
-            </div>
-        </div>
-    </x-slot:headerActions>
-
     <div
         id="editor"
         data-slug="{{ $diagram->slug }}"
         data-title="{{ $diagram->title }}"
+        data-saved-notice="{{ __('messages.saved') }}"
+        data-load-failed-notice="{{ __('messages.diagram_load_failed') }}"
+        data-save-failed-notice="{{ __('messages.diagram_save_failed') }}"
+        data-release-lock-failed-notice="{{ __('messages.release_lock_failed') }}"
         data-content-url="{{ route('diagrams.content', $diagram->slug) }}"
         data-save-url="{{ route('diagrams.save', $diagram->slug) }}"
         data-rename-url="{{ route('diagrams.rename', $diagram->slug) }}"
@@ -96,6 +39,7 @@
         data-version-restored-notice="{{ __('messages.version_restored') }}"
         data-version-restore-failed-notice="{{ __('messages.version_restore_failed') }}"
         data-restore-label="{{ __('messages.restore') }}"
+        data-compare-with-current-label="{{ __('messages.compare_with_current') }}"
         @can('manageCollaborators', $diagram)
             data-collaborators-url="{{ route('diagrams.collaborators.index', $diagram->slug) }}"
             data-collaborator-url-template="{{ route('diagrams.collaborators.update', [$diagram->slug, 'USER_ID']) }}"
@@ -142,21 +86,70 @@
                 hidden
             ></div>
             <header>
-                <span class="brand">{{ __('messages.bpmn_editor') }}</span>
-                <span class="credit">
-                    {{ __('messages.author_label', ['name' => $diagram->author->name]) }}
-                    {{ __('messages.diagram_owner_label', ['name' => $diagram->owner->name]) }}
-                </span>
+                <x-button :href="route('diagrams.index')" id="btn-back-to-list" variant="secondary" size="sm">
+                    <x-icon name="arrow-left" />
+                    {{ __('messages.back') }}
+                </x-button>
+                <span class="brand">{{ $diagram->title }}</span>
                 <span class="spacer"></span>
-                <input type="text" id="name" value="{{ $diagram->title }}" autocomplete="off" spellcheck="false">
+                @php($isHolder = (int) $diagram->locked_by === auth()->id())
+                @if ($isHolder || (auth()->user()->is_admin && $diagram->locked_by !== null))
+                    <button type="button" id="btn-release-lock">
+                        <x-icon name="key" class="inline h-4 w-4 align-text-bottom" />
+                        {{ __($isHolder ? 'messages.release_lock' : 'messages.force_release_lock') }}
+                    </button>
+                @endif
                 <span class="dirty" id="dirty" title="{{ __('messages.unsaved_changes') }}">●</span>
-                <button type="button" class="primary" id="btn-save" title="Ctrl+S"><x-icon name="save" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.save') }}</button>
-                <button type="button" class="danger" id="btn-delete"><x-icon name="trash" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.delete') }}</button>
-            </header>
+                <button type="button" class="primary" id="btn-save" title="Ctrl+S"><x-icon name="save" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.save') }}</button>            </header>
+            <aside id="info-panel" hidden>
+                <div class="aside-head">
+                    <span>{{ __('messages.diagram_info') }}</span>
+                    <button type="button" id="btn-info-close" data-panel-close aria-label="{{ __('messages.close') }}"><x-icon name="x-mark" /></button>
+                </div>
+                <dl class="collab-body info-list">
+                    <div><dt>{{ __('messages.diagram_column_title') }}</dt><dd>{{ $diagram->title }}</dd></div>
+                    <div><dt>{{ __('messages.diagram_column_author') }}</dt><dd>{{ $diagram->author->name }}</dd></div>
+                    <div><dt>{{ __('messages.diagram_column_owner') }}</dt><dd>{{ $diagram->owner->name }}</dd></div>
+                    <div><dt>{{ __('messages.workspace_filter_label') }}</dt><dd>{{ $diagram->workspace?->name ?? __('messages.no_workspace') }}</dd></div>
+                    <div>
+                        <dt>{{ __('messages.diagram_column_tags') }}</dt>
+                        <dd>{{ $diagram->tags->isEmpty() ? '—' : $diagram->tags->pluck('name')->implode(', ') }}</dd>
+                    </div>
+                    <div><dt>{{ __('messages.collaborators') }}</dt><dd>{{ $diagram->approved_collaborators_count }}</dd></div>
+                    <div>
+                        <dt>{{ __('messages.diagram_column_lock') }}</dt>
+                        <dd>{{ $diagram->hasActiveLock() ? $diagram->lockedBy->name : __('messages.not_locked') }}</dd>
+                    </div>
+                    <div><dt>{{ __('messages.created_at_label') }}</dt><dd><x-timestamp :at="$diagram->created_at" /></dd></div>
+                    <div><dt>{{ __('messages.diagram_column_modified') }}</dt><dd><x-timestamp :at="$diagram->updated_at" /></dd></div>
+                    <div><dt>{{ __('messages.slug_label') }}</dt><dd class="break-all">{{ $diagram->slug }}</dd></div>
+                </dl>
+            </aside>
+            @can('manageTags', $diagram)
+                <aside id="data-panel" hidden>
+                    <div class="aside-head">
+                        <span>{{ __('messages.diagram_tags_heading') }}</span>
+                        <button type="button" id="btn-data-close" data-panel-close aria-label="{{ __('messages.close') }}"><x-icon name="x-mark" /></button>
+                    </div>
+                    <form method="POST" action="{{ route('diagrams.tags.sync', $diagram->slug) }}" class="collab-body">
+                        @csrf
+                        @method('PUT')
+                        <x-tag-select
+                            name="tags[]"
+                            :options="$tagNames"
+                            :selected="$diagram->tags->pluck('name')->all()"
+                            multiple
+                            scope="diagram-tags-{{ $diagram->id }}"
+                            placeholder="{{ __('messages.add_tag_placeholder') }}"
+                        />
+                        <button type="submit" class="primary"><x-icon name="tag" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.save_tags') }}</button>
+                    </form>
+                </aside>
+            @endcan
             <aside id="version-panel" hidden>
                 <div class="aside-head">
                     <span>{{ __('messages.versions') }}</span>
-                    <button type="button" id="btn-history-close" aria-label="{{ __('messages.close') }}"><x-icon name="x-mark" /></button>
+                    <button type="button" id="btn-history-close" data-panel-close aria-label="{{ __('messages.close') }}"><x-icon name="x-mark" /></button>
                 </div>
                 <p class="version-hint">{{ __('messages.select_two_versions_hint') }}</p>
                 <ul id="version-list"></ul>
@@ -168,20 +161,33 @@
             @can('manageCollaborators', $diagram)
                 <aside id="collaborators-panel" hidden>
                     <div class="aside-head">
-                        <span>{{ __('messages.collaborators_and_shares') }}</span>
-                        <button type="button" id="btn-collaborators-close" aria-label="{{ __('messages.close') }}"><x-icon name="x-mark" /></button>
+                        <span>{{ __('messages.collaborators') }}</span>
+                        <button type="button" id="btn-collaborators-close" data-panel-close aria-label="{{ __('messages.close') }}"><x-icon name="x-mark" /></button>
                     </div>
                     <div class="collab-body">
                         <section class="collab-section">
-                            <h3>{{ __('messages.collaborators') }}</h3>
                             <form id="collab-invite-form">
-                                <input type="email" id="collab-invite-email" placeholder="{{ __('messages.invite_by_email') }}" autocomplete="off" required>
+                                <x-user-select
+                                    :options="$collaboratorOptions"
+                                    scope="collab-invite"
+                                    :required="false"
+                                    :label="__('messages.invite_collaborator')"
+                                    :placeholder="__('messages.select_user_placeholder')"
+                                />
                                 <button type="submit" class="primary"><x-icon name="user-plus" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.invite') }}</button>
                             </form>
                             <ul id="collab-list"></ul>
                         </section>
+                    </div>
+                </aside>
+                @can('manageShares', $diagram)
+                <aside id="shares-panel" hidden>
+                    <div class="aside-head">
+                        <span>{{ __('messages.shares') }}</span>
+                        <button type="button" id="btn-shares-close" data-panel-close aria-label="{{ __('messages.close') }}"><x-icon name="x-mark" /></button>
+                    </div>
+                    <div class="collab-body">
                         <section class="collab-section" id="shares-section">
-                            <h3>{{ __('messages.shares') }}</h3>
                             <form id="share-create-form">
                                 <label>{{ __('messages.expires_in_days') }}
                                     <input type="number" id="share-days" min="1" max="60" value="7">
@@ -201,7 +207,57 @@
                         </section>
                     </div>
                 </aside>
+                @endcan
             @endcan
+            {{-- Always visible, with the side panel open or closed; the open panel's button is highlighted. --}}
+            <nav class="panel-bar" aria-label="{{ __('messages.bpmn_editor') }}">
+                <button
+                    type="button"
+                    id="btn-info-entry"
+                    class="panel-toggle"
+                    data-panel-toggle="info-panel"
+                    title="{{ __('messages.diagram_info') }}"
+                    aria-label="{{ __('messages.diagram_info') }}"
+                ><x-icon name="information-circle" /></button>
+                @can('manageTags', $diagram)
+                    <button
+                        type="button"
+                        id="btn-data-entry"
+                        class="panel-toggle"
+                        data-panel-toggle="data-panel"
+                        title="{{ __('messages.edit_diagram_tags') }}"
+                        aria-label="{{ __('messages.edit_diagram_tags') }}"
+                    ><x-icon name="tag" /></button>
+                @endcan
+                <button
+                    type="button"
+                    id="btn-version-history-entry"
+                    class="panel-toggle"
+                    data-panel-toggle="version-panel"
+                    title="{{ __('messages.version_history') }}"
+                    aria-label="{{ __('messages.version_history') }}"
+                ><x-icon name="clock" /></button>
+                @can('manageCollaborators', $diagram)
+                    <button
+                        type="button"
+                        id="btn-collaborators-entry"
+                        class="panel-toggle"
+                        data-panel-toggle="collaborators-panel"
+                        title="{{ __('messages.collaborators') }}"
+                        aria-label="{{ __('messages.collaborators') }}"
+                    ><x-icon name="users" /></button>
+                    @can('manageShares', $diagram)
+                        <button
+                            type="button"
+                            id="btn-shares-entry"
+                            class="panel-toggle"
+                            data-panel-toggle="shares-panel"
+                            title="{{ __('messages.shares') }}"
+                            aria-label="{{ __('messages.shares') }}"
+                        ><x-icon name="link" /></button>
+                    @endcan
+                @endcan
+            </nav>
             <main>
                 <div id="canvas"></div>
                 <div class="zoom">

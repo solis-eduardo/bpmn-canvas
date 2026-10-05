@@ -5,8 +5,6 @@
   const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
   const contentUrl = body.dataset.contentUrl;
   const saveUrl = body.dataset.saveUrl;
-  const renameUrl = body.dataset.renameUrl;
-  const deleteUrl = body.dataset.deleteUrl;
   const indexUrl = body.dataset.indexUrl;
   const heartbeatUrl = body.dataset.heartbeatUrl;
   const unlockUrl = body.dataset.unlockUrl;
@@ -14,7 +12,6 @@
 
   const modeler = new BpmnJS({ container: '#canvas' });
   const $ = id => document.getElementById(id);
-  const nameInput = $('name');
 
   // Exposed so the version-comparison module (loaded separately, see
   // versions.js/diff.js) can reuse this same live Modeler/canvas instead of
@@ -60,7 +57,7 @@
       setDirty(false);
     } catch (e) {
       console.error(e);
-      toast('Could not load the diagram.', true);
+      toast(body.dataset.loadFailedNotice, true);
     }
   }
 
@@ -69,46 +66,19 @@
       const { xml } = await modeler.saveXML({ format: true });
       await api('PUT', saveUrl, { content: xml });
       setDirty(false);
-      toast('Saved.');
+      document.dispatchEvent(new CustomEvent('diagram:saved'));
+      toast(body.dataset.savedNotice);
     } catch (e) {
       console.error(e);
-      toast('Error saving: ' + e.message, true);
-    }
-  }
-
-  async function rename() {
-    const title = nameInput.value.trim();
-    if (!title) {
-      toast('Enter a name for the diagram.', true);
-      return;
-    }
-    try {
-      const data = await (await api('PUT', renameUrl, { title })).json();
-      location.href = data.slug ? renameUrl.replace(/\/diagrams\/[^/]+/, '/diagrams/' + data.slug) : location.href;
-    } catch (e) {
-      console.error(e);
-      toast('Error renaming: ' + e.message, true);
+      toast(body.dataset.saveFailedNotice, true);
     }
   }
 
   $('btn-save').addEventListener('click', save);
-  nameInput.addEventListener('change', rename);
   document.addEventListener('keydown', e => {
     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
       e.preventDefault();
       save();
-    }
-  });
-
-  $('btn-delete').addEventListener('click', async () => {
-    if (!confirm('Delete "' + nameInput.value + '"?')) return;
-    try {
-      await api('DELETE', deleteUrl);
-      toast('Deleted.');
-      location.href = indexUrl;
-    } catch (e) {
-      console.error(e);
-      toast('Error deleting: ' + e.message, true);
     }
   });
 
@@ -123,7 +93,7 @@
         location.href = indexUrl;
       } catch (e) {
         console.error(e);
-        toast('Error releasing the Lock: ' + e.message, true);
+        toast(body.dataset.releaseLockFailedNotice, true);
       }
     });
   }

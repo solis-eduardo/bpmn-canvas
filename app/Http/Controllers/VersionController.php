@@ -24,12 +24,17 @@ class VersionController extends Controller
 
         $this->authorize('view', $diagram);
 
-        $grouped = collect($versions->list($diagram))
+        $history = collect($versions->list($diagram));
+        // The history is newest first, so the first Version is the current one.
+        $currentId = $history->first()['id'] ?? null;
+
+        $grouped = $history
             ->groupBy(fn (array $version) => $version['saved_at']->toDateString())
             ->map(fn ($items, string $day) => [
                 'day' => $day,
                 'items' => $items->map(fn (array $version) => [
                     'id' => $version['id'],
+                    'is_current' => $version['id'] === $currentId,
                     'saved_at' => $version['saved_at']->toIso8601String(),
                     'author' => $version['author'],
                     'number' => $version['number'],
