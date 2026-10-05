@@ -17,7 +17,7 @@
     msg.remove();
   } catch (err) {
     console.error(err);
-    msg.textContent = 'Could not open the diagram.';
+    msg.textContent = body.dataset.openFailedNotice || 'Could not open the diagram.';
     return;
   }
 

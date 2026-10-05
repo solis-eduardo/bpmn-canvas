@@ -46,7 +46,7 @@
         </div>
     </x-slot:headerActions>
 
-    <div id="viewer" class="relative h-full" data-title="{{ $diagram->title }}">
+    <div id="viewer" class="relative h-full" data-title="{{ $diagram->title }}" data-open-failed-notice="{{ __('messages.diagram_open_failed') }}">
         <div id="canvas" class="absolute inset-0 bg-white"></div>
         <div id="message" class="absolute inset-0 flex items-center justify-center px-6 text-center text-gray-500">
             {{ __('messages.loading') }}

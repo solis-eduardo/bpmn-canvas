@@ -100,7 +100,7 @@ class UserController extends Controller
         $this->assertPasswordRulesForLoginMethod($user, $loginMethod, $data['password'] ?? null);
 
         if (array_key_exists('is_admin', $data) && ! $data['is_admin'] && $user->is_admin_via_keycloak_claim) {
-            abort(403, 'This Administrator role was granted by the Keycloak claim and cannot be revoked here.');
+            abort(403, __('messages.keycloak_admin_role_not_revocable'));
         }
 
         $user->fill(array_filter(Arr::only($data, ['name', 'password']), filled(...)));

@@ -80,7 +80,7 @@
       renderCollaborators(collaborators || []);
     } catch (e) {
       console.error(e);
-      toast('Could not load collaborators.', true);
+      toast(body.dataset.collaboratorsLoadFailedNotice || 'Could not load collaborators.', true);
     }
   }
 
@@ -252,7 +252,7 @@
       renderShares((data && data.shares) || []);
     } catch (e) {
       console.error(e);
-      toast('Could not load shares.', true);
+      toast(body.dataset.sharesLoadFailedNotice || 'Could not load shares.', true);
     }
   }
 

@@ -162,6 +162,10 @@
 .djs-element.diff-added .djs-visual > :first-child { stroke: #52c41a !important; fill: #52c41a !important; fill-opacity: .15; }
 .djs-element.diff-changed .djs-visual > :first-child { stroke: #faad14 !important; fill: #faad14 !important; fill-opacity: .15; }
 
+/* Removed elements, cloned from the old Version as non-interactive ghosts (diff.js renderRemovedGhosts). */
+.djs-element.diff-removed-ghost { pointer-events: none; }
+.djs-element.diff-removed-ghost .djs-visual > :first-child { stroke: #f5222d !important; fill: #f5222d !important; fill-opacity: .12 !important; stroke-dasharray: 6 3; }
+.djs-element.diff-removed-ghost text { fill: #cf1322 !important; }
 
 @media (min-width: 640px) {
   .app > header { padding-inline: 24px; }
