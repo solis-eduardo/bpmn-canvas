@@ -7,7 +7,7 @@
         </section>
 
         <form method="GET" action="{{ route('home') }}" role="search" class="flex flex-wrap items-center gap-3">
-            <div class="relative min-w-0 flex-1">
+            <div class="relative min-w-48 flex-1">
                 <x-icon name="search" class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                 <input
                     type="search"

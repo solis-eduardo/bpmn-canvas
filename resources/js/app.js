@@ -1,11 +1,16 @@
 import TomSelect from 'tom-select';
-import 'tom-select/dist/css/tom-select.default.css';
 
 // After a failed submit the server re-renders the form with aria-invalid on
 // each offending field; send the keyboard to the first one.
 document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('[aria-invalid="true"]')?.focus();
 });
+
+const escapeHtml = (text) => {
+    const span = document.createElement('span');
+    span.textContent = text ?? '';
+    return span.innerHTML;
+};
 
 // Tom Select pickers (components/tag-select.blade.php for Tags,
 // components/user-select.blade.php for Users, components/filter-select.blade.php
@@ -20,6 +25,20 @@ document.querySelectorAll('select[data-tag-select]').forEach((select) => {
         create: !('noCreate' in select.dataset),
         maxItems: select.multiple ? null : 1,
         plugins: select.multiple ? ['remove_button'] : ('clearable' in select.dataset ? ['clear_button'] : []),
+        // Close right after picking, like a native select. Multi pickers stay
+        // open so several values can be chosen in a row.
+        closeAfterSelect: !select.multiple,
+        // Drop the focus too, so the typing input stops taking width from the
+        // selected label.
+        onItemAdd() {
+            if (!select.multiple) this.blur();
+        },
+        // Tom Select's own texts are English; take them from the page locale.
+        render: {
+            no_results: () => `<div class="no-results">${escapeHtml(document.body.dataset.tsNoResults)}</div>`,
+            option_create: (data, escape) =>
+                `<div class="create">${escapeHtml(document.body.dataset.tsCreate)} <strong>${escape(data.input)}</strong>&hellip;</div>`,
+        },
         persist: false,
         createOnBlur: false,
         placeholder: select.dataset.placeholder,
