@@ -14,7 +14,7 @@
  *    restored to whatever it displayed before once the User exits the
  *    comparison.
  */
-import { compareBpmnXml, highlightDiff } from './diff.js';
+import { compareBpmnXml, highlightDiff, renderRemovedGhosts } from './diff.js';
 
 (async function () {
   const body = document.getElementById('editor');
@@ -26,6 +26,8 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
   const versionRestoreFailedNotice = body.dataset.versionRestoreFailedNotice;
   const restoreLabel = body.dataset.restoreLabel || 'Restore';
   const compareWithCurrentLabel = body.dataset.compareWithCurrentLabel || 'Compare with current';
+  // Translated names of the BPMN element types, keyed by type (e.g. "UserTask").
+  const elementTypes = JSON.parse(body.dataset.elementTypes || '{}');
   const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
   // editor.js runs as a classic (non-module) script earlier in the document
@@ -99,7 +101,7 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
       renderVersions(data.versions || []);
     } catch (e) {
       console.error(e);
-      window.BpmnCommon.toast('Could not load version history.', true);
+      window.BpmnCommon.toast(body.dataset.versionsLoadFailedNotice || 'Could not load version history.', true);
     }
   }
 
@@ -115,7 +117,7 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
     if (!days.length) {
       const empty = document.createElement('li');
       empty.className = 'empty';
-      empty.textContent = 'No versions yet.';
+      empty.textContent = body.dataset.noVersionsNotice || 'No versions yet.';
       list.appendChild(empty);
       selectedIds = [];
       updateCompareBar();
@@ -210,6 +212,45 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
     });
   }
 
+  // Fits the canvas to the diagram plus `extra` ({left, top, right, bottom}).
+  // The canvas' own "fit to viewport" ignores the ghost clones, hence done by hand.
+  function frameWith(extra) {
+    const canvas = modeler.get('canvas');
+    const { inner, outer } = canvas.viewbox();
+    const padding = 40;
+
+    const left = Math.min(inner.x, extra.left) - padding;
+    const top = Math.min(inner.y, extra.top) - padding;
+    const width = Math.max(inner.x + inner.width, extra.right) + padding - left;
+    const height = Math.max(inner.y + inner.height, extra.bottom) + padding - top;
+
+    const scale = Math.min(outer.width / width, outer.height / height, 1);
+    const viewWidth = outer.width / scale;
+    const viewHeight = outer.height / scale;
+
+    canvas.viewbox({
+      x: left - (viewWidth - width) / 2,
+      y: top - (viewHeight - height) / 2,
+      width: viewWidth,
+      height: viewHeight,
+    });
+  }
+
+  // Marks what was added/changed on the canvas and draws what was removed
+  // (only present in `oldXml`) as ghosts; returns one function that undoes both.
+  async function highlightWithGhosts(oldXml, result) {
+    const clearMarkers = highlightDiff(modeler, result);
+    const clearGhosts = await renderRemovedGhosts(modeler, oldXml, result);
+
+    // Ghosts can sit outside what the canvas is showing: frame them together with the diagram.
+    if (clearGhosts.bounds) frameWith(clearGhosts.bounds);
+
+    return () => {
+      clearMarkers();
+      clearGhosts();
+    };
+  }
+
   async function compareWithCurrent(version) {
     if (!modeler) return;
 
@@ -230,14 +271,17 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
 
       exitComparison();
 
-      clearHighlight = highlightDiff(modeler, result);
+      clearHighlight = await highlightWithGhosts(oldXml, result);
       comparingIds = [version.id];
       highlightActiveComparison();
 
-      showDiffSummary('Comparing with ' + versionLabel(version), result);
+      showDiffSummary(
+        (body.dataset.comparingWithTemplate || 'Comparing with :version').replace(':version', versionLabel(version)),
+        result,
+      );
     } catch (e) {
       console.error(e);
-      window.BpmnCommon.toast('Could not compare this version.', true);
+      window.BpmnCommon.toast(body.dataset.versionCompareFailedNotice || 'Could not compare this version.', true);
     }
   }
 
@@ -289,7 +333,7 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
       if (warnings && warnings.length) console.warn('Import warnings:', warnings);
       modeler.get('canvas').zoom('fit-viewport', 'auto');
 
-      clearHighlight = highlightDiff(modeler, result);
+      clearHighlight = await highlightWithGhosts(older.content, result);
       comparingIds = [older.id, newer.id];
       highlightActiveComparison();
 
@@ -298,10 +342,15 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
       const olderLabel = olderVersion ? versionLabel(olderVersion) : older.name;
       const newerLabel = newerVersion ? versionLabel(newerVersion) : newer.name;
 
-      showDiffSummary('Comparing ' + olderLabel + ' with ' + newerLabel, result);
+      showDiffSummary(
+        (body.dataset.comparingVersionsTemplate || 'Comparing :older with :newer')
+          .replace(':older', olderLabel)
+          .replace(':newer', newerLabel),
+        result,
+      );
     } catch (e) {
       console.error(e);
-      window.BpmnCommon.toast('Could not compare these versions.', true);
+      window.BpmnCommon.toast(body.dataset.versionsCompareFailedNotice || 'Could not compare these versions.', true);
     }
   }
 
@@ -319,7 +368,8 @@ import { compareBpmnXml, highlightDiff } from './diff.js';
 
         const type = document.createElement('span');
         type.className = 'type';
-        type.textContent = (element.$type || '').replace(/^bpmn:/, '');
+        const typeName = (element.$type || '').replace(/^bpmn:/, '');
+        type.textContent = elementTypes[typeName] || typeName.replace(/([a-z])([A-Z])/g, '$1 $2');
 
         const name = document.createElement('span');
         name.textContent = element.name || element.id;

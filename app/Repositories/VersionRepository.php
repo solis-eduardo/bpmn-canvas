@@ -226,7 +226,7 @@ class VersionRepository
 
     public static function defaultName(int $number): string
     {
-        return "Version {$number}";
+        return __('messages.version_number', ['number' => $number]);
     }
 
     /**
