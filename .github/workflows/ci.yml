@@ -122,7 +122,7 @@ jobs:
         # not resolve cleanly against this Laravel app's Symfony 8-based
         # dependencies, so it's kept fully isolated from composer.json/lock.
         run: |
-          curl -sSL -o phpmd.phar https://github.com/phpmd/phpmd/releases/latest/download/phpmd.phar
+          curl -sSL -o phpmd.phar https://github.com/phpmd/phpmd/releases/download/2.15.0/phpmd.phar
           chmod +x phpmd.phar
 
       - name: Run PHPMD
