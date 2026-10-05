@@ -376,7 +376,7 @@ class WorkspaceTest extends TestCase
         $this->assertDatabaseMissing('workspaces', ['id' => $workspace->id]);
     }
 
-    public function test_workspace_form_offers_existing_users_excluding_current_members_and_owner(): void
+    public function test_workspace_form_offers_every_user_with_current_members_preselected_and_owner_candidates(): void
     {
         $owner = User::factory()->create();
         $member = User::factory()->create();
@@ -388,13 +388,14 @@ class WorkspaceTest extends TestCase
         $response = $this->actingAs($owner)->get("/workspaces/{$workspace->id}/edit");
 
         $response->assertOk();
-        $response->assertSee(route('workspaces.members.store', $workspace));
+        $response->assertSee(route('workspaces.members.sync', $workspace));
         $response->assertSee(route('workspaces.owner.transfer', $workspace));
-        $response->assertViewHas('memberCandidates', function (array $options) use ($candidate, $owner, $member) {
+        $response->assertViewHas('memberOptions', function (array $options) use ($candidate, $owner, $member) {
             $ids = collect($options)->pluck('id');
 
-            return $ids->contains($candidate->id) && ! $ids->contains($owner->id) && ! $ids->contains($member->id);
+            return $ids->contains($candidate->id) && $ids->contains($owner->id) && $ids->contains($member->id);
         });
+        $response->assertViewHas('memberIds', fn ($ids) => $ids->contains($member->id) && ! $ids->contains($candidate->id));
         $response->assertViewHas('ownerCandidates', function (array $options) use ($candidate, $owner, $member) {
             $ids = collect($options)->pluck('id');
 
@@ -406,7 +407,7 @@ class WorkspaceTest extends TestCase
         $response->assertDontSee('data-user-select', false);
         $response->assertDontSee('type="search"', false);
         $response->assertSee('data-tag-select', false);
-        $response->assertSee('for="add-member-user_id"', false);
+        $response->assertSee('for="members-members"', false);
         $response->assertSee('for="transfer-owner-user_id"', false);
     }
 

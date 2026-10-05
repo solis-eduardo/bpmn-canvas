@@ -4,7 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use App\Models\Workspace;
+use App\Notifications\WorkspaceMemberAdded;
+use App\Notifications\WorkspaceMemberRemoved;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Tests\TestCase;
 use Tests\Traits\TestsEmailEnumerationPrevention;
 
@@ -26,6 +29,76 @@ class WorkspaceMemberTest extends TestCase
 
         $response->assertRedirect();
         $this->assertTrue($this->isMember($workspace, $newMember));
+    }
+
+    public function test_syncing_adds_and_removes_members_to_match_the_submitted_set(): void
+    {
+        Notification::fake();
+        $owner = User::factory()->create();
+        $kept = User::factory()->create();
+        $dropped = User::factory()->create();
+        $added = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $kept);
+        $this->addMember($workspace, $dropped);
+
+        $this->actingAs($owner)->put("/workspaces/{$workspace->id}/members", [
+            'members' => [$owner->id, $kept->id, $added->id],
+        ])->assertRedirect(route('workspaces.edit', $workspace));
+
+        $this->assertTrue($this->isMember($workspace, $kept));
+        $this->assertTrue($this->isMember($workspace, $added));
+        $this->assertFalse($this->isMember($workspace, $dropped));
+        Notification::assertSentTo($added, WorkspaceMemberAdded::class);
+        Notification::assertSentTo($dropped, WorkspaceMemberRemoved::class);
+        Notification::assertNotSentTo($kept, WorkspaceMemberAdded::class);
+    }
+
+    public function test_syncing_without_the_workspace_owner_is_refused_with_an_error_under_the_field(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
+
+        $this->actingAs($owner)->put("/workspaces/{$workspace->id}/members", ['members' => [$member->id]])
+            ->assertSessionHasErrors('members');
+
+        $this->assertTrue($this->isMember($workspace, $owner));
+    }
+
+    public function test_syncing_members_is_refused_to_a_plain_member(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
+
+        $this->actingAs($member)->put("/workspaces/{$workspace->id}/members", ['members' => [$owner->id]])
+            ->assertForbidden();
+
+        $this->assertTrue($this->isMember($workspace, $member));
+    }
+
+    public function test_the_edit_screen_shows_the_members_as_selected_chips_of_one_multi_select(): void
+    {
+        $owner = User::factory()->create(['name' => 'Olivia Owner']);
+        $member = User::factory()->create(['name' => 'Mark Member']);
+        $other = User::factory()->create(['name' => 'Otto Outsider']);
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
+
+        $response = $this->actingAs($owner)->get(route('workspaces.edit', $workspace));
+
+        $response->assertOk();
+        $response->assertSee('name="members[]"', false);
+        $response->assertSee('<option value="'.$member->id.'" selected>', false);
+        $response->assertSee('<option value="'.$other->id.'">', false);
+        $response->assertSee(route('workspaces.members.sync', $workspace), false);
     }
 
     public function test_workspace_owner_can_remove_a_member(): void

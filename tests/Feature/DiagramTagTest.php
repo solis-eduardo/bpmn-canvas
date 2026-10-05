@@ -236,7 +236,7 @@ class DiagramTagTest extends TestCase
             ->assertSee($first->title)->assertSee($second->title);
     }
 
-    public function test_the_edit_screen_lists_the_diagrams_tags_with_remove_actions_and_the_picker(): void
+    public function test_the_edit_screen_shows_the_tags_as_selected_chips_of_one_multi_select(): void
     {
         $owner = User::factory()->create();
         $diagram = Diagram::factory()->for($owner, 'author')->create();
@@ -247,11 +247,13 @@ class DiagramTagTest extends TestCase
         $response = $this->actingAs($owner)->get(route('diagrams.edit', $diagram->slug));
 
         $response->assertOk();
-        $response->assertSee('Onboarding');
-        $response->assertSee(route('diagrams.tags.destroy', [$diagram->slug, $tag->id]), false);
-        $response->assertSee(route('diagrams.tags.store', $diagram->slug), false);
-        $response->assertSee('data-tag-select', false);
+        $response->assertSee('<option value="Onboarding" selected>Onboarding</option>', false);
         $response->assertSee('<option value="Finance">Finance</option>', false);
+        $response->assertSee('name="tags[]"', false);
+        $response->assertSee('data-tag-select', false);
+        $response->assertSee('multiple', false);
+        $response->assertSee(route('diagrams.tags.sync', $diagram->slug), false);
+        $response->assertDontSee(route('diagrams.tags.destroy', [$diagram->slug, $tag->id]), false);
         $response->assertSee('href="'.route('diagrams.show', $diagram->slug).'"', false);
     }
 
@@ -312,6 +314,43 @@ class DiagramTagTest extends TestCase
         $response->assertSee('<option value="Onboarding">Onboarding</option>', false);
     }
 
+    public function test_syncing_applies_new_tags_creating_them_and_detaches_the_ones_removed(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+        $diagram->attachTags(['Keep', 'Drop']);
+        Tag::findOrCreate('Existing');
+
+        $this->actingAs($owner)->put("/diagrams/{$diagram->slug}/tags", ['tags' => ['Keep', 'Existing', ' Brand new ']])
+            ->assertRedirect(route('diagrams.edit', $diagram->slug));
+
+        $names = $diagram->fresh()->tags->pluck('name')->sort()->values()->all();
+        $this->assertSame(['Brand new', 'Existing', 'Keep'], $names);
+        $this->assertTrue(Tag::whereJsonContainsLocale('name', 'en', 'Drop')->exists());
+    }
+
+    public function test_syncing_with_no_tags_clears_them_all(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+        $diagram->attachTags(['One', 'Two']);
+
+        $this->actingAs($owner)->put("/diagrams/{$diagram->slug}/tags")->assertRedirect();
+
+        $this->assertCount(0, $diagram->fresh()->tags);
+    }
+
+    public function test_syncing_tags_is_refused_to_a_user_who_cannot_edit_the_diagram(): void
+    {
+        $diagram = Diagram::factory()->for(User::factory()->create(), 'author')->create();
+        $diagram->attachTag('Kept');
+
+        $this->actingAs(User::factory()->create())->put("/diagrams/{$diagram->slug}/tags", ['tags' => []])
+            ->assertForbidden();
+
+        $this->assertCount(1, $diagram->fresh()->tags);
+    }
+
     public function test_an_invalid_tag_shows_its_error_under_the_picker(): void
     {
         $owner = User::factory()->create();
@@ -320,7 +359,7 @@ class DiagramTagTest extends TestCase
         $response = $this->actingAs($owner)
             ->from(route('diagrams.edit', $diagram->slug))
             ->followingRedirects()
-            ->post("/diagrams/{$diagram->slug}/tags", ['name' => '', '_form' => "diagram-tag-{$diagram->id}"]);
+            ->put("/diagrams/{$diagram->slug}/tags", ['tags' => [str_repeat('x', 256)], '_form' => "diagram-tags-{$diagram->id}"]);
 
         $response->assertSee('aria-invalid="true"', false);
         $response->assertSee('role="alert"', false);
