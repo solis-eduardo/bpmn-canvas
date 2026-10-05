@@ -30,11 +30,9 @@
                     <h2 id="home-search-results-heading" class="text-xl font-semibold text-gray-900">
                         {{ __('messages.search_results_heading') }}
                     </h2>
-                    <a
-                        href="{{ route('home') }}"
-                        data-search-clear
-                        class="inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-blue-700 hover:text-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
-                    >{{ __('messages.search_clear') }}</a>
+                    <x-button :href="route('home')" variant="secondary" size="sm" data-search-clear>
+                        {{ __('messages.search_clear') }}
+                    </x-button>
                 </div>
 
                 @php
