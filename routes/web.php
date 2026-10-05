@@ -79,6 +79,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/diagrams/{slug}/collaborators/{user}', [CollaboratorController::class, 'update'])->name('diagrams.collaborators.update');
     Route::delete('/diagrams/{slug}/collaborators/{user}', [CollaboratorController::class, 'destroy'])->name('diagrams.collaborators.destroy');
 
+    Route::put('/diagrams/{slug}/tags', [DiagramTagController::class, 'sync'])->name('diagrams.tags.sync');
     Route::post('/diagrams/{slug}/tags', [DiagramTagController::class, 'store'])->name('diagrams.tags.store');
     Route::delete('/diagrams/{slug}/tags/{tag}', [DiagramTagController::class, 'destroy'])->name('diagrams.tags.destroy');
 
@@ -113,6 +114,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/workspaces/{workspace}/owner', [WorkspaceOwnerController::class, 'update'])->name('workspaces.owner.transfer');
     Route::delete('/workspaces/{workspace}', [WorkspaceController::class, 'destroy'])->name('workspaces.destroy');
 
+    Route::put('/workspaces/{workspace}/members', [MemberController::class, 'sync'])->name('workspaces.members.sync');
     Route::post('/workspaces/{workspace}/members', [MemberController::class, 'store'])->name('workspaces.members.store');
     Route::delete('/workspaces/{workspace}/members/{user}', [MemberController::class, 'destroy'])->name('workspaces.members.destroy');
     Route::delete('/workspaces/{workspace}/leave', [MemberController::class, 'leave'])->name('workspaces.leave');

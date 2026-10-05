@@ -98,10 +98,10 @@ class WorkspaceController extends Controller
         $everyone = $this->users->allOrderedByName();
         $memberIds = $workspace->members->pluck('user_id');
 
-        $memberCandidates = $this->asOptions($everyone->reject(fn (User $candidate) => $memberIds->contains($candidate->id)));
+        $memberOptions = $this->asOptions($everyone);
         $ownerCandidates = $this->asOptions($everyone->reject(fn (User $candidate) => $workspace->isOwnedBy($candidate)));
 
-        return view('workspaces.edit', compact('workspace', 'memberCandidates', 'ownerCandidates'));
+        return view('workspaces.edit', compact('workspace', 'memberOptions', 'memberIds', 'ownerCandidates'));
     }
 
     /**

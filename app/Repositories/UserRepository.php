@@ -27,6 +27,15 @@ class UserRepository
         return User::findOrFail($id);
     }
 
+    /**
+     * @param  list<int>  $ids
+     * @return Collection<int, User>
+     */
+    public function findMany(array $ids): Collection
+    {
+        return User::findMany($ids);
+    }
+
     public function findByEmail(string $email): ?User
     {
         return $this->byEmail($email)->first();

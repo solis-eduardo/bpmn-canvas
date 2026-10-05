@@ -39,6 +39,38 @@ class MemberController extends Controller
     }
 
     /**
+     * Replaces the Workspace's Members with the submitted set (the chips of
+     * the Members picker, issue #170): new chips are added, removed chips are
+     * removed, each with its notification. The Workspace Owner can't be
+     * dropped, same as destroy().
+     */
+    public function sync(Request $request, Workspace $workspace): RedirectResponse
+    {
+        $this->authorize('member.add', $workspace);
+
+        $data = $request->validate([
+            'members' => ['nullable', 'array'],
+            'members.*' => ['integer', 'exists:users,id'],
+        ]);
+
+        $wanted = collect($data['members'] ?? [])->map(fn ($id) => (int) $id)->unique();
+
+        if (! $wanted->contains($workspace->owner_id)) {
+            throw ValidationException::withMessages(['members' => __('messages.cannot_remove_workspace_owner')]);
+        }
+
+        $current = $workspace->members()->pluck('user_id');
+
+        $this->users->findMany($wanted->diff($current)->all())
+            ->each(fn (User $user) => $this->members->add($workspace, $user));
+
+        $this->users->findMany($current->diff($wanted)->all())
+            ->each(fn (User $user) => $this->members->remove($workspace, $user));
+
+        return redirect()->route('workspaces.edit', $workspace);
+    }
+
+    /**
      * A picked `user_id` can't probe anything, so a stale form is told
      * plainly; an email stays silent (see actOnTargetUser()).
      */
