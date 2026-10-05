@@ -20,11 +20,9 @@
                     </span>
                 </div>
             @endif
-            <x-form.actions />
-        </x-form.card>
-
-        <x-form.card :action="route('account.notifications.update')" method="PUT" :heading="__('messages.notification_preferences_heading')">
+            <h2 class="pt-2 text-lg font-semibold text-gray-900">{{ __('messages.notification_preferences_heading') }}</h2>
             <label for="email_notifications_enabled" class="flex items-start gap-3">
+                <input type="hidden" name="email_notifications_enabled" value="0">
                 <input
                     type="checkbox"
                     id="email_notifications_enabled"
@@ -46,16 +44,14 @@
                 <p id="email_notifications_enabled-error" role="alert" class="text-sm text-red-600">{{ $message }}</p>
             @enderror
 
+            @unless ($user->usesKeycloak())
+                <h2 class="pt-2 text-lg font-semibold text-gray-900">{{ __('messages.change_password') }}</h2>
+                <x-form.field name="current_password" type="password" :label="__('messages.current_password')" autocomplete="current-password" />
+                <x-form.field name="password" type="password" :label="__('messages.new_password')" autocomplete="new-password" />
+                <x-form.field name="password_confirmation" type="password" :label="__('messages.confirm_new_password')" autocomplete="new-password" />
+            @endunless
+
             <x-form.actions />
         </x-form.card>
-
-        @unless ($user->usesKeycloak())
-            <x-form.card :action="route('account.password.update')" method="PUT" :heading="__('messages.change_password')">
-                <x-form.field name="current_password" type="password" :label="__('messages.current_password')" required autocomplete="current-password" />
-                <x-form.field name="password" type="password" :label="__('messages.new_password')" required autocomplete="new-password" />
-                <x-form.field name="password_confirmation" type="password" :label="__('messages.confirm_new_password')" required autocomplete="new-password" />
-                <x-form.actions label="{{ __('messages.change_password') }}" />
-            </x-form.card>
-        @endunless
     </x-form.page>
 </x-layouts.app>

@@ -10,36 +10,24 @@
                     value="{{ old('keycloak_group', $workspace->keycloak_group) }}"
                 />
             @endcan
-            <x-form.actions />
-        </x-form.card>
 
-        <x-form.card :action="route('workspaces.members.sync', $workspace)" method="PUT" :heading="__('messages.members')">
             <x-user-select
                 name="members"
                 :options="$memberOptions"
-                :selected="$memberIds->all()"
+                :selected="old('members', $memberIds->all())"
                 multiple
-                scope="members"
                 :label="__('messages.members')"
                 :placeholder="__('messages.select_user_placeholder')"
             />
-            <x-button type="submit">
-                <x-icon name="user-plus" />
-                {{ __('messages.save_members') }}
-            </x-button>
-        </x-form.card>
 
-        <x-form.card :action="route('workspaces.owner.transfer', $workspace)" method="PUT" :heading="__('messages.transfer_ownership')" class="sm:flex sm:items-end sm:gap-3 sm:space-y-0">
             <x-user-select
                 :options="$ownerCandidates"
-                scope="transfer-owner"
-                :label="__('messages.select_new_owner')"
-                :placeholder="__('messages.select_user_placeholder')"
+                :required="false"
+                :label="__('messages.transfer_ownership')"
+                :placeholder="__('messages.select_new_owner')"
             />
-            <x-button type="submit">
-                <x-icon name="transfer" />
-                {{ __('messages.transfer_ownership') }}
-            </x-button>
+
+            <x-form.actions />
         </x-form.card>
     </x-form.page>
 </x-layouts.app>

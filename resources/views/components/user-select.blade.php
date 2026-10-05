@@ -1,4 +1,4 @@
-@props(['name' => 'user_id', 'options', 'label', 'placeholder', 'scope' => null, 'multiple' => false, 'selected' => []])
+@props(['name' => 'user_id', 'options', 'label', 'placeholder', 'scope' => null, 'multiple' => false, 'selected' => [], 'required' => true])
 @php
     // Same error contract as components/form/input: `scope` ties the error to
     // one form on pages that repeat the field across several forms.
@@ -22,7 +22,7 @@
         data-tag-select
         data-no-create
         data-placeholder="{{ $placeholder }}"
-        @if ($multiple) multiple @else required @endif
+        @if ($multiple) multiple @elseif ($required) required @endif
         aria-label="{{ $label }}"
         @if ($invalid) aria-invalid="true" aria-describedby="{{ $errorId }}" @endif
     >
