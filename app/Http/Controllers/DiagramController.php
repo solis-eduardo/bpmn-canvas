@@ -16,6 +16,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class DiagramController extends Controller
@@ -117,15 +118,25 @@ class DiagramController extends Controller
      * Empty create form, reached from the Create button beside the listing
      * title (issue #131); it never carries data from another Diagram.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
-        return view('diagrams.create');
+        return view('diagrams.create', [
+            'workspaces' => $this->workspaces->forUserOrderedByName($request->user()),
+            'tagNames' => Tag::sortedNames(),
+        ]);
     }
 
     public function store(Request $request, VersionRepository $versions): RedirectResponse
     {
+        // Only Workspaces the User is a Member of may be chosen (the same rule
+        // as DiagramWorkspacePolicy::assign); anything else is a field error.
+        $memberWorkspaceIds = $this->workspaces->forUserOrderedByName($request->user())->modelKeys();
+
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
+            'workspace_id' => ['nullable', 'integer', Rule::in($memberWorkspaceIds)],
+            'tags' => ['nullable', 'array'],
+            'tags.*' => ['string', 'max:255'],
         ]);
 
         $slug = $this->diagrams->uniqueSlug($data['title']);
@@ -135,10 +146,16 @@ class DiagramController extends Controller
             'slug' => $slug,
             'author_id' => $request->user()->id,
             'owner_id' => $request->user()->id,
+            'workspace_id' => $data['workspace_id'] ?? null,
             'disk_path' => $slug.'/diagram.bpmn',
         ], Diagram::emptyBpmn());
 
         $versions->initialize($diagram, $request->user());
+
+        // Tags are global and created implicitly on first use (CONTEXT.md, "Tag").
+        foreach (array_unique(array_filter(array_map('trim', $data['tags'] ?? []))) as $name) {
+            $diagram->attachTag(Tag::findOrCreate($name));
+        }
 
         // "Save" opens the new Diagram in the Editor, "Save and exit" goes back to the list.
         return $request->input('submit_action') === 'exit'
