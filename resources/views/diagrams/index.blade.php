@@ -38,29 +38,21 @@
         />
 
         @foreach (['owner_id' => ['filter_diagram_owner', $ownerId], 'author_id' => ['filter_author', $authorId]] as $field => [$labelKey, $selectedId])
-            <select
-                name="{{ $field }}"
-                aria-label="{{ __('messages.'.$labelKey) }}"
-                class="w-56 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-                <option value="">{{ __('messages.'.$labelKey) }}</option>
-                @foreach ($users as $listedUser)
-                    <option value="{{ $listedUser['id'] }}" @selected($selectedId === $listedUser['id'])>{{ $listedUser['name'] }}</option>
-                @endforeach
-            </select>
+            <x-filter-select
+                :name="$field"
+                :options="collect($users)->pluck('name', 'id')->all()"
+                :selected="$selectedId"
+                :label="__('messages.'.$labelKey)"
+            />
         @endforeach
 
-        <select
+        <x-filter-select
             name="workspace"
-            aria-label="{{ __('messages.workspace_filter_label') }}"
-            class="w-56 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
-            <option value="all" data-placeholder @selected($workspaceFilter === 'all')>{{ __('messages.all_workspaces') }}</option>
-            <option value="none" @selected($workspaceFilter === 'none')>{{ __('messages.no_workspace') }}</option>
-            @foreach ($workspaces as $workspace)
-                <option value="{{ $workspace->id }}" @selected((string) $workspace->id === $workspaceFilter)>{{ $workspace->name }}</option>
-            @endforeach
-        </select>
+            :options="['all' => __('messages.all_workspaces'), 'none' => __('messages.no_workspace')] + $workspaces->pluck('name', 'id')->all()"
+            :selected="$workspaceFilter"
+            :label="__('messages.all_workspaces')"
+            :clearable="false"
+        />
 
         <x-button type="submit" variant="secondary">
             <x-icon name="funnel" />

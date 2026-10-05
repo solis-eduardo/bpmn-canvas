@@ -29,16 +29,12 @@
         </div>
 
         @foreach (['owner' => 'filter_workspace_owner', 'member' => 'filter_workspace_member'] as $filterKey => $filterLabel)
-            <select
-                name="{{ $filterKey }}"
-                aria-label="{{ __('messages.'.$filterLabel) }}"
-                class="w-56 rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-            >
-                <option value="">{{ __('messages.'.$filterLabel) }}</option>
-                @foreach ($users as $user)
-                    <option value="{{ $user['id'] }}" @selected($filters->{$filterKey} === $user['id'])>{{ $user['name'] }} ({{ $user['email'] }})</option>
-                @endforeach
-            </select>
+            <x-filter-select
+                :name="$filterKey"
+                :options="collect($users)->mapWithKeys(fn ($user) => [$user['id'] => $user['name'].' ('.$user['email'].')'])->all()"
+                :selected="$filters->{$filterKey}"
+                :label="__('messages.'.$filterLabel)"
+            />
         @endforeach
 
         <x-button type="submit" variant="secondary">

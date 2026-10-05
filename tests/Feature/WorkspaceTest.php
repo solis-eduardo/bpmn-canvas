@@ -522,6 +522,9 @@ class WorkspaceTest extends TestCase
         $this->actingAs($admin)->get('/workspaces?owner='.$user->id)
             ->assertOk()
             ->assertSee('<select', false)
+            ->assertSee('name="owner"', false)
+            ->assertSee('name="member"', false)
+            ->assertSee('data-tag-select', false)
             ->assertSee('Pick Me (pick@example.test)')
             ->assertSee('value="'.$user->id.'" selected', false);
     }

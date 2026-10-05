@@ -247,6 +247,7 @@ return [
     'no_workspaces_match_filters' => 'No Workspaces match the filters.',
     'search_placeholder' => 'Search diagrams, workspaces and notifications',
     'search_button' => 'Search',
+    'search_clear' => 'Clear',
     'search_results_for' => 'Results for ":term"',
     'search_results_heading' => 'Search results',
     'search_no_results' => 'No results.',

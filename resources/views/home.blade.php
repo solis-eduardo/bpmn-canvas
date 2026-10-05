@@ -26,9 +26,14 @@
 
         @if ($results !== null)
             <section aria-labelledby="home-search-results-heading" class="space-y-6">
-                <h2 id="home-search-results-heading" class="text-xl font-semibold text-gray-900">
-                    {{ __('messages.search_results_heading') }}
-                </h2>
+                <div class="flex items-center justify-between gap-4">
+                    <h2 id="home-search-results-heading" class="text-xl font-semibold text-gray-900">
+                        {{ __('messages.search_results_heading') }}
+                    </h2>
+                    <x-button :href="route('home')" variant="secondary" size="sm" data-search-clear>
+                        {{ __('messages.search_clear') }}
+                    </x-button>
+                </div>
 
                 @php
                     $groups = [

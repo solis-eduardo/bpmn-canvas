@@ -8,7 +8,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Tom Select pickers (components/tag-select.blade.php for Tags,
-// components/user-select.blade.php for Users): choose an existing option or,
+// components/user-select.blade.php for Users, components/filter-select.blade.php
+// for listing filters): choose an existing option or,
 // for Tags, create one by typing. Keeps the original <select>, so the form still
 // submits `name`; Tom Select only replaces the control.
 document.querySelectorAll('select[data-tag-select]').forEach((select) => {
@@ -18,7 +19,7 @@ document.querySelectorAll('select[data-tag-select]').forEach((select) => {
     new TomSelect(select, {
         create: !('noCreate' in select.dataset),
         maxItems: select.multiple ? null : 1,
-        plugins: select.multiple ? ['remove_button'] : [],
+        plugins: select.multiple ? ['remove_button'] : ('clearable' in select.dataset ? ['clear_button'] : []),
         persist: false,
         createOnBlur: false,
         placeholder: select.dataset.placeholder,

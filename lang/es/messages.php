@@ -247,6 +247,7 @@ return [
     'no_workspaces_match_filters' => 'Ningún Workspace coincide con los filtros.',
     'search_placeholder' => 'Buscar diagramas, espacios de trabajo y notificaciones',
     'search_button' => 'Buscar',
+    'search_clear' => 'Limpiar',
     'search_results_for' => 'Resultados para ":term"',
     'search_results_heading' => 'Resultados de la búsqueda',
     'search_no_results' => 'Sin resultados.',
