@@ -4,7 +4,7 @@
      `options` maps each submitted value to its label; the empty option is the
      placeholder and, when `clearable`, the control offers a clear button that
      submits it. Keeps the plain <select>, so the query string is unchanged. --}}
-<div class="w-56">
+<div class="min-w-48 flex-1">
     <select
         name="{{ $name }}"
         data-tag-select

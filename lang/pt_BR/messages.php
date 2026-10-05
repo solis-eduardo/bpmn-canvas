@@ -47,7 +47,7 @@ return [
     'search' => 'Buscar',
     'diagram_column_title' => 'Título',
     'diagram_column_author' => 'Autor',
-    'diagram_column_owner' => 'Dono do Diagrama',
+    'diagram_column_owner' => 'Dono',
     'diagram_column_modified' => 'Última modificação',
     'diagram_column_lock' => 'Trava de Edição',
     'diagram_column_tags' => 'Tags',
@@ -58,7 +58,7 @@ return [
     'diagram_owner_label' => '(dono: :name)',
     'last_modified_label' => 'Última modificação :time',
     'being_edited_by' => 'em edição por :name',
-    'filter_owner' => 'Eu sou o dono do diagrama',
+    'filter_owner' => 'Eu sou o dono',
     'filter_collaborator' => 'Eu sou colaborador',
     'workspace_filter_label' => 'Ambiente',
     'all_workspaces' => 'Ambiente',
@@ -69,6 +69,8 @@ return [
     'filter_diagram_owner' => 'Dono',
     'filter_author' => 'Autor',
     'add_tag_placeholder' => 'Adicionar tag…',
+    'select_no_results' => 'Nenhum resultado encontrado',
+    'select_create_option' => 'Adicionar',
     'save_tags' => 'Salvar tags',
 
     // Editor

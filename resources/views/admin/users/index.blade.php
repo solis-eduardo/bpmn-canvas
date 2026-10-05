@@ -8,7 +8,7 @@
     </div>
 
     <form method="GET" action="{{ route('admin.users.index') }}" class="mt-6 flex flex-wrap items-center gap-3">
-        <div class="relative w-full max-w-sm">
+        <div class="relative min-w-48 flex-1">
             <x-icon name="search" class="h-4 w-4 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
                 type="search"
@@ -48,9 +48,9 @@
         </x-button>
     </form>
 
-    <div class="mt-8 overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+    <div class="mt-8 overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm xl:-mx-14">
         <table class="min-w-full divide-y divide-gray-200">
-            <thead class="bg-gray-50">
+            <thead class="whitespace-nowrap bg-gray-50">
                 <tr>
                     <x-sortable-th column="name" :sort="$sort" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.name') }}</x-sortable-th>
                     <th scope="col" class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600">{{ __('messages.email') }}</th>

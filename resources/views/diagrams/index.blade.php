@@ -8,7 +8,7 @@
     </div>
 
     <form method="GET" action="{{ route('diagrams.index') }}" class="mt-6 flex flex-wrap items-center gap-3">
-        <div class="relative w-full max-w-sm">
+        <div class="relative min-w-48 flex-1">
             <x-icon name="search" class="h-4 w-4 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
                 type="search"
@@ -20,47 +20,46 @@
             >
         </div>
 
-        @foreach (['owner' => 'filter_owner', 'collaborator' => 'filter_collaborator'] as $filterKey => $filterLabel)
-            <label class="flex items-center gap-1.5 text-sm text-gray-700">
-                <input type="checkbox" name="{{ $filterKey }}" value="1" @checked($filters[$filterKey])>
-                {{ __('messages.'.$filterLabel) }}
-            </label>
-        @endforeach
-
         <x-tag-select
             name="tags[]"
             :options="$tagNames"
             :selected="$selectedTags"
             multiple
             :creatable="false"
-            wrapper-class="w-56"
+            wrapper-class="min-w-48 flex-1"
             placeholder="{{ __('messages.filter_tag') }}"
         />
 
-        @foreach (['owner_id' => ['filter_diagram_owner', $ownerId], 'author_id' => ['filter_author', $authorId]] as $field => [$labelKey, $selectedId])
+        <label class="flex items-center gap-1.5 text-sm text-gray-700">
+            <input type="checkbox" name="collaborator" value="1" @checked($filters['collaborator'])>
+            {{ __('messages.filter_collaborator') }}
+        </label>
+
+        <div class="flex w-full flex-wrap items-center gap-3">
+            @foreach (['owner_id' => ['filter_diagram_owner', $ownerId], 'author_id' => ['filter_author', $authorId]] as $field => [$labelKey, $selectedId])
+                <x-filter-select
+                    :name="$field"
+                    :options="collect($users)->pluck('name', 'id')->all()"
+                    :selected="$selectedId"
+                    :label="__('messages.'.$labelKey)"
+                />
+            @endforeach
+
             <x-filter-select
-                :name="$field"
-                :options="collect($users)->pluck('name', 'id')->all()"
-                :selected="$selectedId"
-                :label="__('messages.'.$labelKey)"
+                name="workspace"
+                :options="['none' => __('messages.no_workspace')] + $workspaces->pluck('name', 'id')->all()"
+                :selected="$workspaceFilter === 'all' ? null : $workspaceFilter"
+                :label="__('messages.workspace_filter_label')"
             />
-        @endforeach
 
-        <x-filter-select
-            name="workspace"
-            :options="['all' => __('messages.all_workspaces'), 'none' => __('messages.no_workspace')] + $workspaces->pluck('name', 'id')->all()"
-            :selected="$workspaceFilter"
-            :label="__('messages.all_workspaces')"
-            :clearable="false"
-        />
-
-        <x-button type="submit" variant="secondary">
-            <x-icon name="funnel" />
-            {{ __('messages.apply_filters') }}
-        </x-button>
+            <x-button type="submit" variant="secondary">
+                <x-icon name="funnel" />
+                {{ __('messages.apply_filters') }}
+            </x-button>
+        </div>
     </form>
 
-    <div class="mt-8 overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm">
+    <div class="mt-8 overflow-x-auto rounded-lg border border-gray-200 bg-white shadow-sm xl:-mx-14">
         <table id="diagram-search-results" class="min-w-[1100px] w-full divide-y divide-gray-200 text-left text-sm">
             <thead class="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
                 <tr>
@@ -107,7 +106,7 @@
                 <td class="px-4 py-3 text-gray-600">{{ $diagram->workspace?->name ?? __('messages.no_workspace') }}</td>
                 <td class="px-4 py-3">
                     @if ($diagram->hasActiveLock())
-                        <span class="text-amber-600">{{ __('messages.being_edited_by', ['name' => $diagram->lockedBy->name]) }}</span>
+                        <span class="text-amber-600">{{ $diagram->lockedBy->name }}</span>
                     @else
                         <span class="text-gray-500">{{ __('messages.not_locked') }}</span>
                     @endif

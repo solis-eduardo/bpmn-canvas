@@ -436,8 +436,7 @@ class WorkspaceTest extends TestCase
         $response = $this->actingAs($admin)->get('/workspaces');
 
         $response->assertOk()
-            ->assertSee(__('messages.keycloak_group'))
-            ->assertSee('/finance')
+            ->assertDontSee(__('messages.keycloak_group'))
             ->assertDontSee(route('workspaces.members.store', $workspace))
             ->assertDontSee(route('workspaces.owner.transfer', $workspace))
             ->assertDontSee('data-user-select', false);

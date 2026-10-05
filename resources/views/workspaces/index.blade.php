@@ -49,7 +49,6 @@
                 <tr>
                     <x-sortable-th column="name" :sort="$sort">{{ __('messages.workspace_column_name') }}</x-sortable-th>
                     <th scope="col" class="px-4 py-3">{{ __('messages.workspace_column_owner') }}</th>
-                    <th scope="col" class="px-4 py-3">{{ __('messages.keycloak_group') }}</th>
                     <x-sortable-th column="members_count" :sort="$sort">{{ __('messages.members') }}</x-sortable-th>
                     <x-sortable-th column="updated_at" :sort="$sort">{{ __('messages.diagram_column_modified') }}</x-sortable-th>
                     <th scope="col" class="w-px whitespace-nowrap px-4 py-3">{{ __('messages.workspace_column_actions') }}</th>
@@ -61,7 +60,6 @@
                 <tr>
                     <td class="px-4 py-3 font-medium text-gray-900">{{ $workspace->name }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ $workspace->owner->name }}</td>
-                    <td class="px-4 py-3 text-gray-600">{{ $workspace->keycloak_group ?? '—' }}</td>
                     <td class="px-4 py-3 text-gray-600">{{ $workspace->members_count }}</td>
                     <td class="whitespace-nowrap px-4 py-3 text-gray-600"><x-timestamp :at="$workspace->updated_at" /></td>
                     <td class="w-px whitespace-nowrap px-4 py-3">
@@ -97,7 +95,7 @@
                 </tr>
             @empty
                 <tr>
-                    <td colspan="6" class="px-4 py-6 text-center text-sm text-gray-500">
+                    <td colspan="5" class="px-4 py-6 text-center text-sm text-gray-500">
                         {{ $filters->isActive() ? __('messages.no_workspaces_match_filters') : __('messages.no_workspaces_yet') }}
                     </td>
                 </tr>
