@@ -56,6 +56,14 @@ class LockExpiryService
             return;
         }
 
+        // The draft was accepted while the holder could edit, but expiry
+        // happens minutes later and rights can lapse in between. Committing
+        // it would write content as a User who may no longer edit this
+        // Diagram, so a lapsed holder's draft is dropped instead.
+        if (! $diagram->isEditableBy($holder)) {
+            return;
+        }
+
         $versionId = $this->versions->save($diagram, $holder, $diagram->lock_draft, VersionRepository::MESSAGE_PROVISIONAL);
 
         if ($versionId !== null) {

@@ -95,6 +95,13 @@ class CollaboratorService
             return;
         }
 
+        // Losing edit rights should not leave the Diagram locked behind: the
+        // Lock is state nothing else reconciles, and while it stands the
+        // former Collaborator still looks like its holder. Re-read first —
+        // the caller's instance predates whatever Lock the User has taken
+        // since.
+        $diagram->refresh()->releaseLock($user);
+
         $user->notify($removed->status === Collaborator::STATUS_REQUESTED
             ? new DiagramAccessRequestResolved($diagram, approved: false)
             : new DiagramCollaboratorRemoved($diagram));

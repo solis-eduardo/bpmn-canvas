@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Diagram;
 use App\Models\Member;
 use App\Models\User;
 use App\Models\Workspace;
@@ -46,6 +47,8 @@ class MemberService
         $removed = $this->members->removeFor($workspace, $user);
 
         if ($removed) {
+            $this->releaseLocksLostWith($workspace, $user);
+
             $user->notify(new WorkspaceMemberRemoved($workspace));
         }
 
@@ -55,6 +58,26 @@ class MemberService
     public function leave(Workspace $workspace, User $user): bool
     {
         return $this->remove($workspace, $user);
+    }
+
+    /**
+     * Drops the Locks the User held on this Workspace's Diagrams purely as a
+     * Member. The Lock is state nothing else reconciles, so leaving it
+     * behind would keep a User who can no longer edit looking like the
+     * holder. Diagrams they still reach directly (as Diagram Owner or
+     * Collaborator) keep their Lock — {@see Diagram::isEditableBy()} decides,
+     * live, now that the membership is gone.
+     */
+    private function releaseLocksLostWith(Workspace $workspace, User $user): void
+    {
+        Diagram::query()
+            ->where('workspace_id', $workspace->id)
+            ->where('locked_by', $user->id)
+            ->each(function (Diagram $diagram) use ($user): void {
+                if (! $diagram->isEditableBy($user)) {
+                    $diagram->releaseLock($user);
+                }
+            });
     }
 
     /**

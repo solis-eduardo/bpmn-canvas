@@ -6,6 +6,7 @@ use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Repositories\VersionRepository;
+use App\Services\CollaboratorService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -216,5 +217,81 @@ class LockExpiryTest extends TestCase
         $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/versions/'.$first.'/restore')->assertOk();
 
         $this->assertNull($diagram->fresh()->lock_draft);
+    }
+
+    /**
+     * The Heartbeat carries content, so losing edit rights has to stop it —
+     * otherwise a revoked Collaborator keeps writing drafts that expiry
+     * would later commit as the Diagram's content.
+     */
+    public function test_a_revoked_collaborator_cannot_heartbeat_a_draft(): void
+    {
+        $owner = User::factory()->create();
+        $collaborator = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create(['owner_id' => $owner->id]);
+        $membership = Collaborator::create([
+            'diagram_id' => $diagram->id,
+            'user_id' => $collaborator->id,
+            'status' => Collaborator::STATUS_APPROVED,
+        ]);
+        $this->actingAs($collaborator)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->assertSame($collaborator->id, (int) $diagram->fresh()->locked_by);
+
+        $membership->delete();
+
+        $this->actingAs($collaborator)->patchJson('/diagrams/'.$diagram->slug.'/lock', [
+            'draft' => $this->draft('Revoked'),
+        ])->assertForbidden();
+
+        $this->assertNull($diagram->fresh()->lock_draft);
+    }
+
+    /** Removing a Collaborator releases the Lock they were holding. */
+    public function test_revoking_a_collaborator_releases_their_lock(): void
+    {
+        $owner = User::factory()->create();
+        $collaborator = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create(['owner_id' => $owner->id]);
+        Collaborator::create([
+            'diagram_id' => $diagram->id,
+            'user_id' => $collaborator->id,
+            'status' => Collaborator::STATUS_APPROVED,
+        ]);
+        $this->actingAs($collaborator)->get('/diagrams/'.$diagram->slug)->assertOk();
+
+        app(CollaboratorService::class)->revoke($diagram, $collaborator);
+
+        $this->assertNull($diagram->fresh()->locked_by);
+    }
+
+    /**
+     * A draft accepted while the holder could edit must not be committed
+     * once their rights have lapsed — expiry runs minutes later.
+     */
+    public function test_expiry_drops_the_draft_of_a_holder_who_can_no_longer_edit(): void
+    {
+        $owner = User::factory()->create();
+        $collaborator = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create(['owner_id' => $owner->id]);
+        $membership = Collaborator::create([
+            'diagram_id' => $diagram->id,
+            'user_id' => $collaborator->id,
+            'status' => Collaborator::STATUS_APPROVED,
+        ]);
+        $this->actingAs($collaborator)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($collaborator)->patchJson('/diagrams/'.$diagram->slug.'/lock', [
+            'draft' => $this->draft('Should not land'),
+        ])->assertOk();
+
+        // Rights lapse without anything releasing the Lock, as a direct
+        // database delete leaves it (the service path releases it).
+        $membership->delete();
+        $before = Storage::disk('diagrams')->get($diagram->disk_path);
+
+        $this->travel(6)->minutes();
+        $this->artisan('locks:expire')->assertSuccessful();
+
+        $this->assertSame($before, Storage::disk('diagrams')->get($diagram->disk_path));
+        $this->assertNull($diagram->fresh()->locked_by);
     }
 }
