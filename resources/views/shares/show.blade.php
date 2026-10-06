@@ -28,6 +28,17 @@
                     <span id="lock-request-waiting" class="max-w-xs text-xs text-gray-600" hidden>{{ __('messages.lock_request_waiting') }}</span>
                 </div>
             @endif
+            {{-- Running into the Lock offers a Fork: an independent copy to work
+                 on instead of waiting for the holder (CONTEXT.md, "Fork"). --}}
+            @isset($forkUrl)
+                <form method="POST" action="{{ $forkUrl }}">
+                    @csrf
+                    <x-button type="submit" variant="secondary" size="sm">
+                        <x-icon name="copy" />
+                        {{ __('messages.fork_diagram') }}
+                    </x-button>
+                </form>
+            @endisset
             @if (isset($unlockUrl))
                 <button
                     type="button"
