@@ -51,12 +51,14 @@ class DiagramContentController extends Controller
             'content' => ['required', 'string', new BpmnXml],
         ]);
 
-        // Writing takes the Lock: a free Lock is claimed by whoever saves, so
-        // the save never lands outside one. Opening the Editor normally
-        // acquires it first; this also covers a save whose Lock expired
-        // (ADR-0003) while nobody else took it over.
-        if (! $diagram->hasActiveLock()) {
-            $diagram->acquireLock($user);
+        // Writing takes the Lock, so a save never lands outside one. Opening
+        // the Editor normally acquires it first; this also covers a save
+        // whose Lock expired (ADR-0003) while nobody else took it over.
+        // The claim is conditional, so of two concurrent saves against a free
+        // Lock only one proceeds — the other is told the Lock is gone rather
+        // than silently overwriting it.
+        if (! $diagram->isLockedBy($user) && ! $diagram->claimFreeLock($user)) {
+            abort(423, __('messages.error_lock_lost'));
         }
 
         $this->versions->save($diagram, $user, $data['content']);

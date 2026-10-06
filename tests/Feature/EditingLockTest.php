@@ -658,4 +658,41 @@ class EditingLockTest extends TestCase
 
         Notification::assertNothingSent();
     }
+
+    /**
+     * Claiming a free Lock is one conditional write, so of two concurrent
+     * savers only one can win it.
+     */
+    public function test_only_one_of_two_concurrent_claims_on_a_free_lock_wins(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $diagram = Diagram::factory()->for($first, 'author')->create();
+        $this->approveCollaborator($diagram, $second);
+
+        // Both read the Diagram while the Lock is free, as two requests
+        // racing between the check and the claim would.
+        $firstView = Diagram::findOrFail($diagram->id);
+        $secondView = Diagram::findOrFail($diagram->id);
+
+        $this->assertTrue($firstView->claimFreeLock($first));
+        $this->assertFalse($secondView->claimFreeLock($second));
+        $this->assertSame($first->id, (int) $diagram->fresh()->locked_by);
+    }
+
+    /** The loser of that race is told the Lock is gone, not silently merged. */
+    public function test_saving_against_a_lock_taken_between_check_and_write_is_refused(): void
+    {
+        $holder = User::factory()->create();
+        $saver = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $saver);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        $response = $this->actingAs($saver)->putJson('/diagrams/'.$diagram->slug.'/content', [
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">racing</bpmn:definitions>',
+        ]);
+
+        $response->assertStatus(423);
+    }
 }

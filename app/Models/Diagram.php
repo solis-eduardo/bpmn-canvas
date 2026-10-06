@@ -223,8 +223,9 @@ BPMN;
 
     /**
      * True when $user actually holds the Lock right now. Deliberately not the
-     * negation of {@see isLockedByOther()}: a free Lock is nobody's, so saving
-     * content gates on this, not on the mere absence of another holder — an
+     * negation of {@see isLockedByOther()}: both are false for a free Lock,
+     * which is nobody's. Saving content gates on this (then falls back to
+     * {@see claimFreeLock()}), not on the mere absence of another holder — an
      * expired Lock must not let a stale Editor tab keep writing (ADR-0003).
      */
     public function isLockedBy(User $user): bool
@@ -240,6 +241,37 @@ BPMN;
             'last_heartbeat_at' => now(),
             'lock_draft' => null,
         ])->save();
+    }
+
+    /**
+     * Takes a *free* Lock in one conditional write, reporting whether it was
+     * won. Unlike {@see acquireLock()}, two concurrent callers can't both
+     * succeed: the `locked_by is null` predicate is evaluated by the
+     * database, so the loser's UPDATE matches no row. Used where the Lock is
+     * a precondition rather than the point of the request (saving content).
+     */
+    public function claimFreeLock(User $user): bool
+    {
+        $won = static::query()
+            ->whereKey($this->getKey())
+            ->whereNull('locked_by')
+            ->update([
+                'locked_by' => $user->id,
+                'locked_at' => now(),
+                'last_heartbeat_at' => now(),
+                'lock_draft' => null,
+            ]) === 1;
+
+        if ($won) {
+            $this->forceFill([
+                'locked_by' => $user->id,
+                'locked_at' => now(),
+                'last_heartbeat_at' => now(),
+                'lock_draft' => null,
+            ])->syncChanges();
+        }
+
+        return $won;
     }
 
     /**
