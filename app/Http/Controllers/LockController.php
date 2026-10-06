@@ -59,21 +59,31 @@ class LockController extends Controller
 
         abort_unless(Gate::allows('lock.renew', $diagram), 403, __('messages.error_lock_lost'));
 
-        // Renewing the Lock is the Heartbeat's job; carrying the draft is a
-        // bonus. A draft that doesn't validate is dropped rather than
-        // refused, because a 422 here would stop the Lock being renewed and
-        // expire it under a holder who is actively editing — the Editor
-        // only reacts to 403/423, so they'd never be told.
-        $draft = $request->input('draft');
-
-        if ($draft !== null && Validator::make(['draft' => $draft], ['draft' => ['string', new BpmnXml]])->fails()) {
-            $draft = null;
-        }
-
         return response()->json([
             'heartbeat' => true,
-            'lock_requested_by' => $this->locks->heartbeat($diagram, $request->user(), $draft)?->name,
+            'lock_requested_by' => $this->locks->heartbeat(
+                $diagram,
+                $request->user(),
+                $this->usableDraft($request->input('draft')),
+            )?->name,
         ]);
+    }
+
+    /**
+     * The Heartbeat's draft if it is usable, null otherwise. Renewing the
+     * Lock is the Heartbeat's job and carrying the draft is a bonus, so an
+     * unusable draft is dropped rather than refused: a 422 would stop the
+     * Lock being renewed and expire it under a holder who is actively
+     * editing — and the Editor only reacts to 403/423, so they'd never be
+     * told.
+     */
+    private function usableDraft(mixed $draft): ?string
+    {
+        if (! is_string($draft)) {
+            return null;
+        }
+
+        return Validator::make(['draft' => $draft], ['draft' => [new BpmnXml]])->fails() ? null : $draft;
     }
 
     /**

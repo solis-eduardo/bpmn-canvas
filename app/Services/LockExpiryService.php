@@ -34,10 +34,15 @@ class LockExpiryService
                 ->where('last_heartbeat_at', '<=', $cutoff)
                 ->orWhere(fn ($legacy) => $legacy->whereNull('last_heartbeat_at')->where('locked_at', '<=', $cutoff)))
             ->with('lockedBy')
-            ->each(function (Diagram $diagram) use (&$released): void {
-                $this->saveProvisionalVersion($diagram);
-                $this->locks->release($diagram);
-                $released++;
+            // chunkById, not each(): releasing clears `locked_by`, the very
+            // column the filter selects on, so offset-based paging would
+            // skip rows as the result set shrinks under it.
+            ->chunkById(100, function ($diagrams) use (&$released): void {
+                foreach ($diagrams as $diagram) {
+                    $this->saveProvisionalVersion($diagram);
+                    $this->locks->release($diagram);
+                    $released++;
+                }
             });
 
         return $released;

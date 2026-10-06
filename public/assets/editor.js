@@ -20,11 +20,19 @@
 
   let dirty = false;
 
+  // The draft the server was last told about, so a Heartbeat can skip
+  // re-sending content that hasn't changed since.
+  let lastSentDraft = null;
+
   setupZoom(modeler);
 
   function setDirty(v) {
     dirty = v;
     $('dirty').classList.toggle('on', v);
+
+    // A save settles the content and clears the server's draft, so what it
+    // holds is no longer what we last sent.
+    if (!v) lastSentDraft = null;
   }
 
   async function api(method, url, body) {
@@ -136,9 +144,21 @@
     if (Date.now() - lastActivityAt > IDLE_AFTER_MS) return;
 
     try {
-      const payload = dirty ? { draft: (await modeler.saveXML({ format: true })).xml } : undefined;
+      // `dirty` stays true until a save, so without this the whole diagram
+      // would be re-serialized, re-uploaded, re-parsed and rewritten on
+      // every beat of an editing session. The server only needs the draft
+      // when it differs from the one it already holds.
+      let payload;
+
+      if (dirty) {
+        const xml = (await modeler.saveXML({ format: true })).xml;
+
+        if (xml !== lastSentDraft) payload = { draft: xml };
+      }
+
       const res = await api('PATCH', heartbeatUrl, payload);
       const data = await res.json();
+      if (payload) lastSentDraft = payload.draft;
       showLockRequestedNotice(data.lock_requested_by);
     } catch (e) {
       console.error(e);

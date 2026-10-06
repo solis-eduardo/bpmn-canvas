@@ -83,6 +83,14 @@ class VersionRepository
         // describing content that was never actually saved as a Version.
         $this->reindexSearchableText($diagram, $content);
 
+        // Settling the content settles the holder's draft with it: whatever
+        // the Editor had unsaved is now a Version, so an expiring Lock must
+        // not resurrect it on top (ADR-0003). Here rather than in each
+        // caller, so no future content-settling path can forget it.
+        if ($content !== null) {
+            $diagram->clearLockDraft();
+        }
+
         return $versionId;
     }
 

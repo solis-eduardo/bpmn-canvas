@@ -53,8 +53,6 @@ class DiagramContentController extends Controller
 
         $this->versions->save($diagram, $request->user(), $data['content']);
 
-        $diagram->clearLockDraft();
-
         return response()->json(['saved' => true]);
     }
 }
