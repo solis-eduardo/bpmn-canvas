@@ -185,7 +185,8 @@ class DiagramRepositoryTest extends TestCase
         $workspace = Workspace::factory()->create();
         Diagram::factory()->create(['workspace_id' => $workspace->id]);
 
-        $this->assertEqualsCanonicalizing([$requested->id, $open->id], $this->repository->discoveryQuery($user)->pluck('id')->all());
+        $this->assertSame([], $this->repository->discoveryQuery($user)->pluck('id')->all());
+        $this->assertEqualsCanonicalizing([$requested->id, $open->id], $this->repository->discoveryQuery($user, 'one')->pluck('id')->all());
         $this->assertSame([$open->id], $this->repository->discoveryQuery($user, 'open')->pluck('id')->all());
     }
 

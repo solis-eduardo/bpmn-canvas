@@ -1,5 +1,5 @@
 (function () {
-  const { toast, setupZoom } = window.BpmnCommon;
+  const { toast, setupZoom, errorMessage } = window.BpmnCommon;
 
   const body = document.getElementById('editor');
   const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
@@ -39,7 +39,7 @@
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     if (!res.ok) {
-      throw new Error(method + ' ' + url + ' → HTTP ' + res.status);
+      throw await window.BpmnCommon.httpError(res);
     }
     return res;
   }
@@ -57,7 +57,7 @@
       setDirty(false);
     } catch (e) {
       console.error(e);
-      toast(body.dataset.loadFailedNotice, true);
+      toast(errorMessage(e, body.dataset.loadFailedNotice), true);
     }
   }
 
@@ -70,7 +70,7 @@
       toast(body.dataset.savedNotice);
     } catch (e) {
       console.error(e);
-      toast(body.dataset.saveFailedNotice, true);
+      toast(errorMessage(e, body.dataset.saveFailedNotice), true);
     }
   }
 
@@ -93,7 +93,7 @@
         location.href = indexUrl;
       } catch (e) {
         console.error(e);
-        toast(body.dataset.releaseLockFailedNotice, true);
+        toast(errorMessage(e, body.dataset.releaseLockFailedNotice), true);
       }
     });
   }
@@ -120,12 +120,38 @@
     lockRequestBanner.hidden = false;
   }
 
-  const heartbeatInterval = setInterval(() => {
-    api('PATCH', heartbeatUrl)
-      .then(res => res.json())
-      .then(data => showLockRequestedNotice(data.lock_requested_by))
-      .catch(e => console.error(e));
-  }, 30000);
+  // The Lock expires after a few minutes without a Heartbeat (ADR-0003), so
+  // the Heartbeat only goes out while the holder is actually using the
+  // Editor: an abandoned tab stops renewing and its Lock is released. When
+  // there are unsaved changes, the Heartbeat carries them along so the
+  // server can keep them as a provisional Version if the Lock expires.
+  const HEARTBEAT_INTERVAL_MS = 30000;
+  const IDLE_AFTER_MS = 3 * 60 * 1000;
+  let lastActivityAt = Date.now();
+  ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'].forEach(name => {
+    document.addEventListener(name, () => { lastActivityAt = Date.now(); }, { passive: true });
+  });
+
+  async function sendHeartbeat() {
+    if (Date.now() - lastActivityAt > IDLE_AFTER_MS) return;
+
+    try {
+      const payload = dirty ? { draft: (await modeler.saveXML({ format: true })).xml } : undefined;
+      const res = await api('PATCH', heartbeatUrl, payload);
+      const data = await res.json();
+      showLockRequestedNotice(data.lock_requested_by);
+    } catch (e) {
+      console.error(e);
+
+      // The Lock is gone (expired or taken): stop renewing and say so, once.
+      if (e.status === 403 || e.status === 423) {
+        clearInterval(heartbeatTimer);
+        toast(errorMessage(e, body.dataset.saveFailedNotice), true);
+      }
+    }
+  }
+
+  const heartbeatTimer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
 
   loadContent();
 })();

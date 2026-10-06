@@ -101,7 +101,7 @@ import { compareBpmnXml, highlightDiff, renderRemovedGhosts } from './diff.js';
       renderVersions(data.versions || []);
     } catch (e) {
       console.error(e);
-      window.BpmnCommon.toast(body.dataset.versionsLoadFailedNotice || 'Could not load version history.', true);
+      window.BpmnCommon.toast(window.BpmnCommon.errorMessage(e, body.dataset.versionsLoadFailedNotice || 'Could not load version history.'), true);
     }
   }
 
@@ -263,7 +263,7 @@ import { compareBpmnXml, highlightDiff, renderRemovedGhosts } from './diff.js';
         modeler.saveXML({ format: true }),
       ]);
 
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) throw await window.BpmnCommon.httpError(res);
 
       const { content: oldXml } = await res.json();
 
@@ -281,7 +281,7 @@ import { compareBpmnXml, highlightDiff, renderRemovedGhosts } from './diff.js';
       );
     } catch (e) {
       console.error(e);
-      window.BpmnCommon.toast(body.dataset.versionCompareFailedNotice || 'Could not compare this version.', true);
+      window.BpmnCommon.toast(window.BpmnCommon.errorMessage(e, body.dataset.versionCompareFailedNotice || 'Could not compare this version.'), true);
     }
   }
 
@@ -313,7 +313,7 @@ import { compareBpmnXml, highlightDiff, renderRemovedGhosts } from './diff.js';
 
       const res = await fetchPromise;
 
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) throw await window.BpmnCommon.httpError(res);
 
       const { older, newer } = await res.json();
 
@@ -350,7 +350,7 @@ import { compareBpmnXml, highlightDiff, renderRemovedGhosts } from './diff.js';
       );
     } catch (e) {
       console.error(e);
-      window.BpmnCommon.toast(body.dataset.versionsCompareFailedNotice || 'Could not compare these versions.', true);
+      window.BpmnCommon.toast(window.BpmnCommon.errorMessage(e, body.dataset.versionsCompareFailedNotice || 'Could not compare these versions.'), true);
     }
   }
 
@@ -436,7 +436,7 @@ import { compareBpmnXml, highlightDiff, renderRemovedGhosts } from './diff.js';
         },
       });
 
-      if (!res.ok) throw new Error('HTTP ' + res.status);
+      if (!res.ok) throw await window.BpmnCommon.httpError(res);
 
       exitComparison();
       await reloadCanvas();
@@ -448,7 +448,7 @@ import { compareBpmnXml, highlightDiff, renderRemovedGhosts } from './diff.js';
       window.BpmnCommon.toast(versionRestoredNotice || 'Version restored.');
     } catch (e) {
       console.error(e);
-      window.BpmnCommon.toast(versionRestoreFailedNotice || 'Could not restore this version.', true);
+      window.BpmnCommon.toast(window.BpmnCommon.errorMessage(e, versionRestoreFailedNotice || 'Could not restore this version.'), true);
     }
   }
 

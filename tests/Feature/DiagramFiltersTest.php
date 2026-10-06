@@ -13,7 +13,7 @@ class DiagramFiltersTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_owner_filter_shows_owned_diagrams_and_preserves_discoverable_results(): void
+    public function test_owner_filter_shows_owned_diagrams_and_not_others(): void
     {
         $user = User::factory()->create();
         $owned = Diagram::factory()->for($user, 'author')->create(['title' => 'Owned by me']);
@@ -23,10 +23,10 @@ class DiagramFiltersTest extends TestCase
 
         $response->assertOk();
         $response->assertSee($owned->title);
-        $this->assertTrue($response->viewData('diagrams')->getCollection()->contains('id', $other->id));
+        $this->assertFalse($response->viewData('diagrams')->getCollection()->contains('id', $other->id));
     }
 
-    public function test_collaborator_filter_shows_approved_collaborators_and_preserves_discoverable_results(): void
+    public function test_collaborator_filter_shows_approved_collaborators_and_not_others(): void
     {
         $user = User::factory()->create();
 
@@ -51,8 +51,8 @@ class DiagramFiltersTest extends TestCase
         $response->assertOk();
         $response->assertSee($approved->title);
         $listedIds = $response->viewData('diagrams')->getCollection()->pluck('id');
-        $this->assertTrue($listedIds->contains($requested->id));
-        $this->assertTrue($listedIds->contains($unrelated->id));
+        $this->assertFalse($listedIds->contains($requested->id));
+        $this->assertFalse($listedIds->contains($unrelated->id));
     }
 
     public function test_owner_and_collaborator_filters_combined_show_the_union_not_the_intersection(): void
@@ -75,7 +75,7 @@ class DiagramFiltersTest extends TestCase
         $response->assertOk();
         $response->assertSee($owned->title);
         $response->assertSee($collaborated->title);
-        $this->assertTrue($response->viewData('diagrams')->getCollection()->contains('id', $unrelated->id));
+        $this->assertFalse($response->viewData('diagrams')->getCollection()->contains('id', $unrelated->id));
     }
 
     public function test_filters_combine_with_search(): void

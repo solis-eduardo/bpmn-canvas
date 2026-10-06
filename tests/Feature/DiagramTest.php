@@ -68,16 +68,14 @@ class DiagramTest extends TestCase
         $this->assertDatabaseMissing('diagrams', ['title' => 'No Login']);
     }
 
-    public function test_authenticated_user_sees_a_listing_of_all_diagrams(): void
+    public function test_listing_hides_other_users_diagrams_unless_searched(): void
     {
         $user = User::factory()->create();
         $other = User::factory()->create();
         Diagram::factory()->for($other, 'author')->create(['title' => "Another User's Diagram"]);
 
-        $response = $this->actingAs($user)->get('/diagrams');
-
-        $response->assertOk();
-        $response->assertSee("Another User's Diagram");
+        $this->actingAs($user)->get('/diagrams')->assertOk()->assertDontSee("Another User's Diagram");
+        $this->actingAs($user)->get('/diagrams?q=Another')->assertOk()->assertSee("Another User's Diagram");
     }
 
     public function test_diagram_listing_shows_the_last_modification_time(): void

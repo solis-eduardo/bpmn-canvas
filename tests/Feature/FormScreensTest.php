@@ -89,6 +89,24 @@ class FormScreensTest extends TestCase
         ])->assertRedirect(route('admin.users.index'));
     }
 
+    public function test_toggling_administrator_from_the_listing_returns_to_the_listing_with_a_visible_notice(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $target = User::factory()->create(['is_admin' => false]);
+
+        $this->actingAs($admin)->get(route('admin.users.index'))
+            ->assertSee('name="submit_action" value="exit"', false);
+
+        $this->actingAs($admin)
+            ->followingRedirects()
+            ->put(route('admin.users.update', $target), ['is_admin' => 1, 'submit_action' => 'exit'])
+            ->assertSee('role="status"', false)
+            ->assertSee(__('messages.saved'))
+            ->assertSee(__('messages.revoke_administrator'));
+
+        $this->assertTrue($target->fresh()->is_admin);
+    }
+
     public function test_save_and_exit_on_the_account_forms_goes_home_and_plain_save_stays(): void
     {
         $user = User::factory()->create();

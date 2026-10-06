@@ -18,7 +18,11 @@ class PublicShareController extends Controller
         $diagram = $share->diagram;
         $diagramXml = $share->content($versions);
 
-        return view('shares.show', compact('share', 'diagram', 'diagramXml'));
+        return view('shares.show', [
+            'diagram' => $diagram,
+            'diagramXml' => $diagramXml,
+            'allowDownload' => $share->allow_download,
+        ]);
     }
 
     public function download(Share $share, string $format, VersionRepository $versions): Response

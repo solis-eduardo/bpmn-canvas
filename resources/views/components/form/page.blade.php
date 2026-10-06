@@ -12,10 +12,6 @@
             </x-button>
         @endif
     </div>
-    @if (session('status'))
-        <p class="mt-6 rounded-md bg-green-50 px-4 py-3 text-sm text-green-700" role="status">
-            {{ session('status') }}
-        </p>
-    @endif
+    <x-flash-status class="mt-6" />
     {{ $slot }}
 </div>

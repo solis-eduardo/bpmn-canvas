@@ -33,7 +33,7 @@
     </ul>
 </details>
 @once
-    <script>
+    <script nonce="{{ $cspNonce }}">
         // <details> doesn't close on Escape or on outside clicks by itself.
         (() => {
             const close = (except) => document.querySelectorAll('details[data-lang-switch][open]')

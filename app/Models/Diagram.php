@@ -207,8 +207,9 @@ BPMN;
     }
 
     /**
-     * True while a User holds the Diagram's Editing Lock. Locks have no
-     * inactivity expiry and are released only explicitly.
+     * True while a User holds the Diagram's Editing Lock. A Lock is released
+     * explicitly or, once it goes without a Heartbeat for the configured TTL,
+     * by `locks:expire` (ADR-0003) — until then it counts as held.
      */
     public function hasActiveLock(): bool
     {
@@ -226,6 +227,7 @@ BPMN;
             'locked_by' => $user->id,
             'locked_at' => now(),
             'last_heartbeat_at' => now(),
+            'lock_draft' => null,
         ])->save();
     }
 
@@ -234,7 +236,7 @@ BPMN;
      * the current lock holder. Any heartbeat counts as the holder
      * "responding", cancelling a pending transfer request.
      */
-    public function heartbeat(User $user): bool
+    public function heartbeat(User $user, ?string $draft = null): bool
     {
         if ((int) $this->locked_by !== $user->id) {
             return false;
@@ -244,9 +246,25 @@ BPMN;
             'last_heartbeat_at' => now(),
             'lock_requested_by' => null,
             'lock_requested_at' => null,
-        ])->save();
+        ]);
+
+        if ($draft !== null) {
+            $this->lock_draft = $draft;
+        }
+
+        $this->save();
 
         return true;
+    }
+
+    /**
+     * Drops the holder's unsaved-content draft once it has been saved for
+     * real. A plain query update so the Diagram's "last modified" stays put.
+     */
+    public function clearLockDraft(): void
+    {
+        static::query()->whereKey($this->getKey())->update(['lock_draft' => null]);
+        $this->setAttribute('lock_draft', null);
     }
 
     /**
@@ -263,6 +281,7 @@ BPMN;
             'locked_by' => null,
             'locked_at' => null,
             'last_heartbeat_at' => null,
+            'lock_draft' => null,
             'lock_requested_by' => null,
             'lock_requested_at' => null,
         ])->save();
@@ -280,6 +299,7 @@ BPMN;
             'locked_by' => $newHolder->id,
             'locked_at' => now(),
             'last_heartbeat_at' => now(),
+            'lock_draft' => null,
             'lock_requested_by' => null,
             'lock_requested_at' => null,
         ])->save();
