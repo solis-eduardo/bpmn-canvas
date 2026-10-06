@@ -233,14 +233,26 @@ BPMN;
         return $this->hasActiveLock() && (int) $this->locked_by === $user->id;
     }
 
-    public function acquireLock(User $user): void
+    /**
+     * The columns that say "this Lock is held by $user, as of now". One
+     * definition for every path that takes a Lock, so a future Lock column
+     * can't be added to some of them and forgotten in the rest.
+     *
+     * @return array<string, mixed>
+     */
+    private function lockHeldBy(User $user): array
     {
-        $this->forceFill([
+        return [
             'locked_by' => $user->id,
             'locked_at' => now(),
             'last_heartbeat_at' => now(),
             'lock_draft' => null,
-        ])->save();
+        ];
+    }
+
+    public function acquireLock(User $user): void
+    {
+        $this->forceFill($this->lockHeldBy($user))->save();
     }
 
     /**
@@ -252,23 +264,17 @@ BPMN;
      */
     public function claimFreeLock(User $user): bool
     {
+        $held = $this->lockHeldBy($user);
+
         $won = static::query()
             ->whereKey($this->getKey())
             ->whereNull('locked_by')
-            ->update([
-                'locked_by' => $user->id,
-                'locked_at' => now(),
-                'last_heartbeat_at' => now(),
-                'lock_draft' => null,
-            ]) === 1;
+            ->update($held) === 1;
 
         if ($won) {
-            $this->forceFill([
-                'locked_by' => $user->id,
-                'locked_at' => now(),
-                'last_heartbeat_at' => now(),
-                'lock_draft' => null,
-            ])->syncChanges();
+            // The row now *is* this, so nothing stays pending for a later
+            // save() to rewrite.
+            $this->forceFill($held)->syncOriginal();
         }
 
         return $won;
@@ -338,11 +344,7 @@ BPMN;
      */
     public function transferLockTo(User $newHolder): void
     {
-        $this->forceFill([
-            'locked_by' => $newHolder->id,
-            'locked_at' => now(),
-            'last_heartbeat_at' => now(),
-            'lock_draft' => null,
+        $this->forceFill($this->lockHeldBy($newHolder) + [
             'lock_requested_by' => null,
             'lock_requested_at' => null,
         ])->save();

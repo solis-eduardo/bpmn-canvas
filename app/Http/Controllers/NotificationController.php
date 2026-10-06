@@ -153,21 +153,10 @@ class NotificationController extends Controller
     {
         return [
             'id' => $notification->id,
-            'message' => $this->message($notification),
+            'message' => $this->presenter->messageFor($notification),
             'read' => $notification->read_at !== null,
             'created_at' => $notification->created_at,
             'url' => route('notifications.read', $notification->id),
         ];
-    }
-
-    /**
-     * Human-readable text for a notification, delegated to
-     * {@see NotificationPresenter} — the one place that maps a
-     * notification's data to what the User reads, shared by the bell's
-     * dropdown, the history screen and notification search.
-     */
-    private function message(DatabaseNotification $notification): string
-    {
-        return $this->presenter->messageFor($notification);
     }
 }
