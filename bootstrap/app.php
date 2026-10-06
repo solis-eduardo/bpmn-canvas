@@ -2,6 +2,7 @@
 
 use App\Http\Middleware\AddContentSecurityPolicy;
 use App\Http\Middleware\SetLocale;
+use App\Support\LocalizedJsonError;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -55,33 +56,21 @@ return Application::configure(basePath: dirname(__DIR__))
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // JSON clients (the Editor and its panels) show `message` to the
-        // user, so Laravel's English defaults are swapped for localized ones.
-        // Deliberate messages (abort(403, '...')) and validation errors stay.
+        // User, so Laravel's English defaults are swapped for localized
+        // ones. {@see LocalizedJsonError} decides which; deliberate
+        // messages of ours and validation errors are left alone.
         $exceptions->respond(function (SymfonyResponse $response, Throwable $e, Request $request) {
             if (! $response instanceof JsonResponse || ! $request->expectsJson()) {
                 return $response;
             }
 
-            $status = $response->getStatusCode();
-            $data = $response->getData(true);
-            $current = (string) ($data['message'] ?? '');
+            $message = LocalizedJsonError::messageFor($e, $response);
 
-            $key = match (true) {
-                $status === 403 && in_array($current, ['', 'This action is unauthorized.'], true) => 'error_forbidden',
-                $status === 404 && ($current === '' || $current === 'Not Found' || str_starts_with($current, 'No query results') || str_starts_with($current, 'The route')) => 'error_not_found',
-                $status === 419 => 'error_session_expired',
-                $status === 429 => 'error_too_many_requests',
-                $status >= 500 && ! config('app.debug') => 'error_server',
-                default => null,
-            };
-
-            if ($key === null) {
+            if ($message === null) {
                 return $response;
             }
 
-            $data['message'] = __('messages.'.$key);
-
-            return $response->setData($data);
+            return $response->setData(array_merge($response->getData(true), ['message' => $message]));
         });
 
         $exceptions->shouldRenderJsonWhen(
