@@ -195,10 +195,7 @@ return [
     'version_restore_failed' => 'Não foi possível restaurar esta versão.',
 
     // Locked diagram
-    'being_edited' => 'Em edição',
-    'currently_being_edited_by' => 'Este diagrama está sendo editado por :name no momento. Você não pode abrir o Editor até que a Trava seja liberada.',
     'create_a_copy_to_continue' => 'Criar uma cópia (Fork) para continuar agora',
-    'locked_since' => 'Travado :time',
     'request_the_lock' => 'Solicitar a Trava',
     'lock_request_waiting' => 'O detentor atual foi avisado. A Trava permanecerá com ele até que a libere explicitamente.',
     'lock_requested_by_notice' => ':name solicitou a Trava deste diagrama.',

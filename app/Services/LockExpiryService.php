@@ -51,7 +51,7 @@ class LockExpiryService
             return;
         }
 
-        $versionId = $this->versions->save($diagram, $holder, $diagram->lock_draft, 'Provisional version (Lock expired)');
+        $versionId = $this->versions->save($diagram, $holder, $diagram->lock_draft, VersionRepository::MESSAGE_PROVISIONAL);
 
         if ($versionId !== null) {
             DiagramVersionName::updateOrCreate(

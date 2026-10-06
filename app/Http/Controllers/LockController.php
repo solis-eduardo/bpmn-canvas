@@ -10,6 +10,7 @@ use App\Services\LockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Validator;
 
 /**
  * A Diagram's Lock as one REST resource (CONTEXT.md, "Lock"; ADR-0011):
@@ -58,13 +59,20 @@ class LockController extends Controller
 
         abort_unless(Gate::allows('lock.renew', $diagram), 403, __('messages.error_lock_lost'));
 
-        $data = $request->validate([
-            'draft' => ['nullable', 'string', new BpmnXml],
-        ]);
+        // Renewing the Lock is the Heartbeat's job; carrying the draft is a
+        // bonus. A draft that doesn't validate is dropped rather than
+        // refused, because a 422 here would stop the Lock being renewed and
+        // expire it under a holder who is actively editing — the Editor
+        // only reacts to 403/423, so they'd never be told.
+        $draft = $request->input('draft');
+
+        if ($draft !== null && Validator::make(['draft' => $draft], ['draft' => ['string', new BpmnXml]])->fails()) {
+            $draft = null;
+        }
 
         return response()->json([
             'heartbeat' => true,
-            'lock_requested_by' => $this->locks->heartbeat($diagram, $request->user(), $data['draft'] ?? null)?->name,
+            'lock_requested_by' => $this->locks->heartbeat($diagram, $request->user(), $draft)?->name,
         ]);
     }
 

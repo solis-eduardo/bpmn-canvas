@@ -207,7 +207,7 @@ BPMN;
     }
 
     /**
-     * True while a User holds the Diagram's Editing Lock. A Lock is released
+     * True while a User holds the Diagram's Lock. A Lock is released
      * explicitly or, once it goes without a Heartbeat for the configured TTL,
      * by `locks:expire` (ADR-0003) — until then it counts as held.
      */

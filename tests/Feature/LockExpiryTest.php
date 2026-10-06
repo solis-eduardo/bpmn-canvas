@@ -112,14 +112,6 @@ class LockExpiryTest extends TestCase
         $this->assertNull($diagram->fresh()->lock_draft);
     }
 
-    public function test_an_invalid_draft_is_rejected(): void
-    {
-        $holder = User::factory()->create();
-        $diagram = $this->heldDiagram($holder);
-
-        $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock', ['draft' => 'not xml'])->assertUnprocessable();
-    }
-
     public function test_expiry_never_transfers_the_lock_to_a_requester(): void
     {
         $holder = User::factory()->create();
@@ -189,5 +181,40 @@ class LockExpiryTest extends TestCase
         $this->actingAs(User::factory()->create())->getJson('/diagrams/does-not-exist/content')
             ->assertNotFound()
             ->assertJsonPath('message', __('messages.error_not_found'));
+    }
+
+    /**
+     * A draft that doesn't validate must not cost the holder their Lock:
+     * renewing is the Heartbeat's job, carrying the draft is a bonus.
+     */
+    public function test_an_invalid_draft_is_dropped_without_failing_the_heartbeat(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = $this->heldDiagram($holder);
+
+        $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock', [
+            'draft' => 'not bpmn at all',
+        ])->assertOk()->assertJsonPath('heartbeat', true);
+
+        $this->assertNull($diagram->fresh()->lock_draft);
+        $this->assertSame($holder->id, (int) $diagram->fresh()->locked_by);
+    }
+
+    /** Restoring a Version settles the content, so the draft is stale. */
+    public function test_restoring_a_version_clears_the_lock_draft(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = $this->heldDiagram($holder);
+        $versions = app(VersionRepository::class);
+        $first = $versions->list($diagram)[0]['id'];
+
+        $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock', [
+            'draft' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">draft</bpmn:definitions>',
+        ])->assertOk();
+        $this->assertNotNull($diagram->fresh()->lock_draft);
+
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/versions/'.$first.'/restore')->assertOk();
+
+        $this->assertNull($diagram->fresh()->lock_draft);
     }
 }

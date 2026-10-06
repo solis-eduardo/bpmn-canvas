@@ -1,4 +1,4 @@
-# Editing Lock released explicitly or by expiry
+# Lock released explicitly or by expiry
 
 The legacy stack was explicit about having no concurrent editing lock at all: "if two people save the same file, the last one wins." That was acceptable with a single shared username/password, but with individual accounts (ADR-0001) and per-Diagram Collaborators, silent collisions become a real risk of lost work.
 

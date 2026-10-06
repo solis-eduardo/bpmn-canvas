@@ -110,6 +110,11 @@ class VersionController extends Controller
             abort(404);
         }
 
+        // Like a save, a restore settles the content, so the holder's draft
+        // is stale. Left behind, an expiring Lock would resurrect it as a
+        // provisional Version on top of what was just restored (ADR-0003).
+        $diagram->clearLockDraft();
+
         return response()->json(['restored' => true]);
     }
 

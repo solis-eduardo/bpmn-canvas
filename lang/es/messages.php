@@ -195,10 +195,7 @@ return [
     'version_restore_failed' => 'No se pudo restaurar esta versión.',
 
     // Locked diagram
-    'being_edited' => 'En edición',
-    'currently_being_edited_by' => 'Este diagrama está siendo editado por :name en este momento. No puedes abrir el Editor hasta que se libere el Bloqueo.',
     'create_a_copy_to_continue' => 'Crear una copia (Fork) para continuar ahora',
-    'locked_since' => 'Bloqueado :time',
     'request_the_lock' => 'Solicitar el Bloqueo',
     'lock_request_waiting' => 'Se ha avisado al titular actual. El Bloqueo permanecerá con esa persona hasta que lo libere explícitamente.',
     'lock_requested_by_notice' => ':name ha solicitado el Bloqueo de este diagrama.',

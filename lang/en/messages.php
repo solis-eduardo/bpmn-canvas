@@ -195,10 +195,7 @@ return [
     'version_restore_failed' => 'Could not restore this version.',
 
     // Locked diagram
-    'being_edited' => 'Being edited',
-    'currently_being_edited_by' => "This diagram is currently being edited by :name. You can't open the Editor until the Lock is released.",
     'create_a_copy_to_continue' => 'Create a copy (Fork) to continue now',
-    'locked_since' => 'Locked :time',
     'request_the_lock' => 'Request the Lock',
     'lock_request_waiting' => 'The current holder has been notified. The Lock will remain with them until they explicitly release it.',
     'lock_requested_by_notice' => ':name has requested the Lock on this diagram.',

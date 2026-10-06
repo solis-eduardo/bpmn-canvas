@@ -191,7 +191,7 @@ class DiagramController extends Controller
             return $this->viewer($diagram, __('messages.read_only_diagram_notice'), 'blue', $user);
         }
 
-        // The Editing Lock only concerns actual editors. When someone else
+        // The Lock only concerns actual editors. When someone else
         // holds it, the Editor stays closed: the Viewer opens instead, with
         // a red notice and the option to request the Lock.
         if (! $this->locks->enter($diagram, $user)) {
