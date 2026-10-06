@@ -197,6 +197,7 @@ return [
     // Locked diagram
     'create_a_copy_to_continue' => 'Criar uma cópia (Fork) para continuar agora',
     'request_the_lock' => 'Solicitar a Trava',
+    'fork_diagram' => 'Criar uma cópia',
     'lock_request_waiting' => 'O detentor atual foi avisado. A Trava permanecerá com ele até que a libere explicitamente.',
     'lock_requested_by_notice' => ':name solicitou a Trava deste diagrama.',
     'release_lock' => 'Liberar Trava',
@@ -266,6 +267,7 @@ return [
     'no_notifications_yet' => 'Nenhuma notificação ainda.',
     'mark_all_as_read' => 'Marcar todas como lidas',
     'notification_requested_access' => ':name solicitou acesso a :diagram',
+    'notification_lock_requested' => ':name solicitou a trava de :diagram',
     'notification_workspace_added' => 'Você foi adicionado ao Ambiente :workspace.',
     'notification_workspace_removed' => 'Você foi removido do Ambiente :workspace.',
     'notification_workspace_ownership_transferred' => 'Você agora é o dono do Ambiente :workspace.',

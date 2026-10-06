@@ -197,6 +197,7 @@ return [
     // Locked diagram
     'create_a_copy_to_continue' => 'Crear una copia (Fork) para continuar ahora',
     'request_the_lock' => 'Solicitar el Bloqueo',
+    'fork_diagram' => 'Crear una copia',
     'lock_request_waiting' => 'Se ha avisado al titular actual. El Bloqueo permanecerá con esa persona hasta que lo libere explícitamente.',
     'lock_requested_by_notice' => ':name ha solicitado el Bloqueo de este diagrama.',
     'release_lock' => 'Liberar Bloqueo',
@@ -266,6 +267,7 @@ return [
     'no_notifications_yet' => 'Todavía no hay notificaciones.',
     'mark_all_as_read' => 'Marcar todas como leídas',
     'notification_requested_access' => ':name solicitó acceso a :diagram',
+    'notification_lock_requested' => ':name solicitó el bloqueo de :diagram',
     'notification_workspace_added' => 'Fuiste añadido a :workspace.',
     'notification_workspace_removed' => 'Fuiste quitado de :workspace.',
     'notification_workspace_ownership_transferred' => 'Ahora eres el propietario del espacio de trabajo :workspace.',

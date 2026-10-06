@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Diagram;
 use App\Models\User;
+use App\Notifications\DiagramLockRequested;
 
 /**
  * Decides which Lock primitive on the Diagram to call, and when (CONTEXT.md,
@@ -24,13 +25,22 @@ class LockService
      */
     public function openOrRequest(Diagram $diagram, User $user): LockOutcome
     {
-        if (! $diagram->hasActiveLock() || ! $diagram->isLockedByOther($user)) {
+        if (! $diagram->isLockedByOther($user)) {
             $diagram->acquireLock($user);
 
             return LockOutcome::acquired();
         }
 
+        // Only a genuinely new request notifies: re-opening the blocked
+        // screen keeps polling this endpoint, and the holder shouldn't get
+        // one notification per poll.
+        $alreadyPending = $diagram->pendingLockRequestIsFrom($user);
+
         $diagram->registerLockRequest($user);
+
+        if (! $alreadyPending) {
+            $diagram->lockedBy?->notify(new DiagramLockRequested($diagram, $user));
+        }
 
         return LockOutcome::waiting($diagram->lock_requested_at);
     }
