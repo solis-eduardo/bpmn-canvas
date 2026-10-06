@@ -221,6 +221,17 @@ BPMN;
         return $this->hasActiveLock() && (int) $this->locked_by !== $user->id;
     }
 
+    /**
+     * True when $user actually holds the Lock right now. Deliberately not the
+     * negation of {@see isLockedByOther()}: a free Lock is nobody's, so saving
+     * content gates on this, not on the mere absence of another holder — an
+     * expired Lock must not let a stale Editor tab keep writing (ADR-0003).
+     */
+    public function isLockedBy(User $user): bool
+    {
+        return $this->hasActiveLock() && (int) $this->locked_by === $user->id;
+    }
+
     public function acquireLock(User $user): void
     {
         $this->forceFill([
