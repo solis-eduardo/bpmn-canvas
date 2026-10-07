@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\LockUnavailableException;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Repositories\DiagramRepository;
 use App\Repositories\VersionRepository;
@@ -43,8 +44,8 @@ class DiagramContentController extends Controller
 
         $user = $request->user();
 
-        if ($diagram->isLockedByOther($user)) {
-            abort(423, __('messages.error_diagram_locked_by', ['name' => $diagram->lockedBy->name]));
+        if (! Gate::allows('lock.write', $diagram)) {
+            throw LockUnavailableException::heldByOther($diagram);
         }
 
         $data = $request->validate([
@@ -58,7 +59,7 @@ class DiagramContentController extends Controller
         // Lock only one proceeds — the other is told the Lock is gone rather
         // than silently overwriting it.
         if (! $diagram->isLockedBy($user) && ! $diagram->claimFreeLock($user)) {
-            abort(423, __('messages.error_lock_lost'));
+            throw LockUnavailableException::lost();
         }
 
         $this->versions->save($diagram, $user, $data['content']);

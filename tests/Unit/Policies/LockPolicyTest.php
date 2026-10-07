@@ -45,6 +45,20 @@ class LockPolicyTest extends TestCase
         return $this->diagram->fresh();
     }
 
+    public function test_write_is_for_the_holder_or_an_editor_while_the_lock_is_free(): void
+    {
+        $this->assertTrue($this->policy->write($this->holder, $this->diagram));
+        $this->assertTrue($this->policy->write($this->collaborator, $this->diagram));
+        $this->assertFalse($this->policy->write($this->admin, $this->diagram));
+        $this->assertFalse($this->policy->write($this->stranger, $this->diagram));
+
+        $held = $this->lockedByOwner();
+
+        $this->assertTrue($this->policy->write($this->holder, $held));
+        $this->assertFalse($this->policy->write($this->collaborator, $held));
+        $this->assertFalse($this->policy->write($this->admin, $held));
+    }
+
     public function test_view_is_for_editors_and_administrators(): void
     {
         $this->assertTrue($this->policy->view($this->holder, $this->diagram));
