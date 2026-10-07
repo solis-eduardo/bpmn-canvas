@@ -57,14 +57,7 @@
     });
 
     if (!res.ok) {
-      const error = new Error('HTTP ' + res.status);
-      error.status = res.status;
-      try {
-        error.body = await res.json();
-      } catch (e) {
-        // no JSON body
-      }
-      throw error;
+      throw await window.BpmnCommon.httpError(res);
     }
 
     if (res.status === 204) return null;
@@ -80,7 +73,7 @@
       renderCollaborators(collaborators || []);
     } catch (e) {
       console.error(e);
-      toast(body.dataset.collaboratorsLoadFailedNotice || 'Could not load collaborators.', true);
+      toast(window.BpmnCommon.errorMessage(e, body.dataset.collaboratorsLoadFailedNotice || 'Could not load collaborators.'), true);
     }
   }
 
@@ -153,7 +146,7 @@
       await loadCollaborators();
     } catch (e) {
       console.error(e);
-      toast(body.dataset.approveFailedNotice || 'Could not approve this collaborator.', true);
+      toast(window.BpmnCommon.errorMessage(e, body.dataset.approveFailedNotice || 'Could not approve this collaborator.'), true);
     }
   }
 
@@ -170,7 +163,7 @@
       await loadCollaborators();
     } catch (e) {
       console.error(e);
-      toast(body.dataset.removeFailedNotice || 'Could not remove this collaborator.', true);
+      toast(window.BpmnCommon.errorMessage(e, body.dataset.removeFailedNotice || 'Could not remove this collaborator.'), true);
     }
   }
 
@@ -191,7 +184,7 @@
       await loadCollaborators();
     } catch (e) {
       console.error(e);
-      toast(body.dataset.inviteFailedNotice || 'Could not invite this collaborator.', true);
+      toast(window.BpmnCommon.errorMessage(e, body.dataset.inviteFailedNotice || 'Could not invite this collaborator.'), true);
     }
   });
 
@@ -252,7 +245,7 @@
       renderShares((data && data.shares) || []);
     } catch (e) {
       console.error(e);
-      toast(body.dataset.sharesLoadFailedNotice || 'Could not load shares.', true);
+      toast(window.BpmnCommon.errorMessage(e, body.dataset.sharesLoadFailedNotice || 'Could not load shares.'), true);
     }
   }
 
@@ -346,7 +339,7 @@
       toast(body.dataset.linkCopiedNotice || 'Link copied to clipboard.');
     } catch (e) {
       console.error(e);
-      toast(body.dataset.linkCopyFailedNotice || 'Could not copy the link.', true);
+      toast(window.BpmnCommon.errorMessage(e, body.dataset.linkCopyFailedNotice || 'Could not copy the link.'), true);
     }
   }
 
@@ -361,7 +354,7 @@
       await loadShares();
     } catch (e) {
       console.error(e);
-      toast(body.dataset.shareRevokeFailedNotice || 'Could not revoke this share.', true);
+      toast(window.BpmnCommon.errorMessage(e, body.dataset.shareRevokeFailedNotice || 'Could not revoke this share.'), true);
     }
   }
 
@@ -384,7 +377,7 @@
         await loadShares();
       } catch (e) {
         console.error(e);
-        toast(body.dataset.shareCreateFailedNotice || 'Could not create the share link.', true);
+        toast(window.BpmnCommon.errorMessage(e, body.dataset.shareCreateFailedNotice || 'Could not create the share link.'), true);
       }
     });
   }

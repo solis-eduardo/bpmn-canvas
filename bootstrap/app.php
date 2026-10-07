@@ -2,11 +2,14 @@
 
 use App\Http\Middleware\AddContentSecurityPolicy;
 use App\Http\Middleware\SetLocale;
+use App\Support\LocalizedJsonError;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Symfony\Component\HttpFoundation\Response as SymfonyResponse;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -48,8 +51,28 @@ return Application::configure(basePath: dirname(__DIR__))
         // Offset from :00, same reasoning as backup:run above — avoids the
         // crowd of jobs everyone else schedules on the hour.
         $schedule->command('shares:warn-expiring')->hourlyAt(45)->onOneServer();
+        // Lock expiry (ADR-0003) is time-sensitive, so it runs every minute.
+        $schedule->command('locks:expire')->everyMinute()->onOneServer();
     })
     ->withExceptions(function (Exceptions $exceptions): void {
+        // JSON clients (the Editor and its panels) show `message` to the
+        // User, so Laravel's English defaults are swapped for localized
+        // ones. {@see LocalizedJsonError} decides which; deliberate
+        // messages of ours and validation errors are left alone.
+        $exceptions->respond(function (SymfonyResponse $response, Throwable $e, Request $request) {
+            if (! $response instanceof JsonResponse || ! $request->expectsJson()) {
+                return $response;
+            }
+
+            $message = LocalizedJsonError::messageFor($e, $response);
+
+            if ($message === null) {
+                return $response;
+            }
+
+            return $response->setData(array_merge($response->getData(true), ['message' => $message]));
+        });
+
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );

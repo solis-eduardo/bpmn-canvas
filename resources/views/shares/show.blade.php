@@ -13,11 +13,38 @@
 
     <x-slot:headerActions>
         <div class="flex items-center gap-3">
+            @isset($backUrl)
+                <x-button :href="$backUrl" variant="secondary" size="sm">
+                    <x-icon name="arrow-left" />
+                    {{ __('messages.back') }}
+                </x-button>
+            @endisset
+            @if (isset($requestLockUrl))
+                <div id="lock-request" class="flex items-center gap-2" data-request-url="{{ $requestLockUrl }}" data-show-url="{{ $showUrl }}">
+                    <button type="button" id="btn-request-lock" class="inline-flex items-center gap-1.5 rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 disabled:opacity-50">
+                        <x-icon name="key" />
+                        {{ __('messages.request_the_lock') }}
+                    </button>
+                    <span id="lock-request-waiting" class="max-w-xs text-xs text-gray-600" hidden>{{ __('messages.lock_request_waiting') }}</span>
+                </div>
+            @endif
+            @if (isset($unlockUrl))
+                <button
+                    type="button"
+                    id="btn-release-lock"
+                    data-unlock-url="{{ $unlockUrl }}"
+                    data-release-failed-notice="{{ __('messages.release_lock_failed') }}"
+                    class="inline-flex items-center gap-1.5 rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50"
+                >
+                    <x-icon name="key" />
+                    {{ __('messages.force_release_lock') }}
+                </button>
+            @endif
             <span class="max-w-xs truncate text-sm font-medium text-gray-700" title="{{ $diagram->title }}">
                 {{ $diagram->title }}
             </span>
 
-            @if ($share->allow_download)
+            @if ($allowDownload)
                 <div class="dropdown relative">
                     <button
                         type="button"
@@ -48,6 +75,13 @@
 
     <div id="viewer" class="relative h-full" data-title="{{ $diagram->title }}" data-open-failed-notice="{{ __('messages.diagram_open_failed') }}">
         <div id="canvas" class="absolute inset-0 bg-white"></div>
+        @isset($notice)
+            <p
+                class="absolute left-4 right-4 top-4 z-10 rounded-md border px-3 py-2 text-sm font-semibold shadow-sm sm:right-auto sm:max-w-xl {{ ($noticeTone ?? 'blue') === 'red' ? 'border-red-300 bg-red-100 text-red-900' : 'border-blue-200 bg-blue-50 text-blue-900' }}"
+                role="{{ ($noticeTone ?? 'blue') === 'red' ? 'alert' : 'status' }}"
+                @if (! empty($lockedAt)) data-locked-at="{{ $lockedAt->toIso8601String() }}" @endif
+            >{{ $notice }}</p>
+        @endisset
         <div id="message" class="absolute inset-0 flex items-center justify-center px-6 text-center text-gray-500">
             {{ __('messages.loading') }}
         </div>
@@ -63,4 +97,7 @@
     <script src="{{ asset('vendor/bpmn-js/bpmn-navigated-viewer.production.min.js') }}"></script>
     <script src="{{ asset('assets/common.js') }}"></script>
     <script src="{{ asset('assets/share-viewer.js') }}"></script>
+    @isset($requestLockUrl)
+        <script src="{{ asset('assets/locked.js') }}"></script>
+    @endisset
 </x-layouts.app>

@@ -44,12 +44,12 @@ class DiagramVisibilityTest extends TestCase
             'title' => 'Discoverable but inaccessible',
         ]);
 
-        $response = $this->actingAs($owner)->get('/diagrams');
+        $listed = fn (string $query) => $this->actingAs($owner)->get('/diagrams'.$query)
+            ->assertOk()->viewData('diagrams')->getCollection()->pluck('id');
 
-        $response->assertOk();
-        $listedIds = $response->viewData('diagrams')->getCollection()->pluck('id');
-        $this->assertTrue($listedIds->contains($openable->id));
-        $this->assertTrue($listedIds->contains($inaccessible->id));
+        $this->assertTrue($listed('')->contains($openable->id));
+        $this->assertFalse($listed('')->contains($inaccessible->id));
+        $this->assertTrue($listed('?q=inaccessible')->contains($inaccessible->id));
     }
 
     public function test_unified_search_only_exposes_title_and_diagram_owner_for_discoverable_diagrams(): void
@@ -142,14 +142,16 @@ class DiagramVisibilityTest extends TestCase
         $response->assertSee($hidden->title);
     }
 
-    public function test_a_diagram_outside_any_workspace_stays_visible_to_every_user(): void
+    public function test_a_diagram_outside_any_workspace_is_discoverable_by_search_for_every_user(): void
     {
         $owner = User::factory()->create();
         $diagram = Diagram::factory()->for($owner, 'author')->create();
 
         $stranger = User::factory()->create();
 
-        $response = $this->actingAs($stranger)->get('/diagrams');
+        $this->assertFalse($this->actingAs($stranger)->get('/diagrams')->viewData('diagrams')->getCollection()->contains('id', $diagram->id));
+
+        $response = $this->actingAs($stranger)->get('/diagrams?q='.urlencode($diagram->title));
 
         $response->assertOk();
         $this->assertTrue($response->viewData('diagrams')->getCollection()->contains('id', $diagram->id));

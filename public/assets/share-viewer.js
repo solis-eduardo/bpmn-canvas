@@ -21,6 +21,28 @@
     return;
   }
 
+  // Administrators opening a locked Diagram in the Viewer can force-release it.
+  const releaseButton = document.getElementById('btn-release-lock');
+  if (releaseButton) {
+    releaseButton.addEventListener('click', async () => {
+      try {
+        const res = await fetch(releaseButton.dataset.unlockUrl, {
+          method: 'DELETE',
+          credentials: 'same-origin',
+          headers: {
+            Accept: 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+          },
+        });
+        if (!res.ok) throw await window.BpmnCommon.httpError(res);
+        location.reload();
+      } catch (e) {
+        console.error(e);
+        window.BpmnCommon.toast(window.BpmnCommon.errorMessage(e, releaseButton.dataset.releaseFailedNotice), true);
+      }
+    });
+  }
+
   document.querySelectorAll('[data-export]').forEach(btn => {
     btn.addEventListener('click', async () => {
       try {

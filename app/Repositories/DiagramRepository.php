@@ -133,8 +133,10 @@ class DiagramRepository
             'collaborators' => fn ($collaborators) => $collaborators->where('user_id', $user->id),
         ]);
 
-        if ($user->is_admin) {
-            return $this->titleContaining($query->whereRaw('1 = 0'), $search);
+        // Discovery only ever happens through a search (ADR-0013): without a
+        // term the list shows nothing the User can't open.
+        if ($user->is_admin || $search === '') {
+            return $query->whereRaw('1 = 0');
         }
 
         return $this->titleContaining(

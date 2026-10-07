@@ -114,5 +114,27 @@
     setupPanels();
   }
 
-  window.BpmnCommon = { toast, download, exportBpmn, exportSvg, exportPng, setupDropdowns, setupZoom, baseName, togglePanel };
+  // Builds the Error for a failed response, carrying the HTTP status and the
+  // localized `message` the server sent (when it sent one), so callers can
+  // tell the user why instead of a generic "could not ...".
+  async function httpError(res) {
+    const error = new Error('HTTP ' + res.status);
+    error.status = res.status;
+    try {
+      error.body = await res.json();
+      if (error.body && typeof error.body.message === 'string' && error.body.message) {
+        error.serverMessage = error.body.message;
+      }
+    } catch (e) {
+      // no JSON body
+    }
+    return error;
+  }
+
+  // The server's own explanation when there is one, else the generic notice.
+  function errorMessage(error, fallback) {
+    return (error && error.serverMessage) || fallback;
+  }
+
+  window.BpmnCommon = { httpError, errorMessage, toast, download, exportBpmn, exportSvg, exportPng, setupDropdowns, setupZoom, baseName, togglePanel };
 })();

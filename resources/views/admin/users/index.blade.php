@@ -7,6 +7,8 @@
         </x-button>
     </div>
 
+    <x-flash-status class="mt-6" />
+
     <form method="GET" action="{{ route('admin.users.index') }}" class="mt-6 flex flex-wrap items-center gap-3">
         <div class="relative min-w-48 flex-1">
             <x-icon name="search" class="h-4 w-4 pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -95,6 +97,7 @@
                                     <form method="POST" action="{{ route('admin.users.update', $user) }}">
                                         @csrf
                                         @method('PUT')
+                                        <input type="hidden" name="submit_action" value="exit">
                                         <input type="hidden" name="is_admin" value="{{ $user->is_admin ? 0 : 1 }}">
                                         <x-button type="submit" :variant="$user->is_admin ? 'destructive' : 'secondary'" size="sm">
                                             <x-icon name="shield-check" />

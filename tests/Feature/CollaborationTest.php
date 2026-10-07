@@ -200,16 +200,14 @@ class CollaborationTest extends TestCase
         ])->assertForbidden();
     }
 
-    public function test_the_general_listing_remains_visible_to_any_authenticated_user(): void
+    public function test_another_users_diagram_is_absent_from_the_listing_and_only_found_by_search(): void
     {
         $author = User::factory()->create();
         $outsider = User::factory()->create();
         $diagram = Diagram::factory()->for($author, 'author')->create(['title' => "Another User's Diagram"]);
 
-        $response = $this->actingAs($outsider)->get('/diagrams');
-
-        $response->assertOk();
-        $response->assertSee("Another User's Diagram");
+        $this->actingAs($outsider)->get('/diagrams')->assertOk()->assertDontSee("Another User's Diagram");
+        $this->actingAs($outsider)->get('/diagrams?q=Another')->assertOk()->assertSee("Another User's Diagram");
     }
 
     public function test_a_non_author_non_admin_cannot_add_someone_else_as_collaborator(): void

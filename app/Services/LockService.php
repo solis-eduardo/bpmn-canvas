@@ -38,22 +38,23 @@ class LockService
     /**
      * Heartbeat: only has an effect for the current holder.
      */
-    public function renew(Diagram $diagram, User $user): bool
+    public function renew(Diagram $diagram, User $user, ?string $draft = null): bool
     {
-        return $diagram->heartbeat($user);
+        return $diagram->heartbeat($user, $draft);
     }
 
     /**
      * Heartbeat that also reports who, if anyone, was waiting for the Lock.
      * A heartbeat counts as the holder responding and clears the request, so
-     * the requester has to be read first.
+     * the requester has to be read first. $draft is the holder's unsaved
+     * Editor content, kept for a provisional Version if the Lock expires.
      */
-    public function heartbeat(Diagram $diagram, User $holder): ?User
+    public function heartbeat(Diagram $diagram, User $holder, ?string $draft = null): ?User
     {
         $diagram->loadMissing('lockRequestedBy');
         $requester = $diagram->lockRequestedBy;
 
-        $this->renew($diagram, $holder);
+        $this->renew($diagram, $holder, $draft);
 
         return $requester;
     }

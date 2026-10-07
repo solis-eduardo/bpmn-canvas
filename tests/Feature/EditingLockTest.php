@@ -79,8 +79,8 @@ class EditingLockTest extends TestCase
         $firstResponse = $this->actingAs($other)->get('/diagrams/'.$first->slug);
         $secondResponse = $this->actingAs($other)->get('/diagrams/'.$second->slug);
 
-        $firstResponse->assertViewIs('diagrams.locked')->assertSee($holder->name);
-        $secondResponse->assertViewIs('diagrams.locked')->assertSee($holder->name);
+        $firstResponse->assertViewIs('shares.show')->assertSee($holder->name);
+        $secondResponse->assertViewIs('shares.show')->assertSee($holder->name);
         $this->assertSame($holder->id, $first->fresh()->locked_by);
         $this->assertSame($holder->id, $second->fresh()->locked_by);
     }
@@ -148,7 +148,7 @@ class EditingLockTest extends TestCase
         $this->assertSame($other->id, $diagram->fresh()->locked_by);
     }
 
-    public function test_an_inactive_lock_remains_held_until_explicitly_released(): void
+    public function test_an_inactive_lock_remains_held_until_released_or_expired(): void
     {
         $holder = User::factory()->create();
         $other = User::factory()->create();
@@ -161,7 +161,7 @@ class EditingLockTest extends TestCase
         $response = $this->actingAs($other)->get('/diagrams/'.$diagram->slug);
 
         $response->assertOk();
-        $response->assertViewIs('diagrams.locked');
+        $response->assertViewIs('shares.show');
         $this->assertSame($holder->id, $diagram->fresh()->locked_by);
     }
 
@@ -180,7 +180,7 @@ class EditingLockTest extends TestCase
         $response = $this->actingAs($other)->get('/diagrams/'.$diagram->slug);
 
         $response->assertOk();
-        $response->assertViewIs('diagrams.locked');
+        $response->assertViewIs('shares.show');
         $this->assertSame($holder->id, $diagram->fresh()->locked_by);
     }
 
@@ -329,10 +329,22 @@ class EditingLockTest extends TestCase
         $response = $this->actingAs($blocked)->get('/diagrams/'.$diagram->slug);
 
         $response->assertOk();
-        $response->assertViewIs('diagrams.locked');
+        $response->assertViewIs('shares.show');
         $response->assertSee('Dora Detain');
         $response->assertSee($lockedAt->toIso8601String(), false);
         $response->assertSee('id="btn-request-lock"', false);
+        $response->assertSee('bg-red-100', false);
+        $response->assertDontSee('id="btn-save"', false);
+    }
+
+    public function test_a_user_without_edit_permission_is_turned_away_from_the_diagram(): void
+    {
+        $owner = User::factory()->create();
+        $stranger = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+
+        $this->actingAs($stranger)->get('/diagrams/'.$diagram->slug)->assertForbidden();
+        $this->actingAs($stranger)->get('/diagrams')->assertDontSee($diagram->title);
     }
 
     /**

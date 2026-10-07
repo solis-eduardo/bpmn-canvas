@@ -184,15 +184,21 @@ class DiagramController extends Controller
 
         $user = $request->user();
 
-        // The Editing Lock only concerns actual editors (Diagram Owner,
-        // Collaborator, Member) — an Administrator who can merely "see and
-        // open" the Diagram (DiagramPolicy::view()'s admin bypass) but
-        // can't save must never acquire, hold, or be blocked by it.
-        if (Gate::allows('lock.acquire', $diagram) && ! $this->locks->enter($diagram, $user)) {
-            return view('diagrams.locked', [
-                'diagram' => $diagram,
-                'lockedBy' => $diagram->lockedBy,
-            ]);
+        // Whoever can open a Diagram without being able to edit it (only an
+        // Administrator who isn't Owner, Collaborator or Member: everyone
+        // else is turned away by the policy above) gets the read-only Viewer.
+        if (Gate::denies('update', $diagram)) {
+            return $this->viewer($diagram, __('messages.read_only_diagram_notice'), 'blue', $user);
+        }
+
+        // The Lock only concerns actual editors. When someone else
+        // holds it, the Editor stays closed: the Viewer opens instead, with
+        // a red notice and the option to request the Lock.
+        if (! $this->locks->enter($diagram, $user)) {
+            return $this->viewer($diagram, __('messages.viewer_locked_notice', [
+                'name' => $diagram->lockedBy->name,
+                'time' => $diagram->locked_at?->diffForHumans() ?? '',
+            ]), 'red', $user, requestLock: true);
         }
 
         $diagram->loadMissing(['author', 'owner', 'tags', 'workspace', 'lockedBy']);
@@ -203,6 +209,24 @@ class DiagramController extends Controller
             : [];
 
         return view('diagrams.show', compact('diagram', 'tagNames', 'collaboratorOptions'));
+    }
+
+    private function viewer(Diagram $diagram, string $notice, string $tone, User $user, bool $requestLock = false): View
+    {
+        $diagram->loadMissing('lockedBy');
+
+        return view('shares.show', [
+            'diagram' => $diagram,
+            'diagramXml' => $this->diagrams->contentOf($diagram),
+            'allowDownload' => true,
+            'backUrl' => route('diagrams.index'),
+            'notice' => $notice,
+            'noticeTone' => $tone,
+            'lockedAt' => $diagram->locked_at,
+            'requestLockUrl' => $requestLock ? route('diagrams.lock.store', $diagram->slug) : null,
+            'showUrl' => route('diagrams.show', $diagram->slug),
+            'unlockUrl' => $user->is_admin && $diagram->hasActiveLock() ? route('diagrams.lock.destroy', $diagram->slug) : null,
+        ]);
     }
 
     public function update(Request $request, string $slug): JsonResponse

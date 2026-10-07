@@ -28,6 +28,14 @@ class VersionRepository
     private const MESSAGE_RESTORE = 'Restored a previous version';
 
     /**
+     * Commit message for the Version an expiring Lock leaves behind
+     * (ADR-0003). Public because LockExpiryService is the one caller that
+     * passes its own message; the User-facing name of that Version is the
+     * localized `messages.provisional_version`, not this.
+     */
+    public const MESSAGE_PROVISIONAL = 'Provisional version (Lock expired)';
+
+    /**
      * Ensures the Diagram has a Version repository, registering the content
      * currently on disk as the first Version if the repository doesn't
      * exist yet (created via the CRUD from ticket 02, or via any other path
@@ -74,6 +82,14 @@ class VersionRepository
         // ahead of a commit that then throws would leave searchable_text
         // describing content that was never actually saved as a Version.
         $this->reindexSearchableText($diagram, $content);
+
+        // Settling the content settles the holder's draft with it: whatever
+        // the Editor had unsaved is now a Version, so an expiring Lock must
+        // not resurrect it on top (ADR-0003). Here rather than in each
+        // caller, so no future content-settling path can forget it.
+        if ($content !== null) {
+            $diagram->clearLockDraft();
+        }
 
         return $versionId;
     }
