@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
+use App\Notifications\DiagramLockRequested;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -523,5 +525,174 @@ class EditingLockTest extends TestCase
         $known->assertForbidden();
         $unknown->assertForbidden();
         $this->assertSame($known->json('message'), $unknown->json('message'));
+    }
+
+    /**
+     * A stale Editor tab whose Lock expired must not overwrite whoever took
+     * the Lock over in the meantime (ADR-0003).
+     */
+    public function test_a_former_holder_cannot_save_once_their_expired_lock_was_taken_by_someone_else(): void
+    {
+        $former = User::factory()->create();
+        $newHolder = User::factory()->create();
+        $diagram = Diagram::factory()->for($former, 'author')->create();
+        $this->approveCollaborator($diagram, $newHolder);
+
+        $this->actingAs($former)->get('/diagrams/'.$diagram->slug);
+
+        Carbon::setTestNow(now()->addMinutes(config('bpmn.lock_ttl_minutes') + 1));
+        $this->artisan('locks:expire');
+        $this->actingAs($newHolder)->get('/diagrams/'.$diagram->slug);
+
+        $response = $this->actingAs($former)->putJson('/diagrams/'.$diagram->slug.'/content', [
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">stale</bpmn:definitions>',
+        ]);
+
+        $response->assertStatus(423);
+        $this->assertSame($newHolder->id, (int) $diagram->fresh()->locked_by);
+    }
+
+    /**
+     * Saving into a free Lock claims it, so content is never written outside
+     * a Lock the saver holds.
+     */
+    public function test_saving_while_the_lock_is_free_acquires_it_for_the_saver(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+
+        $this->assertNull($diagram->fresh()->locked_by);
+
+        $this->actingAs($owner)->putJson('/diagrams/'.$diagram->slug.'/content', [
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">saved</bpmn:definitions>',
+        ])->assertOk();
+
+        $this->assertSame($owner->id, (int) $diagram->fresh()->locked_by);
+    }
+
+    /** Invalid content is refused without claiming the Lock as a side effect. */
+    public function test_a_rejected_save_does_not_acquire_the_lock(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+
+        $this->actingAs($owner)->putJson('/diagrams/'.$diagram->slug.'/content', [
+            'content' => 'not xml',
+        ])->assertStatus(422);
+
+        $this->assertNull($diagram->fresh()->locked_by);
+    }
+
+    /**
+     * The banner only reaches a holder whose Editor is still open, so the
+     * request also notifies them (CONTEXT.md, "Lock").
+     */
+    public function test_requesting_the_lock_notifies_the_holder(): void
+    {
+        Notification::fake();
+        $holder = User::factory()->create();
+        $requester = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $requester);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+
+        Notification::assertSentTo($holder, DiagramLockRequested::class);
+    }
+
+    /** Polling the blocked screen must not notify the holder over and over. */
+    public function test_repeating_a_pending_lock_request_does_not_notify_the_holder_again(): void
+    {
+        Notification::fake();
+        $holder = User::factory()->create();
+        $requester = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $requester);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
+
+        Notification::assertSentToTimes($holder, DiagramLockRequested::class, 1);
+    }
+
+    /** The way out of someone else's Lock is offered on the blocked screen. */
+    public function test_the_blocked_screen_offers_a_fork(): void
+    {
+        $holder = User::factory()->create();
+        $blocked = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $blocked);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        $response = $this->actingAs($blocked)->get('/diagrams/'.$diagram->slug);
+
+        $response->assertOk();
+        $response->assertSee(route('diagrams.fork', $diagram->slug), false);
+        $response->assertSee(__('messages.fork_diagram'), false);
+    }
+
+    /** The read-only Viewer an Administrator gets is not a blocked screen. */
+    public function test_the_read_only_viewer_does_not_offer_a_fork(): void
+    {
+        $owner = User::factory()->create();
+        $admin = User::factory()->create(['is_admin' => true]);
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+
+        $response = $this->actingAs($admin)->get('/diagrams/'.$diagram->slug);
+
+        $response->assertOk();
+        $response->assertDontSee(route('diagrams.fork', $diagram->slug), false);
+    }
+
+    /** Acquiring a free Lock notifies nobody — there is no holder to tell. */
+    public function test_acquiring_a_free_lock_notifies_nobody(): void
+    {
+        Notification::fake();
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+
+        $this->actingAs($user)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+
+        Notification::assertNothingSent();
+    }
+
+    /**
+     * Claiming a free Lock is one conditional write, so of two concurrent
+     * savers only one can win it.
+     */
+    public function test_only_one_of_two_concurrent_claims_on_a_free_lock_wins(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $diagram = Diagram::factory()->for($first, 'author')->create();
+        $this->approveCollaborator($diagram, $second);
+
+        // Both read the Diagram while the Lock is free, as two requests
+        // racing between the check and the claim would.
+        $firstView = Diagram::findOrFail($diagram->id);
+        $secondView = Diagram::findOrFail($diagram->id);
+
+        $this->assertTrue($firstView->claimFreeLock($first));
+        $this->assertFalse($secondView->claimFreeLock($second));
+        $this->assertSame($first->id, (int) $diagram->fresh()->locked_by);
+    }
+
+    /** The loser of that race is told the Lock is gone, not silently merged. */
+    public function test_saving_against_a_lock_taken_between_check_and_write_is_refused(): void
+    {
+        $holder = User::factory()->create();
+        $saver = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $saver);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        $response = $this->actingAs($saver)->putJson('/diagrams/'.$diagram->slug.'/content', [
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">racing</bpmn:definitions>',
+        ]);
+
+        $response->assertStatus(423);
     }
 }

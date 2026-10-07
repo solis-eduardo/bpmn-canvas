@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\FiltersDiagramList;
+use App\Models\Concerns\HoldsALock;
 use App\Rules\BpmnXml;
 use Database\Factories\DiagramFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -23,6 +24,7 @@ class Diagram extends Model
     use HasFactory;
 
     use HasTags;
+    use HoldsALock;
 
     /**
      * Template for a newly created Diagram's seed BPMN XML. The start
@@ -192,141 +194,6 @@ BPMN;
         }
 
         return $this->isEditableBy($user);
-    }
-
-    /** @return BelongsTo<User, $this> */
-    public function lockedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'locked_by');
-    }
-
-    /** @return BelongsTo<User, $this> */
-    public function lockRequestedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'lock_requested_by');
-    }
-
-    /**
-     * True while a User holds the Diagram's Lock. A Lock is released
-     * explicitly or, once it goes without a Heartbeat for the configured TTL,
-     * by `locks:expire` (ADR-0003) — until then it counts as held.
-     */
-    public function hasActiveLock(): bool
-    {
-        return $this->locked_by !== null;
-    }
-
-    public function isLockedByOther(User $user): bool
-    {
-        return $this->hasActiveLock() && (int) $this->locked_by !== $user->id;
-    }
-
-    public function acquireLock(User $user): void
-    {
-        $this->forceFill([
-            'locked_by' => $user->id,
-            'locked_at' => now(),
-            'last_heartbeat_at' => now(),
-            'lock_draft' => null,
-        ])->save();
-    }
-
-    /**
-     * Updates the Lock's heartbeat. Only has an effect if the given User is
-     * the current lock holder. Any heartbeat counts as the holder
-     * "responding", cancelling a pending transfer request.
-     */
-    public function heartbeat(User $user, ?string $draft = null): bool
-    {
-        if ((int) $this->locked_by !== $user->id) {
-            return false;
-        }
-
-        $this->forceFill([
-            'last_heartbeat_at' => now(),
-            'lock_requested_by' => null,
-            'lock_requested_at' => null,
-        ]);
-
-        if ($draft !== null) {
-            $this->lock_draft = $draft;
-        }
-
-        $this->save();
-
-        return true;
-    }
-
-    /**
-     * Drops the holder's unsaved-content draft once it has been saved for
-     * real. A plain query update so the Diagram's "last modified" stays put.
-     */
-    public function clearLockDraft(): void
-    {
-        static::query()->whereKey($this->getKey())->update(['lock_draft' => null]);
-        $this->setAttribute('lock_draft', null);
-    }
-
-    /**
-     * Releases the Lock. If a User is given, only releases it if they're the
-     * current lock holder (silent no-op otherwise).
-     */
-    public function releaseLock(?User $user = null): bool
-    {
-        if ($user !== null && (int) $this->locked_by !== $user->id) {
-            return false;
-        }
-
-        $this->forceFill([
-            'locked_by' => null,
-            'locked_at' => null,
-            'last_heartbeat_at' => null,
-            'lock_draft' => null,
-            'lock_requested_by' => null,
-            'lock_requested_at' => null,
-        ])->save();
-
-        return true;
-    }
-
-    /**
-     * Hands the Lock straight to $newHolder in a single write, dropping any
-     * pending request (a Transfer answers it, or pre-empts it).
-     */
-    public function transferLockTo(User $newHolder): void
-    {
-        $this->forceFill([
-            'locked_by' => $newHolder->id,
-            'locked_at' => now(),
-            'last_heartbeat_at' => now(),
-            'lock_draft' => null,
-            'lock_requested_by' => null,
-            'lock_requested_at' => null,
-        ])->save();
-    }
-
-    /**
-     * True if there's a pending Lock request made by $user.
-     */
-    public function pendingLockRequestIsFrom(User $user): bool
-    {
-        return $this->lock_requested_by !== null && (int) $this->lock_requested_by === $user->id;
-    }
-
-    /**
-     * Registers $user as requesting the Lock. Doesn't restart the timestamp
-     * if there's already a pending request from the same User.
-     */
-    public function registerLockRequest(User $user): void
-    {
-        if ($this->pendingLockRequestIsFrom($user)) {
-            return;
-        }
-
-        $this->forceFill([
-            'lock_requested_by' => $user->id,
-            'lock_requested_at' => now(),
-        ])->save();
     }
 
     /** @return HasMany<DiagramOldSlug, $this> */

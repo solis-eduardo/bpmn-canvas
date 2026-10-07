@@ -6,6 +6,7 @@ use App\Notifications\DiagramAccessRequested;
 use App\Notifications\DiagramAccessRequestResolved;
 use App\Notifications\DiagramCollaboratorInvited;
 use App\Notifications\DiagramCollaboratorRemoved;
+use App\Notifications\DiagramLockRequested;
 use App\Notifications\DiagramOwnershipTransferred;
 use App\Notifications\WorkspaceMemberAdded;
 use App\Notifications\WorkspaceMemberRemoved;
@@ -25,6 +26,10 @@ class NotificationPresenter
 
         return match ($notification->type) {
             DiagramAccessRequested::class => __('messages.notification_requested_access', [
+                'name' => $data['requester_name'] ?? '',
+                'diagram' => $data['diagram_title'] ?? '',
+            ]),
+            DiagramLockRequested::class => __('messages.notification_lock_requested', [
                 'name' => $data['requester_name'] ?? '',
                 'diagram' => $data['diagram_title'] ?? '',
             ]),

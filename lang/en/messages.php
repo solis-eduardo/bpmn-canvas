@@ -197,6 +197,7 @@ return [
     // Locked diagram
     'create_a_copy_to_continue' => 'Create a copy (Fork) to continue now',
     'request_the_lock' => 'Request the Lock',
+    'fork_diagram' => 'Create a copy',
     'lock_request_waiting' => 'The current holder has been notified. The Lock will remain with them until they explicitly release it.',
     'lock_requested_by_notice' => ':name has requested the Lock on this diagram.',
     'release_lock' => 'Release Lock',
@@ -266,6 +267,7 @@ return [
     'no_notifications_yet' => 'No notifications yet.',
     'mark_all_as_read' => 'Mark all as read',
     'notification_requested_access' => ':name requested access to :diagram',
+    'notification_lock_requested' => ':name requested the Lock on :diagram',
     'notification_workspace_added' => 'You were added to :workspace.',
     'notification_workspace_removed' => 'You were removed from :workspace.',
     'notification_workspace_ownership_transferred' => 'You are now the Workspace Owner of :workspace.',

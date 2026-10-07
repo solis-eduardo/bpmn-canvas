@@ -2,16 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Notifications\DiagramAccessRequested;
-use App\Notifications\DiagramAccessRequestResolved;
-use App\Notifications\DiagramCollaboratorInvited;
 use App\Notifications\DiagramCollaboratorRemoved;
-use App\Notifications\DiagramOwnershipTransferred;
-use App\Notifications\WorkspaceMemberAdded;
-use App\Notifications\WorkspaceMemberRemoved;
-use App\Notifications\WorkspaceOwnershipTransferred;
+use App\Notifications\DiagramLockRequested;
 use App\Repositories\DiagramRepository;
 use App\Repositories\WorkspaceRepository;
+use App\Services\Notifications\NotificationPresenter;
 use App\Services\Notifications\NotificationSearch;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
@@ -36,6 +31,7 @@ class NotificationController extends Controller
     public function __construct(
         private readonly DiagramRepository $diagrams,
         private readonly WorkspaceRepository $workspaces,
+        private readonly NotificationPresenter $presenter,
     ) {}
 
     /**
@@ -119,7 +115,11 @@ class NotificationController extends Controller
         $diagram = $this->diagrams->find($record->data['diagram_id'] ?? 0);
 
         if ($diagram) {
-            return redirect(route('diagrams.show', $diagram->slug).'?open-panel=collaborators');
+            // A Lock request is about the Editor itself, not about who may
+            // edit, so it opens the Diagram without the Collaborators panel.
+            return $record->type === DiagramLockRequested::class
+                ? redirect()->route('diagrams.show', $diagram->slug)
+                : redirect(route('diagrams.show', $diagram->slug).'?open-panel=collaborators');
         }
 
         $workspace = $this->workspaces->find($record->data['workspace_id'] ?? 0);
@@ -153,49 +153,10 @@ class NotificationController extends Controller
     {
         return [
             'id' => $notification->id,
-            'message' => $this->message($notification),
+            'message' => $this->presenter->messageFor($notification),
             'read' => $notification->read_at !== null,
             'created_at' => $notification->created_at,
             'url' => route('notifications.read', $notification->id),
         ];
-    }
-
-    /**
-     * Human-readable text for a notification, keyed by its type — the one
-     * place that maps a notification's data to what the User reads, shared
-     * by both the bell's dropdown and the history screen.
-     */
-    private function message(DatabaseNotification $notification): string
-    {
-        return match ($notification->type) {
-            DiagramAccessRequested::class => __('messages.notification_requested_access', [
-                'name' => $notification->data['requester_name'] ?? '',
-                'diagram' => $notification->data['diagram_title'] ?? '',
-            ]),
-            WorkspaceMemberAdded::class => __('messages.notification_workspace_added', [
-                'workspace' => $notification->data['workspace_name'] ?? '',
-            ]),
-            WorkspaceMemberRemoved::class => __('messages.notification_workspace_removed', [
-                'workspace' => $notification->data['workspace_name'] ?? '',
-            ]),
-            WorkspaceOwnershipTransferred::class => __('messages.notification_workspace_ownership_transferred', [
-                'workspace' => $notification->data['workspace_name'] ?? '',
-            ]),
-            DiagramAccessRequestResolved::class => __($notification->data['approved']
-                ? 'messages.notification_access_request_approved'
-                : 'messages.notification_access_request_refused', [
-                    'diagram' => $notification->data['diagram_title'],
-                ]),
-            DiagramCollaboratorInvited::class => __('messages.notification_collaborator_invited', [
-                'diagram' => $notification->data['diagram_title'] ?? '',
-            ]),
-            DiagramCollaboratorRemoved::class => __('messages.notification_collaborator_removed', [
-                'diagram' => $notification->data['diagram_title'] ?? '',
-            ]),
-            DiagramOwnershipTransferred::class => __('messages.notification_diagram_ownership_transferred', [
-                'diagram' => $notification->data['diagram_title'] ?? '',
-            ]),
-            default => '',
-        };
     }
 }
