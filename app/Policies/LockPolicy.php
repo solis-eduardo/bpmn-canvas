@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Models\Concerns\HoldsALock;
 use App\Models\Diagram;
 use App\Models\User;
 
@@ -41,6 +42,19 @@ class LockPolicy
     {
         return $diagram->isEditableBy($user)
             && $diagram->hasActiveLock()
+            && ! $diagram->isLockedByOther($user);
+    }
+
+    /**
+     * Write content under the Lock: its holder, or anyone eligible to edit
+     * while it is free (the write then takes it, see
+     * {@see HoldsALock::claimFreeLock()}). Never
+     * while someone else holds it, an Administrator included. A free Lock
+     * only *allows* the write: winning it is still a race the caller settles.
+     */
+    public function write(User $user, Diagram $diagram): bool
+    {
+        return $diagram->isEditableBy($user)
             && ! $diagram->isLockedByOther($user);
     }
 
