@@ -109,7 +109,6 @@ docker-compose.prod.yml     # production overlay: .env.prod + shared reverse-pro
 .env.prod                   # non-secret production overrides (layered over .env)
 Dockerfile                  # multi-stage: vendored bpmn-js + composer + app + web
 CONTEXT.md                  # domain glossary
-docs/GLOSSARY.md            # PT-BR -> English naming thesaurus
 docs/adr/                   # architectural decisions
 ```
 
@@ -235,7 +234,6 @@ docker-compose.prod.yml     # overlay de produção: .env.prod + rede do reverse
 .env.prod                   # overrides de produção sem segredos (sobre o .env)
 Dockerfile                  # multi-stage: bpmn-js vendorizado + composer + app + web
 CONTEXT.md                  # glossário do domínio
-docs/GLOSSARY.md            # tesauro de nomenclatura PT-BR -> inglês
 docs/adr/                   # decisões arquiteturais
 ```
 

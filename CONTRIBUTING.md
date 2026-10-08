@@ -19,7 +19,7 @@ Thanks for your interest in contributing! This is a small project, so the proces
 
 ## Domain vocabulary
 
-Before touching code, skim `CONTEXT.md` (domain glossary) and `docs/adr/` (architectural decisions). This project uses a controlled vocabulary — Diagram, Author, Collaborator, Share, Editing Lock, Version, Fork, User — consistently across code, UI, and docs. Match that vocabulary in new code, commit messages, and PR descriptions rather than introducing synonyms (`docs/GLOSSARY.md` has the full PT-BR ↔ English naming table used while translating this codebase).
+Before touching code, skim `CONTEXT.md` (domain glossary) and `docs/adr/` (architectural decisions). This project uses a controlled vocabulary — Diagram, Author, Collaborator, Share, Editing Lock, Version, Fork, User — consistently across code, UI, and docs. Match that vocabulary in new code, commit messages, and PR descriptions rather than introducing synonyms (`CONTEXT.md` also lists the PT-BR UI term for each).
 
 ## Running tests
 
@@ -78,7 +78,7 @@ Obrigado pelo interesse em contribuir! Este é um projeto pequeno, então o proc
 
 ## Vocabulário do domínio
 
-Antes de mexer no código, dê uma olhada em `CONTEXT.md` (glossário do domínio) e `docs/adr/` (decisões arquiteturais). Este projeto usa um vocabulário controlado — Diagrama, Autor, Colaborador, Compartilhamento, Trava de Edição, Versão, Fork, Usuário — de forma consistente no código, na UI e na documentação. Siga esse vocabulário em código novo, mensagens de commit e descrições de PR, em vez de introduzir sinônimos (`docs/GLOSSARY.md` tem a tabela completa de nomenclatura PT-BR ↔ inglês usada na tradução deste código).
+Antes de mexer no código, dê uma olhada em `CONTEXT.md` (glossário do domínio) e `docs/adr/` (decisões arquiteturais). Este projeto usa um vocabulário controlado — Diagrama, Autor, Colaborador, Compartilhamento, Trava de Edição, Versão, Fork, Usuário — de forma consistente no código, na UI e na documentação. Siga esse vocabulário em código novo, mensagens de commit e descrições de PR, em vez de introduzir sinônimos (`CONTEXT.md` também lista o termo PT-BR da interface para cada um).
 
 ## Rodando os testes
 
