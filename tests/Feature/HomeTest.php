@@ -20,15 +20,6 @@ class HomeTest extends TestCase
         $this->get('/home')->assertRedirect('/login');
     }
 
-    public function test_root_redirects_remain_unchanged_for_guests_and_authenticated_users(): void
-    {
-        $this->get('/')->assertRedirect('/login');
-
-        $this->actingAs(User::factory()->create())
-            ->get('/')
-            ->assertRedirect(route('diagrams.index'));
-    }
-
     public function test_home_greets_the_user_and_offers_dashboard_shortcuts(): void
     {
         $user = User::factory()->create(['name' => 'Ada Lovelace']);
@@ -41,6 +32,7 @@ class HomeTest extends TestCase
             ->assertSee(__('messages.home_workspace_shortcut'))
             ->assertSee(__('messages.home_notifications_shortcut'))
             ->assertSee(__('messages.home_search_shortcut'))
+            ->assertSee(route('diagrams.create'), false)
             ->assertSee(route('workspaces.index'), false)
             ->assertSee(route('notifications.history'), false)
             ->assertSee(route('diagrams.index'), false)

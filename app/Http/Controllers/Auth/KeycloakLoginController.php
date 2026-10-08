@@ -63,7 +63,7 @@ class KeycloakLoginController extends Controller
 
         $request->session()->regenerate();
 
-        return redirect()->intended(route('diagrams.index'));
+        return redirect()->intended(route('home'));
     }
 
     /**

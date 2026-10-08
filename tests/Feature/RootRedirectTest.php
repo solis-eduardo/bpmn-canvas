@@ -17,12 +17,12 @@ class RootRedirectTest extends TestCase
         $response->assertRedirect('/login');
     }
 
-    public function test_authenticated_user_visiting_root_is_redirected_to_the_diagram_list(): void
+    public function test_authenticated_user_visiting_root_is_redirected_to_home(): void
     {
         $user = User::factory()->create();
 
         $response = $this->actingAs($user)->get('/');
 
-        $response->assertRedirect(route('diagrams.index'));
+        $response->assertRedirect(route('home'));
     }
 }

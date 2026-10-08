@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return auth()->check()
-        ? redirect()->route('diagrams.index')
+        ? redirect()->route('home')
         : redirect()->route('login');
 });
 
