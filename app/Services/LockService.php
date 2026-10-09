@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Notifications\DiagramLockRequested;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Decides which Lock primitive on the Diagram to call, and when (CONTEXT.md,
@@ -107,10 +108,14 @@ class LockService
      */
     public function release(Diagram $diagram, bool $saveDraft = false, ?string $draft = null): void
     {
-        if ($saveDraft) {
-            $this->provisional->save($diagram, $draft);
-        }
+        // In a transaction so a release that fails after the save has
+        // cleared the draft doesn't leave a held Lock with its draft gone.
+        DB::transaction(function () use ($diagram, $saveDraft, $draft): void {
+            if ($saveDraft) {
+                $this->provisional->save($diagram, $draft);
+            }
 
-        $diagram->releaseLock();
+            $diagram->releaseLock();
+        });
     }
 }

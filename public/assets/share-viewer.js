@@ -40,6 +40,9 @@
         return res;
       };
 
+      // Disabled while asking and releasing, so a second click can't open a second dialog.
+      releaseButton.disabled = true;
+
       try {
         // Only the server knows whether the holder left an unsaved draft.
         const { has_draft: hasDraft } = await (await request('GET')).json();
@@ -62,6 +65,8 @@
       } catch (e) {
         console.error(e);
         window.BpmnCommon.toast(window.BpmnCommon.errorMessage(e, releaseButton.dataset.releaseFailedNotice), true);
+      } finally {
+        releaseButton.disabled = false;
       }
     });
   }

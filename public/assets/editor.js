@@ -93,6 +93,9 @@
   const releaseLockButton = $('btn-release-lock');
   if (releaseLockButton) {
     releaseLockButton.addEventListener('click', async () => {
+      // Disabled while asking and releasing, so a second click can't open a second dialog.
+      releaseLockButton.disabled = true;
+
       try {
         // The holder's own unsaved content lives here; for an Administrator
         // releasing someone else's Lock, only the server knows whether the
@@ -126,6 +129,8 @@
       } catch (e) {
         console.error(e);
         toast(errorMessage(e, body.dataset.releaseLockFailedNotice), true);
+      } finally {
+        releaseLockButton.disabled = false;
       }
     });
   }
