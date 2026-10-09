@@ -12,10 +12,21 @@ use App\Models\User;
 class CollaboratorPolicy
 {
     /**
-     * Invite a User directly, or approve their request: Diagram Owner or
-     * Administrator.
+     * Invite a User directly, or approve their request: Diagram Owner,
+     * Diagram Manager or Administrator. Managers grant plain Collaborator
+     * access only — see {@see assignRole()}.
      */
     public function grant(User $user, Diagram $diagram): bool
+    {
+        return $diagram->isManagedBy($user) || $diagram->hasManagerRole($user);
+    }
+
+    /**
+     * Make someone a Diagram Manager, or a plain Collaborator again: Diagram
+     * Owner or Administrator only (ADR-0016). A Diagram Manager can't
+     * promote anyone, themselves included.
+     */
+    public function assignRole(User $user, Diagram $diagram): bool
     {
         return $diagram->isManagedBy($user);
     }
@@ -42,10 +53,20 @@ class CollaboratorPolicy
     }
 
     /**
-     * Decline a request or remove a Collaborator: same people who can grant.
+     * Decline a request or remove a Collaborator: same people who can grant,
+     * except that a Diagram Manager can't remove another Diagram Manager —
+     * only themselves (leaving).
      */
-    public function revoke(User $user, Diagram $diagram): bool
+    public function revoke(User $user, Diagram $diagram, ?User $target = null): bool
     {
-        return $this->grant($user, $diagram);
+        if ($diagram->isManagedBy($user)) {
+            return true;
+        }
+
+        if (! $diagram->hasManagerRole($user)) {
+            return false;
+        }
+
+        return $target === null || $user->is($target) || ! $diagram->hasManagerRole($target);
     }
 }

@@ -114,6 +114,20 @@ BPMN;
     }
 
     /**
+     * True if $user is an approved Diagram Manager of this Diagram — a
+     * Collaborator the Diagram Owner delegated Collaborator management to
+     * (CONTEXT.md, "Diagram Manager"; ADR-0016).
+     */
+    public function hasManagerRole(User $user): bool
+    {
+        return $this->collaborators()
+            ->where('user_id', $user->id)
+            ->where('status', Collaborator::STATUS_APPROVED)
+            ->where('role', Collaborator::ROLE_MANAGER)
+            ->exists();
+    }
+
+    /**
      * The Workspace this Diagram belongs to, if any (CONTEXT.md,
      * "Workspace"). A Diagram belongs to at most one.
      */

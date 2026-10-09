@@ -13,6 +13,8 @@
   const slug = body.dataset.slug;
   const collaboratorsUrl = body.dataset.collaboratorsUrl;
   const collaboratorUrlTemplate = body.dataset.collaboratorUrlTemplate;
+  const canAssignRoles = body.dataset.canAssignRoles === 'true';
+  const currentUserId = parseInt(body.dataset.currentUserId, 10);
   const canManageShares = body.dataset.canManageShares === 'true';
   const sharesUrl = body.dataset.sharesUrl;
   const shareDestroyUrlTemplate = body.dataset.shareDestroyUrlTemplate;
@@ -25,6 +27,7 @@
   const sharesSection = $('shares-section');
   const inviteForm = $('collab-invite-form');
   const inviteUser = $('collab-invite-user_id');
+  const inviteRole = $('collab-invite-role');
   const shareForm = $('share-create-form');
   const shareDays = $('share-days');
   const shareAllowDownload = $('share-allow-download');
@@ -107,6 +110,18 @@
         : (body.dataset.statusApprovedLabel || 'Approved');
       info.appendChild(status);
 
+      const isManager = collaborator.role === 'manager';
+      const isApproved = collaborator.status !== 'requested';
+
+      if (isApproved && canAssignRoles) {
+        info.appendChild(roleSelect(collaborator));
+      } else if (isApproved && isManager) {
+        const role = document.createElement('span');
+        role.className = 'badge badge-approved';
+        role.textContent = body.dataset.roleManagerLabel || 'Diagram Manager';
+        info.appendChild(role);
+      }
+
       li.appendChild(info);
 
       const actions = document.createElement('div');
@@ -125,7 +140,8 @@
         refuseBtn.textContent = body.dataset.refuseLabel || 'Refuse';
         refuseBtn.addEventListener('click', () => removeCollaborator(collaborator, true));
         actions.appendChild(refuseBtn);
-      } else {
+      } else if (canAssignRoles || !isManager || collaborator.user_id === currentUserId) {
+        // A Diagram Manager only removes plain Collaborators (or themselves).
         const removeBtn = document.createElement('button');
         removeBtn.type = 'button';
         removeBtn.className = 'danger';
@@ -137,6 +153,38 @@
       li.appendChild(actions);
       collabList.appendChild(li);
     });
+  }
+
+  function roleSelect(collaborator) {
+    const select = document.createElement('select');
+    select.setAttribute('aria-label', body.dataset.roleLabel || 'Role');
+    [
+      ['collaborator', body.dataset.roleCollaboratorLabel || 'Collaborator'],
+      ['manager', body.dataset.roleManagerLabel || 'Diagram Manager'],
+    ].forEach(([value, label]) => {
+      const option = document.createElement('option');
+      option.value = value;
+      option.textContent = label;
+      select.appendChild(option);
+    });
+    select.value = collaborator.role;
+    select.addEventListener('change', () => changeRole(collaborator, select.value));
+    return select;
+  }
+
+  async function changeRole(collaborator, role) {
+    try {
+      await requestJson(collaboratorUrl(collaborator.user_id), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ role }),
+      });
+      toast(body.dataset.roleChangedNotice || 'Role updated.');
+    } catch (e) {
+      console.error(e);
+      toast(window.BpmnCommon.errorMessage(e, body.dataset.roleChangeFailedNotice || 'Could not change this role.'), true);
+    }
+    await loadCollaborators();
   }
 
   async function approveCollaborator(collaborator) {
@@ -177,7 +225,7 @@
       await requestJson(collaboratorsUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ user_id: userId }),
+        body: JSON.stringify(inviteRole && inviteRole.value === 'manager' ? { user_id: userId, role: 'manager' } : { user_id: userId }),
       });
       inviteUser.tomselect.clear();
       toast(body.dataset.invitedNotice || 'Collaborator invited.');

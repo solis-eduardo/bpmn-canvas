@@ -17,12 +17,16 @@ The User who created a Diagram. Fixed forever — authorship is never transferre
 _Avoid_: creator, Owner (always qualify: Diagram Owner or Workspace Owner)
 
 **Diagram Owner**:
-The User currently responsible for a Diagram: the only one who can delete it, invite/remove Collaborators, create/revoke Shares, and put it into a Workspace (one they're a Member of) or take it out of one. Starts as the Author and, unlike authorship, can be transferred to another User by the current Diagram Owner or an Administrator — no acceptance needed; the recipient is notified and needn't be a Member of the Diagram's Workspace. On transfer, the previous Diagram Owner becomes a Collaborator, unless they choose to give up access.
+The User currently responsible for a Diagram: the only one who can delete it, invite/remove Diagram Managers (and promote/demote Collaborators), create/revoke Shares, and put it into a Workspace (one they're a Member of) or take it out of one. Starts as the Author and, unlike authorship, can be transferred to another User by the current Diagram Owner or an Administrator — no acceptance needed; the recipient is notified and needn't be a Member of the Diagram's Workspace. On transfer, the previous Diagram Owner becomes a plain Collaborator (never a Diagram Manager automatically), unless they choose to give up access.
 _Avoid_: Owner (unqualified), Author (the Author is fixed; the Diagram Owner can change)
 
 **Collaborator**:
-A User with direct permission to edit a Diagram they're not the Diagram Owner of. Binary permission (there's no role distinction among Collaborators). Granted two ways: the Diagram Owner invites the User directly, or the User requests access and the Diagram Owner approves it; an Administrator can also grant it directly, without going through the Diagram Owner. Direct invitations and removals notify the affected User. A Diagram hidden inside a Workspace can't be found to request access — only invitation reaches it.
+A User with direct permission to edit a Diagram they're not the Diagram Owner of. Editing permission is the same for every Collaborator; the only distinction is the optional Diagram Manager role (below). Granted two ways: the Diagram Owner (or a Diagram Manager) invites the User directly, or the User requests access and the Diagram Owner or a Diagram Manager approves it (always as a plain Collaborator); an Administrator can also grant it directly, without going through the Diagram Owner. Direct invitations and removals notify the affected User. A Diagram hidden inside a Workspace can't be found to request access — only invitation reaches it.
 _Avoid_: Editor (a role, not to be confused with the Editor interface)
+
+**Diagram Manager**:
+A Collaborator the Diagram Owner promoted to also manage the Diagram's other Collaborators: invite them, approve or decline access requests (as plain Collaborators), and remove plain Collaborators. Hierarchy: Diagram Owner > Diagram Manager > Collaborator. Only the Diagram Owner (or an Administrator) can promote, demote or remove a Diagram Manager, or invite one; a Diagram Manager can leave on their own. Everything else (delete, ownership transfer, Shares, Workspace placement) stays with the Diagram Owner. Promotions, demotions, invitations and removals notify the affected User (ADR-0016).
+_Avoid_: Manager (unqualified; collides with Administrator and Workspace Owner)
 
 **Administrator**:
 A User with the privilege to grant Collaborator access on any Diagram regardless of its Diagram Owner, transfer any Diagram's ownership, to create accounts manually, and to manage any Workspace (including transferring Workspace ownership). Sees every Diagram, including those hidden inside Workspaces they're not a Member of. The role can come from two coexisting sources: set manually by another Administrator, or granted automatically by the corresponding role/claim in the Keycloak token (see User). Once granted, it isn't revoked by the claim's absence — only a manual origin turns it off.
@@ -87,6 +91,7 @@ The UI is localized in pt-BR (`lang/pt_BR`); code, docs and commits use the Engl
 | Author | Autor |
 | Diagram Owner | Dono do Diagrama |
 | Collaborator | Colaborador |
+| Diagram Manager | Gerente do Diagrama |
 | Administrator | Administrador |
 | Share | Compartilhamento |
 | Editor | Editor |

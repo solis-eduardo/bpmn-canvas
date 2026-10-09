@@ -9,6 +9,7 @@ use App\Notifications\DiagramAccessRequested;
 use App\Notifications\DiagramAccessRequestResolved;
 use App\Notifications\DiagramCollaboratorInvited;
 use App\Notifications\DiagramCollaboratorRemoved;
+use App\Notifications\DiagramCollaboratorRoleChanged;
 use App\Repositories\CollaboratorRepository;
 
 /**
@@ -23,21 +24,25 @@ class CollaboratorService
      * Adds $target either way the caller is allowed to: directly when
      * $direct (CollaboratorPolicy::grant), otherwise as a pending request.
      */
-    public function invite(Diagram $diagram, User $target, bool $direct): Collaborator
+    public function invite(Diagram $diagram, User $target, bool $direct, ?string $role = null): Collaborator
     {
-        return $direct ? $this->grant($diagram, $target) : $this->requestAccess($diagram, $target);
+        return $direct ? $this->grant($diagram, $target, $role) : $this->requestAccess($diagram, $target);
     }
 
     /**
      * Direct invite: the target gets access immediately, and is told — unless
-     * they already had it.
+     * they already had it. A null $role keeps the role of someone already
+     * there (and makes a new Collaborator plain); a role change on its own
+     * is told as such.
      */
-    public function grant(Diagram $diagram, User $target): Collaborator
+    public function grant(Diagram $diagram, User $target, ?string $role = null): Collaborator
     {
-        $collaborator = $this->collaborators->upsertApproved($diagram, $target);
+        $collaborator = $this->collaborators->upsertApproved($diagram, $target, $role);
 
         if ($collaborator->wasRecentlyCreated || $collaborator->wasChanged('status')) {
-            $target->notify(new DiagramCollaboratorInvited($diagram));
+            $target->notify(new DiagramCollaboratorInvited($diagram, $collaborator->role));
+        } elseif ($collaborator->wasChanged('role')) {
+            $target->notify(new DiagramCollaboratorRoleChanged($diagram, $collaborator->role));
         }
 
         return $collaborator;
@@ -69,15 +74,18 @@ class CollaboratorService
 
     /**
      * Approves a pending request, telling the requester. Approving someone
-     * already approved changes nothing and notifies no one.
+     * already approved changes nothing and notifies no one — unless a $role
+     * is given and differs, which is a role change.
      */
-    public function approve(Diagram $diagram, User $user): Collaborator
+    public function approve(Diagram $diagram, User $user, ?string $role = null): Collaborator
     {
         $wasPending = $this->collaborators->findForOrFail($diagram, $user)->status === Collaborator::STATUS_REQUESTED;
-        $collaborator = $this->collaborators->upsertApproved($diagram, $user);
+        $collaborator = $this->collaborators->upsertApproved($diagram, $user, $role);
 
         if ($wasPending) {
             $user->notify(new DiagramAccessRequestResolved($diagram, approved: true));
+        } elseif ($collaborator->wasChanged('role')) {
+            $user->notify(new DiagramCollaboratorRoleChanged($diagram, $collaborator->role));
         }
 
         return $collaborator;

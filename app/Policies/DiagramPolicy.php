@@ -39,11 +39,12 @@ class DiagramPolicy
 
     /**
      * Manage a Diagram's Collaborators (invite/approve/remove): Diagram
-     * Owner or Administrator (CONTEXT.md, "Collaborator"; ADR-0006).
+     * Owner, Diagram Manager or Administrator (CONTEXT.md, "Collaborator";
+     * ADR-0006, ADR-0016).
      */
     public function manageCollaborators(User $user, Diagram $diagram): bool
     {
-        return $diagram->isOwnedBy($user) || $user->is_admin;
+        return $diagram->isManagedBy($user) || $diagram->hasManagerRole($user);
     }
 
     /**
