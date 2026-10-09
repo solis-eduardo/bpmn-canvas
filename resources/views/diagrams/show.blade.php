@@ -67,7 +67,6 @@
             data-refuse-label="{{ __('messages.refuse') }}"
             data-remove-label="{{ __('messages.remove') }}"
         @endcan
-        data-can-manage-shares="{{ auth()->user()->can('manageShares', $diagram) ? 'true' : 'false' }}"
         @can('manageShares', $diagram)
             data-shares-url="{{ route('shares.index', $diagram->slug) }}"
             data-share-destroy-url-template="{{ route('shares.destroy', ['share' => 'SHARE_ID']) }}"

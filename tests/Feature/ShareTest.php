@@ -399,7 +399,6 @@ class ShareTest extends TestCase
         $collaborator = $this->collaboratorOf($diagram);
 
         $this->actingAs($collaborator)->get("/diagrams/{$diagram->slug}")
-            ->assertSee('data-can-manage-shares="true"', false)
             ->assertSee('id="shares-panel"', false)
             ->assertSee('id="btn-shares-entry"', false);
 
@@ -411,7 +410,6 @@ class ShareTest extends TestCase
         $workspace->members()->create(['user_id' => $member->id]);
 
         $this->actingAs($member)->get("/diagrams/{$memberDiagram->slug}")
-            ->assertSee('data-can-manage-shares="false"', false)
             ->assertDontSee('id="shares-panel"', false)
             ->assertDontSee('id="btn-shares-entry"', false);
     }

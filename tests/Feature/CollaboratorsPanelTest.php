@@ -38,7 +38,7 @@ class CollaboratorsPanelTest extends TestCase
         $response->assertSee('id="btn-collaborators-entry"', false);
         $response->assertSee('id="collaborators-panel"', false);
         $response->assertSee('assets/collaborators.js', false);
-        $response->assertSee('data-can-manage-shares="true"', false);
+        $response->assertSee('id="shares-panel"', false);
     }
 
     public function test_an_approved_collaborator_who_is_not_the_owner_sees_the_shares_panel_but_not_the_collaborators_one(): void

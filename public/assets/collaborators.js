@@ -13,8 +13,7 @@
   const slug = body.dataset.slug;
   const collaboratorsUrl = body.dataset.collaboratorsUrl;
   const collaboratorUrlTemplate = body.dataset.collaboratorUrlTemplate;
-  const canManageShares = body.dataset.canManageShares === 'true';
-  const sharesUrl = body.dataset.sharesUrl;
+  const sharesUrl = body.dataset.sharesUrl; // set only for Users who may manage Shares
   const shareDestroyUrlTemplate = body.dataset.shareDestroyUrlTemplate;
   const versionsUrl = body.dataset.versionsUrl;
   const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
@@ -193,7 +192,7 @@
   // the same Version history endpoint the Version panel already fetches
   // (see versions.js) — one list, two consumers.
   async function loadVersionsForPinSelect() {
-    if (!canManageShares || !sharePinVersion || !versionsUrl) return;
+    if (!sharesUrl || !sharePinVersion || !versionsUrl) return;
 
     try {
       const data = await requestJson(versionsUrl);
@@ -237,7 +236,7 @@
   }
 
   async function loadShares() {
-    if (!canManageShares) return;
+    if (!sharesUrl) return;
 
     try {
       const data = await requestJson(sharesUrl);
