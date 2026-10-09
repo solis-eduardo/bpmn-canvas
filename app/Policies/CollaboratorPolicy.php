@@ -18,7 +18,7 @@ class CollaboratorPolicy
      */
     public function grant(User $user, Diagram $diagram): bool
     {
-        return $diagram->isManagedBy($user) || $diagram->hasManagerRole($user);
+        return $diagram->canManageCollaborators($user);
     }
 
     /**
@@ -44,7 +44,7 @@ class CollaboratorPolicy
 
     /**
      * Ask for access to a Diagram one can't edit yet. Those who can grant it
-     * directly (Diagram Owner, Administrator) or already edit it have no
+     * directly (Diagram Owner, Diagram Manager, Administrator) or already edit it have no
      * reason to ask.
      */
     public function requestAccess(User $user, Diagram $diagram): bool
@@ -57,7 +57,7 @@ class CollaboratorPolicy
      * except that a Diagram Manager can't remove another Diagram Manager —
      * only themselves (leaving).
      */
-    public function revoke(User $user, Diagram $diagram, ?User $target = null): bool
+    public function revoke(User $user, Diagram $diagram, User $target): bool
     {
         if ($diagram->isManagedBy($user)) {
             return true;
@@ -67,6 +67,6 @@ class CollaboratorPolicy
             return false;
         }
 
-        return $target === null || $user->is($target) || ! $diagram->hasManagerRole($target);
+        return $user->is($target) || ! $diagram->hasManagerRole($target);
     }
 }

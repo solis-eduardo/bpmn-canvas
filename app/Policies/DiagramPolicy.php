@@ -44,7 +44,7 @@ class DiagramPolicy
      */
     public function manageCollaborators(User $user, Diagram $diagram): bool
     {
-        return $diagram->isManagedBy($user) || $diagram->hasManagerRole($user);
+        return $diagram->canManageCollaborators($user);
     }
 
     /**

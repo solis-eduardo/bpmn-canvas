@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Notifications\DiagramOwnershipTransferred;
@@ -47,7 +48,7 @@ class DiagramOwnerService
                 return;
             }
 
-            $this->collaborators->upsertApproved($diagram, $previousOwner);
+            $this->collaborators->upsertApproved($diagram, $previousOwner, Collaborator::ROLE_COLLABORATOR);
         });
 
         if ($changesHands) {

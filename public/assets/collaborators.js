@@ -115,10 +115,12 @@
 
       if (isApproved && canAssignRoles) {
         info.appendChild(roleSelect(collaborator));
-      } else if (isApproved && isManager) {
+      } else if (isApproved) {
         const role = document.createElement('span');
-        role.className = 'badge badge-approved';
-        role.textContent = body.dataset.roleManagerLabel || 'Diagram Manager';
+        role.className = 'badge ' + (isManager ? 'badge-approved' : 'badge-muted');
+        role.textContent = isManager
+          ? (body.dataset.roleManagerLabel || 'Diagram Manager')
+          : (body.dataset.roleCollaboratorLabel || 'Collaborator');
         info.appendChild(role);
       }
 

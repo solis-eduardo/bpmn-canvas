@@ -23,10 +23,10 @@ class CollaboratorPolicyTest extends TestCase
         Collaborator::create(['diagram_id' => $diagram->id, 'user_id' => $collaborator->id, 'status' => Collaborator::STATUS_APPROVED]);
 
         foreach (['grant', 'revoke'] as $ability) {
-            $this->assertTrue($policy->$ability($diagram->owner, $diagram), $ability);
-            $this->assertTrue($policy->$ability($admin, $diagram), $ability);
-            $this->assertFalse($policy->$ability($collaborator, $diagram), $ability);
-            $this->assertFalse($policy->$ability($stranger, $diagram), $ability);
+            $this->assertTrue($policy->$ability($diagram->owner, $diagram, $collaborator), $ability);
+            $this->assertTrue($policy->$ability($admin, $diagram, $collaborator), $ability);
+            $this->assertFalse($policy->$ability($collaborator, $diagram, $collaborator), $ability);
+            $this->assertFalse($policy->$ability($stranger, $diagram, $collaborator), $ability);
         }
     }
 

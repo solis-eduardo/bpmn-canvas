@@ -52,7 +52,7 @@ class CollaboratorRepository
     {
         return Collaborator::updateOrCreate(
             ['diagram_id' => $diagram->id, 'user_id' => $user->id],
-            array_filter(['status' => $status, 'role' => $role]),
+            $role === null ? ['status' => $status] : ['status' => $status, 'role' => $role],
         );
     }
 

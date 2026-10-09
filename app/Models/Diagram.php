@@ -114,6 +114,16 @@ BPMN;
     }
 
     /**
+     * True if $user may invite, approve and remove Collaborators: whoever
+     * administers the Diagram or holds the Diagram Manager role
+     * (ADR-0017).
+     */
+    public function canManageCollaborators(User $user): bool
+    {
+        return $this->isManagedBy($user) || $this->hasManagerRole($user);
+    }
+
+    /**
      * True if $user is an approved Diagram Manager of this Diagram — a
      * Collaborator the Diagram Owner delegated Collaborator management to
      * (CONTEXT.md, "Diagram Manager"; ADR-0017).
