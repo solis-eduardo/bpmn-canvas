@@ -127,7 +127,15 @@
 .app .version-hint { margin: 0; padding: 8px 12px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--bg); }
 .app aside li .version-row { display: flex; align-items: center; gap: 8px; }
 .app aside li .version-row input[type=checkbox] { flex-shrink: 0; }
-.app aside li .version-actions { display: flex; gap: 6px; margin-top: 2px; }
+.app aside li.version-day { position: sticky; top: 0; z-index: 1; padding: 6px 12px; font-size: 12px; font-weight: 600; text-transform: uppercase; background: var(--bg); cursor: default; }
+.app aside li.version-card { cursor: default; gap: 4px; }
+.app aside li .version-name { overflow-wrap: anywhere; }
+.app aside li .version-number { margin-left: auto; flex-shrink: 0; font-size: 12px; color: var(--muted); }
+.app aside li .version-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+.app aside li .version-badge { padding: 0 6px; border-radius: 999px; font-size: 11px; border: 1px solid var(--border); color: var(--muted); }
+.app aside li .version-badge.current { border-color: var(--accent); color: var(--accent); }
+.app aside li .version-badge.provisional { border-color: var(--danger); color: var(--danger); }
+.app aside li .version-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
 .app aside li .version-actions button { padding: 2px 8px; font-size: 12px; }
 .app aside li.comparing { background: var(--selected); }
 .version-compare-bar {

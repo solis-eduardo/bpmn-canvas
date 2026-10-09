@@ -172,7 +172,13 @@ class VersionRepository
      * these two cases apart, e.g. to highlight renamed Versions in the
      * history.
      *
-     * @return array<int, array{id: string, saved_at: Carbon, author: string, number: int, name: string, renamed: bool}>
+     * Hidden Versions (see hide()) are still returned, flagged `hidden`, so
+     * numbering stays stable and Shares/comparisons can still resolve them;
+     * the history shown to the User filters them out. A provisional Version
+     * (see markProvisional()) without a custom name is called by the
+     * localized provisional label.
+     *
+     * @return array<int, array{id: string, saved_at: Carbon, author: string, number: int, name: string, renamed: bool, provisional: bool, hidden: bool}>
      */
     public function list(Diagram $diagram): array
     {
@@ -198,24 +204,27 @@ class VersionRepository
         $lines = explode("\n", $output);
         $total = count($lines);
 
-        $customNames = DiagramVersionName::where('diagram_id', $diagram->id)
-            ->pluck('name', 'version_id');
+        $states = DiagramVersionName::where('diagram_id', $diagram->id)->get()->keyBy('version_id');
 
-        return array_map(function (string $line, int $index) use ($total, $customNames) {
+        return array_map(function (string $line, int $index) use ($total, $states) {
             [$id, $date, $author] = explode("\t", $line);
 
             // $index 0 is the newest (git log's default order), so the
             // oldest (chronologically first, index $total - 1) is number 1.
             $number = $total - $index;
-            $customName = $customNames->get($id);
+            $state = $states->get($id);
+            $customName = $state?->name;
+            $provisional = (bool) $state?->is_provisional;
 
             return [
                 'id' => $id,
                 'saved_at' => Carbon::parse($date),
                 'author' => $author,
                 'number' => $number,
-                'name' => $customName ?? self::defaultName($number),
+                'name' => $customName ?? ($provisional ? __('messages.provisional_version') : self::defaultName($number)),
                 'renamed' => $customName !== null,
+                'provisional' => $provisional,
+                'hidden' => (bool) $state?->is_hidden,
             ];
         }, $lines, array_keys($lines));
     }
@@ -234,9 +243,63 @@ class VersionRepository
         // an orphaned, unreachable row behind.
         $this->get($diagram, $version);
 
+        $this->setState($diagram, $version, ['name' => $name]);
+    }
+
+    /**
+     * Flags a Version as provisional: content an expiring Lock kept for its
+     * holder (ADR-0003). It stays provisional, and badged in the history,
+     * until someone makes it permanent or deletes it.
+     */
+    public function markProvisional(Diagram $diagram, string $version): void
+    {
+        $this->setState($diagram, $version, ['is_provisional' => true]);
+    }
+
+    /**
+     * Keeps a provisional Version: it becomes an ordinary Version.
+     *
+     * @return bool false if the Version isn't provisional (nothing changed).
+     */
+    public function makePermanent(Diagram $diagram, string $version): bool
+    {
+        return $this->clearProvisional($diagram, $version, ['is_provisional' => false]);
+    }
+
+    /**
+     * Deletes a provisional Version from the history. A soft delete: the Git
+     * commit stays (ADR-0004 never discards Versions, and dropping it would
+     * shift every later "Version N" and break pinned Shares), so numbering is
+     * untouched and Shares/comparisons that reference it keep working.
+     *
+     * @return bool false if the Version isn't provisional (nothing changed).
+     */
+    public function hide(Diagram $diagram, string $version): bool
+    {
+        return $this->clearProvisional($diagram, $version, ['is_provisional' => false, 'is_hidden' => true]);
+    }
+
+    /**
+     * @param  array<string, bool>  $state
+     */
+    private function clearProvisional(Diagram $diagram, string $version, array $state): bool
+    {
+        $this->get($diagram, $version);
+
+        return DiagramVersionName::where('diagram_id', $diagram->id)
+            ->where('version_id', $version)
+            ->where('is_provisional', true)
+            ->update($state) > 0;
+    }
+
+    /**
+     * @param  array<string, mixed>  $state
+     */
+    private function setState(Diagram $diagram, string $version, array $state): void
+    {
         DiagramVersionName::updateOrCreate(
             ['diagram_id' => $diagram->id, 'version_id' => $version],
-            ['name' => $name],
+            $state,
         );
     }
 

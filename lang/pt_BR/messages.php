@@ -193,6 +193,18 @@ return [
     'restore_version_confirm' => 'Restaurar esta versão? Isso cria uma nova versão em cima do histórico.',
     'version_restored' => 'Versão restaurada.',
     'version_restore_failed' => 'Não foi possível restaurar esta versão.',
+    'rename_version' => 'Renomear',
+    'rename_version_prompt' => 'Nome desta versão:',
+    'version_rename_failed' => 'Não foi possível renomear esta versão.',
+    'provisional_badge' => 'Provisória',
+    'current_version_badge' => 'Atual',
+    'make_permanent' => 'Manter',
+    'version_made_permanent' => 'Versão mantida.',
+    'version_promote_failed' => 'Não foi possível manter esta versão.',
+    'delete_version_confirm' => 'Excluir esta versão provisória do histórico? A numeração das demais versões não muda.',
+    'version_deleted' => 'Versão excluída.',
+    'version_delete_failed' => 'Não foi possível excluir esta versão.',
+    'version_by_author' => 'por :name',
 
     // Locked diagram
     'create_a_copy_to_continue' => 'Criar uma cópia (Fork) para continuar agora',

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
+use App\Models\Diagram;
 use App\Repositories\DiagramRepository;
 use App\Repositories\VersionRepository;
 use App\Services\DiagramVersionService;
@@ -25,10 +26,12 @@ class VersionController extends Controller
         $this->authorize('view', $diagram);
 
         $history = collect($versions->list($diagram));
-        // The history is newest first, so the first Version is the current one.
+        // The history is newest first, so the first Version is the current
+        // one, even when it was deleted from the list below.
         $currentId = $history->first()['id'] ?? null;
 
         $grouped = $history
+            ->reject(fn (array $version) => $version['hidden'])
             ->groupBy(fn (array $version) => $version['saved_at']->toDateString())
             ->map(fn ($items, string $day) => [
                 'day' => $day,
@@ -40,6 +43,7 @@ class VersionController extends Controller
                     'number' => $version['number'],
                     'name' => $version['name'],
                     'renamed' => $version['renamed'],
+                    'provisional' => $version['provisional'],
                 ])->values(),
             ])
             ->values();
@@ -142,5 +146,44 @@ class VersionController extends Controller
             'name' => $data['name'],
             'renamed' => true,
         ]);
+    }
+
+    /**
+     * Keeps a provisional Version: it stops being provisional and stays in
+     * the history as an ordinary Version. Anyone who can edit the Diagram
+     * may do it, same as renaming.
+     */
+    public function promoteVersion(string $slug, string $version, VersionRepository $versions): JsonResponse
+    {
+        return $this->resolveProvisional($slug, $version, $versions, $versions->makePermanent(...));
+    }
+
+    /**
+     * Deletes a provisional Version from the history (soft delete, see
+     * VersionRepository::hide()). Only provisional Versions can be deleted.
+     */
+    public function deleteVersion(string $slug, string $version, VersionRepository $versions): JsonResponse
+    {
+        return $this->resolveProvisional($slug, $version, $versions, $versions->hide(...));
+    }
+
+    /**
+     * @param  callable(Diagram, string): bool  $change
+     */
+    private function resolveProvisional(string $slug, string $version, VersionRepository $versions, callable $change): JsonResponse
+    {
+        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
+
+        $this->authorize('update', $diagram);
+
+        try {
+            $changed = $change($diagram, $version);
+        } catch (RuntimeException $e) {
+            abort(404);
+        }
+
+        abort_unless($changed, 409);
+
+        return response()->json(['id' => $version]);
     }
 }

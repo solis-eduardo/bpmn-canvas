@@ -193,6 +193,18 @@ return [
     'restore_version_confirm' => 'Restore this version? This creates a new version on top of the history.',
     'version_restored' => 'Version restored.',
     'version_restore_failed' => 'Could not restore this version.',
+    'rename_version' => 'Rename',
+    'rename_version_prompt' => 'Name for this version:',
+    'version_rename_failed' => 'Could not rename this version.',
+    'provisional_badge' => 'Provisional',
+    'current_version_badge' => 'Current',
+    'make_permanent' => 'Keep',
+    'version_made_permanent' => 'Version kept.',
+    'version_promote_failed' => 'Could not keep this version.',
+    'delete_version_confirm' => 'Delete this provisional version from the history? The numbering of the other versions does not change.',
+    'version_deleted' => 'Version deleted.',
+    'version_delete_failed' => 'Could not delete this version.',
+    'version_by_author' => 'by :name',
 
     // Locked diagram
     'create_a_copy_to_continue' => 'Create a copy (Fork) to continue now',
