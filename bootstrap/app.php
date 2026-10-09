@@ -52,7 +52,12 @@ return Application::configure(basePath: dirname(__DIR__))
         // crowd of jobs everyone else schedules on the hour.
         $schedule->command('shares:warn-expiring')->hourlyAt(45)->onOneServer();
         // Lock expiry (ADR-0003) is time-sensitive, so it runs every minute.
-        $schedule->command('locks:expire')->everyMinute()->onOneServer();
+        // Its output is kept: a failure here leaves a Lock stuck, and without
+        // a trace nobody finds out why.
+        $schedule->command('locks:expire')
+            ->everyMinute()
+            ->onOneServer()
+            ->appendOutputTo(storage_path('logs/locks-expire.log'));
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // JSON clients (the Editor and its panels) show `message` to the

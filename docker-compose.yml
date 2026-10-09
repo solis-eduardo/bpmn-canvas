@@ -73,7 +73,7 @@ services:
     command: ["artisan", "schedule:work"]
     stop_grace_period: 30s
     volumes:
-      - ./diagrams:/var/www/html/storage/app/diagrams:ro
+      - ./diagrams:/var/www/html/storage/app/diagrams
       # Default destination for backup artifacts (see BACKUP_DESTINATION in
       # .env.example): a host folder, easy to ship elsewhere / back up
       # further.
