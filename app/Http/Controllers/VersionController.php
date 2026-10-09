@@ -155,7 +155,7 @@ class VersionController extends Controller
      */
     public function promoteVersion(string $slug, string $version, VersionRepository $versions): JsonResponse
     {
-        return $this->resolveProvisional($slug, $version, $versions, $versions->makePermanent(...));
+        return $this->resolveProvisional($slug, $version, $versions->makePermanent(...));
     }
 
     /**
@@ -164,13 +164,13 @@ class VersionController extends Controller
      */
     public function deleteVersion(string $slug, string $version, VersionRepository $versions): JsonResponse
     {
-        return $this->resolveProvisional($slug, $version, $versions, $versions->hide(...));
+        return $this->resolveProvisional($slug, $version, $versions->hide(...));
     }
 
     /**
      * @param  callable(Diagram, string): bool  $change
      */
-    private function resolveProvisional(string $slug, string $version, VersionRepository $versions, callable $change): JsonResponse
+    private function resolveProvisional(string $slug, string $version, callable $change): JsonResponse
     {
         $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
