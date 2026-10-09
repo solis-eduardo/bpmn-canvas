@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AuthorizesDiagramWrites;
+use App\Http\Controllers\Concerns\ListsOwnerCandidates;
 use App\Http\Controllers\Concerns\RedirectsAfterSave;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Diagram;
@@ -25,6 +26,7 @@ use Illuminate\View\View;
 class DiagramSettingsController extends Controller
 {
     use AuthorizesDiagramWrites;
+    use ListsOwnerCandidates;
     use RedirectsAfterSave;
     use ResolvesVisibleDiagram;
 
@@ -43,9 +45,7 @@ class DiagramSettingsController extends Controller
         return view('diagrams.edit', [
             'diagram' => $diagram->load('tags'),
             'tagNames' => Tag::sortedNames(),
-            'ownerCandidates' => Gate::allows('diagram-owner.transfer', $diagram)
-                ? $this->userOptions($this->users->allOrderedByName(), $diagram->owner)
-                : [],
+            'ownerCandidates' => $this->ownerCandidates($diagram),
         ]);
     }
 

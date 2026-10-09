@@ -65,11 +65,11 @@
     $('info-slug').textContent = slug;
     document.title = title + suffix;
 
-    const path = location.pathname.replace(/^(.*\/diagrams\/)[^/]+/, '$1' + encodeURIComponent(slug));
-    history.replaceState(history.state, '', path + location.search + location.hash);
+    const withSlug = path => path.replace(/(\/diagrams\/)[^/]+/, '$1' + encodeURIComponent(slug));
+    history.replaceState(history.state, '', withSlug(location.pathname) + location.search + location.hash);
 
     const editLink = $('info-edit-link');
-    editLink.href = editLink.href.replace(/(\/diagrams\/)[^/]+/, '$1' + encodeURIComponent(slug));
+    editLink.href = withSlug(editLink.href);
   }
 
   $('info-title-edit').addEventListener('click', () => showTitleForm(true));
