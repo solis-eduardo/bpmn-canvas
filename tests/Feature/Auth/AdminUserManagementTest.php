@@ -298,7 +298,7 @@ class AdminUserManagementTest extends TestCase
 
         auth()->logout();
         $this->post('/login', ['email' => $target->email, 'password' => 'original-password'])
-            ->assertRedirect(route('diagrams.index'));
+            ->assertRedirect(route('home'));
         $this->assertAuthenticatedAs($target);
     }
 

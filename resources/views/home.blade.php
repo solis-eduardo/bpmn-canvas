@@ -85,7 +85,7 @@
                     {{ __('messages.home_recent_diagrams') }}
                 </h2>
                 <a
-                    href="{{ route('diagrams.index') }}"
+                    href="{{ route('diagrams.create') }}"
                     class="inline-flex items-center gap-1.5 rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700"
                 >
                     <x-icon name="plus" />
@@ -107,9 +107,7 @@
                             >
                                 {{ $diagram->title }}
                             </a>
-                            <time datetime="{{ $diagram->updated_at->toISOString() }}" class="shrink-0 text-sm text-gray-500">
-                                {{ $diagram->updated_at->diffForHumans() }}
-                            </time>
+                            <x-timestamp :at="$diagram->updated_at" class="shrink-0 text-sm text-gray-500" />
                         </li>
                     @endforeach
                 </ul>

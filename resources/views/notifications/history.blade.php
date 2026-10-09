@@ -16,11 +16,11 @@
                 >
                     <span>{{ $notification['message'] }}</span>
 
-                    <span class="flex items-center gap-2 text-sm text-gray-500" title="{{ $notification['created_at'] }}">
+                    <span class="flex items-center gap-2 text-sm text-gray-500">
                         @unless ($notification['read'])
                             <span class="h-2 w-2 rounded-full bg-blue-600" aria-hidden="true"></span>
                         @endunless
-                        {{ $notification['created_at']?->diffForHumans() }}
+                        <x-timestamp :at="$notification['created_at']" />
                     </span>
                 </a>
             </li>

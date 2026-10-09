@@ -28,7 +28,7 @@ class LoginTest extends TestCase
             'password' => 'correct-password',
         ]);
 
-        $response->assertRedirect(route('diagrams.index'));
+        $response->assertRedirect(route('home'));
         $this->assertAuthenticatedAs($user);
 
         $this->get(route('diagrams.index'))->assertOk();

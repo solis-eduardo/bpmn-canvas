@@ -224,10 +224,9 @@ class DiagramController extends Controller
             'noticeTone' => $tone,
             'lockedAt' => $diagram->locked_at,
             'requestLockUrl' => $requestLock ? route('diagrams.lock.store', $diagram->slug) : null,
-            // Offered only on the blocked screen: a Fork is the way out of
-            // someone else's Lock (CONTEXT.md, "Fork"), not a general action
-            // on the read-only Viewer.
-            'forkUrl' => $requestLock ? route('diagrams.fork', $diagram->slug) : null,
+            // A Fork is available at any time (CONTEXT.md, "Fork"), not only
+            // as the way out of someone else's Lock.
+            'forkUrl' => route('diagrams.fork', $diagram->slug),
             'showUrl' => route('diagrams.show', $diagram->slug),
             'unlockUrl' => $user->is_admin && $diagram->hasActiveLock() ? route('diagrams.lock.destroy', $diagram->slug) : null,
         ]);

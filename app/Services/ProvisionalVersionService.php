@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Diagram;
-use App\Models\DiagramVersionName;
 use App\Repositories\VersionRepository;
 
 /**
@@ -40,10 +39,7 @@ class ProvisionalVersionService
         $versionId = $this->versions->save($diagram, $holder, $draft, VersionRepository::MESSAGE_PROVISIONAL);
 
         if ($versionId !== null) {
-            DiagramVersionName::updateOrCreate(
-                ['diagram_id' => $diagram->id, 'version_id' => $versionId],
-                ['name' => __('messages.provisional_version')],
-            );
+            $this->versions->markProvisional($diagram, $versionId);
         }
     }
 }

@@ -58,3 +58,18 @@ document.querySelectorAll('select[data-tag-select]').forEach((select) => {
         },
     });
 });
+
+// First access with no timezone stored: send the browser's IANA timezone once
+// so dates render in the User's own timezone from the next page on.
+const detectUrl = document.body.dataset.detectTimezone;
+if (detectUrl) {
+    fetch(detectUrl, {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content ?? '',
+        },
+        body: JSON.stringify({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }),
+    }).catch(() => {});
+}

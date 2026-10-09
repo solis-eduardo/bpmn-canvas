@@ -79,6 +79,23 @@
         + (notification.read ? 'text-gray-500' : 'font-medium text-gray-900');
       link.textContent = notification.message;
 
+      // Already on the page the notification opens (the holder's open
+      // Editor): navigating would just reload it, so mark it read in place.
+      if (notification.opens && new URL(notification.opens, location.href).pathname === location.pathname) {
+        link.addEventListener('click', async event => {
+          event.preventDefault();
+          try {
+            // The redirect back to this page isn't followed: marking it read
+            // is all that's needed, so the response is opaque and ignored.
+            await fetch(notification.url, { credentials: 'same-origin', redirect: 'manual' });
+          } catch (e) {
+            console.error(e);
+          }
+          closeDropdown();
+          refreshUnreadCount();
+        });
+      }
+
       li.appendChild(link);
       list.appendChild(li);
     });

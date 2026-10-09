@@ -25,6 +25,8 @@ import { compareBpmnXml, highlightDiff, renderRemovedGhosts } from './diff.js';
   const versionRestoredNotice = body.dataset.versionRestoredNotice;
   const versionRestoreFailedNotice = body.dataset.versionRestoreFailedNotice;
   const restoreLabel = body.dataset.restoreLabel || 'Restore';
+  const canEdit = body.dataset.canEditVersions === 'true';
+  const label = key => body.dataset[key] || '';
   const compareWithCurrentLabel = body.dataset.compareWithCurrentLabel || 'Compare with current';
   // Translated names of the BPMN element types, keyed by type (e.g. "UserTask").
   const elementTypes = JSON.parse(body.dataset.elementTypes || '{}');
@@ -62,6 +64,16 @@ import { compareBpmnXml, highlightDiff, renderRemovedGhosts } from './diff.js';
 
   function versionRestoreUrl(id) {
     return versionRestoreUrlTemplate.replace('VERSION_ID', encodeURIComponent(id));
+  }
+
+  function versionActionUrl(templateKey, id) {
+    return body.dataset[templateKey].replace('VERSION_ID', encodeURIComponent(id));
+  }
+
+  function formatTime(version) {
+    const locale = (document.documentElement.lang || '').replace('_', '-') || undefined;
+
+    return new Date(version.saved_at).toLocaleTimeString(locale, { timeStyle: 'short' });
   }
 
   function formatVersion(version) {
@@ -126,60 +138,158 @@ import { compareBpmnXml, highlightDiff, renderRemovedGhosts } from './diff.js';
 
     days.forEach(day => {
       const header = document.createElement('li');
-      header.className = 'empty';
+      header.className = 'empty version-day';
       header.textContent = formatDay(day.day);
       list.appendChild(header);
 
       day.items.forEach(version => {
         versionsById.set(version.id, version);
         seenIds.add(version.id);
-
-        const li = document.createElement('li');
-        li.dataset.versionId = version.id;
-
-        const row = document.createElement('div');
-        row.className = 'version-row';
-
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.checked = selectedIds.includes(version.id);
-        checkbox.addEventListener('change', () => toggleSelection(version.id, checkbox));
-        row.appendChild(checkbox);
-
-        const label = document.createElement('span');
-        label.textContent = versionLabel(version);
-        row.appendChild(label);
-
-        li.appendChild(row);
-
-        // The current Version is what's on the canvas: nothing to restore or
-        // compare it against.
-        if (!version.is_current) {
-          const actions = document.createElement('div');
-          actions.className = 'version-actions';
-
-          const compareBtn = document.createElement('button');
-          compareBtn.type = 'button';
-          compareBtn.textContent = compareWithCurrentLabel;
-          compareBtn.addEventListener('click', () => compareWithCurrent(version));
-          actions.appendChild(compareBtn);
-
-          const restoreBtn = document.createElement('button');
-          restoreBtn.type = 'button';
-          restoreBtn.textContent = restoreLabel;
-          restoreBtn.addEventListener('click', () => restoreVersion(version));
-          actions.appendChild(restoreBtn);
-
-          li.appendChild(actions);
-        }
-
-        list.appendChild(li);
+        list.appendChild(renderVersionCard(version));
       });
     });
 
     selectedIds = selectedIds.filter(id => seenIds.has(id));
     updateCompareBar();
     highlightActiveComparison();
+  }
+
+  function addBadge(parent, text, modifier) {
+    const badge = document.createElement('span');
+    badge.className = 'version-badge ' + modifier;
+    badge.textContent = text;
+    parent.appendChild(badge);
+  }
+
+  function addAction(parent, text, handler, modifier) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = text;
+    if (modifier) button.className = modifier;
+    button.addEventListener('click', handler);
+    parent.appendChild(button);
+  }
+
+  // One card per Version: name and number, badges, time and author, then
+  // the actions available for it.
+  function renderVersionCard(version) {
+    const li = document.createElement('li');
+    li.className = 'version-card';
+    li.dataset.versionId = version.id;
+
+    const row = document.createElement('div');
+    row.className = 'version-row';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = selectedIds.includes(version.id);
+    checkbox.addEventListener('change', () => toggleSelection(version.id, checkbox));
+    row.appendChild(checkbox);
+
+    const name = document.createElement('strong');
+    name.className = 'version-name';
+    name.textContent = version.name;
+    row.appendChild(name);
+
+    // A custom name replaces "Version N", so the number is shown beside it.
+    const number = document.createElement('span');
+    number.className = 'version-number';
+    number.textContent = '#' + version.number;
+    row.appendChild(number);
+
+    li.appendChild(row);
+
+    const badges = document.createElement('div');
+    badges.className = 'version-badges';
+    if (version.is_current) addBadge(badges, label('currentBadgeLabel'), 'current');
+    if (version.provisional) addBadge(badges, label('provisionalBadgeLabel'), 'provisional');
+    if (badges.childElementCount) li.appendChild(badges);
+
+    const meta = document.createElement('small');
+    meta.className = 'version-meta';
+    meta.textContent = formatTime(version) + ' · ' + label('versionByTemplate').replace(':name', version.author);
+    li.appendChild(meta);
+
+    const actions = document.createElement('div');
+    actions.className = 'version-actions';
+
+    // The current Version is what's on the canvas: nothing to restore or
+    // compare it against.
+    if (!version.is_current) {
+      addAction(actions, compareWithCurrentLabel, () => compareWithCurrent(version));
+      addAction(actions, restoreLabel, () => restoreVersion(version));
+    }
+
+    if (canEdit) {
+      addAction(actions, label('renameVersionLabel'), () => renameVersion(version));
+
+      if (version.provisional) {
+        addAction(actions, label('makePermanentLabel'), () => promoteVersion(version));
+        addAction(actions, label('deleteVersionLabel'), () => deleteVersion(version), 'danger');
+      }
+    }
+
+    if (actions.childElementCount) li.appendChild(actions);
+
+    return li;
+  }
+
+  // Runs a change on one Version, then re-fetches the history to show it.
+  async function changeVersion(request, doneNotice, failedNotice) {
+    try {
+      const res = await request();
+
+      if (!res.ok) throw await window.BpmnCommon.httpError(res);
+
+      await loadVersions();
+      if (doneNotice) window.BpmnCommon.toast(doneNotice);
+    } catch (e) {
+      console.error(e);
+      window.BpmnCommon.toast(window.BpmnCommon.errorMessage(e, failedNotice), true);
+    }
+  }
+
+  function sendVersionRequest(method, templateKey, version, payload) {
+    const headers = { Accept: 'application/json', 'X-CSRF-TOKEN': csrfToken };
+    if (payload) headers['Content-Type'] = 'application/json';
+
+    return fetch(versionActionUrl(templateKey, version.id), {
+      method,
+      credentials: 'same-origin',
+      headers,
+      body: payload ? JSON.stringify(payload) : undefined,
+    });
+  }
+
+  async function renameVersion(version) {
+    const name = (prompt(label('renameVersionPrompt'), version.name) || '').trim();
+    if (!name || name === version.name) return;
+
+    await changeVersion(
+      () => sendVersionRequest('PUT', 'versionRenameUrlTemplate', version, { name }),
+      '',
+      label('versionRenameFailedNotice'),
+    );
+  }
+
+  function promoteVersion(version) {
+    return changeVersion(
+      () => sendVersionRequest('POST', 'versionPromoteUrlTemplate', version),
+      label('versionMadePermanentNotice'),
+      label('versionPromoteFailedNotice'),
+    );
+  }
+
+  async function deleteVersion(version) {
+    if (!confirm(label('deleteVersionConfirm'))) return;
+
+    selectedIds = selectedIds.filter(id => id !== version.id);
+
+    await changeVersion(
+      () => sendVersionRequest('DELETE', 'versionDeleteUrlTemplate', version),
+      label('versionDeletedNotice'),
+      label('versionDeleteFailedNotice'),
+    );
   }
 
   function toggleSelection(id, checkbox) {

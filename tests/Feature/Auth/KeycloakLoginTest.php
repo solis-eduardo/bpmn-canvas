@@ -87,7 +87,7 @@ class KeycloakLoginTest extends TestCase
 
         $response = $this->get('/login/keycloak/callback');
 
-        $response->assertRedirect(route('diagrams.index'));
+        $response->assertRedirect(route('home'));
         $this->assertAuthenticated();
 
         $this->get(route('diagrams.index'))->assertOk();
@@ -233,7 +233,7 @@ class KeycloakLoginTest extends TestCase
 
         $this->mockSocialiteUser($this->fakeSocialiteUser('sub-ci', 'Fatima', 'fatima@example.com'));
 
-        $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
+        $this->get('/login/keycloak/callback')->assertRedirect(route('home'));
 
         $this->assertDatabaseCount('users', 1);
         $this->assertSame('sub-ci', $local->fresh()->keycloak_id);
@@ -247,7 +247,7 @@ class KeycloakLoginTest extends TestCase
             'linked-sub', $user->name, $user->email, ['bpmn-admin'], emailVerified: false,
         ));
 
-        $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
+        $this->get('/login/keycloak/callback')->assertRedirect(route('home'));
 
         $this->assertAuthenticatedAs($user->fresh());
         $this->assertFalse($user->fresh()->is_admin);
@@ -283,7 +283,7 @@ class KeycloakLoginTest extends TestCase
             groups: ['/finance'],
         ));
 
-        $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
+        $this->get('/login/keycloak/callback')->assertRedirect(route('home'));
 
         $this->assertDatabaseHas('members', [
             'workspace_id' => $workspace->id,
@@ -309,7 +309,7 @@ class KeycloakLoginTest extends TestCase
             $member->email,
         ));
 
-        $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
+        $this->get('/login/keycloak/callback')->assertRedirect(route('home'));
 
         $this->assertDatabaseMissing('members', [
             'workspace_id' => $workspace->id,
@@ -335,7 +335,7 @@ class KeycloakLoginTest extends TestCase
             groups: null,
         ));
 
-        $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
+        $this->get('/login/keycloak/callback')->assertRedirect(route('home'));
 
         $this->assertDatabaseHas('members', [
             'workspace_id' => $workspace->id,
@@ -362,7 +362,7 @@ class KeycloakLoginTest extends TestCase
             groups: ['/finance'],
         ));
 
-        $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
+        $this->get('/login/keycloak/callback')->assertRedirect(route('home'));
 
         $this->assertDatabaseHas('members', [
             'workspace_id' => $workspace->id,
@@ -376,7 +376,7 @@ class KeycloakLoginTest extends TestCase
             $member->name,
             $member->email,
         ));
-        $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
+        $this->get('/login/keycloak/callback')->assertRedirect(route('home'));
 
         $this->assertDatabaseHas('members', [
             'workspace_id' => $workspace->id,
@@ -403,7 +403,7 @@ class KeycloakLoginTest extends TestCase
             $member->email,
         ));
 
-        $this->get('/login/keycloak/callback')->assertRedirect(route('diagrams.index'));
+        $this->get('/login/keycloak/callback')->assertRedirect(route('home'));
 
         $this->assertDatabaseHas('members', [
             'workspace_id' => $workspace->id,
