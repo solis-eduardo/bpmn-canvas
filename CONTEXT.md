@@ -75,3 +75,28 @@ _Avoid_: Owner (unqualified), Workspace admin, manager (reserve "Administrator" 
 **Tag**:
 A global, free-text marker applied to Diagrams to organize and filter the Diagram list. Anyone who can edit a Diagram (Diagram Owner, Collaborator, Member) can apply or remove its Tags. Unrelated to the Git mechanics behind Versions, which stay invisible.
 _Avoid_: label, category, folder
+
+## PT-BR UI terms
+
+The UI is localized in pt-BR (`lang/pt_BR`); code, docs and commits use the English term. Keep these pairings when adding or translating UI strings.
+
+| English | PT-BR |
+|---|---|
+| Diagram | Diagrama |
+| Slug / Old slug | Slug / Slug antigo |
+| Author | Autor |
+| Diagram Owner | Dono do Diagrama |
+| Collaborator | Colaborador |
+| Administrator | Administrador |
+| Share | Compartilhamento |
+| Editor | Editor |
+| Public Viewer | Visualizador Público |
+| Lock (request, release, transfer) | Trava (solicitar, liberar, transferir) |
+| Fork | Fork |
+| Version / Version name | Versão / Nome da Versão |
+| Restore (a Version) | Restaurar |
+| User | Usuário |
+| Workspace | Ambiente de Trabalho |
+| Workspace Owner | Dono do Ambiente |
+| Member | Membro |
+| Tag | Tag |
