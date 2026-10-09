@@ -46,7 +46,7 @@ class AuthServiceProvider extends ServiceProvider
         $policies = [
             'lock' => [LockPolicy::class, ['view', 'acquire', 'renew', 'write', 'transfer', 'release']],
             'fork' => [ForkPolicy::class, ['create']],
-            'collaborator' => [CollaboratorPolicy::class, ['grant', 'invite', 'requestAccess', 'revoke']],
+            'collaborator' => [CollaboratorPolicy::class, ['grant', 'invite', 'requestAccess', 'revoke', 'assignRole']],
             'member' => [MemberPolicy::class, ['add', 'remove', 'leave']],
             'diagram-owner' => [DiagramOwnerPolicy::class, ['transfer']],
             'diagram-workspace' => [DiagramWorkspacePolicy::class, ['assign', 'remove']],

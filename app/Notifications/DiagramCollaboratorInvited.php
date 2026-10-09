@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
 use Illuminate\Notifications\Notification;
 
@@ -9,6 +10,7 @@ class DiagramCollaboratorInvited extends Notification
 {
     public function __construct(
         private readonly Diagram $diagram,
+        private readonly string $role = Collaborator::ROLE_COLLABORATOR,
     ) {}
 
     /**
@@ -32,6 +34,7 @@ class DiagramCollaboratorInvited extends Notification
             'diagram_id' => $this->diagram->id,
             'diagram_slug' => $this->diagram->slug,
             'diagram_title' => $this->diagram->title,
+            'role' => $this->role,
         ];
     }
 }

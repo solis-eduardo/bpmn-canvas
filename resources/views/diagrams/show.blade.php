@@ -88,6 +88,13 @@
             data-approve-label="{{ __('messages.approve') }}"
             data-refuse-label="{{ __('messages.refuse') }}"
             data-remove-label="{{ __('messages.remove') }}"
+            data-can-assign-roles="{{ auth()->user()->can('collaborator.assignRole', $diagram) ? 'true' : 'false' }}"
+            data-current-user-id="{{ auth()->id() }}"
+            data-role-label="{{ __('messages.collaborator_role') }}"
+            data-role-collaborator-label="{{ __('messages.role_collaborator') }}"
+            data-role-manager-label="{{ __('messages.role_manager') }}"
+            data-role-changed-notice="{{ __('messages.collaborator_role_changed') }}"
+            data-role-change-failed-notice="{{ __('messages.collaborator_role_change_failed') }}"
         @endcan
         @can('manageShares', $diagram)
             data-shares-url="{{ route('shares.index', $diagram->slug) }}"
@@ -213,6 +220,12 @@
                                     :label="__('messages.invite_collaborator')"
                                     :placeholder="__('messages.select_user_placeholder')"
                                 />
+                                @can('collaborator.assignRole', $diagram)
+                                    <select id="collab-invite-role" aria-label="{{ __('messages.collaborator_role') }}">
+                                        <option value="collaborator">{{ __('messages.role_collaborator') }}</option>
+                                        <option value="manager">{{ __('messages.role_manager') }}</option>
+                                    </select>
+                                @endcan
                                 <button type="submit" class="primary"><x-icon name="user-plus" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.invite') }}</button>
                             </form>
                             <ul id="collab-list"></ul>

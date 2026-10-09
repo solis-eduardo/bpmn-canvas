@@ -2,10 +2,12 @@
 
 namespace App\Services\Notifications;
 
+use App\Models\Collaborator;
 use App\Notifications\DiagramAccessRequested;
 use App\Notifications\DiagramAccessRequestResolved;
 use App\Notifications\DiagramCollaboratorInvited;
 use App\Notifications\DiagramCollaboratorRemoved;
+use App\Notifications\DiagramCollaboratorRoleChanged;
 use App\Notifications\DiagramLockRequested;
 use App\Notifications\DiagramOwnershipTransferred;
 use App\Notifications\WorkspaceMemberAdded;
@@ -47,9 +49,16 @@ class NotificationPresenter
                 : 'messages.notification_access_request_refused', [
                     'diagram' => $data['diagram_title'],
                 ]),
-            DiagramCollaboratorInvited::class => __('messages.notification_collaborator_invited', [
-                'diagram' => $data['diagram_title'] ?? '',
-            ]),
+            DiagramCollaboratorInvited::class => __(($data['role'] ?? null) === Collaborator::ROLE_MANAGER
+                ? 'messages.notification_manager_invited'
+                : 'messages.notification_collaborator_invited', [
+                    'diagram' => $data['diagram_title'] ?? '',
+                ]),
+            DiagramCollaboratorRoleChanged::class => __(($data['role'] ?? null) === Collaborator::ROLE_MANAGER
+                ? 'messages.notification_role_promoted'
+                : 'messages.notification_role_demoted', [
+                    'diagram' => $data['diagram_title'] ?? '',
+                ]),
             DiagramCollaboratorRemoved::class => __('messages.notification_collaborator_removed', [
                 'diagram' => $data['diagram_title'] ?? '',
             ]),

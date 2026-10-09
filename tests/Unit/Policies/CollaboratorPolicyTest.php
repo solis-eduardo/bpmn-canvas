@@ -23,10 +23,10 @@ class CollaboratorPolicyTest extends TestCase
         Collaborator::create(['diagram_id' => $diagram->id, 'user_id' => $collaborator->id, 'status' => Collaborator::STATUS_APPROVED]);
 
         foreach (['grant', 'revoke'] as $ability) {
-            $this->assertTrue($policy->$ability($diagram->owner, $diagram), $ability);
-            $this->assertTrue($policy->$ability($admin, $diagram), $ability);
-            $this->assertFalse($policy->$ability($collaborator, $diagram), $ability);
-            $this->assertFalse($policy->$ability($stranger, $diagram), $ability);
+            $this->assertTrue($policy->$ability($diagram->owner, $diagram, $collaborator), $ability);
+            $this->assertTrue($policy->$ability($admin, $diagram, $collaborator), $ability);
+            $this->assertFalse($policy->$ability($collaborator, $diagram, $collaborator), $ability);
+            $this->assertFalse($policy->$ability($stranger, $diagram, $collaborator), $ability);
         }
     }
 
@@ -66,5 +66,30 @@ class CollaboratorPolicyTest extends TestCase
 
         $this->assertTrue($policy->invite($diagram->owner, $diagram, null));
         $this->assertFalse($policy->invite(User::factory()->create(), $diagram, null));
+    }
+
+    public function test_a_diagram_manager_grants_and_revokes_but_only_the_owner_assigns_roles(): void
+    {
+        $diagram = Diagram::factory()->create();
+        $policy = new CollaboratorPolicy;
+        $manager = User::factory()->create();
+        Collaborator::create(['diagram_id' => $diagram->id, 'user_id' => $manager->id, 'status' => Collaborator::STATUS_APPROVED, 'role' => Collaborator::ROLE_MANAGER]);
+        $otherManager = User::factory()->create();
+        Collaborator::create(['diagram_id' => $diagram->id, 'user_id' => $otherManager->id, 'status' => Collaborator::STATUS_APPROVED, 'role' => Collaborator::ROLE_MANAGER]);
+        $plain = User::factory()->create();
+        Collaborator::create(['diagram_id' => $diagram->id, 'user_id' => $plain->id, 'status' => Collaborator::STATUS_APPROVED]);
+        $pendingManager = User::factory()->create();
+        Collaborator::create(['diagram_id' => $diagram->id, 'user_id' => $pendingManager->id, 'status' => Collaborator::STATUS_REQUESTED, 'role' => Collaborator::ROLE_MANAGER]);
+
+        $this->assertTrue($policy->grant($manager, $diagram));
+        $this->assertTrue($policy->revoke($manager, $diagram, $plain));
+        $this->assertTrue($policy->revoke($manager, $diagram, $manager));
+        $this->assertFalse($policy->revoke($manager, $diagram, $otherManager));
+        $this->assertFalse($policy->assignRole($manager, $diagram));
+        $this->assertTrue($policy->assignRole($diagram->owner, $diagram));
+        $this->assertTrue($policy->assignRole(User::factory()->create(['is_admin' => true]), $diagram));
+        $this->assertFalse($policy->assignRole($plain, $diagram));
+        $this->assertFalse($policy->grant($pendingManager, $diagram));
+        $this->assertFalse($policy->revoke($plain, $diagram, $plain));
     }
 }

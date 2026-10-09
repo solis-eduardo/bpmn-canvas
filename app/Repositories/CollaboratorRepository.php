@@ -32,9 +32,13 @@ class CollaboratorRepository
         return $diagram->collaborators()->with('user')->get();
     }
 
-    public function upsertApproved(Diagram $diagram, User $user): Collaborator
+    /**
+     * A null $role leaves an existing row's role alone (a new row is a plain
+     * Collaborator).
+     */
+    public function upsertApproved(Diagram $diagram, User $user, ?string $role = null): Collaborator
     {
-        return $this->upsertStatus($diagram, $user, Collaborator::STATUS_APPROVED);
+        return $this->upsertStatus($diagram, $user, Collaborator::STATUS_APPROVED, $role);
     }
 
     public function approve(Collaborator $collaborator): Collaborator
@@ -44,11 +48,11 @@ class CollaboratorRepository
         return $collaborator;
     }
 
-    public function upsertStatus(Diagram $diagram, User $user, string $status): Collaborator
+    public function upsertStatus(Diagram $diagram, User $user, string $status, ?string $role = null): Collaborator
     {
         return Collaborator::updateOrCreate(
             ['diagram_id' => $diagram->id, 'user_id' => $user->id],
-            ['status' => $status],
+            $role === null ? ['status' => $status] : ['status' => $status, 'role' => $role],
         );
     }
 
