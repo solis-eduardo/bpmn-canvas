@@ -85,24 +85,24 @@
             @endif
         </div>
 
-    <div id="viewer" class="relative min-h-0 flex-1" data-title="{{ $diagram->title }}" data-open-failed-notice="{{ __('messages.diagram_open_failed') }}">
-        <div id="canvas" class="absolute inset-0 bg-white"></div>
-        @isset($notice)
-            <p
-                class="absolute left-4 right-4 top-4 z-10 rounded-md border px-3 py-2 text-sm font-semibold shadow-sm sm:right-auto sm:max-w-xl {{ ($noticeTone ?? 'blue') === 'red' ? 'border-red-300 bg-red-100 text-red-900' : 'border-blue-200 bg-blue-50 text-blue-900' }}"
-                role="{{ ($noticeTone ?? 'blue') === 'red' ? 'alert' : 'status' }}"
-                @if (! empty($lockedAt)) data-locked-at="{{ $lockedAt->toIso8601String() }}" @endif
-            >{{ $notice }}</p>
-        @endisset
-        <div id="message" class="absolute inset-0 flex items-center justify-center px-6 text-center text-gray-500">
-            {{ __('messages.loading') }}
+        <div id="viewer" class="relative min-h-0 flex-1" data-title="{{ $diagram->title }}" data-open-failed-notice="{{ __('messages.diagram_open_failed') }}">
+            <div id="canvas" class="absolute inset-0 bg-white"></div>
+            @isset($notice)
+                <p
+                    class="absolute left-4 right-4 top-4 z-10 rounded-md border px-3 py-2 text-sm font-semibold shadow-sm sm:right-auto sm:max-w-xl {{ ($noticeTone ?? 'blue') === 'red' ? 'border-red-300 bg-red-100 text-red-900' : 'border-blue-200 bg-blue-50 text-blue-900' }}"
+                    role="{{ ($noticeTone ?? 'blue') === 'red' ? 'alert' : 'status' }}"
+                    @if (! empty($lockedAt)) data-locked-at="{{ $lockedAt->toIso8601String() }}" @endif
+                >{{ $notice }}</p>
+            @endisset
+            <div id="message" class="absolute inset-0 flex items-center justify-center px-6 text-center text-gray-500">
+                {{ __('messages.loading') }}
+            </div>
+            <div class="absolute bottom-16 right-4 z-10 flex flex-col gap-1">
+                <button type="button" id="zoom-in" title="{{ __('messages.zoom_in') }}" aria-label="{{ __('messages.zoom_in') }}" class="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white shadow-sm hover:bg-gray-50"><x-icon name="plus" class="h-5 w-5" /></button>
+                <button type="button" id="zoom-out" title="{{ __('messages.zoom_out') }}" aria-label="{{ __('messages.zoom_out') }}" class="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white shadow-sm hover:bg-gray-50"><x-icon name="minus" class="h-5 w-5" /></button>
+                <button type="button" id="zoom-fit" title="{{ __('messages.fit_to_screen') }}" aria-label="{{ __('messages.fit_to_screen') }}" class="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white shadow-sm hover:bg-gray-50"><x-icon name="fit" class="h-5 w-5" /></button>
+            </div>
         </div>
-        <div class="absolute bottom-16 right-4 z-10 flex flex-col gap-1">
-            <button type="button" id="zoom-in" title="{{ __('messages.zoom_in') }}" aria-label="{{ __('messages.zoom_in') }}" class="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white shadow-sm hover:bg-gray-50"><x-icon name="plus" class="h-5 w-5" /></button>
-            <button type="button" id="zoom-out" title="{{ __('messages.zoom_out') }}" aria-label="{{ __('messages.zoom_out') }}" class="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white shadow-sm hover:bg-gray-50"><x-icon name="minus" class="h-5 w-5" /></button>
-            <button type="button" id="zoom-fit" title="{{ __('messages.fit_to_screen') }}" aria-label="{{ __('messages.fit_to_screen') }}" class="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white shadow-sm hover:bg-gray-50"><x-icon name="fit" class="h-5 w-5" /></button>
-        </div>
-    </div>
     </div>
 
     {{-- Non-executing JSON block: JSON_HEX_* escapes every `<`, `>`, `&` and quote, so the XML can't close the tag or start another one. --}}
