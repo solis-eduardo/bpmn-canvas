@@ -14,7 +14,7 @@ use Illuminate\Notifications\Notifiable;
 // keycloak_id is only ever assigned internally by the OAuth flow (KeycloakLoginController),
 // never from a user request payload — no route exposes it. login_method is set only from
 // validated Administrator input or by the OAuth flow.
-#[Fillable(['name', 'email', 'password', 'keycloak_id', 'login_method', 'email_notifications_enabled'])]
+#[Fillable(['name', 'email', 'password', 'keycloak_id', 'login_method', 'email_notifications_enabled', 'timezone'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -39,6 +39,15 @@ class User extends Authenticatable
             'is_admin_via_keycloak_claim' => 'boolean',
             'email_notifications_enabled' => 'boolean',
         ];
+    }
+
+    /**
+     * The IANA timezone this User sees dates in; the app timezone (UTC) when
+     * they have not chosen one. Storage is always UTC, only display converts.
+     */
+    public function displayTimezone(): string
+    {
+        return $this->timezone ?: config('app.timezone');
     }
 
     /**

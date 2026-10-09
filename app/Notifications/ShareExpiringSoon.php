@@ -3,6 +3,7 @@
 namespace App\Notifications;
 
 use App\Models\Share;
+use App\Models\User;
 
 /**
  * Sent to a Diagram's Owner when one of their Shares is inside the
@@ -14,11 +15,11 @@ class ShareExpiringSoon extends PreferenceAwareNotification
         private readonly Share $share,
     ) {}
 
-    protected function emailMessage(): string
+    protected function emailMessage(User $recipient): string
     {
         return __('messages.notification_share_expiring', [
             'diagram' => $this->share->diagram->title,
-            'date' => $this->share->expires_at->translatedFormat('M j, Y'),
+            'date' => $this->share->expires_at->copy()->timezone($recipient->displayTimezone())->translatedFormat('M j, Y'),
         ]);
     }
 

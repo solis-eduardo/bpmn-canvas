@@ -30,11 +30,11 @@ abstract class PreferenceAwareNotification extends Notification
         return (new MailMessage)
             ->subject(__('messages.notification_email_subject'))
             ->greeting(__('messages.notification_email_greeting', ['name' => $notifiable->name]))
-            ->line($this->emailMessage())
+            ->line($this->emailMessage($notifiable))
             ->action(__('messages.notification_email_action'), $this->emailUrl());
     }
 
-    abstract protected function emailMessage(): string;
+    abstract protected function emailMessage(User $recipient): string;
 
     abstract protected function emailUrl(): string;
 }

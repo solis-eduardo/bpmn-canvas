@@ -107,9 +107,7 @@
                             >
                                 {{ $diagram->title }}
                             </a>
-                            <time datetime="{{ $diagram->updated_at->toISOString() }}" class="shrink-0 text-sm text-gray-500">
-                                {{ $diagram->updated_at->diffForHumans() }}
-                            </time>
+                            <x-timestamp :at="$diagram->updated_at" class="shrink-0 text-sm text-gray-500" />
                         </li>
                     @endforeach
                 </ul>

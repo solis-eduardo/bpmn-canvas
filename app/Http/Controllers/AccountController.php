@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\RedirectsAfterSave;
 use App\Repositories\UserRepository;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
 use Illuminate\View\View;
 
 class AccountController extends Controller
@@ -32,6 +33,7 @@ class AccountController extends Controller
         $rules = [
             'name' => ['required', 'string', 'max:255'],
             'email_notifications_enabled' => ['sometimes', 'boolean'],
+            'timezone' => ['sometimes', 'nullable', 'timezone:all'],
         ];
 
         if (! $user->usesKeycloak()) {
@@ -47,6 +49,10 @@ class AccountController extends Controller
             $attributes['email_notifications_enabled'] = $request->boolean('email_notifications_enabled');
         }
 
+        if ($request->has('timezone')) {
+            $attributes['timezone'] = $data['timezone'];
+        }
+
         $changesPassword = ! $user->usesKeycloak() && filled($data['password'] ?? null);
 
         if ($changesPassword) {
@@ -60,6 +66,23 @@ class AccountController extends Controller
         }
 
         return $this->afterSave($request, 'home', 'account.edit');
+    }
+
+    /**
+     * Fills the User's timezone from the browser on first access. Never
+     * overwrites a timezone the User already has.
+     */
+    public function detectTimezone(Request $request): Response
+    {
+        $data = $request->validate(['timezone' => ['required', 'string', 'timezone:all']]);
+
+        $user = $request->user();
+
+        if ($user->timezone === null) {
+            $user->update(['timezone' => $data['timezone']]);
+        }
+
+        return response()->noContent();
     }
 
     public function updatePassword(Request $request): RedirectResponse
