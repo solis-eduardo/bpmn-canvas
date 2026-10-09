@@ -136,5 +136,39 @@
     return (error && error.serverMessage) || fallback;
   }
 
-  window.BpmnCommon = { httpError, errorMessage, toast, download, exportBpmn, exportSvg, exportPng, setupDropdowns, setupZoom, baseName, togglePanel };
+  // Asks how to release a Lock that has an unsaved draft: resolves to 'save',
+  // 'discard' or 'cancel'. A native confirm() only has two outcomes.
+  function chooseRelease({ message, saveLabel, discardLabel, cancelLabel }) {
+    return new Promise(resolve => {
+      const dialog = document.createElement('dialog');
+      dialog.style.cssText = 'max-width:28rem;padding:1.25rem;border:1px solid #d1d5db;border-radius:.5rem';
+
+      const text = document.createElement('p');
+      text.textContent = message;
+      text.style.cssText = 'margin:0 0 1rem';
+
+      const actions = document.createElement('div');
+      actions.style.cssText = 'display:flex;flex-wrap:wrap;gap:.5rem;justify-content:flex-end';
+
+      let choice = 'cancel';
+      [['cancel', cancelLabel], ['discard', discardLabel], ['save', saveLabel]].forEach(([value, label]) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.textContent = label;
+        button.dataset.releaseChoice = value;
+        button.style.cssText = 'padding:.375rem .75rem;border:1px solid #d1d5db;border-radius:.375rem;cursor:pointer;'
+          + (value === 'save' ? 'background:#2563eb;border-color:#2563eb;color:#fff' : 'background:#fff');
+        button.addEventListener('click', () => { choice = value; dialog.close(); });
+        actions.appendChild(button);
+      });
+
+      // Escape closes the dialog without a click: that is a cancel too.
+      dialog.addEventListener('close', () => { dialog.remove(); resolve(choice); });
+      dialog.append(text, actions);
+      document.body.appendChild(dialog);
+      dialog.showModal();
+    });
+  }
+
+  window.BpmnCommon = { chooseRelease, httpError, errorMessage, toast, download, exportBpmn, exportSvg, exportPng, setupDropdowns, setupZoom, baseName, togglePanel };
 })();

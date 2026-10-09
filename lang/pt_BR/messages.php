@@ -202,7 +202,11 @@ return [
     'lock_requested_by_notice' => ':name solicitou a Trava deste diagrama.',
     'release_lock' => 'Liberar Trava',
     'force_release_lock' => 'Forçar liberação da Trava',
-    'release_lock_unsaved_confirm' => 'Há alterações não salvas. Sair sem salvar e liberar a Trava?',
+    'release_lock_draft_holder' => 'Há alterações não salvas. Salvá-las como versão provisória antes de liberar a Trava?',
+    'release_lock_draft_admin' => 'O titular desta Trava tem alterações não salvas. Salvá-las como versão provisória em nome do titular antes de liberar a Trava?',
+    'release_save_and_release' => 'Salvar e liberar',
+    'release_discard_and_release' => 'Descartar e liberar',
+    'release_cancel' => 'Cancelar',
 
     // Gestão de usuários
     'users_heading' => 'Usuários',

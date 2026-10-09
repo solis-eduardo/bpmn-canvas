@@ -18,7 +18,7 @@ class LockServiceTest extends TestCase
     {
         parent::setUp();
 
-        $this->service = new LockService;
+        $this->service = app(LockService::class);
     }
 
     public function test_a_free_diagram_reports_no_holder(): void

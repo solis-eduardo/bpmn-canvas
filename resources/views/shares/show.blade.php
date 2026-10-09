@@ -44,6 +44,10 @@
                     type="button"
                     id="btn-release-lock"
                     data-unlock-url="{{ $unlockUrl }}"
+                    data-release-draft-message="{{ __('messages.release_lock_draft_admin') }}"
+                    data-release-save-label="{{ __('messages.release_save_and_release') }}"
+                    data-release-discard-label="{{ __('messages.release_discard_and_release') }}"
+                    data-release-cancel-label="{{ __('messages.release_cancel') }}"
                     data-release-failed-notice="{{ __('messages.release_lock_failed') }}"
                     class="inline-flex items-center gap-1.5 rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50"
                 >

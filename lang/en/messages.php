@@ -202,7 +202,11 @@ return [
     'lock_requested_by_notice' => ':name has requested the Lock on this diagram.',
     'release_lock' => 'Release Lock',
     'force_release_lock' => 'Force release Lock',
-    'release_lock_unsaved_confirm' => 'You have unsaved changes. Leave without saving and release the Lock?',
+    'release_lock_draft_holder' => 'You have unsaved changes. Save them as a provisional version before releasing the Lock?',
+    'release_lock_draft_admin' => "The holder of this Lock has unsaved changes. Save them as a provisional version in the holder's name before releasing the Lock?",
+    'release_save_and_release' => 'Save and release',
+    'release_discard_and_release' => 'Discard and release',
+    'release_cancel' => 'Cancel',
 
     // User management
     'users_heading' => 'Users',
