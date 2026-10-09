@@ -52,9 +52,6 @@
         @can('manageCollaborators', $diagram)
             data-collaborators-url="{{ route('diagrams.collaborators.index', $diagram->slug) }}"
             data-collaborator-url-template="{{ route('diagrams.collaborators.update', [$diagram->slug, 'USER_ID']) }}"
-            data-can-manage-shares="{{ auth()->user()->can('manageShares', $diagram) ? 'true' : 'false' }}"
-            data-shares-url="{{ route('shares.index', $diagram->slug) }}"
-            data-share-destroy-url-template="{{ route('shares.destroy', ['share' => 'SHARE_ID']) }}"
             data-invite-failed-notice="{{ __('messages.collaborator_invite_failed') }}"
             data-invited-notice="{{ __('messages.collaborator_invited') }}"
             data-approve-failed-notice="{{ __('messages.collaborator_approve_failed') }}"
@@ -69,6 +66,10 @@
             data-approve-label="{{ __('messages.approve') }}"
             data-refuse-label="{{ __('messages.refuse') }}"
             data-remove-label="{{ __('messages.remove') }}"
+        @endcan
+        @can('manageShares', $diagram)
+            data-shares-url="{{ route('shares.index', $diagram->slug) }}"
+            data-share-destroy-url-template="{{ route('shares.destroy', ['share' => 'SHARE_ID']) }}"
             data-revoke-label="{{ __('messages.revoke') }}"
             data-copy-link-label="{{ __('messages.copy_link') }}"
             data-share-create-failed-notice="{{ __('messages.share_create_failed') }}"
@@ -196,7 +197,8 @@
                         </section>
                     </div>
                 </aside>
-                @can('manageShares', $diagram)
+            @endcan
+            @can('manageShares', $diagram)
                 <aside id="shares-panel" hidden>
                     <div class="aside-head">
                         <span>{{ __('messages.shares') }}</span>
@@ -223,7 +225,6 @@
                         </section>
                     </div>
                 </aside>
-                @endcan
             @endcan
             {{-- Always visible, with the side panel open or closed; the open panel's button is highlighted. --}}
             <nav class="panel-bar" aria-label="{{ __('messages.bpmn_editor') }}">
@@ -262,16 +263,16 @@
                         title="{{ __('messages.collaborators') }}"
                         aria-label="{{ __('messages.collaborators') }}"
                     ><x-icon name="users" /></button>
-                    @can('manageShares', $diagram)
-                        <button
-                            type="button"
-                            id="btn-shares-entry"
-                            class="panel-toggle"
-                            data-panel-toggle="shares-panel"
-                            title="{{ __('messages.shares') }}"
-                            aria-label="{{ __('messages.shares') }}"
-                        ><x-icon name="link" /></button>
-                    @endcan
+                @endcan
+                @can('manageShares', $diagram)
+                    <button
+                        type="button"
+                        id="btn-shares-entry"
+                        class="panel-toggle"
+                        data-panel-toggle="shares-panel"
+                        title="{{ __('messages.shares') }}"
+                        aria-label="{{ __('messages.shares') }}"
+                    ><x-icon name="link" /></button>
                 @endcan
             </nav>
             <main>
@@ -301,7 +302,7 @@
     <script src="{{ asset('assets/editor.js') }}"></script>
     <script type="module" src="{{ asset('assets/diff.js') }}"></script>
     <script type="module" src="{{ asset('assets/versions.js') }}"></script>
-    @can('manageCollaborators', $diagram)
+    @if (auth()->user()->can('manageCollaborators', $diagram) || auth()->user()->can('manageShares', $diagram))
         <script type="module" src="{{ asset('assets/collaborators.js') }}"></script>
-    @endcan
+    @endif
 </x-layouts.app>
