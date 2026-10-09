@@ -101,6 +101,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/diagrams/{slug}/versions/{version}/content', [VersionController::class, 'versionContent'])->name('diagrams.versions.content');
     Route::post('/diagrams/{slug}/versions/{version}/restore', [VersionController::class, 'restoreVersion'])->name('diagrams.versions.restore');
     Route::put('/diagrams/{slug}/versions/{version}/rename', [VersionController::class, 'renameVersion'])->name('diagrams.versions.rename');
+    Route::post('/diagrams/{slug}/versions/{version}/promote', [VersionController::class, 'promoteVersion'])->name('diagrams.versions.promote');
+    Route::delete('/diagrams/{slug}/versions/{version}', [VersionController::class, 'deleteVersion'])->name('diagrams.versions.delete');
     Route::get('/diagrams/{slug}', [DiagramController::class, 'show'])->name('diagrams.show');
 
     Route::get('/diagrams/{slug}/shares', [ShareController::class, 'index'])->name('shares.index');
