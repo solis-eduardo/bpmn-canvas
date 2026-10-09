@@ -1,5 +1,6 @@
 /*
- * Collaborators & Shares panels (ticket 11; each is rendered only for Users allowed to manage it). Backed by the existing JSON
+ * Collaborators & Shares panels (ticket 11). Each panel is rendered only
+ * for Users allowed to manage it. Backed by the existing JSON
  * endpoints (DiagramCollaboratorController / ShareController) — no new API
  * shape, this just renders and drives them. Follows the same
  * "header button toggles a side panel" pattern as the Version history
@@ -388,7 +389,7 @@
 
   // Deep link from the notification bell (issue #15): clicking a
   // "requested access" notification lands here with ?open-panel=collaborators.
-  if (new URLSearchParams(window.location.search).get('open-panel') === 'collaborators') {
+  if (new URLSearchParams(window.location.search).get('open-panel') === 'collaborators' && $('collaborators-panel')) {
     window.BpmnCommon.togglePanel('collaborators-panel', true);
   }
 })();
