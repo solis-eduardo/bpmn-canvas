@@ -101,6 +101,13 @@
                 </x-button>
                 <span class="brand">{{ $diagram->title }}</span>
                 <span class="spacer"></span>
+                <form method="POST" action="{{ route('diagrams.fork', $diagram->slug) }}">
+                    @csrf
+                    <button type="submit" id="btn-fork">
+                        <x-icon name="copy" class="inline h-4 w-4 align-text-bottom" />
+                        {{ __('messages.fork_diagram') }}
+                    </button>
+                </form>
                 @php($isHolder = (int) $diagram->locked_by === auth()->id())
                 @if ($isHolder || (auth()->user()->is_admin && $diagram->locked_by !== null))
                     <button type="button" id="btn-release-lock">

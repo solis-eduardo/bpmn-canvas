@@ -28,8 +28,8 @@
                     <span id="lock-request-waiting" class="max-w-xs text-xs text-gray-600" hidden>{{ __('messages.lock_request_waiting') }}</span>
                 </div>
             @endif
-            {{-- Running into the Lock offers a Fork: an independent copy to work
-                 on instead of waiting for the holder (CONTEXT.md, "Fork"). --}}
+            {{-- A Fork is an independent copy, available at any time; it is also
+                 the way to keep working past someone else's Lock (CONTEXT.md, "Fork"). --}}
             @isset($forkUrl)
                 <form method="POST" action="{{ $forkUrl }}">
                     @csrf
