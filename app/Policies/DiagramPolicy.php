@@ -48,21 +48,21 @@ class DiagramPolicy
     }
 
     /**
-     * Manage a Diagram's Shares (create/revoke): Diagram Owner only, no
-     * exception for Administrator — "Only the Diagram Owner creates and
-     * revokes Shares" (CONTEXT.md, "Share"; ADR-0006). Deliberately
-     * stricter than manageCollaborators; don't unify the two.
+     * Manage a Diagram's Shares (create/revoke/list): the Diagram Owner or
+     * an approved Collaborator (CONTEXT.md, "Share"; ADR-0016). No
+     * exception for Administrator, and Workspace Members who are not
+     * Collaborators get nothing.
      */
     public function manageShares(User $user, Diagram $diagram): bool
     {
-        return $diagram->isOwnedBy($user);
+        return $diagram->isOwnedBy($user) || $diagram->hasApprovedCollaborator($user);
     }
 
     /**
      * Apply or remove a Diagram's Tags: same eligibility as editing it —
      * Diagram Owner, approved Collaborator, or Member of its Workspace
-     * (CONTEXT.md, "Tag"; issue #40). Unlike manageCollaborators/
-     * manageShares, this is deliberately not Owner-only.
+     * (CONTEXT.md, "Tag"; issue #40). Unlike manageCollaborators,
+     * this is deliberately not Owner-only.
      */
     public function manageTags(User $user, Diagram $diagram): bool
     {

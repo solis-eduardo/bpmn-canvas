@@ -87,6 +87,7 @@ class LockExpiryTest extends TestCase
         $list = $versions->list($diagram);
         $this->assertCount($before + 1, $list);
         $this->assertSame(__('messages.provisional_version'), $list[0]['name']);
+        $this->assertTrue($list[0]['provisional']);
         $this->assertSame($holder->name, $list[0]['author']);
         $this->assertStringContainsString('Unsaved work', Storage::disk('diagrams')->get($diagram->disk_path));
     }

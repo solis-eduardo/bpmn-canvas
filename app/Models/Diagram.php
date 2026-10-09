@@ -154,6 +154,18 @@ BPMN;
     }
 
     /**
+     * True if $user is a direct, approved Collaborator of this Diagram
+     * (not merely a Workspace Member).
+     */
+    public function hasApprovedCollaborator(User $user): bool
+    {
+        return $this->collaborators()
+            ->where('user_id', $user->id)
+            ->where('status', Collaborator::STATUS_APPROVED)
+            ->exists();
+    }
+
+    /**
      * True if $user can edit this Diagram: Diagram Owner, an approved
      * Collaborator, or (CONTEXT.md, "Member"; issue #27) a Member of the
      * Diagram's Workspace, checked live so removal from the Workspace takes

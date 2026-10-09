@@ -171,7 +171,8 @@ class DiagramManagerTest extends TestCase
     public function test_a_manager_gains_no_owner_only_powers(): void
     {
         $this->actingAs($this->manager)->deleteJson("/diagrams/{$this->diagram->slug}")->assertForbidden();
-        $this->assertFalse($this->manager->can('manageShares', $this->diagram));
+        // Shares are open to every approved Collaborator (ADR-0016), Managers included.
+        $this->assertTrue($this->manager->can('manageShares', $this->diagram));
         $this->assertFalse($this->manager->can('transferOwnership', $this->diagram));
         $this->assertFalse($this->manager->can('putInWorkspace', $this->diagram));
     }

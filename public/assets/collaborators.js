@@ -1,5 +1,6 @@
 /*
- * Collaborators & Shares panel (ticket 11). Backed by the existing JSON
+ * Collaborators & Shares panels (ticket 11). Each panel is rendered only
+ * for Users allowed to manage it. Backed by the existing JSON
  * endpoints (DiagramCollaboratorController / ShareController) — no new API
  * shape, this just renders and drives them. Follows the same
  * "header button toggles a side panel" pattern as the Version history
@@ -8,15 +9,14 @@
  */
 (function () {
   const body = document.getElementById('editor');
-  if (!body || !body.dataset.collaboratorsUrl) return; // panel not rendered for this user
+  if (!body || (!body.dataset.collaboratorsUrl && !body.dataset.sharesUrl)) return; // no panel rendered for this user
 
   const slug = body.dataset.slug;
   const collaboratorsUrl = body.dataset.collaboratorsUrl;
   const collaboratorUrlTemplate = body.dataset.collaboratorUrlTemplate;
   const canAssignRoles = body.dataset.canAssignRoles === 'true';
   const currentUserId = parseInt(body.dataset.currentUserId, 10);
-  const canManageShares = body.dataset.canManageShares === 'true';
-  const sharesUrl = body.dataset.sharesUrl;
+  const sharesUrl = body.dataset.sharesUrl; // set only for Users who may manage Shares
   const shareDestroyUrlTemplate = body.dataset.shareDestroyUrlTemplate;
   const versionsUrl = body.dataset.versionsUrl;
   const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
@@ -24,7 +24,6 @@
   const $ = id => document.getElementById(id);
   const collabList = $('collab-list');
   const shareList = $('share-list');
-  const sharesSection = $('shares-section');
   const inviteForm = $('collab-invite-form');
   const inviteUser = $('collab-invite-user_id');
   const inviteRole = $('collab-invite-role');
@@ -217,7 +216,7 @@
     }
   }
 
-  inviteForm.addEventListener('submit', async event => {
+  if (inviteForm) inviteForm.addEventListener('submit', async event => {
     event.preventDefault();
 
     const userId = parseInt(inviteUser.value, 10);
@@ -244,7 +243,7 @@
   // the same Version history endpoint the Version panel already fetches
   // (see versions.js) — one list, two consumers.
   async function loadVersionsForPinSelect() {
-    if (!canManageShares || !sharePinVersion || !versionsUrl) return;
+    if (!sharesUrl || !sharePinVersion || !versionsUrl) return;
 
     try {
       const data = await requestJson(versionsUrl);
@@ -288,7 +287,7 @@
   }
 
   async function loadShares() {
-    if (!canManageShares) return;
+    if (!sharesUrl) return;
 
     try {
       const data = await requestJson(sharesUrl);
@@ -432,11 +431,7 @@
     });
   }
 
-  if (!canManageShares && sharesSection) {
-    sharesSection.hidden = true;
-  }
-
-  loadCollaborators();
+  if (collaboratorsUrl) loadCollaborators();
   loadShares();
   loadVersionsForPinSelect();
   // A save adds a Version, which can then be pinned to (see editor.js).
@@ -444,7 +439,7 @@
 
   // Deep link from the notification bell (issue #15): clicking a
   // "requested access" notification lands here with ?open-panel=collaborators.
-  if (new URLSearchParams(window.location.search).get('open-panel') === 'collaborators') {
+  if (new URLSearchParams(window.location.search).get('open-panel') === 'collaborators' && $('collaborators-panel')) {
     window.BpmnCommon.togglePanel('collaborators-panel', true);
   }
 })();

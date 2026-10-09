@@ -8,6 +8,8 @@ use App\Models\Workspace;
 use App\Services\ForkService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use PHPUnit\Framework\Attributes\DataProvider;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -43,6 +45,29 @@ class ForkServiceTest extends TestCase
         $this->assertSame($origin->id, $fork->forked_from_id);
         $this->assertNull($fork->workspace_id);
         $this->assertSame('<bpmn>copy me</bpmn>', Storage::disk('diagrams')->get($fork->disk_path));
+    }
+
+    /** @return array<string, array{string, string}> */
+    public static function defaultLanguagePrefixes(): array
+    {
+        return [
+            'en' => ['en', 'Copy of Purchase'],
+            'es' => ['es', 'Copia de Purchase'],
+            'pt_BR' => ['pt_BR', 'Cópia de Purchase'],
+        ];
+    }
+
+    #[DataProvider('defaultLanguagePrefixes')]
+    public function test_the_fork_title_uses_the_prefix_of_the_application_default_language(string $locale, string $expected): void
+    {
+        config(['app.locale' => $locale]);
+        $origin = $this->origin();
+        $origin->update(['title' => 'Purchase']);
+
+        $fork = app(ForkService::class)->create($origin, User::factory()->create());
+
+        $this->assertSame($expected, $fork->title);
+        $this->assertSame(Str::slug($expected), $fork->slug);
     }
 
     public function test_the_fork_can_be_placed_in_a_workspace(): void
