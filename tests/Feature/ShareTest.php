@@ -2,9 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\Share;
 use App\Models\User;
+use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
@@ -345,6 +347,73 @@ class ShareTest extends TestCase
         $list = $this->actingAs($author)->getJson("/diagrams/{$diagram->slug}/shares");
         $list->assertOk();
         $list->assertJsonCount(2, 'shares');
+    }
+
+    private function collaboratorOf(Diagram $diagram, string $status = Collaborator::STATUS_APPROVED): User
+    {
+        $user = User::factory()->create();
+        Collaborator::create(['diagram_id' => $diagram->id, 'user_id' => $user->id, 'status' => $status]);
+
+        return $user;
+    }
+
+    public function test_a_collaborator_can_list_create_and_revoke_shares(): void
+    {
+        $diagram = $this->createDiagram(User::factory()->create());
+        $collaborator = $this->collaboratorOf($diagram);
+        $ownerShare = Share::factory()->for($diagram)->for($diagram->owner, 'author')->create();
+
+        $this->actingAs($collaborator)->postJson("/diagrams/{$diagram->slug}/shares")->assertCreated();
+        $this->actingAs($collaborator)->getJson("/diagrams/{$diagram->slug}/shares")
+            ->assertOk()->assertJsonCount(2, 'shares');
+        $this->actingAs($collaborator)->deleteJson("/shares/{$ownerShare->id}")->assertOk();
+        $this->assertNotNull($ownerShare->fresh()->revoked_at);
+    }
+
+    public function test_a_pending_collaborator_workspace_member_and_stranger_cannot_manage_shares(): void
+    {
+        $diagram = $this->createDiagram(User::factory()->create());
+        $workspace = Workspace::factory()->create();
+        $diagram->update(['workspace_id' => $workspace->id]);
+        $member = User::factory()->create();
+        $workspace->members()->create(['user_id' => $member->id]);
+        $share = Share::factory()->for($diagram)->for($diagram->owner, 'author')->create();
+
+        $others = [
+            $this->collaboratorOf($diagram, Collaborator::STATUS_REQUESTED),
+            $member,
+            User::factory()->create(),
+        ];
+
+        foreach ($others as $user) {
+            $this->actingAs($user)->postJson("/diagrams/{$diagram->slug}/shares")->assertForbidden();
+            $this->actingAs($user)->getJson("/diagrams/{$diagram->slug}/shares")->assertForbidden();
+            $this->actingAs($user)->deleteJson("/shares/{$share->id}")->assertForbidden();
+        }
+        $this->assertNull($share->fresh()->revoked_at);
+    }
+
+    public function test_share_controls_are_shown_to_collaborators_only(): void
+    {
+        $diagram = $this->createDiagram(User::factory()->create());
+        $collaborator = $this->collaboratorOf($diagram);
+
+        $this->actingAs($collaborator)->get("/diagrams/{$diagram->slug}")
+            ->assertSee('data-can-manage-shares="true"', false)
+            ->assertSee('id="shares-panel"', false)
+            ->assertSee('id="btn-shares-entry"', false);
+
+        // A Workspace Member who is not a Collaborator edits but cannot share.
+        $workspace = Workspace::factory()->create();
+        $memberDiagram = $this->createDiagram(User::factory()->create());
+        $memberDiagram->update(['workspace_id' => $workspace->id]);
+        $member = User::factory()->create();
+        $workspace->members()->create(['user_id' => $member->id]);
+
+        $this->actingAs($member)->get("/diagrams/{$memberDiagram->slug}")
+            ->assertSee('data-can-manage-shares="false"', false)
+            ->assertDontSee('id="shares-panel"', false)
+            ->assertDontSee('id="btn-shares-entry"', false);
     }
 
     public function test_an_admin_cannot_manage_shares_of_a_diagram_they_do_not_author(): void

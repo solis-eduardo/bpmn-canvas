@@ -17,7 +17,7 @@ The User who created a Diagram. Fixed forever — authorship is never transferre
 _Avoid_: creator, Owner (always qualify: Diagram Owner or Workspace Owner)
 
 **Diagram Owner**:
-The User currently responsible for a Diagram: the only one who can delete it, invite/remove Collaborators, create/revoke Shares, and put it into a Workspace (one they're a Member of) or take it out of one. Starts as the Author and, unlike authorship, can be transferred to another User by the current Diagram Owner or an Administrator — no acceptance needed; the recipient is notified and needn't be a Member of the Diagram's Workspace. On transfer, the previous Diagram Owner becomes a Collaborator, unless they choose to give up access.
+The User currently responsible for a Diagram: the only one who can delete it, invite/remove Collaborators, and put it into a Workspace (one they're a Member of) or take it out of one. Starts as the Author and, unlike authorship, can be transferred to another User by the current Diagram Owner or an Administrator — no acceptance needed; the recipient is notified and needn't be a Member of the Diagram's Workspace. On transfer, the previous Diagram Owner becomes a Collaborator, unless they choose to give up access.
 _Avoid_: Owner (unqualified), Author (the Author is fixed; the Diagram Owner can change)
 
 **Collaborator**:
@@ -28,7 +28,7 @@ _Avoid_: Editor (a role, not to be confused with the Editor interface)
 A User with the privilege to grant Collaborator access on any Diagram regardless of its Diagram Owner, transfer any Diagram's ownership, to create accounts manually, and to manage any Workspace (including transferring Workspace ownership). Sees every Diagram, including those hidden inside Workspaces they're not a Member of. The role can come from two coexisting sources: set manually by another Administrator, or granted automatically by the corresponding role/claim in the Keycloak token (see User). Once granted, it isn't revoked by the claim's absence — only a manual origin turns it off.
 
 **Share**:
-A public, signed link with an expiration (`expires_at`) set in days (default 7, max 60), granting read access to a Diagram without requiring login. A Share either follows the Diagram's latest Version or is pinned to one specific Version. Has a download permission (`allow_download`, disabled by default) and can be revoked before it expires (`revoked_at`). A Diagram can have multiple active Shares simultaneously, each with its own expiration/permission. Only the Diagram Owner creates and revokes Shares. A Share keeps working when its Diagram is hidden inside a Workspace — visibility in the Diagram list doesn't affect Shares.
+A public, signed link with an expiration (`expires_at`) set in days (default 7, max 60), granting read access to a Diagram without requiring login. A Share either follows the Diagram's latest Version or is pinned to one specific Version. Has a download permission (`allow_download`, disabled by default) and can be revoked before it expires (`revoked_at`). A Diagram can have multiple active Shares simultaneously, each with its own expiration/permission. The Diagram Owner and the Diagram's Collaborators create and revoke Shares (Workspace Members who are not Collaborators, and Administrators, cannot). A Share keeps working when its Diagram is hidden inside a Workspace — visibility in the Diagram list doesn't affect Shares.
 _Avoid_: Share token, public link (use "Share" for the entity; the URL itself can be called a "share link")
 
 **Editor**:

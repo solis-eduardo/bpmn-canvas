@@ -1,5 +1,5 @@
 /*
- * Collaborators & Shares panel (ticket 11). Backed by the existing JSON
+ * Collaborators & Shares panels (ticket 11; each is rendered only for Users allowed to manage it). Backed by the existing JSON
  * endpoints (DiagramCollaboratorController / ShareController) — no new API
  * shape, this just renders and drives them. Follows the same
  * "header button toggles a side panel" pattern as the Version history
@@ -8,7 +8,7 @@
  */
 (function () {
   const body = document.getElementById('editor');
-  if (!body || !body.dataset.collaboratorsUrl) return; // panel not rendered for this user
+  if (!body || (!body.dataset.collaboratorsUrl && !body.dataset.sharesUrl)) return; // no panel rendered for this user
 
   const slug = body.dataset.slug;
   const collaboratorsUrl = body.dataset.collaboratorsUrl;
@@ -22,7 +22,6 @@
   const $ = id => document.getElementById(id);
   const collabList = $('collab-list');
   const shareList = $('share-list');
-  const sharesSection = $('shares-section');
   const inviteForm = $('collab-invite-form');
   const inviteUser = $('collab-invite-user_id');
   const shareForm = $('share-create-form');
@@ -167,7 +166,7 @@
     }
   }
 
-  inviteForm.addEventListener('submit', async event => {
+  if (inviteForm) inviteForm.addEventListener('submit', async event => {
     event.preventDefault();
 
     const userId = parseInt(inviteUser.value, 10);
@@ -382,11 +381,7 @@
     });
   }
 
-  if (!canManageShares && sharesSection) {
-    sharesSection.hidden = true;
-  }
-
-  loadCollaborators();
+  if (collaboratorsUrl) loadCollaborators();
   loadShares();
   loadVersionsForPinSelect();
   // A save adds a Version, which can then be pinned to (see editor.js).

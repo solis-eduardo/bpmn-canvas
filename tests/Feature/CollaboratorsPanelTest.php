@@ -41,7 +41,7 @@ class CollaboratorsPanelTest extends TestCase
         $response->assertSee('data-can-manage-shares="true"', false);
     }
 
-    public function test_an_approved_collaborator_who_is_not_the_owner_only_sees_the_placeholder(): void
+    public function test_an_approved_collaborator_who_is_not_the_owner_sees_the_shares_panel_but_not_the_collaborators_one(): void
     {
         $owner = User::factory()->create();
         $collaborator = User::factory()->create();
@@ -58,6 +58,8 @@ class CollaboratorsPanelTest extends TestCase
         $response->assertOk();
         $response->assertDontSee('id="btn-collaborators-entry"', false);
         $response->assertDontSee('id="collaborators-panel"', false);
-        $response->assertDontSee('assets/collaborators.js', false);
+        $response->assertSee('id="btn-shares-entry"', false);
+        $response->assertSee('id="shares-panel"', false);
+        $response->assertSee('assets/collaborators.js', false);
     }
 }
