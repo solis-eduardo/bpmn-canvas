@@ -94,6 +94,7 @@
   // --- Tags ------------------------------------------------------------
 
   const tagsSelect = document.querySelector('#info-tags-form select');
+  let savedTags = Array.from(tagsSelect.selectedOptions).map(option => option.value);
   let savingTags = false;
   let tagsDirty = false;
 
@@ -109,10 +110,14 @@
         tagsDirty = false;
         const tags = Array.from(tagsSelect.selectedOptions).map(option => option.value);
         await putJson(editor.dataset.tagsUrl, { tags });
+        savedTags = tags;
       }
       toast(editor.dataset.tagsSavedNotice);
     } catch (error) {
       console.error(error);
+      // Put the chips back to what the server holds, so they never claim a save that failed.
+      tagsDirty = false;
+      if (tagsSelect.tomselect) tagsSelect.tomselect.setValue(savedTags, true);
       toast(failureMessage(error, 'tags', editor.dataset.tagsSaveFailedNotice), true);
     } finally {
       savingTags = false;
