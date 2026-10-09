@@ -80,7 +80,7 @@
     on('zoom-fit', () => canvas.zoom('fit-viewport', 'auto'));
   }
 
-  // Left side panels of the Editor (data, versions, collaborators, shares):
+  // Left side panels of the Editor (info, versions, collaborators, shares):
   // one is open at a time, opened by [data-panel-toggle="<panel id>"] buttons
   // and closed by [data-panel-close] ones.
   function togglePanel(id, open) {
@@ -103,9 +103,6 @@
     });
     document.querySelectorAll('[data-panel-close]').forEach(button =>
       button.addEventListener('click', () => togglePanel(null, false)));
-
-    // A rejected Tags submission comes back to this screen: show its errors.
-    if (document.querySelector('#data-panel [aria-invalid="true"]')) togglePanel('data-panel', true);
   }
 
   if (document.readyState === 'loading') {

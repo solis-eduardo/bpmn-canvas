@@ -35,7 +35,7 @@ class CollaboratorController extends Controller
      */
     public function index(string $slug): JsonResponse
     {
-        $diagram = $this->resolveDiagram($slug);
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('manageCollaborators', $diagram);
 
@@ -63,7 +63,7 @@ class CollaboratorController extends Controller
      */
     public function store(Request $request, string $slug): JsonResponse|RedirectResponse
     {
-        $diagram = $this->resolveDiagram($slug);
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $data = $request->validate($this->userIdentifierRules() + $this->roleRules());
 
@@ -104,7 +104,7 @@ class CollaboratorController extends Controller
      */
     public function update(Request $request, string $slug, User $user): JsonResponse
     {
-        $diagram = $this->resolveDiagram($slug);
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $data = $request->validate($this->roleRules());
 
@@ -126,7 +126,7 @@ class CollaboratorController extends Controller
      */
     public function destroy(string $slug, User $user): JsonResponse
     {
-        $diagram = $this->resolveDiagram($slug);
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('collaborator.revoke', [$diagram, $user]);
 

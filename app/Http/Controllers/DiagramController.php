@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AuthorizesDiagramWrites;
+use App\Http\Controllers\Concerns\ListsOwnerCandidates;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Diagram;
 use App\Models\Tag;
@@ -22,6 +24,8 @@ use Illuminate\View\View;
 
 class DiagramController extends Controller
 {
+    use AuthorizesDiagramWrites;
+    use ListsOwnerCandidates;
     use ResolvesVisibleDiagram;
 
     /**
@@ -208,7 +212,9 @@ class DiagramController extends Controller
             ? $this->userOptions($this->users->allOrderedByName(), $diagram->owner)
             : [];
 
-        return view('diagrams.show', compact('diagram', 'tagNames', 'collaboratorOptions'));
+        $ownerCandidates = $this->ownerCandidates($diagram);
+
+        return view('diagrams.show', compact('diagram', 'tagNames', 'collaboratorOptions', 'ownerCandidates'));
     }
 
     private function viewer(Diagram $diagram, string $notice, string $tone, User $user, bool $requestLock = false): View
@@ -236,13 +242,13 @@ class DiagramController extends Controller
     {
         $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
+        $this->authorizeWrite($diagram);
+
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
         ]);
 
-        $newSlug = $this->diagrams->uniqueSlug($data['title'], $diagram->id);
-
-        $diagram = $this->diagrams->move($diagram, $data['title'], $newSlug);
+        $diagram = $this->diagrams->rename($diagram, $data['title']);
 
         return response()->json([
             'slug' => $diagram->slug,

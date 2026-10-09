@@ -393,15 +393,17 @@ class ShareTest extends TestCase
         $workspace->members()->create(['user_id' => $member->id]);
         $share = Share::factory()->for($diagram)->for($diagram->owner, 'author')->create();
 
+        // The Diagram sits in a Workspace, so Users outside it can't even see it
+        // (404, not 403); the Member sees it but may not share it.
         $others = [
-            $this->collaboratorOf($diagram, Collaborator::STATUS_REQUESTED),
-            $member,
-            User::factory()->create(),
+            [$this->collaboratorOf($diagram, Collaborator::STATUS_REQUESTED), 404],
+            [$member, 403],
+            [User::factory()->create(), 404],
         ];
 
-        foreach ($others as $user) {
-            $this->actingAs($user)->postJson("/diagrams/{$diagram->slug}/shares")->assertForbidden();
-            $this->actingAs($user)->getJson("/diagrams/{$diagram->slug}/shares")->assertForbidden();
+        foreach ($others as [$user, $status]) {
+            $this->actingAs($user)->postJson("/diagrams/{$diagram->slug}/shares")->assertStatus($status);
+            $this->actingAs($user)->getJson("/diagrams/{$diagram->slug}/shares")->assertStatus($status);
             $this->actingAs($user)->deleteJson("/shares/{$share->id}")->assertForbidden();
         }
         $this->assertNull($share->fresh()->revoked_at);

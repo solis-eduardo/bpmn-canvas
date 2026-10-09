@@ -3,19 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\LockUnavailableException;
+use App\Http\Controllers\Concerns\AuthorizesDiagramWrites;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Repositories\DiagramRepository;
 use App\Repositories\VersionRepository;
 use App\Rules\BpmnXml;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Gate;
 
 /**
  * A Diagram's BPMN content as a sub-resource: read it, or save a new Version.
  */
 class DiagramContentController extends Controller
 {
+    use AuthorizesDiagramWrites;
     use ResolvesVisibleDiagram;
 
     public function __construct(
@@ -40,13 +41,9 @@ class DiagramContentController extends Controller
     {
         $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
-        abort_unless(Gate::allows('update', $diagram), 403, __('messages.error_cannot_edit_diagram'));
+        $this->authorizeWrite($diagram);
 
         $user = $request->user();
-
-        if (! Gate::allows('lock.write', $diagram)) {
-            throw LockUnavailableException::heldByOther($diagram);
-        }
 
         $data = $request->validate([
             'content' => ['required', 'string', new BpmnXml],

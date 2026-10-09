@@ -252,7 +252,7 @@ class DiagramTagTest extends TestCase
         $response->assertSee('name="tags[]"', false);
         $response->assertSee('data-tag-select', false);
         $response->assertSee('multiple', false);
-        $response->assertSee(route('diagrams.tags.sync', $diagram->slug), false);
+        $response->assertSee(route('diagrams.settings.update', $diagram->slug), false);
         $response->assertDontSee(route('diagrams.tags.destroy', [$diagram->slug, $tag->id]), false);
         $response->assertSee('href="'.route('diagrams.show', $diagram->slug).'"', false);
     }
@@ -290,15 +290,15 @@ class DiagramTagTest extends TestCase
         $response->assertSee(__('messages.filter_tag'), false);
     }
 
-    public function test_the_editor_offers_the_tags_form_in_a_side_panel_for_editors(): void
+    public function test_the_editor_edits_tags_in_the_info_panel_for_editors(): void
     {
         $owner = User::factory()->create();
         $diagram = Diagram::factory()->for($owner, 'author')->create();
 
         $this->actingAs($owner)->get(route('diagrams.show', $diagram->slug))
-            ->assertSee('id="data-panel"', false)
-            ->assertSee('data-panel-toggle="data-panel"', false)
-            ->assertSee('action="'.route('diagrams.tags.sync', $diagram->slug).'"', false);
+            ->assertSee('id="info-tags-form"', false)
+            ->assertSee('data-tags-url="'.route('diagrams.tags.sync', $diagram->slug).'"', false)
+            ->assertDontSee('id="data-panel"', false);
     }
 
     public function test_the_listing_filter_offers_existing_tags_in_the_tom_select_picker(): void

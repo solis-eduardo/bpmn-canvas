@@ -56,7 +56,7 @@ class IconsTest extends TestCase
         foreach (['close', 'zoom_in', 'zoom_out', 'fit_to_screen'] as $key) {
             $response->assertSee('aria-label="'.__('messages.'.$key).'"', false);
         }
-        foreach (['save', 'x-mark', 'fit', 'tag', 'clock'] as $icon) {
+        foreach (['save', 'x-mark', 'fit', 'pencil', 'clock'] as $icon) {
             $response->assertSee('data-icon="'.$icon.'"', false);
         }
     }

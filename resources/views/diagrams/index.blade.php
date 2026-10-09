@@ -127,6 +127,13 @@
                             <x-icon name="arrow-right" />
                             {{ __('messages.open_diagram') }}
                         </x-button>
+                        {{-- Cheap check (no query per row): the Owner and Administrators can always edit the details; other editors reach the form from the Editor. --}}
+                        @if ($diagram->isManagedBy(auth()->user()))
+                            <x-button :href="route('diagrams.edit', $diagram->slug)" variant="secondary" size="sm">
+                                <x-icon name="pencil" />
+                                {{ __('messages.edit') }}
+                            </x-button>
+                        @endif
                     </div>
                 </td>
             </tr>
