@@ -14,6 +14,7 @@
     "Connection Closed Without Response": "Conexión cerrada sin respuesta",
     "Connection Timed Out": "Tiempo de conexión agotado",
     "Continue": "Continuar",
+    "Copy of :title": "Copia de :title",
     "Created": "Creado",
     "Encrypted environment file already exists.": "El archivo de entorno cifrado ya existe.",
     "Encrypted environment file not found.": "No se encontró el archivo de entorno cifrado.",

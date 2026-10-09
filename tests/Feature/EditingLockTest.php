@@ -200,6 +200,7 @@ class EditingLockTest extends TestCase
 
     public function test_forking_from_the_lock_screen_creates_an_independent_diagram_with_copied_content(): void
     {
+        config(['app.locale' => 'pt_BR']);
         $holder = User::factory()->create();
         $blocked = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
@@ -213,6 +214,7 @@ class EditingLockTest extends TestCase
         $forked = Diagram::where('forked_from_id', $diagram->id)->firstOrFail();
         $this->assertSame($blocked->id, $forked->author_id);
         $this->assertNotSame($diagram->slug, $forked->slug);
+        $this->assertSame('Cópia de '.$diagram->title, $forked->title);
         $this->assertNull($forked->locked_by);
         $this->assertSame(
             Storage::disk('diagrams')->get($diagram->disk_path),
@@ -671,8 +673,8 @@ class EditingLockTest extends TestCase
         $response->assertSee(__('messages.fork_diagram'), false);
     }
 
-    /** The read-only Viewer an Administrator gets is not a blocked screen. */
-    public function test_the_read_only_viewer_does_not_offer_a_fork(): void
+    /** A Fork is available at any time, so the read-only Viewer offers it too. */
+    public function test_the_read_only_viewer_offers_a_fork(): void
     {
         $owner = User::factory()->create();
         $admin = User::factory()->create(['is_admin' => true]);
@@ -681,7 +683,7 @@ class EditingLockTest extends TestCase
         $response = $this->actingAs($admin)->get('/diagrams/'.$diagram->slug);
 
         $response->assertOk();
-        $response->assertDontSee(route('diagrams.fork', $diagram->slug), false);
+        $response->assertSee(route('diagrams.fork', $diagram->slug), false);
     }
 
     /** Acquiring a free Lock notifies nobody — there is no holder to tell. */

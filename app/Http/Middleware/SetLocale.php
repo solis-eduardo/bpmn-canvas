@@ -19,6 +19,12 @@ class SetLocale
     {
         $locale = $this->resolveLocale($request);
 
+        // setLocale() overwrites app.locale with the requesting User's
+        // language, so remember the application's default (what APP_LOCALE
+        // configures) before that happens, for text that must not follow the
+        // User, such as a Fork's title.
+        config(['app.default_locale' => config('app.default_locale') ?? config('app.locale')]);
+
         app()->setLocale($locale);
 
         // Keeps Carbon's human-readable output (e.g. diffForHumans(), used
