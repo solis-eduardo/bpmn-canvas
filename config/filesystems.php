@@ -50,6 +50,14 @@ return [
         'diagrams' => [
             'driver' => 'local',
             'root' => storage_path('app/diagrams'),
+            // Flysystem's default makes directories 0700, which locks the
+            // host user out of the bind-mounted ./diagrams volume (the files
+            // are owned by the container's www-data uid). 0755 keeps them
+            // readable for host tooling while only www-data can write.
+            'permissions' => [
+                'dir' => ['public' => 0755, 'private' => 0755],
+                'file' => ['public' => 0644, 'private' => 0644],
+            ],
             'throw' => false,
             'report' => false,
         ],

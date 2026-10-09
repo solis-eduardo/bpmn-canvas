@@ -27,7 +27,13 @@ Before touching code, skim `CONTEXT.md` (domain glossary) and `docs/adr/` (archi
 php artisan test
 ```
 
-Tests run against the Postgres database configured in `.env`/`docker-compose.yml`; make sure the stack is up first.
+Tests use an in-memory SQLite database (see `phpunit.xml`), so no database needs to be running. To run them (and phpstan/pint) inside a container instead of on the host, use the dev overlay, which adds the Composer dev dependencies the production image omits:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm dev
+docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm dev vendor/bin/phpstan analyse --memory-limit=1G
+docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm dev vendor/bin/pint --test
+```
 
 ## Coding standards
 
@@ -86,7 +92,13 @@ Antes de mexer no código, dê uma olhada em `CONTEXT.md` (glossário do domíni
 php artisan test
 ```
 
-Os testes rodam contra o banco Postgres configurado no `.env`/`docker-compose.yml`; garanta que o stack esteja de pé antes.
+Os testes usam um banco SQLite em memória (veja `phpunit.xml`), então nenhum banco precisa estar de pé. Para rodá-los (e phpstan/pint) dentro de um container em vez do host, use o overlay de dev, que adiciona as dependências de dev do Composer que a imagem de produção omite:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm dev
+docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm dev vendor/bin/phpstan analyse --memory-limit=1G
+docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm dev vendor/bin/pint --test
+```
 
 ## Padrões de código
 

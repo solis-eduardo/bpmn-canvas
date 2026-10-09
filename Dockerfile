@@ -58,6 +58,32 @@ RUN chmod +x /entrypoint.sh /usr/local/bin/healthcheck.sh
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["php-fpm"]
 
+# --- Stage 4b (dev only): app image plus dev tooling ---
+# Not part of the production build (`target: app` / `web` never reach it). Adds
+# the Composer dev dependencies (phpunit, phpstan, pint, ...) and pdo_sqlite,
+# which phpunit.xml uses for the in-memory test database, and bcmath. Used by the `dev`
+# service in docker-compose.dev.yml.
+FROM composer:2.9.8 AS composer-dev-deps
+ENV COMPOSER_CACHE_DIR=/tmp/composer-cache
+WORKDIR /build
+COPY composer.json composer.lock ./
+# bcmath is required by a dev dependency (laravel-lang) and installed in the dev
+# image below; the composer image itself lacks it.
+RUN --mount=type=cache,target=/tmp/composer-cache \
+    composer install --no-interaction --no-progress --no-scripts --optimize-autoloader --ignore-platform-req=ext-bcmath
+
+FROM app AS dev
+RUN --mount=type=cache,target=/var/cache/apk,sharing=locked \
+    apk add --update --virtual .build-deps $PHPIZE_DEPS sqlite-dev \
+    && docker-php-ext-install -j$(nproc) pdo_sqlite bcmath \
+    && apk del .build-deps \
+    && apk add --update sqlite-libs
+COPY --from=composer-dev-deps /build/vendor ./vendor
+COPY --from=composer-dev-deps /usr/bin/composer /usr/bin/composer
+RUN composer dump-autoload --optimize \
+    && chown -R www-data:www-data vendor
+CMD ["php", "artisan", "test"]
+
 # --- Stage 5: nginx (reverse proxy + static files) ---
 FROM nginx:1.30.5-alpine AS web
 COPY --from=vendor /build/node_modules/bpmn-js/dist/assets/                                 /var/www/html/public/vendor/bpmn-js/assets/

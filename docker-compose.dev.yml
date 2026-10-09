@@ -1,0 +1,36 @@
+# Dev tooling overlay: runs the test suite and static analysis inside the
+# container, with the Composer dev dependencies the production image omits.
+#
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm dev
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm dev vendor/bin/phpstan analyse --memory-limit=1G
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm dev vendor/bin/pint --test
+#
+# The source is bind-mounted read-only, so no rebuild is needed after an edit.
+# The service is behind a profile: a plain `docker compose up` never starts it.
+services:
+  dev:
+    profiles: ["dev"]
+    build:
+      context: .
+      target: dev
+    image: bpmn-canvas-app:dev
+    init: true
+    # Tests use an in-memory sqlite database (phpunit.xml); no db dependency.
+    env_file: []
+    entrypoint: []
+    user: www-data
+    volumes:
+      - ./app:/var/www/html/app:ro
+      - ./bootstrap/app.php:/var/www/html/bootstrap/app.php:ro
+      - ./config:/var/www/html/config:ro
+      - ./database:/var/www/html/database:ro
+      - ./lang:/var/www/html/lang:ro
+      - ./resources:/var/www/html/resources:ro
+      - ./routes:/var/www/html/routes:ro
+      - ./tests:/var/www/html/tests:ro
+      # Some tests read the dotenv file directly.
+      - ./.env:/var/www/html/.env:ro
+      - ./phpunit.xml:/var/www/html/phpunit.xml:ro
+      - ./phpstan.neon:/var/www/html/phpstan.neon:ro
+      - ./phpmd.xml:/var/www/html/phpmd.xml:ro
+      - ./pint.json:/var/www/html/pint.json:ro
