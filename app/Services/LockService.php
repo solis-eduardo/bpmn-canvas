@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Notifications\DiagramLockRequested;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Decides which Lock primitive on the Diagram to call, and when (CONTEXT.md,
@@ -13,9 +14,11 @@ use App\Notifications\DiagramLockRequested;
  */
 class LockService
 {
+    public function __construct(private readonly ProvisionalVersionService $provisional) {}
+
     public function state(Diagram $diagram): LockState
     {
-        return new LockState($diagram->lockedBy, $diagram->lockRequestedBy, $diagram->lock_requested_at);
+        return new LockState($diagram->lockedBy, $diagram->lockRequestedBy, $diagram->lock_requested_at, filled($diagram->lock_draft));
     }
 
     /**
@@ -111,8 +114,23 @@ class LockService
         $diagram->transferLockTo($newHolder);
     }
 
-    public function release(Diagram $diagram): void
+    /**
+     * Releases the Lock, dropping the holder's draft unless $saveDraft asks
+     * to keep it as a provisional Version first ($draft being the holder's
+     * latest Editor content, newer than what the last Heartbeat carried).
+     * The Version is written before the Lock goes, so a failed save leaves
+     * the Lock and the draft untouched.
+     */
+    public function release(Diagram $diagram, bool $saveDraft = false, ?string $draft = null): void
     {
-        $diagram->releaseLock();
+        // In a transaction so a release that fails after the save has
+        // cleared the draft doesn't leave a held Lock with its draft gone.
+        DB::transaction(function () use ($diagram, $saveDraft, $draft): void {
+            if ($saveDraft) {
+                $this->provisional->save($diagram, $draft);
+            }
+
+            $diagram->releaseLock();
+        });
     }
 }

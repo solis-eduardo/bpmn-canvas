@@ -7,7 +7,8 @@ use Carbon\CarbonInterface;
 
 /**
  * Snapshot of a Diagram's Lock: who holds it and who, if anyone, is waiting
- * for it (CONTEXT.md, "Lock").
+ * for it, and whether the holder has an unsaved draft on the server
+ * (CONTEXT.md, "Lock").
  */
 final class LockState
 {
@@ -15,6 +16,7 @@ final class LockState
         public readonly ?User $holder,
         public readonly ?User $requester,
         public readonly ?CarbonInterface $requestedAt,
+        public readonly bool $hasDraft = false,
     ) {}
 
     public function isHeld(): bool
@@ -28,7 +30,7 @@ final class LockState
     }
 
     /**
-     * @return array{held: bool, holder: array{id: int, name: string}|null, requested_by: string|null, requested_at: string|null}
+     * @return array{held: bool, holder: array{id: int, name: string}|null, requested_by: string|null, requested_at: string|null, has_draft: bool}
      */
     public function toArray(): array
     {
@@ -37,6 +39,7 @@ final class LockState
             'holder' => $this->holder ? ['id' => $this->holder->id, 'name' => $this->holder->name] : null,
             'requested_by' => $this->requester?->name,
             'requested_at' => $this->requestedAt?->toIso8601String(),
+            'has_draft' => $this->hasDraft,
         ];
     }
 }

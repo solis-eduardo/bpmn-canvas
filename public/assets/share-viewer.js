@@ -25,20 +25,48 @@
   const releaseButton = document.getElementById('btn-release-lock');
   if (releaseButton) {
     releaseButton.addEventListener('click', async () => {
-      try {
+      const request = async (method, payload) => {
         const res = await fetch(releaseButton.dataset.unlockUrl, {
-          method: 'DELETE',
+          method,
           credentials: 'same-origin',
           headers: {
+            'Content-Type': 'application/json',
             Accept: 'application/json',
             'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
           },
+          body: payload ? JSON.stringify(payload) : undefined,
         });
         if (!res.ok) throw await window.BpmnCommon.httpError(res);
+        return res;
+      };
+
+      // Disabled while asking and releasing, so a second click can't open a second dialog.
+      releaseButton.disabled = true;
+
+      try {
+        // Only the server knows whether the holder left an unsaved draft.
+        const { has_draft: hasDraft } = await (await request('GET')).json();
+        let payload;
+
+        if (hasDraft) {
+          const choice = await window.BpmnCommon.chooseRelease({
+            message: releaseButton.dataset.releaseDraftMessage,
+            saveLabel: releaseButton.dataset.releaseSaveLabel,
+            discardLabel: releaseButton.dataset.releaseDiscardLabel,
+            cancelLabel: releaseButton.dataset.releaseCancelLabel,
+          });
+
+          if (choice === 'cancel') return;
+          if (choice === 'save') payload = { save_draft: true };
+        }
+
+        await request('DELETE', payload);
         location.reload();
       } catch (e) {
         console.error(e);
         window.BpmnCommon.toast(window.BpmnCommon.errorMessage(e, releaseButton.dataset.releaseFailedNotice), true);
+      } finally {
+        releaseButton.disabled = false;
       }
     });
   }

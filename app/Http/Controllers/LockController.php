@@ -106,13 +106,24 @@ class LockController extends Controller
         return response()->json($this->locks->state($diagram)->toArray());
     }
 
-    public function destroy(string $slug): JsonResponse
+    /**
+     * Releases the Lock. `save_draft` keeps the holder's unsaved content as a
+     * provisional Version first. Only the holder's own request may carry newer
+     * content (`draft`); anyone else's saves what the server already holds.
+     */
+    public function destroy(Request $request, string $slug): JsonResponse
     {
         $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('lock.release', $diagram);
 
-        $this->locks->release($diagram);
+        $data = $request->validate(['save_draft' => ['sometimes', 'boolean']]);
+
+        $this->locks->release(
+            $diagram,
+            (bool) ($data['save_draft'] ?? false),
+            $diagram->isLockedBy($request->user()) ? $this->usableDraft($request->input('draft')) : null,
+        );
 
         return response()->json(['unlocked' => true]);
     }

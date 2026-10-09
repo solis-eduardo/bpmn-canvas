@@ -93,15 +93,44 @@
   const releaseLockButton = $('btn-release-lock');
   if (releaseLockButton) {
     releaseLockButton.addEventListener('click', async () => {
-      if (dirty && !confirm(body.dataset.releaseUnsavedConfirm)) return;
+      // Disabled while asking and releasing, so a second click can't open a second dialog.
+      releaseLockButton.disabled = true;
 
       try {
-        await api('DELETE', unlockUrl);
+        // The holder's own unsaved content lives here; for an Administrator
+        // releasing someone else's Lock, only the server knows whether the
+        // holder left a draft.
+        const isHolder = body.dataset.isLockHolder === '1';
+        const hasDraft = isHolder
+          ? dirty
+          : (await (await api('GET', unlockUrl)).json()).has_draft;
+
+        let payload;
+
+        if (hasDraft) {
+          const choice = await window.BpmnCommon.chooseRelease({
+            message: isHolder ? body.dataset.releaseDraftHolderMessage : body.dataset.releaseDraftAdminMessage,
+            saveLabel: body.dataset.releaseSaveLabel,
+            discardLabel: body.dataset.releaseDiscardLabel,
+            cancelLabel: body.dataset.releaseCancelLabel,
+          });
+
+          if (choice === 'cancel') return;
+
+          if (choice === 'save') {
+            payload = { save_draft: true };
+            if (isHolder) payload.draft = (await modeler.saveXML({ format: true })).xml;
+          }
+        }
+
+        await api('DELETE', unlockUrl, payload);
         setDirty(false);
         location.href = indexUrl;
       } catch (e) {
         console.error(e);
         toast(errorMessage(e, body.dataset.releaseLockFailedNotice), true);
+      } finally {
+        releaseLockButton.disabled = false;
       }
     });
   }

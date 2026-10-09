@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Diagram;
-use App\Repositories\VersionRepository;
 use Illuminate\Support\Carbon;
 
 /**
@@ -15,7 +14,6 @@ class LockExpiryService
 {
     public function __construct(
         private readonly LockService $locks,
-        private readonly VersionRepository $versions,
     ) {}
 
     /**
@@ -38,35 +36,11 @@ class LockExpiryService
             // skip rows as the result set shrinks under it.
             ->chunkById(100, function ($diagrams) use (&$released): void {
                 foreach ($diagrams as $diagram) {
-                    $this->saveProvisionalVersion($diagram);
-                    $this->locks->release($diagram);
+                    $this->locks->release($diagram, saveDraft: true);
                     $released++;
                 }
             });
 
         return $released;
-    }
-
-    private function saveProvisionalVersion(Diagram $diagram): void
-    {
-        $holder = $diagram->lockedBy;
-
-        if ($holder === null || blank($diagram->lock_draft)) {
-            return;
-        }
-
-        // The draft was accepted while the holder could edit, but expiry
-        // happens minutes later and rights can lapse in between. Committing
-        // it would write content as a User who may no longer edit this
-        // Diagram, so a lapsed holder's draft is dropped instead.
-        if (! $diagram->isEditableBy($holder)) {
-            return;
-        }
-
-        $versionId = $this->versions->save($diagram, $holder, $diagram->lock_draft, VersionRepository::MESSAGE_PROVISIONAL);
-
-        if ($versionId !== null) {
-            $this->versions->markProvisional($diagram, $versionId);
-        }
     }
 }

@@ -217,7 +217,11 @@ return [
     'lock_requested_by_notice' => ':name ha solicitado el Bloqueo de este diagrama.',
     'release_lock' => 'Liberar Bloqueo',
     'force_release_lock' => 'Forzar liberación del Bloqueo',
-    'release_lock_unsaved_confirm' => 'Hay cambios sin guardar. ¿Salir sin guardar y liberar el Bloqueo?',
+    'release_lock_draft_holder' => 'Hay cambios sin guardar. ¿Guardarlos como versión provisional antes de liberar el Bloqueo?',
+    'release_lock_draft_admin' => 'El titular de este Bloqueo tiene cambios sin guardar. ¿Guardarlos como versión provisional a nombre del titular antes de liberar el Bloqueo?',
+    'release_save_and_release' => 'Guardar y liberar',
+    'release_discard_and_release' => 'Descartar y liberar',
+    'release_cancel' => 'Cancelar',
 
     // Gestión de usuarios
     'users_heading' => 'Usuarios',
