@@ -25,7 +25,7 @@ A User with direct permission to edit a Diagram they're not the Diagram Owner of
 _Avoid_: Editor (a role, not to be confused with the Editor interface)
 
 **Diagram Manager**:
-A Collaborator the Diagram Owner promoted to also manage the Diagram's other Collaborators: invite them, approve or decline access requests (as plain Collaborators), and remove plain Collaborators. Hierarchy: Diagram Owner > Diagram Manager > Collaborator. Only the Diagram Owner (or an Administrator) can promote, demote or remove a Diagram Manager, or invite one; a Diagram Manager can leave on their own. Everything else (delete, ownership transfer, Shares, Workspace placement) stays with the Diagram Owner. Promotions, demotions, invitations and removals notify the affected User (ADR-0016).
+A Collaborator the Diagram Owner promoted to also manage the Diagram's other Collaborators: invite them, approve or decline access requests (as plain Collaborators), and remove plain Collaborators. Hierarchy: Diagram Owner > Diagram Manager > Collaborator. Only the Diagram Owner (or an Administrator) can promote, demote or remove a Diagram Manager, or invite one; a Diagram Manager can leave on their own. Everything else (delete, ownership transfer, Shares, Workspace placement) stays with the Diagram Owner. Promotions, demotions, invitations and removals notify the affected User (ADR-0017).
 _Avoid_: Manager (unqualified; collides with Administrator and Workspace Owner)
 
 **Administrator**:

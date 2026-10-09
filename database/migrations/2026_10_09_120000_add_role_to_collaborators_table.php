@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 /**
  * A Collaborator is either a plain `collaborator` or a `manager` (Diagram
- * Manager, ADR-0016). Every existing row stays a plain Collaborator.
+ * Manager, ADR-0017). Every existing row stays a plain Collaborator.
  */
 return new class extends Migration
 {

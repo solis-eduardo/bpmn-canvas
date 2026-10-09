@@ -40,7 +40,7 @@ class DiagramPolicy
     /**
      * Manage a Diagram's Collaborators (invite/approve/remove): Diagram
      * Owner, Diagram Manager or Administrator (CONTEXT.md, "Collaborator";
-     * ADR-0006, ADR-0016).
+     * ADR-0006, ADR-0017).
      */
     public function manageCollaborators(User $user, Diagram $diagram): bool
     {

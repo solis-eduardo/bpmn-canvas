@@ -145,7 +145,7 @@ class CollaboratorController extends Controller
 
     /**
      * Choosing a role is the Diagram Owner's/Administrator's call alone
-     * (ADR-0016), whichever way the request came in.
+     * (ADR-0017), whichever way the request came in.
      */
     private function authorizeRole(Diagram $diagram, ?string $role): void
     {

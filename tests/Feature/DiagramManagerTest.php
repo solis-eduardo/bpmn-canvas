@@ -16,7 +16,7 @@ use Tests\TestCase;
 
 /**
  * Diagram Manager: a Collaborator who can also invite and remove plain
- * Collaborators (CONTEXT.md, "Diagram Manager"; ADR-0016).
+ * Collaborators (CONTEXT.md, "Diagram Manager"; ADR-0017).
  */
 class DiagramManagerTest extends TestCase
 {

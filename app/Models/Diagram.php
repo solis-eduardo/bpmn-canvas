@@ -116,7 +116,7 @@ BPMN;
     /**
      * True if $user is an approved Diagram Manager of this Diagram — a
      * Collaborator the Diagram Owner delegated Collaborator management to
-     * (CONTEXT.md, "Diagram Manager"; ADR-0016).
+     * (CONTEXT.md, "Diagram Manager"; ADR-0017).
      */
     public function hasManagerRole(User $user): bool
     {

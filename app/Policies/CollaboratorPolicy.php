@@ -23,7 +23,7 @@ class CollaboratorPolicy
 
     /**
      * Make someone a Diagram Manager, or a plain Collaborator again: Diagram
-     * Owner or Administrator only (ADR-0016). A Diagram Manager can't
+     * Owner or Administrator only (ADR-0017). A Diagram Manager can't
      * promote anyone, themselves included.
      */
     public function assignRole(User $user, Diagram $diagram): bool
