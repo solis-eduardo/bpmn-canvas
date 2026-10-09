@@ -31,18 +31,33 @@ class LockService
             return LockOutcome::acquired();
         }
 
-        // Only a genuinely new request notifies: re-opening the blocked
-        // screen keeps polling this endpoint, and the holder shouldn't get
-        // one notification per poll.
         $alreadyPending = $diagram->pendingLockRequestIsFrom($user);
 
         $diagram->registerLockRequest($user);
 
-        if (! $alreadyPending) {
+        // Re-opening the blocked screen keeps polling this endpoint, and the
+        // holder's Heartbeat clears the pending request in between, so the
+        // pending request alone can't tell a repeat from a new request: an
+        // unread notification from the same requester can.
+        if (! $alreadyPending && ! $this->holderAlreadyNotified($diagram, $user)) {
             $diagram->lockedBy?->notify(new DiagramLockRequested($diagram, $user));
         }
 
         return LockOutcome::waiting($diagram->lock_requested_at);
+    }
+
+    /**
+     * True while the holder still has an unread notification from $requester
+     * asking for this Diagram's Lock.
+     */
+    private function holderAlreadyNotified(Diagram $diagram, User $requester): bool
+    {
+        $unread = $diagram->lockedBy?->unreadNotifications()
+            ->where('type', DiagramLockRequested::class)
+            ->get();
+
+        return $unread?->contains(fn ($notification) => ($notification->data['diagram_id'] ?? null) === $diagram->id
+            && ($notification->data['requester_id'] ?? null) === $requester->id) ?? false;
     }
 
     /**
