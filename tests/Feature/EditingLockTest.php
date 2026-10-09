@@ -200,6 +200,7 @@ class EditingLockTest extends TestCase
 
     public function test_forking_from_the_lock_screen_creates_an_independent_diagram_with_copied_content(): void
     {
+        config(['app.locale' => 'pt_BR']);
         $holder = User::factory()->create();
         $blocked = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
@@ -213,6 +214,7 @@ class EditingLockTest extends TestCase
         $forked = Diagram::where('forked_from_id', $diagram->id)->firstOrFail();
         $this->assertSame($blocked->id, $forked->author_id);
         $this->assertNotSame($diagram->slug, $forked->slug);
+        $this->assertSame('Cópia de '.$diagram->title, $forked->title);
         $this->assertNull($forked->locked_by);
         $this->assertSame(
             Storage::disk('diagrams')->get($diagram->disk_path),
@@ -618,6 +620,43 @@ class EditingLockTest extends TestCase
         Notification::assertSentToTimes($holder, DiagramLockRequested::class, 1);
     }
 
+    /**
+     * The holder's Heartbeat clears the pending request, so the requester's
+     * next poll registers it again; that must not notify a second time.
+     */
+    public function test_a_request_renewed_after_a_heartbeat_does_not_notify_the_holder_again(): void
+    {
+        $holder = User::factory()->create();
+        $requester = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $requester);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        foreach (range(1, 3) as $ignored) {
+            $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+            $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+        }
+
+        $this->assertSame(1, $holder->notifications()->where('type', DiagramLockRequested::class)->count());
+    }
+
+    /** A request is new again once the holder has read the earlier one. */
+    public function test_a_new_request_after_the_holder_read_the_notification_notifies_again(): void
+    {
+        $holder = User::factory()->create();
+        $requester = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $requester);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
+        $holder->notifications()->first()->markAsRead();
+        $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock');
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
+
+        $this->assertSame(2, $holder->notifications()->where('type', DiagramLockRequested::class)->count());
+    }
+
     /** The way out of someone else's Lock is offered on the blocked screen. */
     public function test_the_blocked_screen_offers_a_fork(): void
     {
@@ -634,8 +673,8 @@ class EditingLockTest extends TestCase
         $response->assertSee(__('messages.fork_diagram'), false);
     }
 
-    /** The read-only Viewer an Administrator gets is not a blocked screen. */
-    public function test_the_read_only_viewer_does_not_offer_a_fork(): void
+    /** A Fork is available at any time, so the read-only Viewer offers it too. */
+    public function test_the_read_only_viewer_offers_a_fork(): void
     {
         $owner = User::factory()->create();
         $admin = User::factory()->create(['is_admin' => true]);
@@ -644,7 +683,7 @@ class EditingLockTest extends TestCase
         $response = $this->actingAs($admin)->get('/diagrams/'.$diagram->slug);
 
         $response->assertOk();
-        $response->assertDontSee(route('diagrams.fork', $diagram->slug), false);
+        $response->assertSee(route('diagrams.fork', $diagram->slug), false);
     }
 
     /** Acquiring a free Lock notifies nobody — there is no holder to tell. */

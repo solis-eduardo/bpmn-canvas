@@ -17,7 +17,8 @@ class DiagramAccessRequested extends PreferenceAwareNotification
         private readonly User $requester,
     ) {}
 
-    protected function emailMessage(): string
+    /** @SuppressWarnings("PHPMD.UnusedFormalParameter") */
+    protected function emailMessage(User $recipient): string
     {
         return __('messages.notification_requested_access', [
             'name' => $this->requester->name,

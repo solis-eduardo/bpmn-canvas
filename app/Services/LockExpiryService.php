@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Diagram;
-use App\Models\DiagramVersionName;
 use App\Repositories\VersionRepository;
 use Illuminate\Support\Carbon;
 
@@ -67,10 +66,7 @@ class LockExpiryService
         $versionId = $this->versions->save($diagram, $holder, $diagram->lock_draft, VersionRepository::MESSAGE_PROVISIONAL);
 
         if ($versionId !== null) {
-            DiagramVersionName::updateOrCreate(
-                ['diagram_id' => $diagram->id, 'version_id' => $versionId],
-                ['name' => __('messages.provisional_version')],
-            );
+            $this->versions->markProvisional($diagram, $versionId);
         }
     }
 }

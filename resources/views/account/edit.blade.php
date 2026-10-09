@@ -20,6 +20,24 @@
                     </span>
                 </div>
             @endif
+            <div class="flex flex-col gap-1">
+                <label for="timezone" class="text-sm font-medium text-gray-700">{{ __('messages.timezone') }}</label>
+                <select
+                    id="timezone"
+                    name="timezone"
+                    @error('timezone') aria-invalid="true" aria-describedby="timezone-error" @enderror
+                    class="rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                    <option value="">{{ __('messages.timezone_default', ['timezone' => config('app.timezone')]) }}</option>
+                    @foreach (DateTimeZone::listIdentifiers() as $identifier)
+                        <option value="{{ $identifier }}" @selected(old('timezone', $user->timezone) === $identifier)>{{ $identifier }}</option>
+                    @endforeach
+                </select>
+                <span class="text-xs text-gray-500">{{ __('messages.timezone_hint') }}</span>
+                @error('timezone')
+                    <p id="timezone-error" role="alert" class="text-sm text-red-600">{{ $message }}</p>
+                @enderror
+            </div>
             <h2 class="pt-2 text-lg font-semibold text-gray-900">{{ __('messages.notification_preferences_heading') }}</h2>
             <label for="email_notifications_enabled" class="flex items-start gap-3">
                 <input type="hidden" name="email_notifications_enabled" value="0">

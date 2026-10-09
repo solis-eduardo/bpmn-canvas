@@ -52,6 +52,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/account', [AccountController::class, 'edit'])->name('account.edit');
     Route::put('/account', [AccountController::class, 'update'])->name('account.update');
+    Route::put('/account/timezone', [AccountController::class, 'detectTimezone'])->name('account.timezone.detect');
     Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.password.update');
 
     Route::get('/admin/users', [UserController::class, 'index'])->name('admin.users.index');
@@ -102,6 +103,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/diagrams/{slug}/versions/{version}/content', [VersionController::class, 'versionContent'])->name('diagrams.versions.content');
     Route::post('/diagrams/{slug}/versions/{version}/restore', [VersionController::class, 'restoreVersion'])->name('diagrams.versions.restore');
     Route::put('/diagrams/{slug}/versions/{version}/rename', [VersionController::class, 'renameVersion'])->name('diagrams.versions.rename');
+    Route::post('/diagrams/{slug}/versions/{version}/promote', [VersionController::class, 'promoteVersion'])->name('diagrams.versions.promote');
+    Route::delete('/diagrams/{slug}/versions/{version}', [VersionController::class, 'deleteVersion'])->name('diagrams.versions.delete');
     Route::get('/diagrams/{slug}', [DiagramController::class, 'show'])->name('diagrams.show');
 
     Route::get('/diagrams/{slug}/shares', [ShareController::class, 'index'])->name('shares.index');

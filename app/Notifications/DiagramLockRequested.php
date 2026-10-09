@@ -22,7 +22,8 @@ class DiagramLockRequested extends PreferenceAwareNotification
         private readonly User $requester,
     ) {}
 
-    protected function emailMessage(): string
+    /** @SuppressWarnings("PHPMD.UnusedFormalParameter") */
+    protected function emailMessage(User $recipient): string
     {
         return __('messages.notification_lock_requested', [
             'name' => $this->requester->name,
