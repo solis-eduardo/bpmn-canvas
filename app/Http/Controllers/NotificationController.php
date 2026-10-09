@@ -163,14 +163,16 @@ class NotificationController extends Controller
         ];
     }
 
+    /**
+     * Built from the slug stored in the payload, so listing the bell costs
+     * no extra query; a stale slug just falls back to following the link.
+     */
     private function opensDiagram(DatabaseNotification $notification): ?string
     {
-        if ($notification->type !== DiagramLockRequested::class) {
-            return null;
-        }
+        $slug = $notification->data['diagram_slug'] ?? null;
 
-        $diagram = $this->diagrams->find($notification->data['diagram_id'] ?? 0);
-
-        return $diagram ? route('diagrams.show', $diagram->slug) : null;
+        return $notification->type === DiagramLockRequested::class && $slug
+            ? route('diagrams.show', $slug)
+            : null;
     }
 }
