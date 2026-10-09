@@ -147,7 +147,7 @@ class NotificationController extends Controller
     }
 
     /**
-     * @return array{id: string, message: string, read: bool, created_at: ?Carbon, url: string}
+     * @return array{id: string, message: string, read: bool, created_at: ?Carbon, url: string, opens: ?string}
      */
     private function present(DatabaseNotification $notification): array
     {
@@ -157,6 +157,20 @@ class NotificationController extends Controller
             'read' => $notification->read_at !== null,
             'created_at' => $notification->created_at,
             'url' => route('notifications.read', $notification->id),
+            // Where clicking lands when it is always the same Diagram, so the
+            // bell can tell it is already there and mark it read in place.
+            'opens' => $this->opensDiagram($notification),
         ];
+    }
+
+    private function opensDiagram(DatabaseNotification $notification): ?string
+    {
+        if ($notification->type !== DiagramLockRequested::class) {
+            return null;
+        }
+
+        $diagram = $this->diagrams->find($notification->data['diagram_id'] ?? 0);
+
+        return $diagram ? route('diagrams.show', $diagram->slug) : null;
     }
 }

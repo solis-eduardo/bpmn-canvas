@@ -10,6 +10,7 @@ use App\Notifications\DiagramAccessRequested;
 use App\Notifications\DiagramAccessRequestResolved;
 use App\Notifications\DiagramCollaboratorInvited;
 use App\Notifications\DiagramCollaboratorRemoved;
+use App\Notifications\DiagramLockRequested;
 use App\Notifications\WorkspaceMemberAdded;
 use App\Notifications\WorkspaceMemberRemoved;
 use App\Notifications\WorkspaceOwnershipTransferred;
@@ -321,6 +322,29 @@ class NotificationTest extends TestCase
         $response = $this->actingAs($owner)->get("/notifications/{$notification->id}/read");
 
         $response->assertRedirect(route('diagrams.show', $diagram->slug).'?open-panel=collaborators');
+        $this->assertNotNull($notification->fresh()->read_at);
+    }
+
+    public function test_clicking_a_lock_request_notification_marks_it_read_and_opens_the_diagram(): void
+    {
+        $holder = User::factory()->create();
+        $requester = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        Collaborator::create([
+            'diagram_id' => $diagram->id,
+            'user_id' => $requester->id,
+            'status' => Collaborator::STATUS_APPROVED,
+        ]);
+        $this->actingAs($holder)->get("/diagrams/{$diagram->slug}");
+        $this->actingAs($requester)->postJson("/diagrams/{$diagram->slug}/lock")->assertOk();
+
+        $notification = $holder->notifications()->where('type', DiagramLockRequested::class)->firstOrFail();
+        $listed = $this->actingAs($holder)->getJson('/notifications')->json();
+
+        $this->assertSame(route('notifications.read', $notification->id), $listed[0]['url']);
+        $this->assertSame(route('diagrams.show', $diagram->slug), $listed[0]['opens']);
+        $this->actingAs($holder)->get("/notifications/{$notification->id}/read")
+            ->assertRedirect(route('diagrams.show', $diagram->slug));
         $this->assertNotNull($notification->fresh()->read_at);
     }
 
