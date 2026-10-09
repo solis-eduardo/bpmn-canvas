@@ -183,6 +183,23 @@
 .app .info-list { margin: 0; gap: 14px; }
 .app .info-list dt { font-size: 12px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
 .app .info-list dd { margin: 2px 0 0; }
+
+/* Info panel as a settings form (issue #195): click-to-edit Title, Owner with a Transfer action. */
+.app .info-inline { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.app .info-inline input[type=text] { flex: 1; margin: 0; min-width: 0; }
+.app .info-inline button { padding: 2px 8px; font-size: 12px; }
+.app .info-error { margin: 4px 0 0; color: var(--danger); font-size: 12px; }
+.app .info-footer { margin: 0; padding: 12px; }
+.app .info-footer a { color: var(--accent); text-decoration: underline; }
+.app .owner-transfer-dialog {
+  margin: auto; padding: 20px; width: min(420px, calc(100vw - 32px)); overflow: visible;
+  border: 1px solid var(--border-strong); border-radius: var(--radius-md); background: var(--panel); color: var(--text);
+}
+.app .owner-transfer-dialog::backdrop { background: rgb(0 0 0 / .4); }
+.app .owner-transfer-dialog form { display: flex; flex-direction: column; gap: 16px; }
+.app .owner-transfer-dialog h2 { margin: 0; font-size: 16px; font-weight: 600; }
+.app .owner-transfer-dialog label.checkbox { display: flex; align-items: center; gap: 6px; }
+.app .owner-transfer-dialog .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; }
 .app .collab-section h3 { margin: 0 0 8px; font-size: 13px; text-transform: uppercase; letter-spacing: .03em; color: var(--muted); }
 .app .collab-section form { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
 .app .collab-section form input[type=email],

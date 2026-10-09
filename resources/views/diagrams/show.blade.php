@@ -25,6 +25,17 @@
         data-content-url="{{ route('diagrams.content', $diagram->slug) }}"
         data-save-url="{{ route('diagrams.save', $diagram->slug) }}"
         data-rename-url="{{ route('diagrams.rename', $diagram->slug) }}"
+        data-tags-url="{{ route('diagrams.tags.sync', $diagram->slug) }}"
+        data-document-title-suffix=" | {{ __('messages.bpmn_editor') }}"
+        data-renamed-notice="{{ __('messages.diagram_renamed') }}"
+        data-rename-failed-notice="{{ __('messages.diagram_rename_failed') }}"
+        data-tags-saved-notice="{{ __('messages.tags_saved') }}"
+        data-tags-save-failed-notice="{{ __('messages.tags_save_failed') }}"
+        @can('diagram-owner.transfer', $diagram)
+            data-owner-url="{{ route('diagrams.owner.transfer', $diagram->slug) }}"
+            data-owner-transferred-notice="{{ __('messages.owner_transferred') }}"
+            data-owner-transfer-failed-notice="{{ __('messages.owner_transfer_failed') }}"
+        @endcan
         data-delete-url="{{ route('diagrams.destroy', $diagram->slug) }}"
         data-index-url="{{ route('diagrams.index') }}"
         data-heartbeat-url="{{ route('diagrams.lock.update', $diagram->slug) }}"
@@ -99,7 +110,7 @@
                     <x-icon name="arrow-left" />
                     {{ __('messages.back') }}
                 </x-button>
-                <span class="brand">{{ $diagram->title }}</span>
+                <span class="brand" id="editor-brand">{{ $diagram->title }}</span>
                 <span class="spacer"></span>
                 @php($isHolder = (int) $diagram->locked_by === auth()->id())
                 @if ($isHolder || (auth()->user()->is_admin && $diagram->locked_by !== null))
@@ -116,13 +127,48 @@
                     <button type="button" id="btn-info-close" data-panel-close aria-label="{{ __('messages.close') }}"><x-icon name="x-mark" /></button>
                 </div>
                 <dl class="collab-body info-list">
-                    <div><dt>{{ __('messages.diagram_column_title') }}</dt><dd>{{ $diagram->title }}</dd></div>
+                    {{-- Whoever reaches the Editor can edit the Diagram, so Title and Tags are always editable here;
+                         the changes go through the JSON endpoints (issue #195). --}}
+                    <div>
+                        <dt>{{ __('messages.diagram_column_title') }}</dt>
+                        <dd>
+                            <div id="info-title-view" class="info-inline">
+                                <span id="info-title">{{ $diagram->title }}</span>
+                                <button type="button" id="info-title-edit" title="{{ __('messages.edit_title') }}" aria-label="{{ __('messages.edit_title') }}"><x-icon name="pencil" /></button>
+                            </div>
+                            <form id="info-title-form" class="info-inline" hidden>
+                                <input type="text" id="info-title-input" name="title" maxlength="255" required value="{{ $diagram->title }}" aria-label="{{ __('messages.diagram_column_title') }}">
+                                <button type="submit" class="primary">{{ __('messages.save') }}</button>
+                                <button type="button" id="info-title-cancel">{{ __('messages.cancel') }}</button>
+                            </form>
+                            <p id="info-title-error" class="info-error" role="alert" hidden></p>
+                        </dd>
+                    </div>
                     <div><dt>{{ __('messages.diagram_column_author') }}</dt><dd>{{ $diagram->author->name }}</dd></div>
-                    <div><dt>{{ __('messages.diagram_column_owner') }}</dt><dd>{{ $diagram->owner->name }}</dd></div>
+                    <div>
+                        <dt>{{ __('messages.diagram_column_owner') }}</dt>
+                        <dd class="info-inline">
+                            <span id="info-owner">{{ $diagram->owner->name }}</span>
+                            @can('diagram-owner.transfer', $diagram)
+                                <button type="button" id="info-owner-transfer">{{ __('messages.transfer') }}</button>
+                            @endcan
+                        </dd>
+                    </div>
                     <div><dt>{{ __('messages.workspace_filter_label') }}</dt><dd>{{ $diagram->workspace?->name ?? __('messages.no_workspace') }}</dd></div>
                     <div>
                         <dt>{{ __('messages.diagram_column_tags') }}</dt>
-                        <dd>{{ $diagram->tags->isEmpty() ? '—' : $diagram->tags->pluck('name')->implode(', ') }}</dd>
+                        <dd>
+                            <form id="info-tags-form">
+                                <x-tag-select
+                                    name="tags[]"
+                                    :options="$tagNames"
+                                    :selected="$diagram->tags->pluck('name')->all()"
+                                    multiple
+                                    wrapper-class="w-full"
+                                    placeholder="{{ __('messages.add_tag_placeholder') }}"
+                                />
+                            </form>
+                        </dd>
                     </div>
                     <div><dt>{{ __('messages.collaborators') }}</dt><dd>{{ $diagram->approved_collaborators_count }}</dd></div>
                     <div>
@@ -131,30 +177,12 @@
                     </div>
                     <div><dt>{{ __('messages.created_at_label') }}</dt><dd><x-timestamp :at="$diagram->created_at" /></dd></div>
                     <div><dt>{{ __('messages.diagram_column_modified') }}</dt><dd><x-timestamp :at="$diagram->updated_at" /></dd></div>
-                    <div><dt>{{ __('messages.slug_label') }}</dt><dd class="break-all">{{ $diagram->slug }}</dd></div>
+                    <div><dt>{{ __('messages.slug_label') }}</dt><dd class="break-all" id="info-slug">{{ $diagram->slug }}</dd></div>
                 </dl>
+                <p class="info-footer">
+                    <a id="info-edit-link" href="{{ route('diagrams.edit', $diagram->slug) }}">{{ __('messages.edit_diagram') }}</a>
+                </p>
             </aside>
-            @can('manageTags', $diagram)
-                <aside id="data-panel" hidden>
-                    <div class="aside-head">
-                        <span>{{ __('messages.diagram_tags_heading') }}</span>
-                        <button type="button" id="btn-data-close" data-panel-close aria-label="{{ __('messages.close') }}"><x-icon name="x-mark" /></button>
-                    </div>
-                    <form method="POST" action="{{ route('diagrams.tags.sync', $diagram->slug) }}" class="collab-body">
-                        @csrf
-                        @method('PUT')
-                        <x-tag-select
-                            name="tags[]"
-                            :options="$tagNames"
-                            :selected="$diagram->tags->pluck('name')->all()"
-                            multiple
-                            scope="diagram-tags-{{ $diagram->id }}"
-                            placeholder="{{ __('messages.add_tag_placeholder') }}"
-                        />
-                        <button type="submit" class="primary"><x-icon name="tag" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.save_tags') }}</button>
-                    </form>
-                </aside>
-            @endcan
             <aside id="version-panel" hidden>
                 <div class="aside-head">
                     <span>{{ __('messages.versions') }}</span>
@@ -228,16 +256,6 @@
                     title="{{ __('messages.diagram_info') }}"
                     aria-label="{{ __('messages.diagram_info') }}"
                 ><x-icon name="information-circle" /></button>
-                @can('manageTags', $diagram)
-                    <button
-                        type="button"
-                        id="btn-data-entry"
-                        class="panel-toggle"
-                        data-panel-toggle="data-panel"
-                        title="{{ __('messages.edit_diagram_tags') }}"
-                        aria-label="{{ __('messages.edit_diagram_tags') }}"
-                    ><x-icon name="tag" /></button>
-                @endcan
                 <button
                     type="button"
                     id="btn-version-history-entry"
@@ -286,6 +304,29 @@
                     <ul id="diff-removed-list"></ul>
                 </div>
             </main>
+            @can('diagram-owner.transfer', $diagram)
+                <dialog id="owner-transfer-dialog" class="owner-transfer-dialog" aria-labelledby="owner-transfer-title">
+                    <form id="owner-transfer-form">
+                        <h2 id="owner-transfer-title">{{ __('messages.transfer_ownership') }}</h2>
+                        <x-user-select
+                            :options="$ownerCandidates"
+                            scope="owner-transfer"
+                            :required="false"
+                            :label="__('messages.diagram_column_owner')"
+                            :placeholder="__('messages.select_new_owner')"
+                        />
+                        <label class="checkbox">
+                            <input type="checkbox" id="owner-transfer-give-up" name="give_up_access" value="1">
+                            {{ __('messages.give_up_access') }}
+                        </label>
+                        <p id="owner-transfer-error" class="info-error" role="alert" hidden></p>
+                        <div class="dialog-actions">
+                            <button type="button" id="owner-transfer-cancel">{{ __('messages.cancel') }}</button>
+                            <button type="submit" class="primary">{{ __('messages.transfer') }}</button>
+                        </div>
+                    </form>
+                </dialog>
+            @endcan
         </div>
     </div>
 
@@ -294,6 +335,7 @@
     <script src="{{ asset('assets/editor.js') }}"></script>
     <script type="module" src="{{ asset('assets/diff.js') }}"></script>
     <script type="module" src="{{ asset('assets/versions.js') }}"></script>
+    <script src="{{ asset('assets/diagram-settings.js') }}"></script>
     @can('manageCollaborators', $diagram)
         <script type="module" src="{{ asset('assets/collaborators.js') }}"></script>
     @endcan

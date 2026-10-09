@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Diagram;
 use App\Models\Share;
 use App\Repositories\DiagramRepository;
@@ -14,6 +15,8 @@ use Illuminate\Validation\ValidationException;
 
 class ShareController extends Controller
 {
+    use ResolvesVisibleDiagram;
+
     public function __construct(
         private readonly DiagramRepository $diagrams,
         private readonly ShareRepository $shares,
@@ -21,7 +24,7 @@ class ShareController extends Controller
 
     public function index(string $slug, VersionRepository $versions): JsonResponse
     {
-        $diagram = $this->diagrams->findBySlugOrFail($slug);
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('manageShares', $diagram);
 
@@ -36,7 +39,7 @@ class ShareController extends Controller
 
     public function store(Request $request, string $slug, VersionRepository $versions): JsonResponse
     {
-        $diagram = $this->diagrams->findBySlugOrFail($slug);
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('manageShares', $diagram);
 

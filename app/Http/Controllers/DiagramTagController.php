@@ -5,9 +5,9 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Tag;
 use App\Repositories\DiagramRepository;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
 
 class DiagramTagController extends Controller
 {
@@ -18,29 +18,14 @@ class DiagramTagController extends Controller
     ) {}
 
     /**
-     * The Diagram's edit screen, where its Tags are managed through one
-     * multi-select of removable chips (issues #40, #170). Same eligibility as
-     * applying a Tag.
-     */
-    public function edit(string $slug): View
-    {
-        $diagram = $this->resolveDiagram($slug);
-
-        $this->authorize('manageTags', $diagram);
-
-        $tagNames = Tag::sortedNames();
-
-        return view('diagrams.edit', ['diagram' => $diagram->load('tags'), 'tagNames' => $tagNames]);
-    }
-
-    /**
-     * Replaces the Diagram's Tags with the submitted set: chips added in the
+     * Replaces the Diagram's Tags with the submitted set (the Editor's info
+     * panel, and the edit form through DiagramSettingsController): chips added in the
      * picker are applied (created on first use), chips removed are detached.
      * An empty submission clears them all. Same eligibility as applying a Tag.
      */
-    public function sync(Request $request, string $slug): RedirectResponse
+    public function sync(Request $request, string $slug): RedirectResponse|JsonResponse
     {
-        $diagram = $this->resolveDiagram($slug);
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('manageTags', $diagram);
 
@@ -49,15 +34,15 @@ class DiagramTagController extends Controller
             'tags.*' => ['required', 'string', 'max:255'],
         ]);
 
-        $names = collect($data['tags'] ?? [])
-            ->map(fn (string $name) => trim($name))
-            ->filter()
-            ->unique()
-            ->values()
-            ->all();
+        $names = Tag::cleanNames($data['tags'] ?? []);
 
         // syncTags() creates the missing Tags itself.
         $diagram->syncTags($names);
+
+        // The Editor's info panel saves Tags in place and reads the result back.
+        if ($request->wantsJson()) {
+            return response()->json(['tags' => $names]);
+        }
 
         return redirect()->route('diagrams.show', $diagram->slug);
     }
@@ -70,7 +55,7 @@ class DiagramTagController extends Controller
      */
     public function store(Request $request, string $slug): RedirectResponse
     {
-        $diagram = $this->resolveDiagram($slug);
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('manageTags', $diagram);
 
@@ -90,7 +75,7 @@ class DiagramTagController extends Controller
      */
     public function destroy(string $slug, Tag $tag): RedirectResponse
     {
-        $diagram = $this->resolveDiagram($slug);
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('manageTags', $diagram);
 

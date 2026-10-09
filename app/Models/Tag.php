@@ -30,4 +30,20 @@ class Tag extends SpatieTag
     {
         return static::query()->get()->map(fn (self $tag) => $tag->name)->sort(SORT_NATURAL | SORT_FLAG_CASE)->values();
     }
+
+    /**
+     * Submitted Tag names, trimmed, without blanks or repeats.
+     *
+     * @param  array<int, string>  $names
+     * @return array<int, string>
+     */
+    public static function cleanNames(array $names): array
+    {
+        return collect($names)
+            ->map(fn (string $name) => trim($name))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
 }

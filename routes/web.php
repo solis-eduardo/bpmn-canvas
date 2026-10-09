@@ -9,6 +9,7 @@ use App\Http\Controllers\CollaboratorController;
 use App\Http\Controllers\DiagramContentController;
 use App\Http\Controllers\DiagramController;
 use App\Http\Controllers\DiagramOwnerController;
+use App\Http\Controllers\DiagramSettingsController;
 use App\Http\Controllers\DiagramTagController;
 use App\Http\Controllers\DiagramWorkspaceController;
 use App\Http\Controllers\ForkController;
@@ -68,7 +69,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/diagrams', [DiagramController::class, 'index'])->name('diagrams.index');
     Route::get('/diagrams/create', [DiagramController::class, 'create'])->name('diagrams.create');
     Route::post('/diagrams', [DiagramController::class, 'store'])->name('diagrams.store');
-    Route::get('/diagrams/{slug}/edit', [DiagramTagController::class, 'edit'])->name('diagrams.edit');
+    Route::get('/diagrams/{slug}/edit', [DiagramSettingsController::class, 'edit'])->name('diagrams.edit');
+    Route::put('/diagrams/{slug}/settings', [DiagramSettingsController::class, 'update'])->name('diagrams.settings.update');
     Route::get('/diagrams/{slug}/content', [DiagramContentController::class, 'show'])->name('diagrams.content');
     Route::put('/diagrams/{slug}/content', [DiagramContentController::class, 'update'])->name('diagrams.save');
     Route::put('/diagrams/{slug}', [DiagramController::class, 'update'])->name('diagrams.rename');

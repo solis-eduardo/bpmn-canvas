@@ -1,18 +1,39 @@
-<x-layouts.app :title="__('messages.edit_diagram_tags').': '.$diagram->title">
+@php
+    $canEdit = auth()->user()->can('update', $diagram);
+@endphp
+<x-layouts.app :title="__('messages.edit_diagram').': '.$diagram->title">
     <x-form.page :title="$diagram->title" :back-href="route('diagrams.show', $diagram->slug)">
-        <x-form.card :action="route('diagrams.tags.sync', $diagram->slug)" method="PUT" :heading="__('messages.diagram_tags_heading')">
-            <x-tag-select
-                name="tags[]"
-                :options="$tagNames"
-                :selected="$diagram->tags->pluck('name')->all()"
-                multiple
-                scope="diagram-tags-{{ $diagram->id }}"
-                placeholder="{{ __('messages.add_tag_placeholder') }}"
-            />
-            <x-button type="submit">
-                <x-icon name="tag" />
-                {{ __('messages.save_tags') }}
-            </x-button>
+        <x-form.card :action="route('diagrams.settings.update', $diagram->slug)" method="PUT">
+            @if ($canEdit)
+                <x-form.field name="title" :label="__('messages.diagram_column_title')" value="{{ old('title', $diagram->title) }}" maxlength="255" required />
+            @endif
+
+            @can('diagram-owner.transfer', $diagram)
+                <x-user-select
+                    name="user_id"
+                    :options="$ownerCandidates"
+                    :required="false"
+                    :label="__('messages.transfer_ownership')"
+                    :placeholder="__('messages.select_new_owner')"
+                />
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="checkbox" name="give_up_access" value="1" @checked(old('give_up_access')) class="rounded border-gray-300">
+                    {{ __('messages.give_up_access') }}
+                </label>
+            @endcan
+
+            @if ($canEdit)
+                <x-tag-select
+                    name="tags[]"
+                    :options="$tagNames"
+                    :selected="old('tags', $diagram->tags->pluck('name')->all())"
+                    multiple
+                    wrapper-class="w-full"
+                    placeholder="{{ __('messages.add_tag_placeholder') }}"
+                />
+            @endif
+
+            <x-form.actions />
         </x-form.card>
     </x-form.page>
 </x-layouts.app>
