@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Models\Workspace;
@@ -50,6 +51,23 @@ class ForkTest extends TestCase
         $this->assertSame('copia-de-compras', $fork->slug);
         $this->assertSame($owner->id, $fork->owner_id);
         $this->assertSame('<bpmn>x</bpmn>', Storage::disk('diagrams')->get($fork->disk_path));
+    }
+
+    public function test_forking_a_locked_diagram_follows_the_default_language_even_when_the_user_prefers_another(): void
+    {
+        config(['app.locale' => 'en']);
+        $holder = User::factory()->create();
+        $other = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create(['title' => 'Compras', 'locked_by' => $holder->id, 'locked_at' => now()]);
+        Storage::disk('diagrams')->put($diagram->disk_path, '<bpmn/>');
+        Collaborator::create(['diagram_id' => $diagram->id, 'user_id' => $other->id, 'status' => Collaborator::STATUS_APPROVED]);
+
+        $this->actingAs($other)
+            ->withSession(['locale' => 'es'])
+            ->post('/diagrams/'.$diagram->slug.'/fork')
+            ->assertRedirect();
+
+        $this->assertSame('Copy of Compras', Diagram::where('forked_from_id', $diagram->id)->firstOrFail()->title);
     }
 
     public function test_forking_into_a_workspace_the_user_is_not_a_member_of_is_refused(): void
