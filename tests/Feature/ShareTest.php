@@ -184,6 +184,26 @@ class ShareTest extends TestCase
         $response->assertDontSee('data-export="bpmn"', false);
     }
 
+    public function test_view_screen_puts_page_actions_in_a_row_below_the_navigation_header(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author);
+        $share = Share::factory()->for($diagram)->for($author, 'author')->create([
+            'expires_at' => now()->addDays(7),
+            'allow_download' => true,
+        ]);
+
+        $html = $this->get($share->showUrl())->assertOk()->getContent();
+
+        $headerEnd = strpos($html, '</header>');
+        $this->assertNotFalse($headerEnd);
+        $actionsRow = strpos($html, 'id="view-actions"');
+        $this->assertNotFalse($actionsRow);
+        $this->assertGreaterThan($headerEnd, $actionsRow);
+        $this->assertGreaterThan($actionsRow, strpos($html, 'id="btn-download"'));
+        $this->assertGreaterThan($actionsRow, strpos($html, $diagram->title, $actionsRow));
+    }
+
     public function test_guest_sees_clear_message_when_share_expired(): void
     {
         $author = User::factory()->create();

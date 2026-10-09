@@ -1,4 +1,4 @@
-<x-layouts.app :title="$diagram->title" :fluid="true">
+<x-layouts.app :title="$diagram->title" :fluid="true" :standard-header="true">
     <x-slot:head>
         <meta name="robots" content="noindex, nofollow">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/diagram-js.css') }}">
@@ -11,14 +11,20 @@
         </style>
     </x-slot:head>
 
-    <x-slot:headerActions>
-        <div class="flex items-center gap-3">
+    {{-- Same arrangement as the Editor: the layout header holds only the global
+         navigation; the page's own actions sit in a separate row below it. --}}
+    <div class="flex h-full flex-col">
+        <div id="view-actions" class="flex shrink-0 flex-wrap items-center gap-3 border-b border-gray-200 bg-white px-4 py-2 sm:px-6">
             @isset($backUrl)
                 <x-button :href="$backUrl" variant="secondary" size="sm">
                     <x-icon name="arrow-left" />
                     {{ __('messages.back') }}
                 </x-button>
             @endisset
+            <span class="min-w-0 max-w-xs truncate text-sm font-medium text-gray-700" title="{{ $diagram->title }}">
+                {{ $diagram->title }}
+            </span>
+            <span class="flex-1"></span>
             @if (isset($requestLockUrl))
                 <div id="lock-request" class="flex items-center gap-2" data-request-url="{{ $requestLockUrl }}" data-show-url="{{ $showUrl }}">
                     <button type="button" id="btn-request-lock" class="inline-flex items-center gap-1.5 rounded-md border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 disabled:opacity-50">
@@ -51,10 +57,6 @@
                     {{ __('messages.force_release_lock') }}
                 </button>
             @endif
-            <span class="max-w-xs truncate text-sm font-medium text-gray-700" title="{{ $diagram->title }}">
-                {{ $diagram->title }}
-            </span>
-
             @if ($allowDownload)
                 <div class="dropdown relative">
                     <button
@@ -82,9 +84,8 @@
                 </div>
             @endif
         </div>
-    </x-slot:headerActions>
 
-    <div id="viewer" class="relative h-full" data-title="{{ $diagram->title }}" data-open-failed-notice="{{ __('messages.diagram_open_failed') }}">
+    <div id="viewer" class="relative min-h-0 flex-1" data-title="{{ $diagram->title }}" data-open-failed-notice="{{ __('messages.diagram_open_failed') }}">
         <div id="canvas" class="absolute inset-0 bg-white"></div>
         @isset($notice)
             <p
@@ -101,6 +102,7 @@
             <button type="button" id="zoom-out" title="{{ __('messages.zoom_out') }}" aria-label="{{ __('messages.zoom_out') }}" class="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white shadow-sm hover:bg-gray-50"><x-icon name="minus" class="h-5 w-5" /></button>
             <button type="button" id="zoom-fit" title="{{ __('messages.fit_to_screen') }}" aria-label="{{ __('messages.fit_to_screen') }}" class="flex h-9 w-9 items-center justify-center rounded-md border border-gray-300 bg-white shadow-sm hover:bg-gray-50"><x-icon name="fit" class="h-5 w-5" /></button>
         </div>
+    </div>
     </div>
 
     {{-- Non-executing JSON block: JSON_HEX_* escapes every `<`, `>`, `&` and quote, so the XML can't close the tag or start another one. --}}
