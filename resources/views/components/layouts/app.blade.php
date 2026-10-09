@@ -8,7 +8,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     {{ $head ?? '' }}
 </head>
-<body class="h-full font-sans text-gray-900 antialiased" data-ts-no-results="{{ __('messages.select_no_results') }}" data-ts-create="{{ __('messages.select_create_option') }}">
+<body class="h-full font-sans text-gray-900 antialiased" data-ts-no-results="{{ __('messages.select_no_results') }}" data-ts-create="{{ __('messages.select_create_option') }}"@if (auth()->check() && auth()->user()->timezone === null) data-detect-timezone="{{ route('account.timezone.detect') }}"@endif>
     <div class="{{ ($fluid ?? false) ? 'flex h-screen flex-col overflow-hidden' : 'min-h-full' }}">
         {{-- A fluid page keeps the full-width header unless it asks for the standard one. --}}
         @php($fluidHeader = ($fluid ?? false) && ! ($standardHeader ?? false))

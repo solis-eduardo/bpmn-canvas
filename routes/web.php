@@ -51,6 +51,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/account', [AccountController::class, 'edit'])->name('account.edit');
     Route::put('/account', [AccountController::class, 'update'])->name('account.update');
+    Route::put('/account/timezone', [AccountController::class, 'detectTimezone'])->name('account.timezone.detect');
     Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.password.update');
 
     Route::get('/admin/users', [UserController::class, 'index'])->name('admin.users.index');
