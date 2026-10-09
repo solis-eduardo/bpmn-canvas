@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -48,6 +49,14 @@ class User extends Authenticatable
     public function displayTimezone(): string
     {
         return $this->timezone ?: config('app.timezone');
+    }
+
+    /**
+     * A copy of $at expressed in this User's display timezone.
+     */
+    public function inDisplayTimezone(CarbonInterface $at): CarbonInterface
+    {
+        return $at->copy()->timezone($this->displayTimezone());
     }
 
     /**

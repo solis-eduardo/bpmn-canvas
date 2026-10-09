@@ -19,7 +19,7 @@ class ShareExpiringSoon extends PreferenceAwareNotification
     {
         return __('messages.notification_share_expiring', [
             'diagram' => $this->share->diagram->title,
-            'date' => $this->share->expires_at->copy()->timezone($recipient->displayTimezone())->translatedFormat('M j, Y'),
+            'date' => $recipient->inDisplayTimezone($this->share->expires_at)->translatedFormat('M j, Y'),
         ]);
     }
 
