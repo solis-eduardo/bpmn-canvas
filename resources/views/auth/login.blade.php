@@ -25,7 +25,7 @@
                 @endif
 
                 <section aria-label="{{ __('messages.log_in_locally') }}">
-                    <form method="POST" action="/login" class="mt-4 flex flex-col gap-4">
+                    <form method="POST" action="{{ url('/login') }}" class="mt-4 flex flex-col gap-4">
                         @csrf
                         <div class="flex flex-col gap-1">
                             <label for="email" class="text-xs font-medium text-gray-500">{{ __('messages.email') }}</label>
