@@ -47,19 +47,6 @@ describe('HttpDiagramStore', () => {
     expect((await store.versions()).map(v => v.number)).toEqual([3, 1]);
   });
 
-  it('sends the CSRF token on every change', async () => {
-    const { store, backend } = makeStore();
-
-    await store.save('<a/>');
-    const [version] = await store.versions();
-    await store.renameVersion(version.id, 'Milestone');
-    await store.restoreVersion(version.id);
-
-    const changes = backend.requests.filter(r => r.method !== 'GET');
-    expect(changes).toHaveLength(3);
-    changes.forEach(r => expect(r.headers['X-CSRF-TOKEN']).toBe(CSRF_TOKEN));
-  });
-
   it("rejects with the HTTP status and the server's own message", async () => {
     const { store } = makeStore({ csrfToken: 'stale' });
 

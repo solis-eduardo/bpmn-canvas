@@ -32,7 +32,9 @@ import { groupVersionsByDay, oldestFirst } from './version-history.js';
   // editor.js is a module loaded earlier in the document and sets this
   // synchronously when it creates the Modeler; modules run in document
   // order, so by the time this runs it is always already set.
-  const { modeler, store, timeZone } = window.BpmnEditor || {};
+  const { modeler, store } = window.BpmnEditor || {};
+  // The User's display timezone (UTC when they haven't chosen one, as everywhere else).
+  const timeZone = body.dataset.timeZone;
 
   const $ = id => document.getElementById(id);
   const list = $('version-list');

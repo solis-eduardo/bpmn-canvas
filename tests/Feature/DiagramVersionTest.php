@@ -32,7 +32,7 @@ class DiagramVersionTest extends TestCase
         $response = $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions');
 
         $response->assertOk();
-        $this->assertCount(1, $response->json('versions.0.items'));
+        $this->assertCount(1, $response->json('versions'));
     }
 
     public function test_multiple_saves_generate_multiple_versions_without_discarding_any(): void
@@ -55,7 +55,7 @@ class DiagramVersionTest extends TestCase
         $response = $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions');
 
         $response->assertOk();
-        $items = collect($response->json('versions'))->flatMap(fn ($day) => $day['items']);
+        $items = collect($response->json('versions'));
 
         // Initial version (created via factory, which also generates a version) + 3 saves.
         $this->assertCount(4, $items);
@@ -72,7 +72,7 @@ class DiagramVersionTest extends TestCase
 
         $before = collect(
             $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
-        )->flatMap(fn ($day) => $day['items']);
+        );
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
             'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">same content</bpmn:definitions>',
@@ -80,12 +80,12 @@ class DiagramVersionTest extends TestCase
 
         $after = collect(
             $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
-        )->flatMap(fn ($day) => $day['items']);
+        );
 
         $this->assertCount($before->count(), $after);
     }
 
-    public function test_version_history_is_grouped_by_calendar_day(): void
+    public function test_version_history_is_a_flat_list_newest_first_across_days(): void
     {
         $user = User::factory()->create();
 
@@ -106,13 +106,9 @@ class DiagramVersionTest extends TestCase
         Carbon::setTestNow();
 
         $response->assertOk();
-        $days = collect($response->json('versions'))->pluck('day')->all();
-
-        $this->assertContains('2026-09-20', $days);
-        $this->assertContains('2026-09-21', $days);
-
-        $expectedDay = collect($response->json('versions'))->firstWhere('day', '2026-09-20');
-        $this->assertCount(2, $expectedDay['items']);
+        // Grouping by day is left to the Editor, in the User's timezone.
+        $this->assertSame([3, 2, 1], array_column($response->json('versions'), 'number'));
+        $this->assertStringStartsWith('2026-09-21', $response->json('versions.0.saved_at'));
     }
 
     public function test_restoring_an_old_version_makes_content_match_it_and_creates_a_new_version_on_top(): void
@@ -131,7 +127,7 @@ class DiagramVersionTest extends TestCase
         ])->assertOk();
 
         $history = $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions');
-        $allVersions = collect($history)->flatMap(fn ($day) => $day['items']);
+        $allVersions = collect($history);
 
         // The oldest version (original content from creation) is the last item.
         $originalVersion = $allVersions->last();
@@ -146,7 +142,7 @@ class DiagramVersionTest extends TestCase
         $this->assertSame($originalContent, $currentContent);
 
         $historyAfter = $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions');
-        $allVersionsAfter = collect($historyAfter)->flatMap(fn ($day) => $day['items']);
+        $allVersionsAfter = collect($historyAfter);
 
         // A new version was created on top of the history.
         $this->assertSame($versionCountBeforeRestore + 1, $allVersionsAfter->count());
@@ -167,7 +163,7 @@ class DiagramVersionTest extends TestCase
     {
         return collect(
             $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
-        )->flatMap(fn ($day) => $day['items']);
+        );
     }
 
     public function test_versions_are_numbered_sequentially_in_chronological_order(): void

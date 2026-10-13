@@ -1,4 +1,4 @@
-import { createHttpDiagramStore } from './http-store.js';
+import { createHttpDiagramStore, httpError } from './http-store.js';
 
 (function () {
   const { toast, setupZoom, errorMessage } = window.BpmnCommon;
@@ -26,10 +26,9 @@ import { createHttpDiagramStore } from './http-store.js';
   });
   const $ = id => document.getElementById(id);
 
-  // Exposed so the version-comparison module (loaded separately, see
-  // versions.js/diff.js) can reuse this same live Modeler/canvas instead of
-  // creating a second one.
-  window.BpmnEditor = { modeler, store, timeZone: body.dataset.timeZone || undefined };
+  // Exposed so the Version history module (versions.js) can reuse this same
+  // live Modeler/canvas and DiagramStore instead of creating its own.
+  window.BpmnEditor = { modeler, store };
 
   let dirty = false;
 
@@ -60,7 +59,7 @@ import { createHttpDiagramStore } from './http-store.js';
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     if (!res.ok) {
-      throw await window.BpmnCommon.httpError(res);
+      throw await httpError(res);
     }
     return res;
   }

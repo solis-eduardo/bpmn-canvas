@@ -60,10 +60,8 @@ export function createHttpDiagramStore({ urls, csrfToken, fetch = globalThis.fet
     return urls[templateKey].replace('VERSION_ID', encodeURIComponent(id));
   }
 
-  // The server groups the history by day; that's a display concern of the
-  // Editor, so the store hands it over flat (still newest first).
-  function toVersions(days) {
-    return days.flatMap(day => day.items).map(item => ({
+  function toVersions(items) {
+    return items.map(item => ({
       id: item.id,
       number: item.number,
       name: item.name,

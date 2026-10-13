@@ -39,7 +39,7 @@ deleteVersion(id)         // → Promise<void>       soft delete, provisional on
 - Lock handling (Heartbeat, release, lock-request banner) moves out of the core into a server-only module built on those events and accessors. Collaborators, Shares, Diagram settings and notifications stay server-only.
 - The interface has no capability flags. Actions are decided by the data, as today: no provisional Versions means no promote/delete actions, a null `author` hides the author line.
 - `versions()` returns a flat list; grouping by day becomes a display concern of the core, using the `timeZone` the shell passes (the User's timezone on the server, the browser's in the standalone build).
-- There is no `compare(from, to)` on the seam: the core fetches both contents with `versionContent` and orders them by `number`, as `DiagramVersionService::compare` does. The `/versions/compare` endpoint can then be retired.
+- There is no `compare(from, to)` on the seam: the core fetches both contents with `versionContent` and orders them by `number`, as `DiagramVersionService::compare` did. The `/versions/compare` endpoint is then retired.
 - The list of Diagrams (create, delete, import/export `.bpmn`) is not part of `DiagramStore`: only the standalone build needs it, so it lives in a standalone-only library module. Saving to a chosen file uses the File System Access API where available (Chromium), falling back to upload/download.
 - UI strings stay sourced from `lang/`; a build step exports the keys the core needs to JSON, consumed through `t(key)` by both builds instead of `data-*` attributes.
 - The standalone build lives in this repo (`standalone/`) and is bundled by Vite into one self-contained HTML file, since ES modules and import maps don't load over `file://`.

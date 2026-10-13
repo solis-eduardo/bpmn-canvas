@@ -143,7 +143,7 @@ class RestoreTest extends TestCase
             ->assertJson(['content' => '<bpmn:definitions>original</bpmn:definitions>']);
 
         $versionsResponse = $this->getJson(route('diagrams.versions', $diagram->slug))->assertOk();
-        $restoredVersionCount = collect($versionsResponse->json('versions'))->sum(fn ($day) => count($day['items']));
+        $restoredVersionCount = count($versionsResponse->json('versions'));
         $this->assertSame(2, $restoredVersionCount, 'Version history must match what it was at backup time.');
 
         $this->getJson(route('diagrams.collaborators.index', $diagram->slug))

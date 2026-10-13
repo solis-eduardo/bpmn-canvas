@@ -29,25 +29,23 @@ class VersionController extends Controller
         // one, even when it was deleted from the list below.
         $currentId = $history->first()['id'] ?? null;
 
-        $grouped = $history
+        // Flat and newest first: grouping by day is a display concern of the
+        // Editor, done in the User's timezone (ADR-0018).
+        $items = $history
             ->reject(fn (array $version) => $version['hidden'])
-            ->groupBy(fn (array $version) => $version['saved_at']->toDateString())
-            ->map(fn ($items, string $day) => [
-                'day' => $day,
-                'items' => $items->map(fn (array $version) => [
-                    'id' => $version['id'],
-                    'is_current' => $version['id'] === $currentId,
-                    'saved_at' => $version['saved_at']->toIso8601String(),
-                    'author' => $version['author'],
-                    'number' => $version['number'],
-                    'name' => $version['name'],
-                    'renamed' => $version['renamed'],
-                    'provisional' => $version['provisional'],
-                ])->values(),
+            ->map(fn (array $version) => [
+                'id' => $version['id'],
+                'is_current' => $version['id'] === $currentId,
+                'saved_at' => $version['saved_at']->toIso8601String(),
+                'author' => $version['author'],
+                'number' => $version['number'],
+                'name' => $version['name'],
+                'renamed' => $version['renamed'],
+                'provisional' => $version['provisional'],
             ])
             ->values();
 
-        return response()->json(['versions' => $grouped]);
+        return response()->json(['versions' => $items]);
     }
 
     /**

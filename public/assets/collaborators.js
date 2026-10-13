@@ -247,19 +247,17 @@
 
     try {
       const data = await requestJson(versionsUrl);
-      const days = (data && data.versions) || [];
+      const versions = (data && data.versions) || [];
 
       while (sharePinVersion.options.length > 1) {
         sharePinVersion.remove(1);
       }
 
-      days.forEach(day => {
-        day.items.forEach(version => {
-          const option = document.createElement('option');
-          option.value = version.id;
-          option.textContent = version.name;
-          sharePinVersion.appendChild(option);
-        });
+      versions.forEach(version => {
+        const option = document.createElement('option');
+        option.value = version.id;
+        option.textContent = version.name;
+        sharePinVersion.appendChild(option);
       });
     } catch (e) {
       console.error(e);
