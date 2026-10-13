@@ -1,22 +1,34 @@
+import { createHttpDiagramStore, httpError } from './http-store.js';
+
 (function () {
   const { toast, setupZoom, errorMessage } = window.BpmnCommon;
 
   const body = document.getElementById('editor');
   const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-  const contentUrl = body.dataset.contentUrl;
-  const saveUrl = body.dataset.saveUrl;
   const indexUrl = body.dataset.indexUrl;
   const heartbeatUrl = body.dataset.heartbeatUrl;
   const unlockUrl = body.dataset.unlockUrl;
   const lockRequestedByNoticeTemplate = body.dataset.lockRequestedByNotice;
 
   const modeler = new BpmnJS({ container: '#canvas' });
+  const store = createHttpDiagramStore({
+    urls: {
+      contentUrl: body.dataset.contentUrl,
+      saveUrl: body.dataset.saveUrl,
+      versionsUrl: body.dataset.versionsUrl,
+      versionContentUrlTemplate: body.dataset.versionContentUrlTemplate,
+      versionRestoreUrlTemplate: body.dataset.versionRestoreUrlTemplate,
+      versionRenameUrlTemplate: body.dataset.versionRenameUrlTemplate,
+      versionPromoteUrlTemplate: body.dataset.versionPromoteUrlTemplate,
+      versionDeleteUrlTemplate: body.dataset.versionDeleteUrlTemplate,
+    },
+    csrfToken,
+  });
   const $ = id => document.getElementById(id);
 
-  // Exposed so the version-comparison module (loaded separately, see
-  // versions.js/diff.js) can reuse this same live Modeler/canvas instead of
-  // creating a second one.
-  window.BpmnEditor = { modeler, contentUrl, versionsUrl: body.dataset.versionsUrl };
+  // Exposed so the Version history module (versions.js) can reuse this same
+  // live Modeler/canvas and DiagramStore instead of creating its own.
+  window.BpmnEditor = { modeler, store };
 
   let dirty = false;
 
@@ -47,19 +59,14 @@
       body: body !== undefined ? JSON.stringify(body) : undefined,
     });
     if (!res.ok) {
-      throw await window.BpmnCommon.httpError(res);
+      throw await httpError(res);
     }
     return res;
   }
 
   async function loadContent() {
     try {
-      const res = await fetch(contentUrl, {
-        credentials: 'same-origin',
-        headers: { Accept: 'application/json' },
-      });
-      const data = await res.json();
-      const { warnings } = await modeler.importXML(data.content);
+      const { warnings } = await modeler.importXML(await store.load());
       if (warnings && warnings.length) console.warn('Import warnings:', warnings);
       modeler.get('canvas').zoom('fit-viewport', 'auto');
       setDirty(false);
@@ -72,7 +79,7 @@
   async function save() {
     try {
       const { xml } = await modeler.saveXML({ format: true });
-      await api('PUT', saveUrl, { content: xml });
+      await store.save(xml);
       setDirty(false);
       document.dispatchEvent(new CustomEvent('diagram:saved'));
       toast(body.dataset.savedNotice);

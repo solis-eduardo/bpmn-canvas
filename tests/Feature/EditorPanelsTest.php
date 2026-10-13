@@ -46,8 +46,7 @@ class EditorPanelsTest extends TestCase
             ])->assertOk();
         }
 
-        $items = collect($this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions'))
-            ->flatMap(fn ($day) => $day['items']);
+        $items = collect($this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions'));
 
         $this->assertGreaterThan(1, $items->count());
         $this->assertSame([true], $items->pluck('is_current')->filter()->unique()->values()->all());

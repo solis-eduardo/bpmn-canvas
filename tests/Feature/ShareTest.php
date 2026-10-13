@@ -490,7 +490,7 @@ class ShareTest extends TestCase
     {
         return collect(
             $this->actingAs($user)->getJson("/diagrams/{$diagram->slug}/versions")->json('versions')
-        )->flatMap(fn (array $day) => $day['items'])->values()->all();
+        )->values()->all();
     }
 
     public function test_share_created_without_a_version_follows_the_latest_version_by_default(): void

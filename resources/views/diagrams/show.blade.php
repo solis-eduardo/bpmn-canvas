@@ -48,8 +48,8 @@
         data-release-discard-label="{{ __('messages.release_discard_and_release') }}"
         data-release-cancel-label="{{ __('messages.release_cancel') }}"
         data-versions-url="{{ route('diagrams.versions', $diagram->slug) }}"
+        data-time-zone="{{ auth()->user()->displayTimezone() }}"
         data-version-content-url-template="{{ route('diagrams.versions.content', [$diagram->slug, 'VERSION_ID']) }}"
-        data-version-compare-url="{{ route('diagrams.versions.compare', $diagram->slug) }}"
         data-version-restore-url-template="{{ route('diagrams.versions.restore', [$diagram->slug, 'VERSION_ID']) }}"
         data-restore-version-confirm="{{ __('messages.restore_version_confirm') }}"
         data-version-restored-notice="{{ __('messages.version_restored') }}"
@@ -375,7 +375,7 @@
 
     <script src="{{ asset('vendor/bpmn-js/bpmn-modeler.production.min.js') }}"></script>
     <script src="{{ asset('assets/common.js') }}"></script>
-    <script src="{{ asset('assets/editor.js') }}"></script>
+    <script type="module" src="{{ asset('assets/editor.js') }}"></script>
     <script type="module" src="{{ asset('assets/diff.js') }}"></script>
     <script type="module" src="{{ asset('assets/versions.js') }}"></script>
     <script src="{{ asset('assets/diagram-settings.js') }}"></script>

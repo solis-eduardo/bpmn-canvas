@@ -35,6 +35,12 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm dev vend
 docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm dev vendor/bin/pint --test
 ```
 
+The Editor's browser-side modules (`public/assets/`) have their own suite, run with Vitest on the host:
+
+```bash
+npm test
+```
+
 ## Coding standards
 
 This project uses [Laravel Pint](https://laravel.com/docs/pint) for PHP formatting:
