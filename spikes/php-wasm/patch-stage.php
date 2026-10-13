@@ -1,4 +1,5 @@
 <?php
+
 // Spike-only patches applied to the staged copy of the app (never to the repo itself).
 // Usage: php patch-stage.php <stage-dir>
 $stage = $argv[1];
@@ -29,7 +30,7 @@ patch(
     "define('LARAVEL_START', microtime(true));\n\n"
     ."if (isset(\$_SERVER['HTTP_X_APP_BASE'])) {\n"
     ."    \$_SERVER['SCRIPT_NAME'] = \$_SERVER['PHP_SELF'] = \$_SERVER['HTTP_X_APP_BASE'].'/index.php';\n"
-    ."}"
+    .'}'
 );
 
 // 3. The shell page embeds the app in an <iframe>, which the app's CSP forbids (frame-ancestors 'none').

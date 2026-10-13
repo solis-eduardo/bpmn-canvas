@@ -5,7 +5,7 @@
 # Needs: git, docker (composer image), node/npm, php (any 8.x, host) for migrating.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
-REPO="$(cd "$HERE/../.." && pwd)"
+REPO="${REPO:-$(cd "$HERE/../.." && pwd)}"
 OUT="${OUT:-$HERE/stage}"
 
 rm -rf "$OUT"; mkdir -p "$OUT"
