@@ -97,7 +97,7 @@ docker compose exec app php artisan backup:restore backup-2026-01-01_000000-abcd
 ```
 app/Http/Controllers/       # Diagram, Collaborators, Shares, Auth
 app/Models/                 # Diagram, User, DiagramCollaborator, Share
-app/Repositories/           # DiagramRepository, VersionRepository (Git-backed versioning, ADR-0004)
+app/Repositories/           # DiagramRepository, VersionRepository (port: GitVersionRepository by default, DatabaseVersionRepository; ADR-0004, ADR-0018)
 app/Actions/                # Editing Lock, Collaborators
 app/Policies/                # DiagramPolicy
 database/migrations/

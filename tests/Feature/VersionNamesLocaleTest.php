@@ -2,7 +2,7 @@
 
 namespace Tests\Feature;
 
-use App\Repositories\VersionRepository;
+use App\Support\VersionName;
 use Tests\TestCase;
 
 /**
@@ -17,7 +17,7 @@ class VersionNamesLocaleTest extends TestCase
         foreach ($expected as $locale => $name) {
             app()->setLocale($locale);
 
-            $this->assertSame($name, VersionRepository::defaultName(3));
+            $this->assertSame($name, VersionName::default(3));
         }
     }
 
