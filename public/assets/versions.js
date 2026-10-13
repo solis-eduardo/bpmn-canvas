@@ -15,7 +15,7 @@
  *    comparison.
  */
 import { compareBpmnXml, highlightDiff, renderRemovedGhosts } from './diff.js';
-import { groupVersionsByDay } from './version-days.js';
+import { groupVersionsByDay, oldestFirst } from './version-history.js';
 
 (async function () {
   const body = document.getElementById('editor');
@@ -76,7 +76,7 @@ import { groupVersionsByDay } from './version-days.js';
     });
   }
 
-  // The day keys are "YYYY-MM-DD" (see version-days.js); show them in the page's locale.
+  // The day keys are "YYYY-MM-DD" (see version-history.js); show them in the page's locale.
   // Built from its parts so the day isn't shifted by the time zone.
   function formatDay(day) {
     const [year, month, date] = day.split('-').map(Number);
@@ -366,11 +366,7 @@ import { groupVersionsByDay } from './version-days.js';
   async function compareSelectedVersions() {
     if (!modeler || selectedIds.length !== MAX_SELECTED) return;
 
-    // The diff always reads "older -> newer" by Version number, whichever
-    // order the User picked them in.
-    const [older, newer] = selectedIds
-      .map(id => versionsById.get(id))
-      .sort((a, b) => a.number - b.number);
+    const [older, newer] = oldestFirst(selectedIds.map(id => versionsById.get(id)));
 
     try {
       const contentPromise = Promise.all([store.versionContent(older.id), store.versionContent(newer.id)]);

@@ -11,13 +11,25 @@ import { createHttpDiagramStore } from './http-store.js';
   const lockRequestedByNoticeTemplate = body.dataset.lockRequestedByNotice;
 
   const modeler = new BpmnJS({ container: '#canvas' });
-  const store = createHttpDiagramStore({ urls: body.dataset, csrfToken });
+  const store = createHttpDiagramStore({
+    urls: {
+      contentUrl: body.dataset.contentUrl,
+      saveUrl: body.dataset.saveUrl,
+      versionsUrl: body.dataset.versionsUrl,
+      versionContentUrlTemplate: body.dataset.versionContentUrlTemplate,
+      versionRestoreUrlTemplate: body.dataset.versionRestoreUrlTemplate,
+      versionRenameUrlTemplate: body.dataset.versionRenameUrlTemplate,
+      versionPromoteUrlTemplate: body.dataset.versionPromoteUrlTemplate,
+      versionDeleteUrlTemplate: body.dataset.versionDeleteUrlTemplate,
+    },
+    csrfToken,
+  });
   const $ = id => document.getElementById(id);
 
   // Exposed so the version-comparison module (loaded separately, see
   // versions.js/diff.js) can reuse this same live Modeler/canvas instead of
   // creating a second one.
-  window.BpmnEditor = { modeler, store, timeZone: body.dataset.timeZone };
+  window.BpmnEditor = { modeler, store, timeZone: body.dataset.timeZone || undefined };
 
   let dirty = false;
 

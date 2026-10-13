@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupVersionsByDay } from '../../public/assets/version-days.js';
+import { groupVersionsByDay, oldestFirst } from '../../public/assets/version-history.js';
 
 const version = (id, savedAt) => ({ id, savedAt });
 
@@ -29,5 +29,23 @@ describe('groupVersionsByDay', () => {
 
   it('returns no days for no Versions', () => {
     expect(groupVersionsByDay([], 'UTC')).toEqual([]);
+  });
+});
+
+describe('oldestFirst', () => {
+  it('orders Versions by number, whichever order they were picked in', () => {
+    const v1 = { id: 'a', number: 1 };
+    const v3 = { id: 'c', number: 3 };
+
+    expect(oldestFirst([v3, v1])).toEqual([v1, v3]);
+    expect(oldestFirst([v1, v3])).toEqual([v1, v3]);
+  });
+
+  it('leaves the given list untouched', () => {
+    const picked = [{ number: 2 }, { number: 1 }];
+
+    oldestFirst(picked);
+
+    expect(picked.map(v => v.number)).toEqual([2, 1]);
   });
 });

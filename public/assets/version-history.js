@@ -1,4 +1,8 @@
 /*
+ * Pure helpers for showing a Version history.
+ */
+
+/**
  * Groups a Version history (newest first) by calendar day for display. The
  * day is taken in `timeZone` (the User's display timezone on the server
  * build), so a Version saved late in the evening isn't filed under the next
@@ -30,4 +34,16 @@ export function groupVersionsByDay(versions, timeZone) {
   });
 
   return days;
+}
+
+/**
+ * Two picked Versions as [older, newer] by number, whichever order they were
+ * picked in, so a comparison always reads "older -> newer".
+ *
+ * @template {{number: number}} V
+ * @param {V[]} versions
+ * @returns {V[]}
+ */
+export function oldestFirst(versions) {
+  return [...versions].sort((a, b) => a.number - b.number);
 }
