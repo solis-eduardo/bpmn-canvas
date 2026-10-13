@@ -32,15 +32,17 @@ export async function httpError(res) {
 }
 
 /**
+ * A JSON request function for the Laravel endpoints: sends the CSRF token on
+ * every change and rejects non-2xx answers with httpError's Error.
+ *
  * @param {Object} options
- * @param {Object} options.urls  contentUrl, saveUrl, versionsUrl and the
- *   version*UrlTemplate URLs (with a VERSION_ID placeholder), as rendered on
- *   the Editor's data-* attributes.
  * @param {string} options.csrfToken
  * @param {typeof fetch} [options.fetch]
+ * @returns {(method: string, url: string, payload?: Object) => Promise<any>}
+ *   resolves to the parsed JSON answer
  */
-export function createHttpDiagramStore({ urls, csrfToken, fetch = globalThis.fetch.bind(globalThis) }) {
-  async function request(method, url, payload) {
+export function createJsonClient({ csrfToken, fetch = globalThis.fetch.bind(globalThis) }) {
+  return async function request(method, url, payload) {
     const headers = { Accept: 'application/json' };
     if (method !== 'GET') headers['X-CSRF-TOKEN'] = csrfToken;
     if (payload !== undefined) headers['Content-Type'] = 'application/json';
@@ -54,7 +56,19 @@ export function createHttpDiagramStore({ urls, csrfToken, fetch = globalThis.fet
     if (!res.ok) throw await httpError(res);
 
     return res.json();
-  }
+  };
+}
+
+/**
+ * @param {Object} options
+ * @param {Object} options.urls  contentUrl, saveUrl, versionsUrl and the
+ *   version*UrlTemplate URLs (with a VERSION_ID placeholder), as rendered on
+ *   the Editor's data-* attributes.
+ * @param {string} options.csrfToken
+ * @param {typeof fetch} [options.fetch]
+ */
+export function createHttpDiagramStore({ urls, csrfToken, fetch }) {
+  const request = createJsonClient({ csrfToken, fetch });
 
   function versionUrl(templateKey, id) {
     return urls[templateKey].replace('VERSION_ID', encodeURIComponent(id));
