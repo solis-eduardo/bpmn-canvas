@@ -1,8 +1,8 @@
 /*
  * Lock session (server build only, ADR-0018): keeps the holder's Lock alive
  * with Heartbeats, releases it on request and shows who is asking for it.
- * Built only on the Editor's public API (isDirty, currentXml, markClean, on),
- * so the Editor core itself knows nothing about Locks.
+ * Built only on the Editor's public API (isDirty, revision, currentXml,
+ * markClean, on), so the Editor core itself knows nothing about Locks.
  */
 
 const HEARTBEAT_INTERVAL_MS = 30000;
@@ -17,7 +17,7 @@ const ACTIVITY_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touc
  * keep them as a provisional Version if the Lock expires.
  *
  * @param {Object} options
- * @param {Object} options.editor  isDirty(), currentXml(), on('dirty', …)
+ * @param {Object} options.editor  isDirty(), revision(), currentXml(), on('dirty', …)
  * @param {(payload?: {draft: string}) => Promise<{lock_requested_by: ?string}>} options.send
  * @param {number} [options.idleAfterMs]
  * @param {() => number} [options.now]
@@ -28,11 +28,10 @@ const ACTIVITY_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touc
 export function createHeartbeat({ editor, send, idleAfterMs = IDLE_AFTER_MS, now = Date.now }) {
   let lastActivityAt = now();
 
-  // The draft the server was last told about, so a beat can skip re-sending
-  // content that hasn't changed since. A save settles the content and clears
-  // the server's draft, so what it holds is no longer what we last sent.
-  let lastSentDraft = null;
-  editor.on('dirty', dirty => { if (!dirty) lastSentDraft = null; });
+  // The revision the server was last sent a draft for. A save settles the
+  // content and clears the server's draft, so the mark is dropped then.
+  let lastSentRevision = null;
+  editor.on('dirty', dirty => { if (!dirty) lastSentRevision = null; });
 
   return {
     touch() {
@@ -42,19 +41,18 @@ export function createHeartbeat({ editor, send, idleAfterMs = IDLE_AFTER_MS, now
     async beat() {
       if (now() - lastActivityAt > idleAfterMs) return null;
 
-      // The Editor stays dirty until a save, so without this the whole
-      // diagram would be re-serialized, re-uploaded, re-parsed and rewritten
-      // on every beat of an editing session.
+      // Serializing the diagram is costly, so it only happens when an edit
+      // happened since the last draft the server holds.
       let payload;
+      let sentRevision = null;
 
-      if (editor.isDirty()) {
-        const xml = await editor.currentXml();
-
-        if (xml !== lastSentDraft) payload = { draft: xml };
+      if (editor.isDirty() && editor.revision() !== lastSentRevision) {
+        sentRevision = editor.revision();
+        payload = { draft: await editor.currentXml() };
       }
 
       const data = await send(payload);
-      if (payload) lastSentDraft = payload.draft;
+      if (payload) lastSentRevision = sentRevision;
 
       return { lockRequestedBy: data.lock_requested_by ?? null };
     },
@@ -70,11 +68,11 @@ export function createHeartbeat({ editor, send, idleAfterMs = IDLE_AFTER_MS, now
  * @param {(method: string, url: string, payload?: Object) => Promise<any>} options.request
  * @param {{heartbeat: string, unlock: string, index: string}} options.urls
  * @param {boolean} options.isHolder  whether the viewer holds the Lock (else an Administrator)
- * @param {Object} options.notices  localized strings, as rendered on the Editor's data-* attributes
+ * @param {(key: string) => string} options.t  localized UI string by key
  * @param {?HTMLElement} options.banner  the lock-request banner
  * @param {?HTMLButtonElement} options.releaseButton
  */
-export function startLockSession({ editor, request, urls, isHolder, notices, banner, releaseButton }) {
+export function startLockSession({ editor, request, urls, isHolder, t, banner, releaseButton }) {
   const { toast, errorMessage, chooseRelease } = window.BpmnCommon;
 
   // The Lock holder's only signal that someone else wants the Lock is this
@@ -89,12 +87,14 @@ export function startLockSession({ editor, request, urls, isHolder, notices, ban
       return;
     }
 
-    banner.textContent = (notices.lockRequestedByNotice || ':name').replace(':name', requestedByName);
+    banner.textContent = (t('lockRequestedByNotice') || ':name').replace(':name', requestedByName);
     banner.hidden = false;
   }
 
   const heartbeat = createHeartbeat({ editor, send: payload => request('PATCH', urls.heartbeat, payload) });
-  ACTIVITY_EVENTS.forEach(name => document.addEventListener(name, () => heartbeat.touch(), { passive: true }));
+  ACTIVITY_EVENTS.forEach(name => document.addEventListener(name, heartbeat.touch, { passive: true }));
+
+  let timer;
 
   async function sendHeartbeat() {
     try {
@@ -106,12 +106,12 @@ export function startLockSession({ editor, request, urls, isHolder, notices, ban
       // The Lock is gone (expired or taken): stop renewing and say so, once.
       if (e.status === 403 || e.status === 423) {
         clearInterval(timer);
-        toast(errorMessage(e, notices.saveFailedNotice), true);
+        toast(errorMessage(e, t('saveFailedNotice')), true);
       }
     }
   }
 
-  const timer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
+  timer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
 
   if (!releaseButton) return;
 
@@ -129,10 +129,10 @@ export function startLockSession({ editor, request, urls, isHolder, notices, ban
 
       if (hasDraft) {
         const choice = await chooseRelease({
-          message: isHolder ? notices.releaseDraftHolderMessage : notices.releaseDraftAdminMessage,
-          saveLabel: notices.releaseSaveLabel,
-          discardLabel: notices.releaseDiscardLabel,
-          cancelLabel: notices.releaseCancelLabel,
+          message: isHolder ? t('releaseDraftHolderMessage') : t('releaseDraftAdminMessage'),
+          saveLabel: t('releaseSaveLabel'),
+          discardLabel: t('releaseDiscardLabel'),
+          cancelLabel: t('releaseCancelLabel'),
         });
 
         if (choice === 'cancel') return;
@@ -150,7 +150,7 @@ export function startLockSession({ editor, request, urls, isHolder, notices, ban
       location.href = urls.index;
     } catch (e) {
       console.error(e);
-      toast(errorMessage(e, notices.releaseLockFailedNotice), true);
+      toast(errorMessage(e, t('releaseLockFailedNotice')), true);
     } finally {
       releaseButton.disabled = false;
     }

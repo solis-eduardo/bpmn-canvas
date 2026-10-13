@@ -66,9 +66,10 @@ export function createJsonClient({ csrfToken, fetch = globalThis.fetch.bind(glob
  *   the Editor's data-* attributes.
  * @param {string} options.csrfToken
  * @param {typeof fetch} [options.fetch]
+ * @param {ReturnType<typeof createJsonClient>} [options.request]  a client
+ *   shared with the rest of the page; built from csrfToken when omitted
  */
-export function createHttpDiagramStore({ urls, csrfToken, fetch }) {
-  const request = createJsonClient({ csrfToken, fetch });
+export function createHttpDiagramStore({ urls, csrfToken, fetch, request = createJsonClient({ csrfToken, fetch }) }) {
 
   function versionUrl(templateKey, id) {
     return urls[templateKey].replace('VERSION_ID', encodeURIComponent(id));

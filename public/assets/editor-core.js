@@ -10,26 +10,31 @@
  * @param {Object} options
  * @param {string} options.container  selector of the canvas element
  * @param {Object} options.store  a DiagramStore
- * @param {{savedNotice: string, saveFailedNotice: string, loadFailedNotice: string}} options.notices
+ * @param {(key: string) => string} options.t  localized UI string by key
+ *   (savedNotice, saveFailedNotice, loadFailedNotice)
  * @returns {{
  *   modeler: Object,
  *   save: () => Promise<void>,
  *   isDirty: () => boolean,
+ *   revision: () => number,
  *   currentXml: () => Promise<string>,
  *   markClean: () => void,
  *   on: (event: 'dirty'|'saved', handler: Function) => void,
  * }}
  *   `dirty` handlers get the new state whenever it changes; `saved` handlers
- *   run after each successful save. markClean() drops the unsaved state
- *   without saving, once the content was kept or discarded some other way.
+ *   run after each successful save. revision() counts edits, so a caller can
+ *   tell whether the content changed without serializing it. markClean()
+ *   drops the unsaved state without saving, once the content was kept or
+ *   discarded some other way.
  */
-export function createEditor({ container, store, notices }) {
+export function createEditor({ container, store, t }) {
   const { toast, setupZoom, errorMessage } = window.BpmnCommon;
 
   const modeler = new BpmnJS({ container });
   const handlers = { dirty: [], saved: [] };
   const dirtyMarker = document.getElementById('dirty');
   let dirty = false;
+  let edits = 0;
 
   setupZoom(modeler);
 
@@ -45,28 +50,41 @@ export function createEditor({ container, store, notices }) {
     return (await modeler.saveXML({ format: true })).xml;
   }
 
-  async function load() {
+  // Runs one action; on failure logs it and shows the localized notice.
+  async function attempt(action, failureKey) {
     try {
+      await action();
+      return true;
+    } catch (e) {
+      console.error(e);
+      toast(errorMessage(e, t(failureKey)), true);
+      return false;
+    }
+  }
+
+  function load() {
+    return attempt(async () => {
       const { warnings } = await modeler.importXML(await store.load());
       if (warnings && warnings.length) console.warn('Import warnings:', warnings);
       modeler.get('canvas').zoom('fit-viewport', 'auto');
       setDirty(false);
-    } catch (e) {
-      console.error(e);
-      toast(errorMessage(e, notices.loadFailedNotice), true);
-    }
+    }, 'loadFailedNotice');
   }
 
   async function save() {
-    try {
-      await store.save(await currentXml());
-      setDirty(false);
-      handlers.saved.forEach(handler => handler());
-      toast(notices.savedNotice);
-    } catch (e) {
-      console.error(e);
-      toast(errorMessage(e, notices.saveFailedNotice), true);
-    }
+    const saved = await attempt(async () => store.save(await currentXml()), 'saveFailedNotice');
+    if (!saved) return;
+
+    setDirty(false);
+    // A failing listener must not turn a successful save into a failed one.
+    handlers.saved.forEach(handler => {
+      try {
+        handler();
+      } catch (e) {
+        console.error(e);
+      }
+    });
+    toast(t('savedNotice'));
   }
 
   document.getElementById('btn-save').addEventListener('click', save);
@@ -77,7 +95,10 @@ export function createEditor({ container, store, notices }) {
     }
   });
 
-  modeler.on('commandStack.changed', () => setDirty(true));
+  modeler.on('commandStack.changed', () => {
+    edits += 1;
+    setDirty(true);
+  });
   window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
 
   load();
@@ -86,6 +107,7 @@ export function createEditor({ container, store, notices }) {
     modeler,
     save,
     isDirty: () => dirty,
+    revision: () => edits,
     currentXml,
     markClean: () => setDirty(false),
     on(event, handler) {

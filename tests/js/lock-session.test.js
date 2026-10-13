@@ -7,8 +7,15 @@ function fakeEditor(xml = '<a/>') {
   const editor = {
     dirty: false,
     xml,
+    edits: 0,
     isDirty: () => editor.dirty,
+    revision: () => editor.edits,
     currentXml: async () => editor.xml,
+    edit(next) {
+      editor.xml = next;
+      editor.edits += 1;
+      editor.dirty = true;
+    },
     on: (event, handler) => { (handlers[event] ||= []).push(handler); },
     emit: (event, ...args) => (handlers[event] || []).forEach(h => h(...args)),
   };
@@ -39,7 +46,7 @@ describe('createHeartbeat', () => {
 
     await heartbeat.beat();
     await heartbeat.beat();
-    editor.xml = '<b/>';
+    editor.edit('<b/>');
     await heartbeat.beat();
 
     expect(send.mock.calls.map(([payload]) => payload)).toEqual([{ draft: '<a/>' }, undefined, { draft: '<b/>' }]);

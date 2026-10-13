@@ -9,6 +9,12 @@ import { startLockSession } from './lock-session.js';
 const body = document.getElementById('editor');
 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
+// Localized UI strings, rendered on the page's data-* attributes.
+const t = key => body.dataset[key];
+
+// One JSON client for the page: the store and the Lock session both use it.
+const request = createJsonClient({ csrfToken });
+
 const store = createHttpDiagramStore({
   urls: {
     contentUrl: body.dataset.contentUrl,
@@ -20,10 +26,10 @@ const store = createHttpDiagramStore({
     versionPromoteUrlTemplate: body.dataset.versionPromoteUrlTemplate,
     versionDeleteUrlTemplate: body.dataset.versionDeleteUrlTemplate,
   },
-  csrfToken,
+  request,
 });
 
-const editor = createEditor({ container: '#canvas', store, notices: body.dataset });
+const editor = createEditor({ container: '#canvas', store, t });
 
 // The other Editor scripts (versions.js, collaborators.js) listen for saves
 // on the document.
@@ -35,14 +41,14 @@ window.BpmnEditor = { modeler: editor.modeler, store };
 
 startLockSession({
   editor,
-  request: createJsonClient({ csrfToken }),
+  request,
   urls: {
     heartbeat: body.dataset.heartbeatUrl,
     unlock: body.dataset.unlockUrl,
     index: body.dataset.indexUrl,
   },
   isHolder: body.dataset.isLockHolder === '1',
-  notices: body.dataset,
+  t,
   banner: document.getElementById('lock-request-banner'),
   releaseButton: document.getElementById('btn-release-lock'),
 });
