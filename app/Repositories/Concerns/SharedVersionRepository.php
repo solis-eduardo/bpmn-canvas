@@ -13,15 +13,63 @@ use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
 /**
- * Behaviour every VersionRepository adapter shares: the Version state kept in
+ * Behaviour every VersionRepository adapter shares: the save orchestration
+ * (initial Version, write, record, bookkeeping), the Version state kept in
  * `diagram_version_names` (names, provisional and hidden flags), the numbering
- * and naming of the history, restore, and the bookkeeping that follows a
- * committed save. An adapter only has to store and read Versions itself.
- *
- * Expects the using class to provide get() and save().
+ * and naming of the history, and restore. An adapter only supplies the storage
+ * steps: openHistory(), recordVersion(), exists(), get(), getMany() and list().
  */
 trait SharedVersionRepository
 {
+    private const MESSAGE_DEFAULT = 'Saved version';
+
+    private const MESSAGE_INITIAL = 'Initial version';
+
+    private const MESSAGE_RESTORE = 'Restored a previous version';
+
+    /**
+     * Makes the Diagram's history ready to be written. Returns true when the
+     * history already existed before this call.
+     */
+    abstract protected function openHistory(Diagram $diagram): bool;
+
+    /**
+     * Records the Diagram's content currently on disk as a new Version, unless
+     * it repeats the last one and $allowEmpty is false. Returns the new
+     * Version's identifier, or null when nothing was recorded.
+     */
+    abstract protected function recordVersion(Diagram $diagram, User $author, string $message, bool $allowEmpty): ?string;
+
+    public function initialize(Diagram $diagram, User $author): void
+    {
+        $this->save($diagram, $author);
+    }
+
+    /**
+     * The content already on disk becomes the initial Version BEFORE it is
+     * overwritten, so the first save never loses what was there.
+     */
+    public function save(Diagram $diagram, User $author, ?string $content = null, ?string $message = null, bool $allowEmpty = false): ?string
+    {
+        $disk = Storage::disk('diagrams');
+
+        $existed = $this->openHistory($diagram);
+
+        if (! $existed && $disk->exists($diagram->disk_path)) {
+            $this->recordVersion($diagram, $author, self::MESSAGE_INITIAL, allowEmpty: false);
+        }
+
+        if ($content !== null) {
+            $disk->put($diagram->disk_path, $content);
+        }
+
+        $versionId = $this->recordVersion($diagram, $author, $message ?? self::MESSAGE_DEFAULT, $allowEmpty);
+
+        $this->afterCommit($diagram, $content);
+
+        return $versionId;
+    }
+
     /**
      * Gives a Version a custom name to mark a milestone (see the interface).
      * No storage tag is used for it (ADR-0004): a dedicated table keeps the
@@ -31,7 +79,7 @@ trait SharedVersionRepository
     {
         // Confirms the Version actually exists in this Diagram's history
         // before naming it, otherwise a bogus id would leave an orphaned row.
-        $this->get($diagram, $version);
+        $this->assertExists($diagram, $version);
 
         $this->setState($diagram, $version, ['name' => $name]);
     }
@@ -46,6 +94,10 @@ trait SharedVersionRepository
         return $this->clearProvisional($diagram, $version, ['is_provisional' => false]);
     }
 
+    /**
+     * Flags a provisional Version as hidden. It also stops being provisional,
+     * so the history keeps it as a regular, hidden Version.
+     */
     public function hide(Diagram $diagram, string $version): bool
     {
         return $this->clearProvisional($diagram, $version, ['is_provisional' => false, 'is_hidden' => true]);
@@ -63,21 +115,17 @@ trait SharedVersionRepository
      * author] rows) into the history shape: numbering derived from position,
      * and names/flags from the state table.
      *
-     * @param  iterable<int, array{0: string, 1: CarbonInterface, 2: string}>  $newestFirst
+     * @param  array<int, array{0: string, 1: CarbonInterface, 2: string}>  $newestFirst
      * @return array<int, array{id: string, saved_at: CarbonInterface, author: string, number: int, name: string, renamed: bool, provisional: bool, hidden: bool}>
      */
-    protected function describeHistory(Diagram $diagram, iterable $newestFirst): array
+    protected function describeHistory(Diagram $diagram, array $newestFirst): array
     {
-        $entries = [];
-        foreach ($newestFirst as $entry) {
-            $entries[] = $entry;
-        }
+        $total = count($newestFirst);
 
-        if ($entries === []) {
+        if ($total === 0) {
             return [];
         }
 
-        $total = count($entries);
         $states = DiagramVersionName::where('diagram_id', $diagram->id)->get()->keyBy('version_id');
 
         return array_map(function (array $entry, int $index) use ($total, $states): array {
@@ -99,7 +147,7 @@ trait SharedVersionRepository
                 'provisional' => $provisional,
                 'hidden' => (bool) $state?->is_hidden,
             ];
-        }, $entries, array_keys($entries));
+        }, $newestFirst, array_keys($newestFirst));
     }
 
     /**
@@ -126,10 +174,33 @@ trait SharedVersionRepository
         }
     }
 
+    /**
+     * The shape of a valid Version identifier. Adapters narrow it when they
+     * accept fewer forms (the database store only takes full 40-character ids).
+     */
+    protected function identifierPattern(): string
+    {
+        return '/^[0-9a-f]{4,40}$/i';
+    }
+
+    protected function isValidIdentifier(string $version): bool
+    {
+        return (bool) preg_match($this->identifierPattern(), $version);
+    }
+
     protected function validateIdentifier(string $version): void
     {
-        if (! preg_match('/^[0-9a-f]{4,40}$/i', $version)) {
+        if (! $this->isValidIdentifier($version)) {
             throw new RuntimeException('Invalid version identifier.');
+        }
+    }
+
+    protected function assertExists(Diagram $diagram, string $version): void
+    {
+        $this->validateIdentifier($version);
+
+        if (! $this->exists($diagram, $version)) {
+            throw new RuntimeException('Version not found.');
         }
     }
 
@@ -138,7 +209,7 @@ trait SharedVersionRepository
      */
     private function clearProvisional(Diagram $diagram, string $version, array $state): bool
     {
-        $this->get($diagram, $version);
+        $this->assertExists($diagram, $version);
 
         return DiagramVersionName::where('diagram_id', $diagram->id)
             ->where('version_id', $version)

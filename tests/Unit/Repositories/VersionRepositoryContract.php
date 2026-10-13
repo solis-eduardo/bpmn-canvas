@@ -313,4 +313,29 @@ abstract class VersionRepositoryContract extends TestCase
 
         $repository->get($second, $firstId);
     }
+
+    /**
+     * A fork starts its own history from the content it was copied with
+     * (ForkService calls initialize), and later Versions of either Diagram
+     * stay separate.
+     */
+    public function test_a_fork_starts_its_own_history_from_the_source_content(): void
+    {
+        $source = $this->bareDiagram('<bpmn>source</bpmn>');
+        $repository = $this->adapter();
+        $repository->initialize($source, $this->author($source));
+        $repository->save($source, $this->author($source), '<bpmn>source, edited</bpmn>');
+
+        $fork = $this->bareDiagram('<bpmn>source, edited</bpmn>');
+        $repository->initialize($fork, $this->author($fork));
+
+        $forkHistory = $repository->list($fork);
+        $this->assertCount(1, $forkHistory);
+        $this->assertSame('<bpmn>source, edited</bpmn>', $repository->get($fork, $forkHistory[0]['id']));
+
+        $repository->save($source, $this->author($source), '<bpmn>source, edited again</bpmn>');
+
+        $this->assertCount(1, $repository->list($fork));
+        $this->assertCount(3, $repository->list($source));
+    }
 }

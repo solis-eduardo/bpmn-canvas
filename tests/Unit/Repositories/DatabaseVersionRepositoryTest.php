@@ -26,6 +26,7 @@ class DatabaseVersionRepositoryTest extends VersionRepositoryContract
             $source = file_get_contents((new ReflectionClass($class))->getFileName());
 
             $this->assertStringNotContainsString('Symfony\\Component\\Process', $source, $class);
+            $this->assertStringNotContainsString('ProcessRunner', $source, $class);
             $this->assertDoesNotMatchRegularExpression('/\b(proc_open|exec|shell_exec|passthru|system)\(/', $source, $class);
         }
     }

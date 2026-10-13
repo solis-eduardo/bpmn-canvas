@@ -26,42 +26,18 @@ class DatabaseVersionRepository implements VersionRepository
 
     private const TABLE = 'diagram_versions';
 
-    private const MESSAGE_DEFAULT = 'Saved version';
-
-    private const MESSAGE_INITIAL = 'Initial version';
-
-    private const MESSAGE_RESTORE = 'Restored a previous version';
-
-    public function initialize(Diagram $diagram, User $author): void
+    /**
+     * Only full identifiers are accepted here, as ADR-0018 records: the table
+     * is keyed by the complete id, with no abbreviation to resolve.
+     */
+    protected function identifierPattern(): string
     {
-        $this->save($diagram, $author);
-    }
-
-    public function save(Diagram $diagram, User $author, ?string $content = null, ?string $message = null, bool $allowEmpty = false): ?string
-    {
-        $disk = Storage::disk('diagrams');
-
-        // The content already on disk becomes the initial Version BEFORE it is
-        // overwritten, exactly like the git adapter.
-        if (! $this->hasHistory($diagram) && $disk->exists($diagram->disk_path)) {
-            $this->record($diagram, $author, self::MESSAGE_INITIAL, $disk->get($diagram->disk_path), allowEmpty: false);
-        }
-
-        if ($content !== null) {
-            $disk->put($diagram->disk_path, $content);
-        }
-
-        $versionId = $this->record($diagram, $author, $message ?? self::MESSAGE_DEFAULT, $disk->get($diagram->disk_path), $allowEmpty);
-
-        $this->afterCommit($diagram, $content);
-
-        return $versionId;
+        return '/^[0-9a-f]{40}$/i';
     }
 
     public function list(Diagram $diagram): array
     {
-        $rows = DB::table(self::TABLE)
-            ->where('diagram_id', $diagram->id)
+        $rows = $this->query($diagram)
             ->orderByDesc('id')
             ->get(['version_id', 'saved_at', 'author_name']);
 
@@ -74,7 +50,7 @@ class DatabaseVersionRepository implements VersionRepository
 
     public function exists(Diagram $diagram, string $version): bool
     {
-        if (! preg_match('/^[0-9a-f]{4,40}$/i', $version)) {
+        if (! $this->isValidIdentifier($version)) {
             return false;
         }
 
@@ -94,24 +70,42 @@ class DatabaseVersionRepository implements VersionRepository
         return $content;
     }
 
+    /**
+     * One query for all the ids, keyed back in the order they were asked for.
+     */
     public function getMany(Diagram $diagram, array $versionIds): array
     {
-        $content = [];
-
         foreach ($versionIds as $version) {
-            $content[$version] = $this->get($diagram, $version);
+            $this->validateIdentifier($version);
         }
 
-        return $content;
+        $contents = $this->query($diagram)
+            ->whereIn('version_id', $versionIds)
+            ->pluck('content', 'version_id');
+
+        $result = [];
+        foreach ($versionIds as $version) {
+            $result[$version] = $contents[$version] ?? throw new RuntimeException('Version not found.');
+        }
+
+        return $result;
+    }
+
+    protected function openHistory(Diagram $diagram): bool
+    {
+        return $this->query($diagram)->exists();
     }
 
     /**
-     * Appends a Version holding $content, unless it repeats the last one (and
-     * $allowEmpty is false). The id is random rather than derived from the
-     * content, so restoring an old content still yields a new Version.
+     * Appends a Version holding the content currently on disk, unless it
+     * repeats the last one (and $allowEmpty is false). The id is random rather
+     * than derived from the content, so restoring an old content still yields a
+     * new Version.
      */
-    private function record(Diagram $diagram, User $author, string $message, string $content, bool $allowEmpty): ?string
+    protected function recordVersion(Diagram $diagram, User $author, string $message, bool $allowEmpty): ?string
     {
+        $content = Storage::disk('diagrams')->get($diagram->disk_path);
+
         $latest = $this->query($diagram)->orderByDesc('id')->first(['content']);
         $hasChanges = $latest === null || $latest->content !== $content;
 
@@ -131,11 +125,6 @@ class DatabaseVersionRepository implements VersionRepository
         ]);
 
         return $versionId;
-    }
-
-    private function hasHistory(Diagram $diagram): bool
-    {
-        return $this->query($diagram)->exists();
     }
 
     private function query(Diagram $diagram): Builder

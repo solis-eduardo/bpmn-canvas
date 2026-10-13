@@ -20,37 +20,18 @@ class GitVersionRepository implements VersionRepository
 {
     use SharedVersionRepository;
 
-    private const MESSAGE_DEFAULT = 'Saved version';
-
-    private const MESSAGE_INITIAL = 'Initial version';
-
-    private const MESSAGE_RESTORE = 'Restored a previous version';
-
-    public function initialize(Diagram $diagram, User $author): void
+    protected function openHistory(Diagram $diagram): bool
     {
-        $this->save($diagram, $author);
+        return $this->ensureGitInit($this->directory($diagram));
     }
 
-    public function save(Diagram $diagram, User $author, ?string $content = null, ?string $message = null, bool $allowEmpty = false): ?string
+    /**
+     * Git commits the file as it is on disk, which is what the shared save()
+     * has just written.
+     */
+    protected function recordVersion(Diagram $diagram, User $author, string $message, bool $allowEmpty): ?string
     {
-        $directory = $this->directory($diagram);
-        $file = $this->file($diagram);
-
-        $alreadyExisted = $this->ensureGitInit($directory);
-
-        if (! $alreadyExisted && Storage::disk('diagrams')->exists($diagram->disk_path)) {
-            $this->commit($diagram, $author, self::MESSAGE_INITIAL, $directory, $file);
-        }
-
-        if ($content !== null) {
-            Storage::disk('diagrams')->put($diagram->disk_path, $content);
-        }
-
-        $versionId = $this->commit($diagram, $author, $message ?? self::MESSAGE_DEFAULT, $directory, $file, $allowEmpty);
-
-        $this->afterCommit($diagram, $content);
-
-        return $versionId;
+        return $this->commit($diagram, $author, $message, $this->directory($diagram), $this->file($diagram), $allowEmpty);
     }
 
     private function commit(Diagram $diagram, User $author, string $message, string $directory, string $file, bool $allowEmpty = false): ?string
@@ -127,7 +108,7 @@ class GitVersionRepository implements VersionRepository
 
     public function exists(Diagram $diagram, string $version): bool
     {
-        if (! preg_match('/^[0-9a-f]{4,40}$/i', $version)) {
+        if (! $this->isValidIdentifier($version)) {
             return false;
         }
 

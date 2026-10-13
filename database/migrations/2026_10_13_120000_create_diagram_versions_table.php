@@ -21,6 +21,9 @@ return new class extends Migration
             $table->string('author_name');
             $table->string('message');
             $table->timestamp('saved_at');
+
+            // Every query filters by diagram and lists newest first.
+            $table->index(['diagram_id', 'id']);
         });
     }
 
