@@ -25,6 +25,7 @@ async function main() {
   // 2. PHP 8.4 runtime (wasm download + compile + init).
   const php = new PHP(await loadWebRuntime('8.4'));
   mark('php runtime ready');
+  window.__spike.php = php; // exposed for debugging (read files such as storage/logs)
 
   // 3. App bundle: one zip (vendor, views, public assets, seed DB), unzipped by PHP's own ZipArchive.
   const zip = await fetch('./app.zip').then((r) => r.arrayBuffer());
@@ -81,18 +82,22 @@ async function main() {
     },
   });
 
+  let queue = Promise.resolve();
+  const enqueue = (fn) => (queue = queue.then(fn, fn));
   navigator.serviceWorker.addEventListener('message', async (e) => {
     if (e.data?.type !== 'php-request') return;
     const port = e.ports[0];
     try {
       const { method, url, headers, body } = e.data;
       const started = performance.now();
-      const res = await handler.request({
+      // One PHP instance: run requests one at a time. Parallel requests (the page fires several
+      // at once) re-entered the runtime and came back as HTTP 500 with "Internal Server Error".
+      const res = await enqueue(() => handler.request({
         method,
         url: location.origin + url,
         headers: { ...headers, 'x-app-base': APP_PREFIX.replace(/\/$/, '') },
         body: body && body.byteLength ? new Uint8Array(body) : undefined,
-      });
+      }));
       const out = {};
       for (const [k, v] of Object.entries(res.headers)) if (!['content-length', 'transfer-encoding', 'connection'].includes(k)) out[k] = v;
       const bytes = res.bytes.slice().buffer;
