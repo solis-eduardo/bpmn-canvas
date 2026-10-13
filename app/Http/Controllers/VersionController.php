@@ -6,7 +6,6 @@ use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Diagram;
 use App\Repositories\DiagramRepository;
 use App\Repositories\VersionRepository;
-use App\Services\DiagramVersionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use RuntimeException;
@@ -73,33 +72,6 @@ class VersionController extends Controller
             'id' => $version,
             'content' => $content,
         ]);
-    }
-
-    /**
-     * BPMN content of any two Versions, resolved in one request (ticket 36 —
-     * extends the "old vs current" comparison from ticket 35 to any pair of
-     * Versions). Reuses VersionRepository::list()/get() exactly like
-     * versionContent() above; the only new behavior is figuring out which of
-     * the two is chronologically older by Version number, so the canvas
-     * always diffs "older -> newer" no matter which order the User picked
-     * them in.
-     */
-    public function compareVersions(Request $request, string $slug, DiagramVersionService $service): JsonResponse
-    {
-        $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
-
-        $this->authorize('update', $diagram);
-
-        $data = $request->validate([
-            'from' => ['required', 'string'],
-            'to' => ['required', 'string'],
-        ]);
-
-        try {
-            return response()->json($service->compare($diagram, $data['from'], $data['to']));
-        } catch (RuntimeException $e) {
-            abort(404);
-        }
     }
 
     public function restoreVersion(Request $request, string $slug, string $version, VersionRepository $versions): JsonResponse
