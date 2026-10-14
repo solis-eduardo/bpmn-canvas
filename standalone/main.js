@@ -73,15 +73,19 @@ function route() {
   return match ? { diagramId: decodeURIComponent(match[1]) } : {};
 }
 
-function button(text, className = '') {
-  return Object.assign(document.createElement('button'), { type: 'button', textContent: text, className });
+// The same classes as the server build's <x-button size="sm">.
+const BUTTON_CLASSES = {
+  secondary: 'inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500',
+  destructive: 'inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium bg-red-600 text-white shadow-sm hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600',
+};
+
+function button(text, variant = 'secondary') {
+  return Object.assign(document.createElement('button'), { type: 'button', textContent: text, className: BUTTON_CLASSES[variant] });
 }
 
-async function startLibrary(db) {
-  const list = $('library-list');
+// The language picker lives in the page header, so it works on both screens.
+function setupLanguagePicker() {
   const select = $('language');
-
-  $('library').hidden = false;
 
   Object.entries(LOCALES).forEach(([code, { name }]) => select.add(new Option(name, code, false, code === locale)));
   select.addEventListener('change', () => {
@@ -92,6 +96,11 @@ async function startLibrary(db) {
     }
     location.reload();
   });
+}
+
+async function startLibrary(db) {
+  const list = $('library-list');
+  $('library').hidden = false;
 
   function goToDiagram(id) {
     location.hash = '#/diagram/' + encodeURIComponent(id);
@@ -113,12 +122,17 @@ async function startLibrary(db) {
 
     diagrams.forEach(diagram => {
       const row = list.insertRow();
-      row.insertCell().textContent = diagram.title;
-      row.insertCell().textContent = new Date(diagram.updatedAt).toLocaleString(htmlLocale, { dateStyle: 'medium', timeStyle: 'short' });
+      const title = row.insertCell();
+      title.className = 'px-4 py-3 font-medium text-gray-900';
+      title.textContent = diagram.title;
+      const modified = row.insertCell();
+      modified.className = 'px-4 py-3 text-gray-500';
+      modified.textContent = new Date(diagram.updatedAt).toLocaleString(htmlLocale, { dateStyle: 'medium', timeStyle: 'short' });
 
       const actions = row.insertCell();
+      actions.className = 'w-px whitespace-nowrap px-4 py-3';
       const openButton = button(t('messages.open_diagram'));
-      const deleteButton = button(t('messages.delete'), 'danger');
+      const deleteButton = button(t('messages.delete'), 'destructive');
       const exportButton = button(t('standalone.export'));
       openButton.addEventListener('click', () => goToDiagram(diagram.id));
       exportButton.addEventListener('click', async () => {
@@ -255,6 +269,7 @@ async function startEditor(db, diagramId) {
 window.addEventListener('hashchange', () => location.reload());
 
 const { diagramId } = route();
+setupLanguagePicker();
 let db;
 
 try {

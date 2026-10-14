@@ -1,8 +1,11 @@
 /*
  * The standalone build's styles: Tailwind and the Editor's own stylesheet
- * (shared with the server build), plus the little the library list needs.
+ * (shared with the server build). Tailwind scans the same Blade views the page
+ * is rendered from.
  */
 @import 'tailwindcss';
+@source '../resources/views';
+@source './main.js';
 @import '../resources/css/editor.css';
 
 /*
@@ -28,22 +31,3 @@ body { font-family: var(--font-sans, ui-sans-serif, system-ui, sans-serif); back
   display: inline-flex; align-items: center; gap: 4px; padding: 6px 12px; border: 1px solid var(--color-gray-300);
   border-radius: var(--radius-md); background: #fff; color: inherit; text-decoration: none; font-weight: 500;
 }
-
-.library { font-size: var(--text-sm); }
-.library-body { max-width: 72rem; margin: 0 auto; padding: 2rem 1rem; }
-.library-header { background: #fff; border-bottom: 1px solid var(--color-gray-200); }
-.library-header-inner { display: flex; align-items: center; gap: .75rem; max-width: 72rem; margin: 0 auto; padding: .75rem 1rem; }
-.library-header h1 { font-size: 1.125rem; font-weight: 600; margin: 0; }
-.library-header .spacer { flex: 1; }
-.language { display: flex; align-items: center; gap: .5rem; }
-.library button, .library select {
-  font: inherit; padding: 6px 12px; border: 1px solid var(--color-gray-300); border-radius: var(--radius-md); background: #fff; cursor: pointer;
-}
-.library button.primary { background: var(--color-blue-600); border-color: var(--color-blue-600); color: #fff; }
-.library button.danger { color: var(--color-red-600); }
-.library-actions { display: flex; flex-wrap: wrap; gap: .5rem; margin-bottom: .75rem; }
-.library-notice { color: var(--color-gray-500); margin: 0 0 1rem; }
-.library-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--color-gray-200); }
-.library-table th, .library-table td { text-align: left; padding: .5rem .75rem; border-bottom: 1px solid var(--color-gray-200); }
-.library-table td:last-child { text-align: right; white-space: nowrap; }
-.library-empty { color: var(--color-gray-500); padding: 1rem 0; }

@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ isset($title) ? $title . ' | ' . config('app.name') : config('app.name') }}</title>
-    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @unless (\App\Support\Ui::standalone())
+        @vite(['resources/css/app.css', 'resources/js/app.js'])
+    @endunless
     {{ $head ?? '' }}
 </head>
 <body class="h-full font-sans text-gray-900 antialiased" data-ts-no-results="{{ __('messages.select_no_results') }}" data-ts-create="{{ __('messages.select_create_option') }}"@if (auth()->check() && auth()->user()->timezone === null) data-detect-timezone="{{ route('account.timezone.detect') }}"@endif>
@@ -15,10 +17,11 @@
         @php($fluidHeader = ($fluid ?? false) && ! ($standardHeader ?? false))
         <header class="shrink-0 border-b border-gray-200 bg-white">
             <div class="{{ $fluidHeader ? 'flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:flex-nowrap sm:px-6' : 'mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6' }}">
-                <a href="{{ url('/home') }}" class="text-lg font-semibold text-gray-900">
+                <a href="{{ \App\Support\Ui::standalone() ? '#/' : url('/home') }}" class="text-lg font-semibold text-gray-900">
                     {{ config('app.name') }}
                 </a>
 
+                @unless (\App\Support\Ui::standalone())
                 <nav class="{{ $fluidHeader ? 'flex w-full min-w-0 flex-wrap items-center gap-1 sm:w-auto sm:flex-1' : 'flex flex-1 items-center gap-1' }}">
                     <a
                         href="{{ url('/home') }}"
@@ -51,11 +54,15 @@
                         </a>
                     @endif
                 </nav>
+                @else
+                    <span class="flex-1"></span>
+                @endunless
 
                 {{-- Page-specific header controls (e.g. the Editor's back-to-list link
                      and the reserved Version history / Collaborators entry points). --}}
                 {{ $headerActions ?? '' }}
 
+                @unless (\App\Support\Ui::standalone())
                 <div class="{{ $fluidHeader ? 'flex flex-wrap items-center gap-3' : 'flex items-center gap-3' }}">
                     @auth
                         @include('partials.notification-bell')
@@ -82,6 +89,7 @@
                         </form>
                     @endauth
                 </div>
+                @endunless
             </div>
         </header>
 
