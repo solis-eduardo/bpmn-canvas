@@ -10,4 +10,4 @@ The endpoints that target a User by email (adding a Collaborator or Member, tran
 - A picker can no longer be searched by email.
 - Two Users with the same name are indistinguishable in a picker.
 
-**Alternative not implemented:** replace the pickers with a search endpoint returning matches as name plus masked email (the issue's other option). It would restore email search and tell same-name Users apart. It was left out of the change that fixed the leak; this ADR does not record a further reason. It remains the option to revisit if the consequences above become a problem.
+**Alternative not implemented:** replace the pickers with a search endpoint returning matches as name plus masked email (the issue's other option). It would restore email search and tell same-name Users apart. It was left out of the change that fixed the leak; this ADR does not record a further reason. It remains an open option.
