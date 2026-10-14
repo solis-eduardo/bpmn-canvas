@@ -121,6 +121,17 @@ class AdminUserManagementTest extends TestCase
         $this->assertFalse($admin->fresh()->is_admin);
     }
 
+    public function test_a_keycloak_claim_administrator_counts_as_remaining_administrator(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        User::factory()->create(['is_admin' => true, 'is_admin_via_keycloak_claim' => true]);
+
+        $this->actingAs($admin)->put("/admin/users/{$admin->id}", ['is_admin' => false])
+            ->assertSessionHasNoErrors();
+
+        $this->assertFalse($admin->fresh()->is_admin);
+    }
+
     public function test_admin_can_update_a_local_user_and_replace_the_password(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
