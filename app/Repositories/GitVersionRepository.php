@@ -106,21 +106,17 @@ class GitVersionRepository implements VersionRepository
         return $this->describeHistory($diagram, $entries);
     }
 
-    public function exists(Diagram $diagram, string $version): bool
+    protected function findVersion(Diagram $diagram, string $version): ?string
     {
-        if (! $this->isValidIdentifier($version)) {
-            return false;
-        }
-
-        $process = $this->git(['git', 'cat-file', '-e', $version.'^{commit}'], $this->directory($diagram));
+        $process = $this->git(['git', 'rev-parse', '--verify', '--quiet', $version.'^{commit}'], $this->directory($diagram));
         $process->run();
 
-        return $process->isSuccessful();
+        return $process->isSuccessful() ? trim($process->getOutput()) : null;
     }
 
     public function get(Diagram $diagram, string $version): string
     {
-        $this->validateIdentifier($version);
+        $version = $this->requireId($diagram, $version);
 
         $process = $this->git(['git', 'show', $version.':'.$this->file($diagram)], $this->directory($diagram));
         $process->run();

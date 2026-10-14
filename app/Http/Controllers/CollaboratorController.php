@@ -17,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class CollaboratorController extends Controller
 {
@@ -83,7 +84,9 @@ class CollaboratorController extends Controller
 
         $this->authorizeRole($diagram, $data['role'] ?? null);
 
-        $collaborator = $target
+        $skipped = $this->refuseDiagramOwnerAsTarget($diagram, $target, $this->targetedByEmail($data));
+
+        $collaborator = $target && ! $skipped
             ? $this->service->invite($diagram, $target, $canGrant, $data['role'] ?? null)
             : null;
 
@@ -99,6 +102,27 @@ class CollaboratorController extends Controller
             'user_id' => $collaborator->user_id,
             'status' => $collaborator->status,
         ], 201);
+    }
+
+    /**
+     * The Diagram Owner already has full access, so a Collaborator row for
+     * them would only list them twice. A picked `user_id` is refused with a
+     * 422; an $emailed target is skipped silently (the caller still sees the
+     * generic success) so the response can't probe who owns the Diagram.
+     *
+     * @return bool true if $target is the Diagram Owner and was silently skipped
+     */
+    private function refuseDiagramOwnerAsTarget(Diagram $diagram, ?User $target, bool $emailed): bool
+    {
+        if (! $target || ! $diagram->isOwnedBy($target)) {
+            return false;
+        }
+
+        if ($emailed) {
+            return true;
+        }
+
+        throw ValidationException::withMessages(['user_id' => __('messages.cannot_invite_diagram_owner')]);
     }
 
     private function requestRedirect(Request $request): RedirectResponse
@@ -119,6 +143,7 @@ class CollaboratorController extends Controller
 
         $this->authorize('collaborator.grant', $diagram);
         $this->authorizeRole($diagram, $data['role'] ?? null);
+        $this->refuseDiagramOwnerAsTarget($diagram, $user, false);
 
         $collaborator = $this->service->approve($diagram, $user, $data['role'] ?? null);
 

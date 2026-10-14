@@ -88,6 +88,13 @@ interface VersionRepository
     public function hide(Diagram $diagram, string $version): bool;
 
     /**
+     * The full identifier of the Version $version designates (it may be an
+     * abbreviation the store accepts), or null when it isn't a Version of this
+     * Diagram. Callers that persist or compare an id use this form.
+     */
+    public function resolve(Diagram $diagram, string $version): ?string;
+
+    /**
      * True if $version is a Version of this Diagram.
      */
     public function exists(Diagram $diagram, string $version): bool;
