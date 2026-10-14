@@ -73,6 +73,10 @@ function route() {
   return match ? { diagramId: decodeURIComponent(match[1]) } : {};
 }
 
+function button(text, className = '') {
+  return Object.assign(document.createElement('button'), { type: 'button', textContent: text, className });
+}
+
 async function startLibrary(db) {
   const list = $('library-list');
   const select = $('language');
@@ -89,7 +93,7 @@ async function startLibrary(db) {
     location.reload();
   });
 
-  function open(id) {
+  function goToDiagram(id) {
     location.hash = '#/diagram/' + encodeURIComponent(id);
   }
 
@@ -113,10 +117,10 @@ async function startLibrary(db) {
       row.insertCell().textContent = new Date(diagram.updatedAt).toLocaleString(htmlLocale, { dateStyle: 'medium', timeStyle: 'short' });
 
       const actions = row.insertCell();
-      const openButton = Object.assign(document.createElement('button'), { type: 'button', textContent: t('messages.open_diagram') });
-      const deleteButton = Object.assign(document.createElement('button'), { type: 'button', textContent: t('messages.delete'), className: 'danger' });
-      const exportButton = Object.assign(document.createElement('button'), { type: 'button', textContent: t('standalone.export') });
-      openButton.addEventListener('click', () => open(diagram.id));
+      const openButton = button(t('messages.open_diagram'));
+      const deleteButton = button(t('messages.delete'), 'danger');
+      const exportButton = button(t('standalone.export'));
+      openButton.addEventListener('click', () => goToDiagram(diagram.id));
       exportButton.addEventListener('click', async () => {
         try {
           const { fileName, xml } = await exportDiagram(db, diagram.id);
@@ -133,7 +137,7 @@ async function startLibrary(db) {
           await deleteDiagram(db, diagram.id);
         } catch (e) {
           console.error(e);
-          toast(errorMessage(e, t('standalone.diagrams_load_failed')), true);
+          toast(errorMessage(e, t('standalone.delete_failed')), true);
         }
         await render();
       });
@@ -145,7 +149,7 @@ async function startLibrary(db) {
     const title = prompt(t('standalone.new_diagram_title_prompt'), t('standalone.untitled'));
     if (title === null) return;
 
-    open(await createDiagram(db, { title: title.trim() || t('standalone.untitled') }));
+    goToDiagram(await createDiagram(db, { title: title.trim() || t('standalone.untitled') }));
   });
 
   $('btn-import').addEventListener('click', () => $('import-file').click());
@@ -155,7 +159,7 @@ async function startLibrary(db) {
     if (!file) return;
 
     try {
-      open(await importBpmn(db, { title: titleFromFileName(file.name) || t('standalone.untitled'), xml: await file.text() }));
+      goToDiagram(await importBpmn(db, { title: titleFromFileName(file.name) || t('standalone.untitled'), xml: await file.text() }));
     } catch (e) {
       console.error(e);
       toast(t('standalone.import_failed'), true);

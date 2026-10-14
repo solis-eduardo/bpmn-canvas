@@ -16,6 +16,7 @@ return [
     'save_to_file_failed' => 'No se pudo guardar en el archivo.',
     'delete_diagram_confirm' => '¿Eliminar ":title" y todas sus versiones? Esto no se puede deshacer.',
     'diagrams_load_failed' => 'No se pudieron leer los diagramas guardados en este navegador.',
+    'delete_failed' => 'No se pudo eliminar el diagrama.',
     'modified' => 'Modificado',
     'storage_notice' => 'Tus diagramas viven en este navegador. Borrar los datos del sitio los elimina: usa "Exportar todo" para guardar una copia de seguridad.',
 ];
