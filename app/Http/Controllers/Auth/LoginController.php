@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Support\Demo;
 use App\Support\KeycloakConfig;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,7 +17,7 @@ class LoginController extends Controller
     public function create(): View
     {
         return view('auth.login', [
-            'keycloakConfigured' => KeycloakConfig::isConfigured(),
+            'keycloakConfigured' => ! Demo::enabled() && KeycloakConfig::isConfigured(),
         ]);
     }
 
