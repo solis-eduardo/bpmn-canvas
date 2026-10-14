@@ -8,7 +8,7 @@
 import { toast, errorMessage, chooseRelease } from './common.js';
 
 const HEARTBEAT_INTERVAL_MS = 30000;
-const IDLE_AFTER_MS = 3 * 60 * 1000;
+export const IDLE_AFTER_MS = 2 * 60 * 1000;
 const ACTIVITY_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'];
 
 /**

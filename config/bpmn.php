@@ -9,7 +9,7 @@ return [
     'keycloak_admin_role' => env('KEYCLOAK_ADMIN_ROLE', 'bpmn-admin'),
 
     // Minutes without a Heartbeat after which a Lock expires and is released (ADR-0003).
-    'lock_ttl_minutes' => (int) env('LOCK_TTL_MINUTES', 5),
+    'lock_ttl_minutes' => (int) env('LOCK_TTL_MINUTES', 3),
 
     // Where Version history is kept: "git" (one Git repository per Diagram, the
     // default) or "database" (rows in diagram_versions, no subprocesses; ADR-0018).

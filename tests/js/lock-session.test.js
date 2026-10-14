@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   createHeartbeat,
   createHeartbeatLoop,
+  IDLE_AFTER_MS,
   handleSaveFailure,
   reacquireLock,
 } from '../../public/assets/lock-session.js';
@@ -89,6 +90,23 @@ describe('createHeartbeat', () => {
     await heartbeat.beat();
 
     expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it('goes idle after 2 minutes without activity by default', async () => {
+    const send = vi.fn(async () => ({}));
+    let clock = 0;
+    const heartbeat = createHeartbeat({ editor: { isDirty: () => false, on: () => {} }, send, now: () => clock });
+
+    expect(IDLE_AFTER_MS).toBe(2 * 60 * 1000);
+
+    clock = IDLE_AFTER_MS;
+    expect(await heartbeat.beat()).not.toBeNull();
+
+    clock = IDLE_AFTER_MS + 1;
+    expect(await heartbeat.beat()).toBeNull();
+
+    heartbeat.touch();
+    expect(await heartbeat.beat()).not.toBeNull();
   });
 
   it("returns who is asking for the Lock, from the server's answer", async () => {
