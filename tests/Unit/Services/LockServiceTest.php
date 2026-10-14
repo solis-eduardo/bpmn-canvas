@@ -250,4 +250,52 @@ class LockServiceTest extends TestCase
 
         $this->assertSame($holder->id, $diagram->fresh()->locked_by);
     }
+
+    /**
+     * Both Users loaded the Diagram while the Lock was free; the first to
+     * write takes it, and the second must not overwrite that holder.
+     */
+    public function test_opening_a_diagram_another_user_just_locked_waits_instead_of_overwriting(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $diagram = Diagram::factory()->create();
+        $stale = Diagram::findOrFail($diagram->id);
+
+        $this->service->openOrRequest($diagram, $first);
+        $outcome = $this->service->openOrRequest($stale, $second);
+
+        $this->assertFalse($outcome->acquired);
+        $this->assertSame($first->id, $diagram->fresh()->locked_by);
+        $this->assertSame($second->id, $diagram->fresh()->lock_requested_by);
+    }
+
+    /** Acquiring one Diagram's Lock must not rewrite the User's other Locks. */
+    public function test_acquiring_a_lock_leaves_the_users_other_locks_untouched(): void
+    {
+        $user = User::factory()->create();
+        $held = Diagram::factory()->create();
+        $free = Diagram::factory()->create();
+        $this->service->openOrRequest($held, $user);
+        $lockedAt = $held->fresh()->locked_at;
+
+        $this->travel(5)->minutes();
+        $this->assertTrue($this->service->openOrRequest($free, $user)->acquired);
+
+        $this->assertEquals($lockedAt, $held->fresh()->locked_at);
+        $this->assertSame($user->id, $free->fresh()->locked_by);
+    }
+
+    public function test_entering_a_diagram_another_user_just_locked_is_refused(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $diagram = Diagram::factory()->create();
+        $stale = Diagram::findOrFail($diagram->id);
+
+        $this->service->enter($diagram, $first);
+
+        $this->assertFalse($this->service->enter($stale, $second));
+        $this->assertSame($first->id, $diagram->fresh()->locked_by);
+    }
 }

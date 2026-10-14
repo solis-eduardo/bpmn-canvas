@@ -96,30 +96,47 @@ trait HoldsALock
         $this->forceFill($attributes)->syncOriginalAttributes(array_keys($attributes));
     }
 
-    public function acquireLock(User $user): void
+    /**
+     * Takes the Lock for $user when it is free or already theirs, in one
+     * conditional write, and reports whether it was won. Two concurrent
+     * callers against a free Lock can't both succeed: the predicate is
+     * evaluated by the database, so the loser's UPDATE matches no row. A
+     * false means someone else holds it; the in-memory model is then stale.
+     */
+    public function acquireLock(User $user): bool
     {
-        $this->persistLockState($this->lockHeldBy($user));
+        return $this->takeLockWhere($user, fn (QueryBuilder $query) => $query->where(
+            fn (QueryBuilder $lock) => $lock->whereNull('locked_by')->orWhere('locked_by', $user->id),
+        ));
     }
 
     /**
      * Takes a *free* Lock in one conditional write, reporting whether it was
-     * won. Unlike {@see acquireLock()}, two concurrent callers can't both
-     * succeed: the `locked_by is null` predicate is evaluated by the
-     * database, so the loser's UPDATE matches no row. Used where the Lock is
-     * a precondition rather than the point of the request (saving content).
+     * won. Used where the Lock is a precondition rather than the point of the
+     * request (saving content): the holder does not win here, because they
+     * already hold it.
      */
     public function claimFreeLock(User $user): bool
     {
+        return $this->takeLockWhere($user, fn (QueryBuilder $query) => $query->whereNull('locked_by'));
+    }
+
+    /**
+     * @param  \Closure(QueryBuilder): mixed  $predicate
+     */
+    private function takeLockWhere(User $user, \Closure $predicate): bool
+    {
         $held = $this->lockHeldBy($user);
 
-        $won = $this->lockRow()
-            ->whereNull('locked_by')
-            ->update($held) === 1;
+        $query = $this->lockRow();
+        $predicate($query);
+
+        $won = $query->update($held) === 1;
 
         if ($won) {
             // The row now *is* this, so nothing stays pending for a later
             // save() to rewrite.
-            $this->forceFill($held)->syncOriginal();
+            $this->forceFill($held)->syncOriginalAttributes(array_keys($held));
         }
 
         return $won;
