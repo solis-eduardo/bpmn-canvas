@@ -212,42 +212,13 @@ class DiagramRepository
     }
 
     /**
-     * Retitles a Diagram, deriving its new Slug from the title (see
-     * {@see move()} for what changes on disk and what stays reserved).
+     * Retitles a Diagram, deriving its new Slug from the title. The old Slug
+     * stays reserved as a permanent redirect; the file moves with the Slug
+     * (see {@see renameWithin()}).
      */
     public function rename(Diagram $diagram, string $newTitle): Diagram
     {
-        return $this->move($diagram, $newTitle, $this->uniqueSlug($newTitle, $diagram->id));
-    }
-
-    /**
-     * Renames a Diagram: moves its directory on disk (if the Slug changed),
-     * records the old Slug as a permanent redirect, and updates the row, all
-     * within a transaction. If the transaction fails, the already-moved file
-     * is moved back to its original place.
-     */
-    public function move(Diagram $diagram, string $newTitle, string $newSlug): Diagram
-    {
-        $oldSlug = $diagram->slug;
-        $slugChanged = $newSlug !== $oldSlug;
-
-        if ($slugChanged) {
-            // Nothing has touched the database yet, so a failed move is a
-            // clean failure with nothing to compensate.
-            $this->moveDirectory($oldSlug, $newSlug);
-        }
-
-        try {
-            DB::transaction(fn () => $this->writeRename($diagram, $newTitle, $newSlug));
-        } catch (Throwable $e) {
-            if ($slugChanged) {
-                Storage::disk('diagrams')->move($newSlug, $oldSlug);
-            }
-
-            throw $e;
-        }
-
-        return $diagram;
+        return $this->renameWithin($diagram, $newTitle, fn () => null);
     }
 
     /**
