@@ -156,9 +156,10 @@ trait SharedVersionRepository
 
     /**
      * Keeps Diagram::searchable_text (issue #41) in sync with the content on
-     * disk, and settles the Lock draft. Called by an adapter only once the
-     * Version is safely recorded: reindexing ahead of a commit that then throws
-     * would leave searchable_text describing content that was never saved.
+     * disk, bumps updated_at when a Version was recorded (issue #220), and
+     * settles the Lock draft. Called by an adapter only once the Version is
+     * safely recorded: reindexing ahead of a commit that then throws would
+     * leave searchable_text describing content that was never saved.
      */
     protected function afterCommit(Diagram $diagram, ?string $content, bool $recorded): void
     {

@@ -5,7 +5,6 @@ namespace App\Models\Concerns;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Query\Builder as QueryBuilder;
-use Illuminate\Support\Facades\DB;
 
 /**
  * A Diagram's Lock (CONTEXT.md, "Lock"; ADR-0003, ADR-0009,
@@ -74,14 +73,15 @@ trait HoldsALock
     }
 
     /**
-     * This Diagram's row through the base query builder. Not the Eloquent
-     * builder: that stamps updated_at on every update(), which the Diagram
-     * list reports as "Modified" (issue #220). Opening the Editor, a
-     * Heartbeat or a blocked request is not a change to the Diagram.
+     * This Diagram's row through the base query builder, on the model's own
+     * connection. Not the Eloquent builder: that stamps updated_at on every
+     * update(), which the Diagram list reports as "Modified" (issue #220).
+     * Opening the Editor, a Heartbeat or a blocked request is not a change to
+     * the Diagram.
      */
     private function lockRow(): QueryBuilder
     {
-        return DB::table($this->getTable())->where($this->getKeyName(), $this->getKey());
+        return $this->newQuery()->toBase()->where($this->getKeyName(), $this->getKey());
     }
 
     /**
