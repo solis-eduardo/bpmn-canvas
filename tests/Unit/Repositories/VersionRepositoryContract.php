@@ -7,8 +7,12 @@ use App\Models\DiagramVersionName;
 use App\Models\User;
 use App\Repositories\VersionRepository;
 use Carbon\CarbonInterface;
+use Closure;
+use Illuminate\Contracts\Cache\Lock;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
+use Mockery;
 use RuntimeException;
 use Tests\TestCase;
 
@@ -350,5 +354,28 @@ abstract class VersionRepositoryContract extends TestCase
 
         $this->assertCount(1, $repository->list($fork));
         $this->assertCount(3, $repository->list($source));
+    }
+
+    public function test_a_save_runs_inside_the_lock_of_its_diagram_history(): void
+    {
+        $diagram = $this->bareDiagram('<bpmn>A</bpmn>');
+
+        // Serialization is checked by the lock's contract rather than by a
+        // real contention: the block() callback must run the whole write.
+        $lock = Mockery::mock(Lock::class);
+        $lock->shouldReceive('block')
+            ->once()
+            ->with(30, Mockery::type('Closure'))
+            ->andReturnUsing(fn (int $seconds, Closure $callback) => $callback());
+
+        Cache::shouldReceive('lock')
+            ->once()
+            ->with('diagram-versions:'.$diagram->getKey(), 120)
+            ->andReturn($lock);
+
+        $this->adapter()->save($diagram, $this->author($diagram), '<bpmn>B</bpmn>');
+
+        $this->assertSame('<bpmn>B</bpmn>', Storage::disk('diagrams')->get($diagram->disk_path));
+        $this->assertCount(2, $this->history($diagram));
     }
 }
