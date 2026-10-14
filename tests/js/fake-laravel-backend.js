@@ -44,8 +44,12 @@ export function createFakeLaravelBackend({ initialXml = '<definitions/>' } = {})
   }
 
   // VersionController::versions: flat, newest first, hidden ones omitted.
+  function currentId() {
+    return versions.length ? versions[versions.length - 1].id : null;
+  }
+
   function history() {
-    const currentId = versions.length ? versions[versions.length - 1].id : null;
+    const current = currentId();
 
     return versions
       .map((version, index) => ({ version, number: index + 1 }))
@@ -53,7 +57,7 @@ export function createFakeLaravelBackend({ initialXml = '<definitions/>' } = {})
       .filter(({ version }) => !version.hidden)
       .map(({ version, number }) => ({
         id: version.id,
-        is_current: version.id === currentId,
+        is_current: version.id === current,
         saved_at: version.savedAt.toISOString(),
         author: version.author,
         number,
@@ -89,10 +93,14 @@ export function createFakeLaravelBackend({ initialXml = '<definitions/>' } = {})
   function route(method, path, body) {
     const local = path.replace(new URL(BASE).pathname, '');
 
-    if (local === '/content' && method === 'GET') return json(200, { content });
+    if (local === '/content' && method === 'GET') return json(200, { content, version: currentId() });
     if (local === '/content' && method === 'PUT') {
+      // VersionController-like optimistic check: only when base_version is sent.
+      if ('base_version' in body && body.base_version !== currentId()) {
+        return json(409, { message: 'Conflict', current_version: currentId() });
+      }
       saveVersion(body.content);
-      return json(200, { saved: true });
+      return json(200, { saved: true, version: currentId() });
     }
     if (local === '/versions' && method === 'GET') return json(200, { versions: history() });
 

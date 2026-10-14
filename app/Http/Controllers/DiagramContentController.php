@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AuthorizesDiagramWrites;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
+use App\Models\Diagram;
 use App\Repositories\DiagramRepository;
 use App\Repositories\VersionRepository;
 use App\Rules\BpmnXml;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 /**
  * A Diagram's BPMN content as a sub-resource: read it, or save a new Version.
@@ -23,6 +25,10 @@ class DiagramContentController extends Controller
         private readonly VersionRepository $versions,
     ) {}
 
+    /**
+     * The content, with the id of the Version it is at. The Editor sends that
+     * id back as `base_version` on save (issue #243).
+     */
     public function show(string $slug): JsonResponse
     {
         $diagram = $this->resolveDiagramAllowingOldSlug($slug);
@@ -33,9 +39,17 @@ class DiagramContentController extends Controller
             'slug' => $diagram->slug,
             'title' => $diagram->title,
             'content' => $this->diagrams->contentOf($diagram),
+            'version' => $this->currentVersion($diagram),
         ]);
     }
 
+    /**
+     * Saves a new Version. When the request carries `base_version`, the save
+     * proceeds only if it still names the current Version; otherwise someone
+     * else saved in between, and the answer is a 409 naming the current one,
+     * so nothing is overwritten silently. Without the key (older clients, API
+     * use) the save is unconditional, as before.
+     */
     public function update(Request $request, string $slug): JsonResponse
     {
         $diagram = $this->resolveDiagramAllowingOldSlug($slug);
@@ -46,6 +60,7 @@ class DiagramContentController extends Controller
 
         $data = $request->validate([
             'content' => ['required', 'string', new BpmnXml],
+            'base_version' => ['sometimes', 'nullable', 'string', 'max:64'],
         ]);
 
         // Writing takes the Lock, so a save never lands outside one. Opening
@@ -56,8 +71,41 @@ class DiagramContentController extends Controller
         // than silently overwriting it.
         $this->claimWriteLock($diagram, $user);
 
-        $this->versions->save($diagram, $user, $data['content']);
+        // The Diagram row stays locked until the save is recorded, so two
+        // saves checking the same base cannot both pass the check and write.
+        $outcome = DB::transaction(function () use ($request, $diagram, $user, $data): array {
+            DB::table('diagrams')->where('id', $diagram->id)->lockForUpdate()->first();
 
-        return response()->json(['saved' => true]);
+            $current = $this->currentVersion($diagram);
+
+            if ($request->has('base_version') && $request->input('base_version') !== $current) {
+                return ['conflict' => $current];
+            }
+
+            // When the content repeats the last Version nothing new is
+            // recorded, and the current one is still the answer.
+            $saved = $this->versions->save($diagram, $user, $data['content']);
+
+            return ['version' => $saved ?? $this->currentVersion($diagram)];
+        });
+
+        if (array_key_exists('conflict', $outcome)) {
+            return response()->json([
+                'message' => __('messages.error_version_conflict'),
+                'current_version' => $outcome['conflict'],
+            ], 409);
+        }
+
+        return response()->json(['saved' => true, 'version' => $outcome['version']]);
+    }
+
+    /**
+     * Id of the Version the content is at, or null when there is no history
+     * yet. The history is newest first, so its first entry is the current one
+     * (as VersionController::versions() also takes it).
+     */
+    private function currentVersion(Diagram $diagram): ?string
+    {
+        return $this->versions->list($diagram)[0]['id'] ?? null;
     }
 }

@@ -5,7 +5,7 @@
  * page around it (e.g. the Lock session) works only through the API that
  * createEditor() returns.
  */
-import { toast, setupZoom, errorMessage } from './common.js';
+import { toast, setupZoom, errorMessage, chooseOption } from './common.js';
 
 /**
  * @param {Object} options
@@ -78,10 +78,15 @@ export function createEditor({ container, store, t, timeZone, Modeler }) {
     }, 'messages.diagram_load_failed');
   }
 
-  async function save() {
+  // Stores the canvas as a new Version; resolves to whether it was stored.
+  async function persist(options) {
     try {
-      await store.save(await currentXml());
+      await store.save(await currentXml(), options);
+
+      return true;
     } catch (e) {
+      if (e.conflict) return resolveConflict();
+
       console.error(e);
       // A listener that handles the failure (a lost Lock) returns true and
       // takes over the notice; a failing listener counts as not handled.
@@ -94,8 +99,35 @@ export function createEditor({ container, store, t, timeZone, Modeler }) {
         }
       });
       if (!handled) toast(errorMessage(e, t('messages.diagram_save_failed')), true);
-      return;
+
+      return false;
     }
+  }
+
+  // Someone saved a newer Version after this canvas was loaded. The User
+  // chooses: reload the newer one (the local changes go), save over it (both
+  // stay in the history), or keep editing. Resolves to whether it was stored.
+  async function resolveConflict() {
+    const choice = await chooseOption({
+      message: t('messages.diagram_conflict'),
+      choices: [
+        { value: 'cancel', label: t('messages.conflict_cancel') },
+        { value: 'overwrite', label: t('messages.conflict_overwrite') },
+        { value: 'reload', label: t('messages.conflict_reload'), primary: true },
+      ],
+    });
+
+    if (choice === 'reload') {
+      await load();
+
+      return false;
+    }
+
+    return choice === 'overwrite' ? persist({ overwrite: true }) : false;
+  }
+
+  async function save() {
+    if (!(await persist())) return;
 
     setDirty(false);
     // A failing listener must not turn a successful save into a failed one.
