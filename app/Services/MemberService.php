@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\Models\Diagram;
 use App\Models\Member;
 use App\Models\User;
 use App\Models\Workspace;
@@ -22,6 +21,7 @@ class MemberService
     public function __construct(
         private readonly MemberRepository $members,
         private readonly WorkspaceRepository $workspaces,
+        private readonly LockService $locks,
     ) {}
 
     /**
@@ -47,7 +47,9 @@ class MemberService
         $removed = $this->members->removeFor($workspace, $user);
 
         if ($removed) {
-            $this->releaseLocksLostWith($workspace, $user);
+            // A Lock the User holds stays only if they can still edit the
+            // Diagram another way (Diagram Owner or Collaborator).
+            $this->locks->reconcileHeldBy($user, $workspace);
 
             $user->notify(new WorkspaceMemberRemoved($workspace));
         }
@@ -61,26 +63,6 @@ class MemberService
     }
 
     /**
-     * Drops the Locks the User held on this Workspace's Diagrams purely as a
-     * Member. The Lock is state nothing else reconciles, so leaving it
-     * behind would keep a User who can no longer edit looking like the
-     * holder. Diagrams they still reach directly (as Diagram Owner or
-     * Collaborator) keep their Lock — {@see Diagram::isEditableBy()} decides,
-     * live, now that the membership is gone.
-     */
-    private function releaseLocksLostWith(Workspace $workspace, User $user): void
-    {
-        Diagram::query()
-            ->where('workspace_id', $workspace->id)
-            ->where('locked_by', $user->id)
-            ->each(function (Diagram $diagram) use ($user): void {
-                if (! $diagram->isEditableBy($user)) {
-                    $diagram->releaseLock($user);
-                }
-            });
-    }
-
-    /**
      * Reconciles only group-managed memberships; manual grants are never
      * changed, even when they overlap with the User's Keycloak groups.
      *
@@ -89,7 +71,7 @@ class MemberService
     public function syncFromKeycloakGroups(User $user, array $groups): void
     {
         DB::transaction(function () use ($user, $groups) {
-            $this->members->removeGroupMembershipsOutside($user, $groups);
+            $removed = $this->members->removeGroupMembershipsOutside($user, $groups);
 
             $this->workspaces->linkedToKeycloakGroups($groups)
                 ->each(function (Workspace $workspace) use ($user) {
@@ -97,6 +79,11 @@ class MemberService
                         $user->notify(new WorkspaceMemberAdded($workspace));
                     }
                 });
+
+            // Only dropped group memberships can take edit rights away from a holder.
+            if ($removed > 0) {
+                $this->locks->reconcileHeldBy($user);
+            }
         });
     }
 }

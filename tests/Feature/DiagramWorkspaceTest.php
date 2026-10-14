@@ -6,6 +6,7 @@ use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Services\LockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -71,6 +72,21 @@ class DiagramWorkspaceTest extends TestCase
 
         $response->assertOk();
         $this->assertNull($diagram->fresh()->workspace_id);
+    }
+
+    public function test_taking_the_diagram_out_of_its_workspace_releases_a_lock_held_by_a_member(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $this->addMember($workspace, $owner);
+        $this->addMember($workspace, $member);
+        $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create(['workspace_id' => $workspace->id]);
+        app(LockService::class)->openOrRequest($diagram, $member);
+
+        $this->actingAs($owner)->deleteJson("/diagrams/{$diagram->slug}/workspace")->assertOk();
+
+        $this->assertNull($diagram->fresh()->locked_by);
     }
 
     public function test_workspace_owner_can_take_a_diagram_out_of_their_workspace_even_if_not_diagram_owner(): void

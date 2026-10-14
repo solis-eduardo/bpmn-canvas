@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Diagram;
 use App\Models\User;
+use App\Models\Workspace;
 use App\Notifications\DiagramLockRequested;
 use Illuminate\Support\Facades\DB;
 
@@ -132,5 +133,50 @@ class LockService
 
             $diagram->releaseLock();
         });
+    }
+
+    /**
+     * Releases the Lock when its holder can no longer edit the Diagram. Called
+     * after every change that can take edit rights away (CONTEXT.md, "Lock"),
+     * so a former editor never keeps showing as the holder. The holder's draft
+     * is dropped, not kept as a provisional Version: that Version would be
+     * authored by someone who may no longer edit (ProvisionalVersionService).
+     */
+    public function reconcile(Diagram $diagram): void
+    {
+        $diagram->refresh();
+
+        $this->releaseIfLapsed($diagram);
+    }
+
+    /**
+     * Reconciles every Lock $user holds on a Diagram in $workspace, or in any
+     * Workspace when none is given. Membership changes can cost a User edit
+     * rights on several Diagrams at once, so they go through here. The rows
+     * are fresh from the query and the holder is eager-loaded, so this skips
+     * the per-Diagram refresh and holder lookup that reconcile() does.
+     */
+    public function reconcileHeldBy(User $user, ?Workspace $workspace = null): void
+    {
+        Diagram::query()
+            ->where('locked_by', $user->id)
+            ->with('lockedBy')
+            ->whereNotNull('workspace_id')
+            ->when($workspace !== null, fn ($query) => $query->where('workspace_id', $workspace?->id))
+            ->each(fn (Diagram $diagram) => $this->releaseIfLapsed($diagram));
+    }
+
+    /**
+     * Releases the Lock if its (already loaded) holder can no longer edit.
+     */
+    private function releaseIfLapsed(Diagram $diagram): void
+    {
+        $holder = $diagram->lockedBy;
+
+        if ($holder === null || $diagram->isEditableBy($holder)) {
+            return;
+        }
+
+        $this->release($diagram);
     }
 }

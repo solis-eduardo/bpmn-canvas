@@ -2,11 +2,13 @@
 
 namespace Tests\Unit\Services;
 
+use App\Models\Diagram;
 use App\Models\Member;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Notifications\WorkspaceMemberAdded;
 use App\Notifications\WorkspaceMemberRemoved;
+use App\Services\LockService;
 use App\Services\MemberService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -103,6 +105,33 @@ class MemberServiceTest extends TestCase
 
         $this->assertFalse($this->isMember($left, $user));
         $this->assertTrue($this->isMember($manual, $user));
+    }
+
+    public function test_removing_a_member_releases_the_lock_they_held_on_the_workspace_diagram(): void
+    {
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $this->addMember($workspace, $member);
+        $diagram = Diagram::factory()->for($owner, 'owner')->create(['workspace_id' => $workspace->id]);
+        app(LockService::class)->openOrRequest($diagram, $member);
+
+        $this->service->remove($workspace, $member);
+
+        $this->assertNull($diagram->fresh()->locked_by);
+    }
+
+    public function test_sync_releases_a_lock_whose_group_membership_was_dropped(): void
+    {
+        $workspace = Workspace::factory()->create(['keycloak_group' => 'old']);
+        $user = User::factory()->create();
+        $this->addGroupMember($workspace, $user);
+        $diagram = Diagram::factory()->create(['workspace_id' => $workspace->id]);
+        app(LockService::class)->openOrRequest($diagram, $user);
+
+        $this->service->syncFromKeycloakGroups($user, []);
+
+        $this->assertNull($diagram->fresh()->locked_by);
     }
 
     public function test_sync_does_not_notify_for_existing_memberships(): void
