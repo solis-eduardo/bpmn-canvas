@@ -2,8 +2,10 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Http\Controllers\Auth\KeycloakLoginController;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Support\KeycloakProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Socialite\Contracts\Provider as SocialiteProvider;
 use Laravel\Socialite\Facades\Socialite;
@@ -57,10 +59,11 @@ class KeycloakLoginTest extends TestCase
         return "{$header}.{$payload}.fake-signature";
     }
 
-    private function mockSocialiteUser(SocialiteUser $user): void
+    private function mockSocialiteUser(SocialiteUser $user, ?string $idToken = null): void
     {
-        $provider = Mockery::mock(SocialiteProvider::class);
+        $provider = Mockery::mock(KeycloakProvider::class);
         $provider->shouldReceive('user')->andReturn($user);
+        $provider->shouldReceive('idToken')->andReturn($idToken);
 
         Socialite::shouldReceive('driver')->with('keycloak')->andReturn($provider);
     }
@@ -459,5 +462,75 @@ class KeycloakLoginTest extends TestCase
         $this->get('/login/keycloak/callback');
 
         $this->assertDatabaseHas('users', ['email' => 'newbie@example.com', 'login_method' => 'keycloak']);
+    }
+
+    public function test_keycloak_login_keeps_the_id_token_in_the_session_for_logout(): void
+    {
+        $this->mockSocialiteUser($this->fakeSocialiteUser('keycloak-sub-20', 'Lia Logout', 'lia@example.com'), 'id-token-20');
+
+        $this->get('/login/keycloak/callback')
+            ->assertSessionHas(KeycloakLoginController::ID_TOKEN_SESSION_KEY, 'id-token-20');
+    }
+
+    public function test_logging_out_a_keycloak_user_ends_the_keycloak_session(): void
+    {
+        $this->configureKeycloak();
+        $user = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'keycloak-sub-21']);
+
+        $response = $this->actingAs($user)
+            ->withSession([KeycloakLoginController::ID_TOKEN_SESSION_KEY => 'id-token-21'])
+            ->post('/logout');
+
+        $response->assertRedirect(
+            'https://sso.example.com/realms/solis/protocol/openid-connect/logout'
+            .'?post_logout_redirect_uri='.urlencode('http://localhost/login')
+            .'&client_id=bpmn-client&id_token_hint=id-token-21'
+        );
+        $response->assertSessionMissing(KeycloakLoginController::ID_TOKEN_SESSION_KEY);
+        $this->assertGuest();
+    }
+
+    public function test_logging_out_a_keycloak_user_without_a_stored_id_token_returns_to_the_login_page(): void
+    {
+        $this->configureKeycloak();
+        $user = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'keycloak-sub-22']);
+
+        $this->actingAs($user)->post('/logout')->assertRedirect('/login');
+
+        $this->assertGuest();
+    }
+
+    public function test_logging_out_a_local_user_does_not_end_any_keycloak_session(): void
+    {
+        $this->configureKeycloak();
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->withSession([KeycloakLoginController::ID_TOKEN_SESSION_KEY => 'stale-id-token'])
+            ->post('/logout')
+            ->assertRedirect('/login');
+
+        $this->assertGuest();
+    }
+
+    public function test_local_login_discards_a_keycloak_id_token_left_in_the_session(): void
+    {
+        $user = User::factory()->create(['password' => 'correct-password']);
+
+        $this->withSession([KeycloakLoginController::ID_TOKEN_SESSION_KEY => 'stale-id-token'])
+            ->post('/login', ['email' => $user->email, 'password' => 'correct-password'])
+            ->assertSessionMissing(KeycloakLoginController::ID_TOKEN_SESSION_KEY);
+
+        $this->assertAuthenticatedAs($user);
+    }
+
+    private function configureKeycloak(): void
+    {
+        config([
+            'services.keycloak.client_id' => 'bpmn-client',
+            'services.keycloak.client_secret' => 'bpmn-secret',
+            'services.keycloak.base_url' => 'https://sso.example.com',
+            'services.keycloak.realms' => 'solis',
+        ]);
     }
 }
