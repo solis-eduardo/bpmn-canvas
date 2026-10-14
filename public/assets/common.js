@@ -130,9 +130,11 @@ export function errorMessage(error, fallback) {
   return (error && error.serverMessage) || fallback;
 }
 
-// Asks how to release a Lock that has an unsaved draft: resolves to 'save',
-// 'discard' or 'cancel'. A native confirm() only has two outcomes.
-export function chooseRelease({ message, saveLabel, discardLabel, cancelLabel }) {
+// A modal dialog asking the User to pick one of `choices` ([{ value, label,
+// primary? }]): resolves to the value picked. Escape counts as picking the
+// first choice, so the first one must be the safe one. A native confirm() only
+// has two outcomes.
+export function chooseOption({ message, choices }) {
   return new Promise(resolve => {
     const dialog = document.createElement('dialog');
     dialog.style.cssText = 'max-width:28rem;padding:1.25rem;border:1px solid #d1d5db;border-radius:.5rem';
@@ -144,22 +146,33 @@ export function chooseRelease({ message, saveLabel, discardLabel, cancelLabel })
     const actions = document.createElement('div');
     actions.style.cssText = 'display:flex;flex-wrap:wrap;gap:.5rem;justify-content:flex-end';
 
-    let choice = 'cancel';
-    [['cancel', cancelLabel], ['discard', discardLabel], ['save', saveLabel]].forEach(([value, label]) => {
+    let choice = choices[0].value;
+    choices.forEach(({ value, label, primary }) => {
       const button = document.createElement('button');
       button.type = 'button';
       button.textContent = label;
-      button.dataset.releaseChoice = value;
       button.style.cssText = 'padding:.375rem .75rem;border:1px solid #d1d5db;border-radius:.375rem;cursor:pointer;'
-        + (value === 'save' ? 'background:#2563eb;border-color:#2563eb;color:#fff' : 'background:#fff');
+        + (primary ? 'background:#2563eb;border-color:#2563eb;color:#fff' : 'background:#fff');
       button.addEventListener('click', () => { choice = value; dialog.close(); });
       actions.appendChild(button);
     });
 
-    // Escape closes the dialog without a click: that is a cancel too.
     dialog.addEventListener('close', () => { dialog.remove(); resolve(choice); });
     dialog.append(text, actions);
     document.body.appendChild(dialog);
     dialog.showModal();
+  });
+}
+
+// Asks how to release a Lock that has an unsaved draft: resolves to 'save',
+// 'discard' or 'cancel'.
+export function chooseRelease({ message, saveLabel, discardLabel, cancelLabel }) {
+  return chooseOption({
+    message,
+    choices: [
+      { value: 'cancel', label: cancelLabel },
+      { value: 'discard', label: discardLabel },
+      { value: 'save', label: saveLabel, primary: true },
+    ],
   });
 }
