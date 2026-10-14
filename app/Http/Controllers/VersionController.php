@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\LockUnavailableException;
 use App\Http\Controllers\Concerns\AuthorizesDiagramWrites;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Diagram;
@@ -87,9 +86,12 @@ class VersionController extends Controller
 
         $user = $request->user();
 
-        if (! $diagram->isLockedBy($user) && ! $diagram->claimFreeLock($user)) {
-            throw LockUnavailableException::lost();
+        // An unknown Version must not take a free Lock on its way to a 404.
+        if (! $versions->exists($diagram, $version)) {
+            abort(404);
         }
+
+        $this->claimWriteLock($diagram, $user);
 
         try {
             $versions->restore($diagram, $version, $user);

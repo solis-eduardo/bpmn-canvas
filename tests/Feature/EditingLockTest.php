@@ -915,4 +915,19 @@ class EditingLockTest extends TestCase
 
         $this->assertSame($editor->id, (int) $diagram->fresh()->locked_by);
     }
+
+    /**
+     * An unknown Version is a 404 that leaves the free Lock alone.
+     */
+    public function test_restoring_an_unknown_version_does_not_take_a_free_lock(): void
+    {
+        $editor = User::factory()->create();
+        $diagram = Diagram::factory()->for($editor, 'author')->create();
+
+        $this->actingAs($editor)->postJson(
+            '/diagrams/'.$diagram->slug.'/versions/'.str_repeat('a', 40).'/restore',
+        )->assertNotFound();
+
+        $this->assertNull($diagram->fresh()->locked_by);
+    }
 }

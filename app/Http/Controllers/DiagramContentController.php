@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Exceptions\LockUnavailableException;
 use App\Http\Controllers\Concerns\AuthorizesDiagramWrites;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Repositories\DiagramRepository;
@@ -55,9 +54,7 @@ class DiagramContentController extends Controller
         // The claim is conditional, so of two concurrent saves against a free
         // Lock only one proceeds — the other is told the Lock is gone rather
         // than silently overwriting it.
-        if (! $diagram->isLockedBy($user) && ! $diagram->claimFreeLock($user)) {
-            throw LockUnavailableException::lost();
-        }
+        $this->claimWriteLock($diagram, $user);
 
         $this->versions->save($diagram, $user, $data['content']);
 
