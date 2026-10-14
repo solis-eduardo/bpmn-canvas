@@ -3,12 +3,12 @@
      as the server build. Text comes from lang/ at runtime: App\Support\Ui turns
      every string into a data-i18n key that standalone/main.js fills in. --}}
 <x-layouts.app :fluid="true" :standard-header="true">
-    <x-slot:headerActions>
+    <x-slot:languageSwitcher>
         <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-600">
             {{ \App\Support\Ui::text('messages.language') }}
             <select id="language" class="rounded-md border border-gray-300 py-1.5 pl-3 pr-8 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"></select>
         </label>
-    </x-slot:headerActions>
+    </x-slot:languageSwitcher>
 
     {{-- The list of Diagrams --}}
     <div id="library" class="h-full overflow-y-auto" hidden>
@@ -47,6 +47,14 @@
                 </table>
                 <p id="library-empty" class="px-4 py-6 text-center text-sm text-gray-500" hidden>{{ \App\Support\Ui::text('messages.no_diagrams_yet') }}</p>
             </div>
+        </div>
+    </div>
+
+    {{-- Screens of the server build the standalone page does not have yet (Home, Workspaces, Users, Profile) --}}
+    <div id="placeholder" class="h-full overflow-y-auto" hidden>
+        <div class="mx-auto max-w-6xl px-4 py-8 sm:px-6">
+            <h1 id="placeholder-title" class="text-2xl font-semibold text-gray-900"></h1>
+            <p class="mt-4 text-sm text-gray-500">{{ \App\Support\Ui::text('standalone.screen_unavailable') }}</p>
         </div>
     </div>
 

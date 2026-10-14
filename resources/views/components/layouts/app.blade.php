@@ -21,54 +21,70 @@
                     {{ config('app.name') }}
                 </a>
 
-                @unless (\App\Support\Ui::standalone())
+                @php($standalone = \App\Support\Ui::standalone())
+                @php($navLink = 'inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900')
+                @php($navActive = 'bg-gray-100 text-gray-900')
+                {{-- In the standalone page the links are hash routes and standalone/main.js marks the current one. --}}
                 <nav class="{{ $fluidHeader ? 'flex w-full min-w-0 flex-wrap items-center gap-1 sm:w-auto sm:flex-1' : 'flex flex-1 items-center gap-1' }}">
                     <a
-                        href="{{ url('/home') }}"
-                        class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->is('home') ? 'bg-gray-100 text-gray-900' : '' }}"
+                        href="{{ $standalone ? '#/home' : url('/home') }}"
+                        @if ($standalone) data-nav="home" @endif
+                        class="{{ $navLink }} {{ ! $standalone && request()->is('home') ? $navActive : '' }}"
                     >
                         <x-icon name="home" />
-                        {{ __('messages.home') }}
+                        {{ \App\Support\Ui::text('messages.home') }}
                     </a>
                     <a
-                        href="{{ route('diagrams.index') }}"
-                        class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('diagrams.*') ? 'bg-gray-100 text-gray-900' : '' }}"
+                        href="{{ $standalone ? '#/' : route('diagrams.index') }}"
+                        @if ($standalone) data-nav="diagrams" @endif
+                        class="{{ $navLink }} {{ ! $standalone && request()->routeIs('diagrams.*') ? $navActive : '' }}"
                     >
                         <x-icon name="diagrams" />
-                        {{ __('messages.diagrams') }}
+                        {{ \App\Support\Ui::text('messages.diagrams') }}
                     </a>
                     <a
-                        href="{{ route('workspaces.index') }}"
-                        class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('workspaces.*') ? 'bg-gray-100 text-gray-900' : '' }}"
+                        href="{{ $standalone ? '#/workspaces' : route('workspaces.index') }}"
+                        @if ($standalone) data-nav="workspaces" @endif
+                        class="{{ $navLink }} {{ ! $standalone && request()->routeIs('workspaces.*') ? $navActive : '' }}"
                     >
                         <x-icon name="workspaces" />
-                        {{ __('messages.workspaces') }}
+                        {{ \App\Support\Ui::text('messages.workspaces') }}
                     </a>
-                    @if (auth()->check() && auth()->user()->is_admin)
+                    @if ($standalone || (auth()->check() && auth()->user()->is_admin))
                         <a
-                            href="{{ route('admin.users.index') }}"
-                            class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('admin.users.*') ? 'bg-gray-100 text-gray-900' : '' }}"
+                            href="{{ $standalone ? '#/users' : route('admin.users.index') }}"
+                            @if ($standalone) data-nav="users" @endif
+                            class="{{ $navLink }} {{ ! $standalone && request()->routeIs('admin.users.*') ? $navActive : '' }}"
                         >
                             <x-icon name="users" />
-                            {{ __('messages.users') }}
+                            {{ \App\Support\Ui::text('messages.users') }}
                         </a>
                     @endif
                 </nav>
-                @else
-                    <span class="flex-1"></span>
-                @endunless
 
                 {{-- Page-specific header controls (e.g. the Editor's back-to-list link
                      and the reserved Version history / Collaborators entry points). --}}
                 {{ $headerActions ?? '' }}
 
-                @unless (\App\Support\Ui::standalone())
                 <div class="{{ $fluidHeader ? 'flex flex-wrap items-center gap-3' : 'flex items-center gap-3' }}">
+                    @if ($standalone)
+                        {{-- Nobody to notify in the standalone page: the bell is only there to keep the header the same. --}}
+                        <div class="relative">
+                            <button type="button" id="btn-notification-bell" class="relative flex h-8 w-8 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900"{!! \App\Support\Ui::attr('messages.notifications') !!}>
+                                <x-icon name="bell" class="h-5 w-5" />
+                            </button>
+                        </div>
+                        <a href="#/account" data-nav="account" class="{{ $navLink }}">
+                            <x-icon name="user-circle" />
+                            {{ \App\Support\Ui::text('messages.profile') }}
+                        </a>
+                        {{ $languageSwitcher ?? '' }}
+                    @else
                     @auth
                         @include('partials.notification-bell')
                         <a
                             href="{{ route('account.edit') }}"
-                            class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('account.*') ? 'bg-gray-100 text-gray-900' : '' }}"
+                            class="{{ $navLink }} {{ request()->routeIs('account.*') ? $navActive : '' }}"
                         >
                             <x-icon name="user-circle" />
                             {{ __('messages.profile') }}
@@ -88,8 +104,8 @@
                             </button>
                         </form>
                     @endauth
+                    @endif
                 </div>
-                @endunless
             </div>
         </header>
 

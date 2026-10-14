@@ -19,4 +19,5 @@ return [
     'delete_failed' => 'Could not delete the diagram.',
     'modified' => 'Modified',
     'storage_notice' => 'Your diagrams live in this browser. Clearing the site data deletes them: use "Export all" to keep a backup.',
+    'screen_unavailable' => 'This screen is not available in the standalone build yet.',
 ];

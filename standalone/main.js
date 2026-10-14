@@ -67,10 +67,29 @@ document.querySelectorAll('*').forEach(element => {
   }
 });
 
+const SCREENS = ['home', 'workspaces', 'users', 'account'];
+
 function route() {
   const match = location.hash.match(/^#\/diagram\/([^/]+)$/);
+  if (match) return { diagramId: decodeURIComponent(match[1]) };
 
-  return match ? { diagramId: decodeURIComponent(match[1]) } : {};
+  const screen = location.hash.match(/^#\/([a-z]+)$/)?.[1];
+
+  return SCREENS.includes(screen) ? { screen } : {};
+}
+
+// Marks the header link of the current screen, as the server build does.
+function markCurrentNav(name) {
+  document.querySelector(`[data-nav="${name}"]`)?.classList.add('bg-gray-100', 'text-gray-900');
+}
+
+// A screen of the server build that the standalone page does not have yet.
+function showPlaceholder(screen) {
+  const link = document.querySelector(`[data-nav="${screen}"]`);
+
+  $('placeholder-title').textContent = link.textContent.trim();
+  $('placeholder').hidden = false;
+  markCurrentNav(screen);
 }
 
 // The same classes as the server build's <x-button size="sm">.
@@ -268,7 +287,7 @@ async function startEditor(db, diagramId) {
 
 window.addEventListener('hashchange', () => location.reload());
 
-const { diagramId } = route();
+const { diagramId, screen } = route();
 setupLanguagePicker();
 let db;
 
@@ -280,8 +299,12 @@ try {
   toast(t('standalone.diagrams_load_failed'), true);
 }
 
-if (db && diagramId) {
+if (screen) {
+  showPlaceholder(screen);
+} else if (db && diagramId) {
+  markCurrentNav('diagrams');
   await startEditor(db, diagramId);
 } else if (db) {
+  markCurrentNav('diagrams');
   await startLibrary(db);
 }
