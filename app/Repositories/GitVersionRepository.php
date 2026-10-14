@@ -106,12 +106,8 @@ class GitVersionRepository implements VersionRepository
         return $this->describeHistory($diagram, $entries);
     }
 
-    public function resolve(Diagram $diagram, string $version): ?string
+    protected function findVersion(Diagram $diagram, string $version): ?string
     {
-        if (! $this->isValidIdentifier($version)) {
-            return null;
-        }
-
         $process = $this->git(['git', 'rev-parse', '--verify', '--quiet', $version.'^{commit}'], $this->directory($diagram));
         $process->run();
 
@@ -120,7 +116,7 @@ class GitVersionRepository implements VersionRepository
 
     public function get(Diagram $diagram, string $version): string
     {
-        $this->validateIdentifier($version);
+        $version = $this->requireId($diagram, $version);
 
         $process = $this->git(['git', 'show', $version.':'.$this->file($diagram)], $this->directory($diagram));
         $process->run();

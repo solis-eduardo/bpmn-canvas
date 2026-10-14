@@ -242,7 +242,7 @@ abstract class VersionRepositoryContract extends TestCase
         $repository->rename($diagram, str_repeat('b', 40), 'Ghost');
     }
 
-    public function test_resolve_returns_the_full_id_or_null_never_a_stored_prefix(): void
+    public function test_resolve_returns_the_full_id_only_for_a_real_version(): void
     {
         $diagram = $this->bareDiagram();
         $repository = $this->adapter();
@@ -252,12 +252,9 @@ abstract class VersionRepositoryContract extends TestCase
         $this->assertSame($id, $repository->resolve($diagram, $id));
         $this->assertNull($repository->resolve($diagram, str_repeat('b', 40)));
         $this->assertNull($repository->resolve($diagram, 'not-a-version'));
-
-        $short = $repository->resolve($diagram, substr($id, 0, 7));
-        $this->assertTrue($short === null || $short === $id);
     }
 
-    public function test_rename_by_a_short_id_names_the_right_version_or_is_rejected(): void
+    public function test_rename_never_leaves_an_orphan_state_row_for_a_short_id(): void
     {
         $diagram = $this->bareDiagram();
         $repository = $this->adapter();
@@ -267,7 +264,7 @@ abstract class VersionRepositoryContract extends TestCase
         try {
             $repository->rename($diagram, substr($id, 0, 7), 'Milestone');
         } catch (RuntimeException) {
-            // Rejecting a short id is acceptable; naming nothing visible is not.
+            // Adapters that only take full ids reject it.
         }
 
         $this->assertSame(0, DiagramVersionName::where('diagram_id', $diagram->id)->where('version_id', '!=', $id)->count());

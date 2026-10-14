@@ -17,7 +17,7 @@ use RuntimeException;
  * (initial Version, write, record, bookkeeping), the Version state kept in
  * `diagram_version_names` (names, provisional and hidden flags), the numbering
  * and naming of the history, and restore. An adapter only supplies the storage
- * steps: openHistory(), recordVersion(), resolve(), get() and list().
+ * steps: openHistory(), recordVersion(), findVersion(), get() and list().
  */
 trait SharedVersionRepository
 {
@@ -32,6 +32,12 @@ trait SharedVersionRepository
      * history already existed before this call.
      */
     abstract protected function openHistory(Diagram $diagram): bool;
+
+    /**
+     * The full identifier of a well-formed $version in this Diagram's history
+     * (resolving an abbreviation where the store accepts one), or null.
+     */
+    abstract protected function findVersion(Diagram $diagram, string $version): ?string;
 
     /**
      * Records the Diagram's content currently on disk as a new Version, unless
@@ -79,12 +85,12 @@ trait SharedVersionRepository
     {
         // Confirms the Version actually exists in this Diagram's history
         // before naming it, otherwise a bogus id would leave an orphaned row.
-        $this->setState($diagram, $this->assertExists($diagram, $version), ['name' => $name]);
+        $this->setState($diagram, $this->requireId($diagram, $version), ['name' => $name]);
     }
 
     public function markProvisional(Diagram $diagram, string $version): void
     {
-        $this->setState($diagram, $version, ['is_provisional' => true]);
+        $this->setState($diagram, $this->requireId($diagram, $version), ['is_provisional' => true]);
     }
 
     public function makePermanent(Diagram $diagram, string $version): bool
@@ -193,20 +199,28 @@ trait SharedVersionRepository
         }
     }
 
+    public function resolve(Diagram $diagram, string $version): ?string
+    {
+        return $this->isValidIdentifier($version) ? $this->findVersion($diagram, $version) : null;
+    }
+
     public function exists(Diagram $diagram, string $version): bool
     {
         return $this->resolve($diagram, $version) !== null;
     }
 
     /**
-     * Returns the full id of $version, which is what the state table must be
-     * keyed by (an abbreviation would leave an orphan row).
+     * The single entry point for an incoming Version id: validates it and
+     * returns the full id, which is what the state table must be keyed by (an
+     * abbreviation would leave an orphan row).
+     *
+     * @throws RuntimeException if the id is malformed or not a Version of the Diagram.
      */
-    protected function assertExists(Diagram $diagram, string $version): string
+    protected function requireId(Diagram $diagram, string $version): string
     {
         $this->validateIdentifier($version);
 
-        return $this->resolve($diagram, $version) ?? throw new RuntimeException('Version not found.');
+        return $this->findVersion($diagram, $version) ?? throw new RuntimeException('Version not found.');
     }
 
     /**
@@ -214,7 +228,7 @@ trait SharedVersionRepository
      */
     private function clearProvisional(Diagram $diagram, string $version, array $state): bool
     {
-        $version = $this->assertExists($diagram, $version);
+        $version = $this->requireId($diagram, $version);
 
         return DiagramVersionName::where('diagram_id', $diagram->id)
             ->where('version_id', $version)
