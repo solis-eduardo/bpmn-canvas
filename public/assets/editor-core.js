@@ -27,17 +27,18 @@ import { toast, setupZoom, errorMessage } from './common.js';
  *   revision: () => number,
  *   currentXml: () => Promise<string>,
  *   markClean: () => void,
- *   on: (event: 'dirty'|'saved', handler: Function) => void,
+ *   on: (event: 'dirty'|'saved'|'saveFailed', handler: Function) => void,
  * }}
  *   `dirty` handlers get the new state whenever it changes; `saved` handlers
- *   run after each successful save. revision() counts edits, so a caller can
- *   tell whether the content changed without serializing it. markClean()
- *   drops the unsaved state without saving, once the content was kept or
- *   discarded some other way.
+ *   run after each successful save; `saveFailed` handlers get the error and
+ *   return true when they handled it, which replaces the generic save-failure
+ *   notice. revision() counts edits, so a caller can tell whether the content
+ *   changed without serializing it. markClean() drops the unsaved state
+ *   without saving, once the content was kept or discarded some other way.
  */
 export function createEditor({ container, store, t, timeZone, Modeler }) {
   const modeler = new Modeler({ container });
-  const handlers = { dirty: [], saved: [] };
+  const handlers = { dirty: [], saved: [], saveFailed: [] };
   const dirtyMarker = document.getElementById('dirty');
   let dirty = false;
   let edits = 0;
@@ -78,8 +79,23 @@ export function createEditor({ container, store, t, timeZone, Modeler }) {
   }
 
   async function save() {
-    const saved = await attempt(async () => store.save(await currentXml()), 'messages.diagram_save_failed');
-    if (!saved) return;
+    try {
+      await store.save(await currentXml());
+    } catch (e) {
+      console.error(e);
+      // A listener that handles the failure (a lost Lock) returns true and
+      // takes over the notice; a failing listener counts as not handled.
+      const handled = handlers.saveFailed.some(handler => {
+        try {
+          return handler(e) === true;
+        } catch (listenerError) {
+          console.error(listenerError);
+          return false;
+        }
+      });
+      if (!handled) toast(errorMessage(e, t('messages.diagram_save_failed')), true);
+      return;
+    }
 
     setDirty(false);
     // A failing listener must not turn a successful save into a failed one.

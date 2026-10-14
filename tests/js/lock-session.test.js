@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { createHeartbeat, createHeartbeatLoop } from '../../public/assets/lock-session.js';
+import {
+  createHeartbeat,
+  createHeartbeatLoop,
+  handleSaveFailure,
+  reacquireLock,
+} from '../../public/assets/lock-session.js';
 
 // The slice of the Editor's public API a Heartbeat uses.
 function fakeEditor(xml = '<a/>') {
@@ -176,5 +181,82 @@ describe('createHeartbeatLoop', () => {
     await pending;
 
     expect(onLost).not.toHaveBeenCalled();
+  });
+});
+
+describe('handleSaveFailure', () => {
+  it('handles a save refused with 423 by stopping the Heartbeat and showing the lost notice', () => {
+    const stopHeartbeat = vi.fn();
+    const showLockLost = vi.fn();
+
+    const handled = handleSaveFailure(Object.assign(new Error('HTTP 423'), { status: 423 }), { stopHeartbeat, showLockLost });
+
+    expect(handled).toBe(true);
+    expect(stopHeartbeat).toHaveBeenCalledTimes(1);
+    expect(showLockLost).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves other save failures to the generic notice', () => {
+    const stopHeartbeat = vi.fn();
+    const showLockLost = vi.fn();
+
+    const handled = handleSaveFailure(Object.assign(new Error('HTTP 500'), { status: 500 }), { stopHeartbeat, showLockLost });
+
+    expect(handled).toBe(false);
+    expect(stopHeartbeat).not.toHaveBeenCalled();
+    expect(showLockLost).not.toHaveBeenCalled();
+  });
+});
+
+describe('reacquireLock', () => {
+  const INTERVAL = 30000;
+
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  function lostLoop() {
+    const heartbeat = { beat: vi.fn(async () => ({ lockRequestedBy: null })) };
+    const onLost = vi.fn();
+    const loop = createHeartbeatLoop({ heartbeat, onRequested: vi.fn(), onLost, intervalMs: INTERVAL });
+
+    heartbeat.beat.mockRejectedValueOnce(Object.assign(new Error('HTTP 403'), { status: 403 }));
+    loop.start();
+    return { heartbeat, onLost, loop };
+  }
+
+  it('keeps the lost notice and the Heartbeat stopped while another User holds the Lock', async () => {
+    const { heartbeat, onLost, loop } = lostLoop();
+    await loop.beatNow();
+    expect(onLost).toHaveBeenCalledTimes(1);
+
+    const request = vi.fn(async () => ({ state: 'waiting', requested_at: '2026-10-14T12:00:00+00:00' }));
+    const onAcquired = vi.fn();
+
+    const acquired = await reacquireLock({ request, url: '/lock', loop, onAcquired });
+    await vi.advanceTimersByTimeAsync(INTERVAL * 3);
+
+    expect(acquired).toBe(false);
+    expect(onAcquired).not.toHaveBeenCalled();
+    expect(heartbeat.beat).toHaveBeenCalledTimes(1);
+    expect(onLost).toHaveBeenCalledTimes(1);
+    loop.stop();
+  });
+
+  it('hides the lost notice and resumes the Heartbeat once the Lock is acquired', async () => {
+    const { heartbeat, loop } = lostLoop();
+    await loop.beatNow();
+
+    const request = vi.fn(async () => ({ state: 'acquired' }));
+    const calls = [];
+    const onAcquired = vi.fn(() => calls.push('hide'));
+    heartbeat.beat.mockImplementation(async () => { calls.push('beat'); return { lockRequestedBy: null }; });
+
+    const acquired = await reacquireLock({ request, url: '/lock', loop, onAcquired });
+    await vi.advanceTimersByTimeAsync(INTERVAL);
+
+    expect(acquired).toBe(true);
+    expect(request).toHaveBeenCalledWith('POST', '/lock');
+    expect(calls).toEqual(['hide', 'beat', 'beat']);
+    loop.stop();
   });
 });

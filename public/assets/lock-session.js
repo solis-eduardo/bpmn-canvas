@@ -118,6 +118,39 @@ export function createHeartbeatLoop({ heartbeat, onRequested, onLost, intervalMs
 }
 
 /**
+ * A save the server refused with 423 means the Lock is gone (see
+ * AuthorizesDiagramWrites): the Heartbeat stops and the lost notice replaces
+ * the generic save-failure toast. Other errors are left to the Editor core.
+ *
+ * @returns {boolean} whether the error was handled here
+ */
+export function handleSaveFailure(error, { stopHeartbeat, showLockLost }) {
+  if (error?.status !== 423) return false;
+
+  stopHeartbeat();
+  showLockLost();
+  return true;
+}
+
+/**
+ * Asks for the Lock again. The server answers "acquired" when it was free;
+ * otherwise the holder is asked and the answer is "waiting", so nothing is
+ * resumed and the lost notice stays up. Only once acquired is the notice
+ * dismissed and the Heartbeat restarted.
+ *
+ * @returns {Promise<boolean>} whether the Lock was acquired
+ */
+export async function reacquireLock({ request, url, loop, onAcquired }) {
+  const answer = await request('POST', url);
+  if (answer?.state !== 'acquired') return false;
+
+  onAcquired();
+  loop.resume();
+  await loop.beatNow();
+  return true;
+}
+
+/**
  * Wires the Lock session into the Editor page: periodic Heartbeats, the
  * lock-request banner, the lost-Lock banner and the release button.
  *
@@ -180,6 +213,12 @@ export function startLockSession({ editor, request, urls, isHolder, t, banner, r
     loop.resume();
   });
 
+  // A save refused for the Lock is the same signal as a refused Heartbeat.
+  editor.on('saveFailed', error => handleSaveFailure(error, {
+    stopHeartbeat: loop.stop,
+    showLockLost,
+  }));
+
   if (lostBanner) {
     lostBanner.querySelector('.lock-lost-dismiss').addEventListener('click', hideLockLost);
 
@@ -189,12 +228,7 @@ export function startLockSession({ editor, request, urls, isHolder, t, banner, r
       reacquire.disabled = true;
 
       try {
-        // Asks for the Lock: it is taken when free, otherwise the holder is
-        // asked for it and the next Heartbeat reports the Lock still lost.
-        await request('POST', urls.lock);
-        hideLockLost();
-        loop.resume();
-        await loop.beatNow();
+        await reacquireLock({ request, url: urls.lock, loop, onAcquired: hideLockLost });
       } catch (e) {
         console.error(e);
         toast(errorMessage(e, t('reacquireLockFailedNotice')), true);
