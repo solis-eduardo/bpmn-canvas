@@ -92,7 +92,7 @@ class UserDeactivationTest extends TestCase
     public function test_deactivated_user_is_hidden_from_pickers(): void
     {
         $gone = User::factory()->create(['name' => 'Gone Person']);
-        $active = User::factory()->create(['name' => 'Active Person']);
+        User::factory()->create(['name' => 'Active Person']);
 
         app(UserDeactivationService::class)->deactivate($gone);
 
@@ -109,6 +109,18 @@ class UserDeactivationTest extends TestCase
             ->assertSessionHasErrors('deactivated');
 
         $this->assertFalse($admin->refresh()->isDeactivated());
+    }
+
+    public function test_an_administrator_cannot_demote_themselves_when_the_only_other_administrator_is_deactivated(): void
+    {
+        $actor = User::factory()->create(['is_admin' => true]);
+        $other = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($actor)->post('/admin/users/'.$other->id.'/deactivate');
+
+        $this->actingAs($actor)->put('/admin/users/'.$actor->id, ['is_admin' => 0])
+            ->assertSessionHasErrors('is_admin');
+        $this->assertTrue($actor->refresh()->is_admin);
     }
 
     public function test_bulk_transfer_hands_owned_diagrams_and_workspaces_to_a_successor(): void

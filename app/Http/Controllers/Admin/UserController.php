@@ -190,7 +190,8 @@ class UserController extends Controller
      */
     private function assertAnotherAdministratorRemains(User $user): void
     {
-        if (! User::where('is_admin', true)->whereKeyNot($user->getKey())->lockForUpdate()->exists()) {
+        // Deactivated Administrators can't act, so they don't count as remaining.
+        if (! User::where('is_admin', true)->active()->whereKeyNot($user->getKey())->lockForUpdate()->exists()) {
             throw ValidationException::withMessages([
                 'is_admin' => __('messages.last_administrator_not_removable'),
             ]);
