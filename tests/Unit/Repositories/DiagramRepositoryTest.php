@@ -14,6 +14,7 @@ use App\Repositories\DiagramRepository;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
@@ -188,6 +189,41 @@ class DiagramRepositoryTest extends TestCase
         $this->assertSame([], $this->repository->discoveryQuery($user)->pluck('id')->all());
         $this->assertEqualsCanonicalizing([$requested->id, $open->id], $this->repository->discoveryQuery($user, 'one')->pluck('id')->all());
         $this->assertSame([$open->id], $this->repository->discoveryQuery($user, 'open')->pluck('id')->all());
+    }
+
+    public function test_discovery_title_match_escapes_like_wildcards(): void
+    {
+        $user = User::factory()->create();
+        $literal = Diagram::factory()->create(['title' => '50% Report']);
+        $underscore = Diagram::factory()->create(['title' => 'a_b Notes']);
+        $notLiteral = Diagram::factory()->create(['title' => '50X Report']);
+        Diagram::factory()->create(['title' => 'axb Notes']);
+
+        $this->assertSame([$literal->id], $this->repository->discoveryQuery($user, '50%')->pluck('id')->all());
+        $this->assertSame([$underscore->id], $this->repository->discoveryQuery($user, 'a_b')->pluck('id')->all());
+        $this->assertNotContains($notLiteral->id, $this->repository->discoveryQuery($user, '50%')->pluck('id')->all());
+    }
+
+    public function test_discovery_title_match_ignores_ascii_case(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->create(['title' => 'Compras']);
+
+        $this->assertSame([$diagram->id], $this->repository->discoveryQuery($user, 'compras')->pluck('id')->all());
+    }
+
+    public function test_discovery_title_match_folds_accented_case_on_postgres_only(): void
+    {
+        // Accent folding needs Postgres ILIKE; sqlite's LOWER() is ASCII-only,
+        // so this case is asserted only when the suite runs against Postgres.
+        if (DB::getDriverName() !== 'pgsql') {
+            $this->markTestSkipped('Accented case folding is Postgres-only (ILIKE).');
+        }
+
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->create(['title' => 'Ação Comercial']);
+
+        $this->assertSame([$diagram->id], $this->repository->discoveryQuery($user, 'AÇÃO')->pluck('id')->all());
     }
 
     public function test_discovery_query_is_empty_for_an_admin(): void
