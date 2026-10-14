@@ -54,3 +54,8 @@ Thumbs.db
 /storage/app/
 /standalone/dist
 /standalone/pages
+
+# Browser demo build (demo/build.sh)
+/demo/node_modules
+/demo/dist
+/demo/.stage

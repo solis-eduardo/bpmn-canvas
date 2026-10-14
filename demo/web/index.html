@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BPMN Canvas: browser demo</title>
+    <style>
+        html, body { height: 100%; margin: 0; font: 14px system-ui, sans-serif; }
+        body { display: flex; flex-direction: column; }
+        #boot { padding: 2rem; max-width: 40rem; }
+        #boot pre { background: #f4f4f4; padding: .75rem; white-space: pre-wrap; }
+        iframe { border: 0; width: 100%; flex: 1; display: none; }
+        #bar { display: none; background: #222; color: #ddd; padding: 4px 8px; font-size: 12px; }
+        #bar button { margin-left: 8px; }
+    </style>
+</head>
+<body>
+    <div id="bar"><span id="timing"></span><button id="reset" type="button">Reset demo data</button></div>
+    <div id="boot"><h1>Starting BPMN Canvas...</h1><pre id="log"></pre></div>
+    <iframe id="app" title="BPMN Canvas"></iframe>
+    <script type="module" src="./src/main.js"></script>
+</body>
+</html>

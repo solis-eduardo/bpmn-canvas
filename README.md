@@ -104,6 +104,24 @@ npm run build:standalone    # needs PHP: it first runs `php artisan lang:export`
 
 The result is `standalone/dist/bpmn-canvas.html`. Open it from disk (`file://`) or put it on any static host. It makes no external requests. It can create, edit and save Diagrams, keeps a Version per save (compare, restore, rename), exports PNG, SVG and BPMN, imports a `.bpmn` (including one exported by the server build), and exports every Diagram as a `.zip`. In Chromium, **Save to file…** writes to a `.bpmn` file of your choice on every save; elsewhere it downloads the file. Title and Tags editing, Locks, Collaborators, Workspaces and Shares are not part of it.
 
+## Browser demo
+
+A hosted demo runs the real app in the visitor's browser: <https://solis-eduardo.github.io/bpmn-canvas/>. PHP runs as WebAssembly (`@php-wasm/web`) behind a Service Worker, so routes, controllers, Blade views, policies and validation are the ones on `main`. `.github/workflows/demo.yml` rebuilds it (`demo/build.sh`) and publishes it to GitHub Pages on every push to `main`, after a headless-browser smoke test (`demo/smoke.mjs`) has passed.
+
+What differs from a real deployment:
+
+- Data lives only in the visitor's browser. Clearing site data, or **Reset demo data** in the top bar, starts over from the seeded demo.
+- No email (`MAIL_MAILER=log`, nothing is sent), no Keycloak/SSO, no backups, and no scheduler: scheduled tasks do not run.
+- Versions are stored in the database (`VERSION_STORE=database`), not in Git.
+- The demo accounts (`admin@demo.test`, `author@demo.test`, `collaborator@demo.test`) share a public password, and the published bundle contains the application source and the demo database.
+
+To build and test it locally you need PHP 8.4 (with `pdo_sqlite`), Composer, Node 22 and Chrome:
+
+```bash
+demo/build.sh                 # writes demo/dist (builds from HEAD)
+cd demo && node smoke.mjs dist
+```
+
 ## Structure
 
 ```
