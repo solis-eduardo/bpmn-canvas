@@ -269,7 +269,7 @@ class LockExpiryTest extends TestCase
 
     /**
      * Removing the Collaborator entry of a User who still edits through a
-     * Workspace Membership leaves their Lock and draft alone.
+     * Workspace Member leaves their Lock and draft alone.
      */
     public function test_revoking_a_collaborator_who_is_still_a_member_keeps_their_lock_and_draft(): void
     {
@@ -286,12 +286,14 @@ class LockExpiryTest extends TestCase
         $this->actingAs($collaborator)->patchJson('/diagrams/'.$diagram->slug.'/lock', [
             'draft' => $this->draft('Still a member'),
         ])->assertOk();
+        $versionsBefore = count(app(VersionRepository::class)->list($diagram));
 
         app(CollaboratorService::class)->revoke($diagram, $collaborator);
 
         $diagram = $diagram->fresh();
         $this->assertSame($collaborator->id, (int) $diagram->locked_by);
         $this->assertNotNull($diagram->lock_draft);
+        $this->assertCount($versionsBefore, app(VersionRepository::class)->list($diagram));
         $this->assertDatabaseMissing('collaborators', ['diagram_id' => $diagram->id, 'user_id' => $collaborator->id]);
     }
 

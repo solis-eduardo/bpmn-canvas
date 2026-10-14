@@ -107,7 +107,7 @@ class CollaboratorService
         // Lock is state nothing else reconciles, and while it stands the
         // former Collaborator still looks like its holder. Re-read first —
         // the caller's instance predates whatever Lock the User has taken
-        // since. A User who still edits through a Workspace Membership keeps
+        // since. A User who is still a Workspace Member keeps
         // the Lock ({@see Diagram::isEditableBy()} decides, live).
         $diagram->refresh();
 
