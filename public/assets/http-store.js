@@ -13,23 +13,9 @@
  * @property {boolean} current
  */
 
-// Builds the Error for a failed response, carrying the HTTP status and the
-// localized `message` the server sent (when it sent one). Same shape as
-// BpmnCommon.httpError, which the classic scripts still use until they
-// become modules (ADR-0018).
-export async function httpError(res) {
-  const error = new Error('HTTP ' + res.status);
-  error.status = res.status;
-  try {
-    error.body = await res.json();
-    if (error.body && typeof error.body.message === 'string' && error.body.message) {
-      error.serverMessage = error.body.message;
-    }
-  } catch (e) {
-    // no JSON body
-  }
-  return error;
-}
+import { httpError } from './common.js';
+
+export { httpError };
 
 /**
  * A JSON request function for the Laravel endpoints: sends the CSRF token on

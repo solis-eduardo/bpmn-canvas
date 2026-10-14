@@ -2,15 +2,23 @@
  * The server build's Editor page: wires the shared Editor core to the
  * Laravel endpoints (HttpDiagramStore) and to the Lock session.
  */
+import { setupPanels } from './common.js';
 import { createEditor } from './editor-core.js';
 import { createHttpDiagramStore, createJsonClient } from './http-store.js';
 import { startLockSession } from './lock-session.js';
+import { createTranslator } from './translator.js';
+import { createVersionHistory } from './versions.js';
 
 const body = document.getElementById('editor');
 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
-// Localized UI strings, rendered on the page's data-* attributes.
-const t = key => body.dataset[key];
+// The core's UI strings: the JSON `php artisan lang:export` writes from lang/,
+// for the page's locale.
+const messages = await (await fetch(body.dataset.langUrl)).json();
+const t = createTranslator(messages);
+
+// The Lock session is server-only and keeps its strings on data-* attributes.
+const lockT = key => body.dataset[key];
 
 // One JSON client for the page: the store and the Lock session both use it.
 const request = createJsonClient({ csrfToken });
@@ -29,15 +37,20 @@ const store = createHttpDiagramStore({
   request,
 });
 
-const editor = createEditor({ container: '#canvas', store, t });
+setupPanels();
 
-// The other Editor scripts (versions.js, collaborators.js) listen for saves
-// on the document.
+const editor = createEditor({
+  container: '#canvas',
+  store,
+  t,
+  timeZone: body.dataset.timeZone,
+  Modeler: window.BpmnJS,
+});
+
+// The server-only scripts (collaborators.js) listen for saves on the document.
 editor.on('saved', () => document.dispatchEvent(new CustomEvent('diagram:saved')));
 
-// Exposed so the Version history module (versions.js) can reuse this same
-// live Modeler/canvas and DiagramStore instead of creating its own.
-window.BpmnEditor = { modeler: editor.modeler, store };
+createVersionHistory({ editor, canEdit: body.dataset.canEditVersions === 'true' });
 
 startLockSession({
   editor,
@@ -48,7 +61,7 @@ startLockSession({
     index: body.dataset.indexUrl,
   },
   isHolder: body.dataset.isLockHolder === '1',
-  t,
+  t: lockT,
   banner: document.getElementById('lock-request-banner'),
   releaseButton: document.getElementById('btn-release-lock'),
 });

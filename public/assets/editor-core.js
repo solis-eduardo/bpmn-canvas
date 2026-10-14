@@ -5,15 +5,23 @@
  * page around it (e.g. the Lock session) works only through the API that
  * createEditor() returns.
  */
+import { toast, setupZoom, errorMessage } from './common.js';
 
 /**
  * @param {Object} options
  * @param {string} options.container  selector of the canvas element
  * @param {Object} options.store  a DiagramStore
- * @param {(key: string) => string} options.t  localized UI string by key
- *   (savedNotice, saveFailedNotice, loadFailedNotice)
+ * @param {(key: string, replacements?: Object) => string} options.t  localized
+ *   UI string by lang/ key (see translator.js)
+ * @param {string} [options.timeZone]  IANA name Version times are shown in;
+ *   the browser's when omitted
+ * @param {Function} options.Modeler  the bpmn-js Modeler constructor
  * @returns {{
  *   modeler: Object,
+ *   Modeler: Function,
+ *   store: Object,
+ *   t: Function,
+ *   timeZone: ?string,
  *   save: () => Promise<void>,
  *   isDirty: () => boolean,
  *   revision: () => number,
@@ -27,10 +35,8 @@
  *   drops the unsaved state without saving, once the content was kept or
  *   discarded some other way.
  */
-export function createEditor({ container, store, t }) {
-  const { toast, setupZoom, errorMessage } = window.BpmnCommon;
-
-  const modeler = new BpmnJS({ container });
+export function createEditor({ container, store, t, timeZone, Modeler }) {
+  const modeler = new Modeler({ container });
   const handlers = { dirty: [], saved: [] };
   const dirtyMarker = document.getElementById('dirty');
   let dirty = false;
@@ -68,11 +74,11 @@ export function createEditor({ container, store, t }) {
       if (warnings && warnings.length) console.warn('Import warnings:', warnings);
       modeler.get('canvas').zoom('fit-viewport', 'auto');
       setDirty(false);
-    }, 'loadFailedNotice');
+    }, 'messages.diagram_load_failed');
   }
 
   async function save() {
-    const saved = await attempt(async () => store.save(await currentXml()), 'saveFailedNotice');
+    const saved = await attempt(async () => store.save(await currentXml()), 'messages.diagram_save_failed');
     if (!saved) return;
 
     setDirty(false);
@@ -84,7 +90,7 @@ export function createEditor({ container, store, t }) {
         console.error(e);
       }
     });
-    toast(t('savedNotice'));
+    toast(t('messages.saved'));
   }
 
   document.getElementById('btn-save').addEventListener('click', save);
@@ -105,6 +111,10 @@ export function createEditor({ container, store, t }) {
 
   return {
     modeler,
+    Modeler,
+    store,
+    t,
+    timeZone,
     save,
     isDirty: () => dirty,
     revision: () => edits,

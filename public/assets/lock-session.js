@@ -5,6 +5,8 @@
  * markClean, on), so the Editor core itself knows nothing about Locks.
  */
 
+import { toast, errorMessage, chooseRelease } from './common.js';
+
 const HEARTBEAT_INTERVAL_MS = 30000;
 const IDLE_AFTER_MS = 3 * 60 * 1000;
 const ACTIVITY_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'];
@@ -73,8 +75,6 @@ export function createHeartbeat({ editor, send, idleAfterMs = IDLE_AFTER_MS, now
  * @param {?HTMLButtonElement} options.releaseButton
  */
 export function startLockSession({ editor, request, urls, isHolder, t, banner, releaseButton }) {
-  const { toast, errorMessage, chooseRelease } = window.BpmnCommon;
-
   // The Lock holder's only signal that someone else wants the Lock is this
   // same heartbeat poll (see LockController::update) — no separate poll
   // loop is started just for this (issue #9).

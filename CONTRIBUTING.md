@@ -41,6 +41,12 @@ The Editor's browser-side modules (`public/assets/`) have their own suite, run w
 npm test
 ```
 
+The Editor loads its UI strings from JSON generated from `lang/` (`public/assets/lang/<locale>.json`, git-ignored; the Docker build runs the same command). After adding a string to the shared core, or changing one in `lang/`, regenerate it:
+
+```bash
+php artisan lang:export
+```
+
 ## Coding standards
 
 This project uses [Laravel Pint](https://laravel.com/docs/pint) for PHP formatting:

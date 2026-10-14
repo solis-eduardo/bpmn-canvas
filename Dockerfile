@@ -58,6 +58,11 @@ RUN chmod +x /entrypoint.sh /usr/local/bin/healthcheck.sh
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["php-fpm"]
 
+# --- Stage 4a: UI strings of the shared Editor core, exported from lang/ ---
+# The nginx image serves them as static files (ADR-0018).
+FROM app AS lang-export
+RUN php artisan lang:export
+
 # --- Stage 4b (dev only): app image plus dev tooling ---
 # Not part of the production build (`target: app` / `web` never reach it). Adds
 # the Composer dev dependencies (phpunit, phpstan, pint, ...) and pdo_sqlite,
@@ -104,5 +109,6 @@ COPY docker/web/default.conf /etc/nginx/conf.d/default.conf
 COPY docker/web/security-headers.conf /etc/nginx/snippets/security-headers.conf
 COPY public/ /var/www/html/public/
 COPY --from=vite-build /build/public/build/ /var/www/html/public/build/
+COPY --from=lang-export /var/www/html/public/assets/lang/ /var/www/html/public/assets/lang/
 
 EXPOSE 80

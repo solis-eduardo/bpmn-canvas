@@ -16,10 +16,9 @@
 
     <div
         id="editor"
+        data-lang-url="{{ asset('assets/lang/'.app()->getLocale().'.json') }}"
         data-slug="{{ $diagram->slug }}"
         data-title="{{ $diagram->title }}"
-        data-saved-notice="{{ __('messages.saved') }}"
-        data-load-failed-notice="{{ __('messages.diagram_load_failed') }}"
         data-save-failed-notice="{{ __('messages.diagram_save_failed') }}"
         data-release-lock-failed-notice="{{ __('messages.release_lock_failed') }}"
         data-content-url="{{ route('diagrams.content', $diagram->slug) }}"
@@ -51,35 +50,10 @@
         data-time-zone="{{ auth()->user()->displayTimezone() }}"
         data-version-content-url-template="{{ route('diagrams.versions.content', [$diagram->slug, 'VERSION_ID']) }}"
         data-version-restore-url-template="{{ route('diagrams.versions.restore', [$diagram->slug, 'VERSION_ID']) }}"
-        data-restore-version-confirm="{{ __('messages.restore_version_confirm') }}"
-        data-version-restored-notice="{{ __('messages.version_restored') }}"
-        data-version-restore-failed-notice="{{ __('messages.version_restore_failed') }}"
-        data-restore-label="{{ __('messages.restore') }}"
         data-version-rename-url-template="{{ route('diagrams.versions.rename', [$diagram->slug, 'VERSION_ID']) }}"
         data-version-promote-url-template="{{ route('diagrams.versions.promote', [$diagram->slug, 'VERSION_ID']) }}"
         data-version-delete-url-template="{{ route('diagrams.versions.delete', [$diagram->slug, 'VERSION_ID']) }}"
         data-can-edit-versions="{{ auth()->user()->can('update', $diagram) ? 'true' : 'false' }}"
-        data-rename-version-label="{{ __('messages.rename_version') }}"
-        data-rename-version-prompt="{{ __('messages.rename_version_prompt') }}"
-        data-version-rename-failed-notice="{{ __('messages.version_rename_failed') }}"
-        data-provisional-badge-label="{{ __('messages.provisional_badge') }}"
-        data-current-badge-label="{{ __('messages.current_version_badge') }}"
-        data-make-permanent-label="{{ __('messages.make_permanent') }}"
-        data-version-made-permanent-notice="{{ __('messages.version_made_permanent') }}"
-        data-version-promote-failed-notice="{{ __('messages.version_promote_failed') }}"
-        data-delete-version-label="{{ __('messages.delete') }}"
-        data-delete-version-confirm="{{ __('messages.delete_version_confirm') }}"
-        data-version-deleted-notice="{{ __('messages.version_deleted') }}"
-        data-version-delete-failed-notice="{{ __('messages.version_delete_failed') }}"
-        data-version-by-template="{{ __('messages.version_by_author', ['name' => ':name']) }}"
-        data-compare-with-current-label="{{ __('messages.compare_with_current') }}"
-        data-no-versions-notice="{{ __('messages.no_versions_yet') }}"
-        data-element-types="{{ json_encode(__('messages.bpmn_element_types'), JSON_UNESCAPED_UNICODE) }}"
-        data-versions-load-failed-notice="{{ __('messages.versions_load_failed') }}"
-        data-version-compare-failed-notice="{{ __('messages.version_compare_failed') }}"
-        data-versions-compare-failed-notice="{{ __('messages.versions_compare_failed') }}"
-        data-comparing-with-template="{{ __('messages.comparing_with', ['version' => ':version']) }}"
-        data-comparing-versions-template="{{ __('messages.comparing_versions', ['older' => ':older', 'newer' => ':newer']) }}"
         data-collaborators-load-failed-notice="{{ __('messages.collaborators_load_failed') }}"
         data-shares-load-failed-notice="{{ __('messages.shares_load_failed') }}"
         @can('manageCollaborators', $diagram)
@@ -374,11 +348,8 @@
     </div>
 
     <script src="{{ asset('vendor/bpmn-js/bpmn-modeler.production.min.js') }}"></script>
-    <script src="{{ asset('assets/common.js') }}"></script>
     <script type="module" src="{{ asset('assets/editor.js') }}"></script>
-    <script type="module" src="{{ asset('assets/diff.js') }}"></script>
-    <script type="module" src="{{ asset('assets/versions.js') }}"></script>
-    <script src="{{ asset('assets/diagram-settings.js') }}"></script>
+    <script type="module" src="{{ asset('assets/diagram-settings.js') }}"></script>
     @if (auth()->user()->can('manageCollaborators', $diagram) || auth()->user()->can('manageShares', $diagram))
         <script type="module" src="{{ asset('assets/collaborators.js') }}"></script>
     @endif
