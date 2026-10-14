@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Controllers\Concerns\AuthorizesDiagramWrites;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Diagram;
 use App\Repositories\DiagramRepository;
@@ -12,6 +13,7 @@ use RuntimeException;
 
 class VersionController extends Controller
 {
+    use AuthorizesDiagramWrites;
     use ResolvesVisibleDiagram;
 
     public function __construct(
@@ -76,10 +78,23 @@ class VersionController extends Controller
     {
         $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
-        $this->authorize('update', $diagram);
+        // Restoring rewrites the content, so it goes through the same gate as
+        // saving: nobody else may hold the Lock, and a free one is taken first
+        // (see DiagramContentController::update()). Otherwise the holder's
+        // draft is dropped by the restore and their next save overwrites it.
+        $this->authorizeWrite($diagram);
+
+        $user = $request->user();
+
+        // An unknown Version must not take a free Lock on its way to a 404.
+        if (! $versions->exists($diagram, $version)) {
+            abort(404);
+        }
+
+        $this->claimWriteLock($diagram, $user);
 
         try {
-            $versions->restore($diagram, $version, $request->user());
+            $versions->restore($diagram, $version, $user);
         } catch (RuntimeException $e) {
             abort(404);
         }

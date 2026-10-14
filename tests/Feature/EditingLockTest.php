@@ -6,6 +6,7 @@ use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Notifications\DiagramLockRequested;
+use App\Repositories\VersionRepository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Notification;
@@ -851,5 +852,82 @@ class EditingLockTest extends TestCase
         ])->assertOk();
 
         $this->assertTrue($diagram->fresh()->updated_at->equalTo($past));
+    }
+
+    /**
+     * Restoring rewrites the content, so it is refused like a save while
+     * someone else holds the Lock, and the holder's draft survives it.
+     */
+    public function test_restoring_a_version_is_refused_while_another_user_holds_the_lock(): void
+    {
+        $holder = User::factory()->create();
+        $restorer = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $restorer);
+        app(VersionRepository::class)->save($diagram, $holder, '<bpmn:definitions>later</bpmn:definitions>');
+        $oldestVersionId = app(VersionRepository::class)->list($diagram)[1]['id'];
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $diagram->fresh()->heartbeat($holder, '<bpmn:definitions>unsaved draft</bpmn:definitions>');
+        $contentBefore = Storage::disk('diagrams')->get($diagram->disk_path);
+
+        $response = $this->actingAs($restorer)->postJson(
+            '/diagrams/'.$diagram->slug.'/versions/'.$oldestVersionId.'/restore',
+        );
+
+        $response->assertStatus(423);
+        $this->assertSame($contentBefore, Storage::disk('diagrams')->get($diagram->fresh()->disk_path));
+        $this->assertSame($holder->id, (int) $diagram->fresh()->locked_by);
+        $this->assertSame('<bpmn:definitions>unsaved draft</bpmn:definitions>', $diagram->fresh()->lock_draft);
+    }
+
+    /**
+     * The Lock holder can restore, and the restore keeps the Lock with them.
+     */
+    public function test_the_lock_holder_can_restore_a_version(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        app(VersionRepository::class)->save($diagram, $holder, '<bpmn:definitions>later</bpmn:definitions>');
+        $oldestVersionId = app(VersionRepository::class)->list($diagram)[1]['id'];
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+
+        $this->actingAs($holder)->postJson(
+            '/diagrams/'.$diagram->slug.'/versions/'.$oldestVersionId.'/restore',
+        )->assertOk()->assertJson(['restored' => true]);
+
+        $this->assertSame($holder->id, (int) $diagram->fresh()->locked_by);
+    }
+
+    /**
+     * Restoring into a free Lock takes it, like saving content does.
+     */
+    public function test_restoring_into_a_free_lock_claims_it(): void
+    {
+        $editor = User::factory()->create();
+        $diagram = Diagram::factory()->for($editor, 'author')->create();
+        app(VersionRepository::class)->save($diagram, $editor, '<bpmn:definitions>later</bpmn:definitions>');
+        $oldestVersionId = app(VersionRepository::class)->list($diagram)[1]['id'];
+        $this->assertNull($diagram->fresh()->locked_by);
+
+        $this->actingAs($editor)->postJson(
+            '/diagrams/'.$diagram->slug.'/versions/'.$oldestVersionId.'/restore',
+        )->assertOk();
+
+        $this->assertSame($editor->id, (int) $diagram->fresh()->locked_by);
+    }
+
+    /**
+     * An unknown Version is a 404 that leaves the free Lock alone.
+     */
+    public function test_restoring_an_unknown_version_does_not_take_a_free_lock(): void
+    {
+        $editor = User::factory()->create();
+        $diagram = Diagram::factory()->for($editor, 'author')->create();
+
+        $this->actingAs($editor)->postJson(
+            '/diagrams/'.$diagram->slug.'/versions/'.str_repeat('a', 40).'/restore',
+        )->assertNotFound();
+
+        $this->assertNull($diagram->fresh()->locked_by);
     }
 }

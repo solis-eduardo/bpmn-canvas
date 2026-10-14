@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Concerns;
 
 use App\Exceptions\LockUnavailableException;
 use App\Models\Diagram;
+use App\Models\User;
 use Illuminate\Support\Facades\Gate;
 
 /**
@@ -20,6 +21,18 @@ trait AuthorizesDiagramWrites
 
         if (! Gate::allows('lock.write', $diagram)) {
             throw LockUnavailableException::heldByOther($diagram);
+        }
+    }
+
+    /**
+     * Takes a free Lock for the write about to happen, so a write never lands
+     * outside a Lock its User holds. The claim is conditional: of two
+     * concurrent writers against a free Lock only one proceeds.
+     */
+    private function claimWriteLock(Diagram $diagram, User $user): void
+    {
+        if (! $diagram->isLockedBy($user) && ! $diagram->claimFreeLock($user)) {
+            throw LockUnavailableException::lost();
         }
     }
 }
