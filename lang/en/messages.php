@@ -86,7 +86,7 @@ return [
     'error_cannot_edit_diagram' => 'You are not allowed to edit this diagram.',
     'error_diagram_locked_by' => 'This diagram is locked by :name; your changes were not saved.',
     'error_version_conflict' => 'This diagram was saved by someone else after you opened it. Reload it before saving again.',
-    'error_lock_lost' =>'You lost the Lock on this diagram (it expired from inactivity or was released). Copy your changes and reload the page.',
+    'error_lock_lost' => 'You lost the Lock on this diagram (it expired from inactivity or was released). Copy your changes and reload the page.',
     'error_session_expired' => 'Your session has expired. Reload the page and sign in again.',
     'error_not_found' => 'The requested item was not found.',
     'error_too_many_requests' => 'Too many attempts in a row. Wait a moment and try again.',

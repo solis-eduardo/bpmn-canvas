@@ -86,7 +86,7 @@ return [
     'error_cannot_edit_diagram' => 'No tienes permiso para editar este diagrama.',
     'error_diagram_locked_by' => 'Este diagrama está bloqueado por :name; tus cambios no se guardaron.',
     'error_version_conflict' => 'Otra sesión guardó este diagrama después de que lo abriste. Recárgalo antes de volver a guardar.',
-    'error_lock_lost' =>'Perdiste el Bloqueo de este diagrama (expiró por inactividad o fue liberado). Copia tus cambios y recarga la página.',
+    'error_lock_lost' => 'Perdiste el Bloqueo de este diagrama (expiró por inactividad o fue liberado). Copia tus cambios y recarga la página.',
     'error_session_expired' => 'Tu sesión ha expirado. Recarga la página e inicia sesión de nuevo.',
     'error_not_found' => 'No se encontró el elemento solicitado.',
     'error_too_many_requests' => 'Demasiados intentos seguidos. Espera un momento e inténtalo de nuevo.',

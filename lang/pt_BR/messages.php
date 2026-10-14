@@ -86,7 +86,7 @@ return [
     'error_cannot_edit_diagram' => 'Você não tem permissão para editar este diagrama.',
     'error_diagram_locked_by' => 'Este diagrama está travado por :name; suas alterações não foram salvas.',
     'error_version_conflict' => 'Outra sessão salvou este diagrama depois que você o abriu. Recarregue-o antes de salvar novamente.',
-    'error_lock_lost' =>'Você perdeu a trava deste diagrama (expirou por inatividade ou foi liberada). Copie suas alterações e recarregue a página.',
+    'error_lock_lost' => 'Você perdeu a trava deste diagrama (expirou por inatividade ou foi liberada). Copie suas alterações e recarregue a página.',
     'error_session_expired' => 'Sua sessão expirou. Recarregue a página e entre novamente.',
     'error_not_found' => 'O item solicitado não foi encontrado.',
     'error_too_many_requests' => 'Muitas tentativas seguidas. Aguarde um instante e tente novamente.',
