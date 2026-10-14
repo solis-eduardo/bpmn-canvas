@@ -133,7 +133,9 @@ class KeycloakLoginController extends Controller
     {
         $changed = [];
 
-        $name = $socialiteUser->getName() ?: $socialiteUser->getNickname();
+        // Only the `name` claim: falling back to the nickname (the IdP username)
+        // would overwrite a real display name when the claim is absent.
+        $name = $socialiteUser->getName();
 
         if (is_string($name) && $name !== '' && $name !== $user->name) {
             $user->name = $name;

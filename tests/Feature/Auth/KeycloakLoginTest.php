@@ -472,6 +472,17 @@ class KeycloakLoginTest extends TestCase
         $this->assertSame('New Name', $user->fresh()->name);
     }
 
+    public function test_linked_login_keeps_the_name_when_keycloak_sends_no_name_claim(): void
+    {
+        $user = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'sub-noname', 'name' => 'Real Name']);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser('sub-noname', '', $user->email));
+
+        $this->get('/login/keycloak/callback')->assertRedirect(route('home'));
+
+        $this->assertSame('Real Name', $user->fresh()->name);
+    }
+
     public function test_linked_login_refreshes_the_email_when_verified_and_not_taken(): void
     {
         $user = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'sub-mail', 'email' => 'old@example.com']);
