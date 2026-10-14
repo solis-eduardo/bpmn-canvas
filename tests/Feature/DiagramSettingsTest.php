@@ -8,6 +8,7 @@ use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -301,6 +302,68 @@ class DiagramSettingsTest extends TestCase
         ])->assertSessionHasErrors('user_id');
 
         $this->assertSame('Before', $diagram->fresh()->title);
+    }
+
+    public function test_a_failure_in_the_tags_step_rolls_back_the_rename_and_the_transfer(): void
+    {
+        $owner = User::factory()->create();
+        $newOwner = User::factory()->create();
+        $diagram = $this->ownedDiagram($owner, ['title' => 'Before']);
+        $oldSlug = $diagram->slug;
+
+        Tag::creating(function (): void {
+            throw new RuntimeException('forced tag failure');
+        });
+
+        $this->withoutExceptionHandling();
+        try {
+            $this->actingAs($owner)->put(route('diagrams.settings.update', $oldSlug), [
+                'title' => 'After',
+                'user_id' => $newOwner->id,
+                'tags' => ['Forced'],
+            ]);
+            $this->fail('The forced tag failure should surface.');
+        } catch (RuntimeException $e) {
+            $this->assertSame('forced tag failure', $e->getMessage());
+        }
+
+        $fresh = $diagram->fresh();
+        $this->assertSame('Before', $fresh->title);
+        $this->assertSame($oldSlug, $fresh->slug);
+        $this->assertSame($owner->id, $fresh->owner_id);
+        $this->assertDatabaseMissing('diagram_old_slugs', ['old_slug' => $oldSlug]);
+        Storage::disk('diagrams')->assertExists($oldSlug.'/diagram.bpmn');
+        Storage::disk('diagrams')->assertMissing('after/diagram.bpmn');
+        $this->assertCount(0, $newOwner->fresh()->notifications);
+    }
+
+    public function test_a_directory_move_that_fails_rolls_back_the_rename_and_the_transfer(): void
+    {
+        $owner = User::factory()->create();
+        $newOwner = User::factory()->create();
+        $diagram = $this->ownedDiagram($owner, ['title' => 'Before']);
+        $oldSlug = $diagram->slug;
+        // A leftover directory already sits at the target, so the move fails.
+        Storage::disk('diagrams')->put('after/leftover.txt', 'stale');
+
+        $this->withoutExceptionHandling();
+        try {
+            $this->actingAs($owner)->put(route('diagrams.settings.update', $oldSlug), [
+                'title' => 'After',
+                'user_id' => $newOwner->id,
+            ]);
+            $this->fail('The failed directory move should surface.');
+        } catch (RuntimeException $e) {
+            $this->assertStringContainsString('Could not move the Diagram directory', $e->getMessage());
+        }
+
+        $fresh = $diagram->fresh();
+        $this->assertSame('Before', $fresh->title);
+        $this->assertSame($oldSlug, $fresh->slug);
+        $this->assertSame($owner->id, $fresh->owner_id);
+        $this->assertDatabaseMissing('diagram_old_slugs', ['old_slug' => $oldSlug]);
+        Storage::disk('diagrams')->assertExists($oldSlug.'/diagram.bpmn');
+        $this->assertCount(0, $newOwner->fresh()->notifications);
     }
 
     // --- JSON endpoints (Editor panel) ----------------------------------

@@ -8,12 +8,14 @@ use App\Models\DiagramOldSlug;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\Slugger;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Throwable;
 
 /**
  * Keeps the Diagram's database row and its `.bpmn` file on disk consistent
@@ -200,7 +202,7 @@ class DiagramRepository
                 Storage::disk('diagrams')->put($diagram->disk_path, $initialContent),
                 "Could not write the Diagram file to disk: {$diagram->disk_path}"
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $diagram->delete();
 
             throw $e;
@@ -210,54 +212,44 @@ class DiagramRepository
     }
 
     /**
-     * Retitles a Diagram, deriving its new Slug from the title (see
-     * {@see move()} for what changes on disk and what stays reserved).
+     * Retitles a Diagram, deriving its new Slug from the title. The old Slug
+     * stays reserved as a permanent redirect; the file moves with the Slug
+     * (see {@see renameWithin()}).
      */
     public function rename(Diagram $diagram, string $newTitle): Diagram
     {
-        return $this->move($diagram, $newTitle, $this->uniqueSlug($newTitle, $diagram->id));
+        return $this->renameWithin($diagram, $newTitle, fn () => null);
     }
 
     /**
-     * Renames a Diagram: moves its directory on disk (if the Slug changed),
-     * records the old Slug as a permanent redirect, and updates the row, all
-     * within a transaction. If the transaction fails, the already-moved file
-     * is moved back to its original place.
+     * Renames a Diagram like {@see rename()}, but runs $alsoInTransaction in
+     * the same database transaction, right after the row is updated, so a
+     * failure in any of those writes leaves the Diagram's title, Slug and
+     * file as they were. The directory move comes last: if it has already
+     * happened when the transaction fails (including at commit), it is moved
+     * back.
+     *
+     * @param  Closure(Diagram): void  $alsoInTransaction  receives the renamed Diagram
      */
-    public function move(Diagram $diagram, string $newTitle, string $newSlug): Diagram
+    public function renameWithin(Diagram $diagram, string $newTitle, Closure $alsoInTransaction): Diagram
     {
         $oldSlug = $diagram->slug;
-        $file = basename($diagram->disk_path);
+        $newSlug = $this->uniqueSlug($newTitle, $diagram->id);
         $slugChanged = $newSlug !== $oldSlug;
-
-        if ($slugChanged) {
-            // Same reasoning as create(): `throw => false` means a failed
-            // move reports itself via a false return, not an exception.
-            // Surface it explicitly — nothing has touched the database yet,
-            // so there's nothing to compensate, just a clean failure.
-            $this->assertDiskSucceeded(
-                Storage::disk('diagrams')->move($oldSlug, $newSlug),
-                "Could not move the Diagram directory from {$oldSlug} to {$newSlug}."
-            );
-        }
+        $directoryMoved = false;
 
         try {
-            DB::transaction(function () use ($diagram, $oldSlug, $newSlug, $file, $newTitle, $slugChanged) {
-                if ($slugChanged) {
-                    DiagramOldSlug::create([
-                        'diagram_id' => $diagram->id,
-                        'old_slug' => $oldSlug,
-                    ]);
-                }
+            DB::transaction(function () use ($diagram, $newTitle, $newSlug, $oldSlug, $slugChanged, $alsoInTransaction, &$directoryMoved) {
+                $this->writeRename($diagram, $newTitle, $newSlug);
+                $alsoInTransaction($diagram);
 
-                $diagram->update([
-                    'title' => $newTitle,
-                    'slug' => $newSlug,
-                    'disk_path' => $newSlug.'/'.$file,
-                ]);
+                if ($slugChanged) {
+                    $this->moveDirectory($oldSlug, $newSlug);
+                    $directoryMoved = true;
+                }
             });
-        } catch (\Throwable $e) {
-            if ($slugChanged) {
+        } catch (Throwable $e) {
+            if ($directoryMoved) {
                 Storage::disk('diagrams')->move($newSlug, $oldSlug);
             }
 
@@ -265,6 +257,42 @@ class DiagramRepository
         }
 
         return $diagram;
+    }
+
+    /**
+     * Moves the Diagram's directory on the "diagrams" disk. The disk is
+     * configured with `throw => false`, so a failed move comes back as a
+     * false return; surface it as an exception here.
+     */
+    private function moveDirectory(string $oldSlug, string $newSlug): void
+    {
+        $this->assertDiskSucceeded(
+            Storage::disk('diagrams')->move($oldSlug, $newSlug),
+            "Could not move the Diagram directory from {$oldSlug} to {$newSlug}."
+        );
+    }
+
+    /**
+     * The database half of a rename: the old Slug is reserved (when the Slug
+     * changes) and the row takes the new title, Slug and file path. Must run
+     * inside a transaction.
+     */
+    private function writeRename(Diagram $diagram, string $newTitle, string $newSlug): void
+    {
+        $oldSlug = $diagram->slug;
+
+        if ($newSlug !== $oldSlug) {
+            DiagramOldSlug::create([
+                'diagram_id' => $diagram->id,
+                'old_slug' => $oldSlug,
+            ]);
+        }
+
+        $diagram->update([
+            'title' => $newTitle,
+            'slug' => $newSlug,
+            'disk_path' => $newSlug.'/'.basename($diagram->disk_path),
+        ]);
     }
 
     /**

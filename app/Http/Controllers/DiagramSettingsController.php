@@ -13,6 +13,7 @@ use App\Repositories\UserRepository;
 use App\Services\DiagramOwnerService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
@@ -112,14 +113,34 @@ class DiagramSettingsController extends Controller
     }
 
     /**
+     * All of the submission's changes land together or not at all: the
+     * rename, the ownership transfer and the Tags share one transaction, and
+     * the directory move (part of the rename) runs last.
+     *
      * @param  array{rename: bool, transfer: bool, tags: bool}  $changes
      * @param  array<string, mixed>  $data
      */
     private function applyChanges(Diagram $diagram, array $changes, array $data): Diagram
     {
         if ($changes['rename']) {
-            $diagram = $this->diagrams->rename($diagram, $data['title']);
+            return $this->diagrams->renameWithin(
+                $diagram,
+                $data['title'],
+                fn (Diagram $renamed) => $this->applyOwnerAndTags($renamed, $changes, $data),
+            );
         }
+
+        DB::transaction(fn () => $this->applyOwnerAndTags($diagram, $changes, $data));
+
+        return $diagram;
+    }
+
+    /**
+     * @param  array{rename: bool, transfer: bool, tags: bool}  $changes
+     * @param  array<string, mixed>  $data
+     */
+    private function applyOwnerAndTags(Diagram $diagram, array $changes, array $data): void
+    {
         if ($changes['transfer']) {
             $this->owners->transfer($diagram, $this->users->findOrFail($data['user_id']), (bool) ($data['give_up_access'] ?? false));
         }
@@ -127,7 +148,5 @@ class DiagramSettingsController extends Controller
             // syncTags() creates the missing Tags itself.
             $diagram->syncTags(Tag::cleanNames($data['tags'] ?? []));
         }
-
-        return $diagram;
     }
 }
