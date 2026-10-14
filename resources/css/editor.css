@@ -241,6 +241,11 @@
   padding: 8px 12px; font-size: 13px; text-align: center;
 }
 
+/* The holder lost the Lock while editing (issue #225): pinned to the bottom so
+   it never overlaps the request banner, with two actions. */
+.app .lock-lost-banner { top: auto; bottom: 0; border-top: 1px solid #ffd591; border-bottom: 0; }
+.app .lock-lost-banner button { margin-left: 8px; }
+
 /* Blocked screen: request-Lock countdown (issue #9). */
 #lock-countdown { color: var(--muted); font-size: 13px; }
 }

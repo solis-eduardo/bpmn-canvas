@@ -69,6 +69,7 @@ startLockSession({
   request,
   urls: {
     heartbeat: body.dataset.heartbeatUrl,
+    lock: body.dataset.lockUrl,
     unlock: body.dataset.unlockUrl,
     index: body.dataset.indexUrl,
   },
@@ -76,4 +77,5 @@ startLockSession({
   t: lockT,
   banner: document.getElementById('lock-request-banner'),
   releaseButton: document.getElementById('btn-release-lock'),
+  lostBanner: document.getElementById('lock-lost-banner'),
 });
