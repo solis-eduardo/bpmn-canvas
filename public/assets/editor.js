@@ -12,15 +12,16 @@ import { createVersionHistory } from './versions.js';
 const body = document.getElementById('editor');
 const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
+// One JSON client for the page: the translations, the store and the Lock
+// session all use it.
+const request = createJsonClient({ csrfToken });
+
 // The core's UI strings: the JSON `php artisan lang:export` writes from lang/,
-// for the page's locale.
-// Without it the Editor still starts, showing the keys instead of the strings.
+// for the page's locale. Without it the Editor still starts, showing the keys
+// instead of the strings.
 async function loadMessages(url) {
   try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-
-    return await res.json();
+    return await request('GET', url);
   } catch (e) {
     console.error('Could not load ' + url + ' (run "php artisan lang:export")', e);
 
@@ -33,9 +34,6 @@ const t = createTranslator(messages);
 
 // The Lock session is server-only and keeps its strings on data-* attributes.
 const lockT = key => body.dataset[key];
-
-// One JSON client for the page: the store and the Lock session both use it.
-const request = createJsonClient({ csrfToken });
 
 const store = createHttpDiagramStore({
   urls: {

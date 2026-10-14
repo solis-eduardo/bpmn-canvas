@@ -15,9 +15,7 @@ export function createTranslator(messages) {
   return function t(key, replacements = {}) {
     const text = Object.prototype.hasOwnProperty.call(messages, key) ? messages[key] : key;
 
-    // Longest names first, so ":versions" isn't half-replaced by ":version".
-    return Object.keys(replacements)
-      .sort((a, b) => b.length - a.length)
-      .reduce((result, name) => result.replaceAll(':' + name, String(replacements[name])), text);
+    return text.replace(/:(\w+)/g, (match, name) =>
+      Object.prototype.hasOwnProperty.call(replacements, name) ? String(replacements[name]) : match);
   };
 }

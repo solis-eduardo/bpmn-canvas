@@ -33,10 +33,11 @@ class ExportLang extends Command
     public function handle(): int
     {
         $keys = $this->coreKeys();
+        $locales = $this->locales();
         $path = $this->option('path') ?: public_path('assets/lang');
         File::ensureDirectoryExists($path);
 
-        foreach ($this->locales() as $locale) {
+        foreach ($locales as $locale) {
             $messages = [];
 
             foreach ($keys as $key) {
@@ -58,7 +59,7 @@ class ExportLang extends Command
             File::put("{$path}/{$locale}.json", json_encode($messages, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)."\n");
         }
 
-        $this->info(count($keys).' key(s) exported for '.count($this->locales()).' locale(s).');
+        $this->info(count($keys).' key(s) exported for '.count($locales).' locale(s).');
 
         return self::SUCCESS;
     }
