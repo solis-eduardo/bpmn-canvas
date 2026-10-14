@@ -81,8 +81,9 @@ class User extends Authenticatable
 
     /**
      * Whether this User's current Administrator status can be revoked from the
-     * User management screen. Per ADR 0005, a role granted via the Keycloak
-     * claim is displayed but only a manual origin can be turned off here.
+     * User management screen. Per ADR 0005 (as amended), a role granted via the
+     * Keycloak claim is displayed but not revocable here while the claim is
+     * present; the flag is cleared at the next login without the claim.
      */
     public function adminRoleIsManuallyRevocable(): bool
     {
