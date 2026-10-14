@@ -13,7 +13,7 @@ describe.each(CORE)('shared core module %s', name => {
   });
 
   it('reads no UI string from data-* attributes', () => {
-    expect(source).not.toMatch(/\.dataset\.(?!versionId|panel|release|export)/);
+    expect(source).not.toMatch(/\.dataset\.(?!versionId\b|panelToggle\b|releaseChoice\b)/);
     expect(source).not.toMatch(/getAttribute\(['"]data-/);
   });
 

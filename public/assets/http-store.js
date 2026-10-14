@@ -15,8 +15,6 @@
 
 import { httpError } from './common.js';
 
-export { httpError };
-
 /**
  * A JSON request function for the Laravel endpoints: sends the CSRF token on
  * every change and rejects non-2xx answers with httpError's Error.

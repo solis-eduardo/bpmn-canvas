@@ -14,7 +14,21 @@ const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
 // The core's UI strings: the JSON `php artisan lang:export` writes from lang/,
 // for the page's locale.
-const messages = await (await fetch(body.dataset.langUrl)).json();
+// Without it the Editor still starts, showing the keys instead of the strings.
+async function loadMessages(url) {
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+
+    return await res.json();
+  } catch (e) {
+    console.error('Could not load ' + url + ' (run "php artisan lang:export")', e);
+
+    return {};
+  }
+}
+
+const messages = await loadMessages(body.dataset.langUrl);
 const t = createTranslator(messages);
 
 // The Lock session is server-only and keeps its strings on data-* attributes.

@@ -40,16 +40,17 @@ class ExportLang extends Command
             $messages = [];
 
             foreach ($keys as $key) {
-                $translation = Lang::get(rtrim($key, '.'), [], $locale);
+                $name = rtrim($key, '.');
+                $translation = Lang::get($name, [], $locale);
 
-                if ($translation === rtrim($key, '.')) {
+                if ($translation === $name) {
                     $this->warn("No translation for '{$key}' in '{$locale}'.");
 
                     continue;
                 }
 
                 $messages += is_array($translation)
-                    ? Arr::dot($translation, rtrim($key, '.').'.')
+                    ? Arr::dot($translation, $name.'.')
                     : [$key => $translation];
             }
 
