@@ -83,8 +83,8 @@ trait SharedVersionRepository
      */
     public function rename(Diagram $diagram, string $version, string $name): void
     {
-        // Confirms the Version actually exists in this Diagram's history
-        // before naming it, otherwise a bogus id would leave an orphaned row.
+        // requireId() confirms the Version exists and yields its full id, so
+        // neither a bogus id nor an abbreviation leaves an orphaned row.
         $this->setState($diagram, $this->requireId($diagram, $version), ['name' => $name]);
     }
 
