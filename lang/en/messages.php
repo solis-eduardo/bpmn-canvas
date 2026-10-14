@@ -289,6 +289,7 @@ return [
     'transfer_ownership' => 'Transfer ownership',
     'select_new_owner' => 'Select the new owner',
     'user_already_member' => 'That user is already a Member.',
+    'cannot_invite_diagram_owner' => "The Diagram Owner already has access and can't be added as a Collaborator.",
     'user_already_owner' => 'That user is already the Workspace Owner.',
     'select_user_placeholder' => 'Select a user',
     'delete_workspace' => 'Delete',
