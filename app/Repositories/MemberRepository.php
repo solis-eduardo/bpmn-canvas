@@ -5,6 +5,7 @@ namespace App\Repositories;
 use App\Models\Member;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Support\AccessMemo;
 
 /**
  * Persistence for a Workspace's Members. Deciding who gets notified about a
@@ -52,7 +53,11 @@ class MemberRepository
 
     public function removeFor(Workspace $workspace, User $user): bool
     {
-        return $workspace->members()->where('user_id', $user->id)->delete() > 0;
+        $removed = $workspace->members()->where('user_id', $user->id)->delete() > 0;
+
+        app(AccessMemo::class)->forget();
+
+        return $removed;
     }
 
     /**
@@ -63,9 +68,13 @@ class MemberRepository
      */
     public function removeGroupMembershipsOutside(User $user, array $groups): int
     {
-        return Member::where('user_id', $user->id)
+        $removed = Member::where('user_id', $user->id)
             ->where('origin', Member::ORIGIN_GROUP)
             ->whereDoesntHave('workspace', fn ($query) => $query->whereIn('keycloak_group', $groups))
             ->delete();
+
+        app(AccessMemo::class)->forget();
+
+        return $removed;
     }
 }
