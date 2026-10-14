@@ -333,4 +333,12 @@ return [
     'search_workspaces' => 'Ambientes de Trabalho',
     'search_notifications' => 'Notificações',
     'search_see_all' => 'Ver todos (:count)',
+    'demo_banner' => 'Demo — os dados ficam apenas no seu navegador',
+    'demo_reset' => 'Reiniciar demo',
+    'demo_accounts' => 'Contas de demonstração',
+    'demo_sign_in_as' => 'Entrar como :name',
+    'demo_role_administrator' => 'Administrador',
+    'demo_role_author' => 'Autor',
+    'demo_role_collaborator' => 'Colaborador',
+    'demo_password_locked' => 'A senha de uma conta de demonstração não pode ser alterada.',
 ];

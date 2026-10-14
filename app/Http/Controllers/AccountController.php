@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\RedirectsAfterSave;
+use App\Models\User;
 use App\Repositories\UserRepository;
+use App\Support\Demo;
 use DateTimeZone;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -38,7 +40,7 @@ class AccountController extends Controller
             'timezone' => ['sometimes', 'nullable', Rule::in(DateTimeZone::listIdentifiers())],
         ];
 
-        if (! $user->usesKeycloak()) {
+        if (! $user->usesKeycloak() && ! $this->passwordLocked($user)) {
             $rules['password'] = ['nullable', 'string', 'min:8', 'confirmed'];
             $rules['current_password'] = ['nullable', 'required_with:password', 'current_password'];
         }
@@ -55,7 +57,7 @@ class AccountController extends Controller
             $attributes['timezone'] = $data['timezone'];
         }
 
-        $changesPassword = ! $user->usesKeycloak() && filled($data['password'] ?? null);
+        $changesPassword = ! $user->usesKeycloak() && ! $this->passwordLocked($user) && filled($data['password'] ?? null);
 
         if ($changesPassword) {
             $attributes['password'] = $data['password'];
@@ -95,6 +97,8 @@ class AccountController extends Controller
             abort(403, __('messages.keycloak_password_managed_externally'));
         }
 
+        abort_if($this->passwordLocked($user), 403, __('messages.demo_password_locked'));
+
         $data = $request->validate([
             'current_password' => ['required', 'current_password'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
@@ -105,5 +109,13 @@ class AccountController extends Controller
         $this->users->invalidateOtherSessions($user, $request->session()->getId());
 
         return $this->afterSave($request, 'home', 'account.edit');
+    }
+
+    /**
+     * The demo's shared accounts keep their known password.
+     */
+    private function passwordLocked(User $user): bool
+    {
+        return Demo::enabled() && Demo::isAccount($user);
     }
 }

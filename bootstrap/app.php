@@ -47,7 +47,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // cron, see docker-compose.yml). A quiet, off-peak hour, staggered
         // away from :00 to dodge the crowd of jobs everyone else also
         // schedules on the hour.
-        $schedule->command('backup:run')->dailyAt('02:15')->onOneServer();
+        $schedule->command('backup:run')->dailyAt('02:15')->onOneServer()->when(fn () => config('bpmn.backups_enabled'));
         // Offset from :00, same reasoning as backup:run above — avoids the
         // crowd of jobs everyone else schedules on the hour.
         $schedule->command('shares:warn-expiring')->hourlyAt(45)->onOneServer();

@@ -333,4 +333,12 @@ return [
     'search_workspaces' => 'Workspaces',
     'search_notifications' => 'Notifications',
     'search_see_all' => 'See all (:count)',
+    'demo_banner' => 'Demo — data lives only in your browser',
+    'demo_reset' => 'Reset demo',
+    'demo_accounts' => 'Demo accounts',
+    'demo_sign_in_as' => 'Sign in as :name',
+    'demo_role_administrator' => 'Administrator',
+    'demo_role_author' => 'Author',
+    'demo_role_collaborator' => 'Collaborator',
+    'demo_password_locked' => 'The password of a demo account cannot be changed.',
 ];

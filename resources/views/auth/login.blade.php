@@ -8,6 +8,7 @@
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="h-full font-sans text-gray-900 antialiased">
+    @include('partials.demo-banner')
     <div class="flex min-h-full flex-col items-center justify-center px-4 py-12">
         <div class="w-full max-w-sm">
             <div class="flex items-center justify-between gap-4">
@@ -57,6 +58,23 @@
                         </x-button>
                     </form>
                 </section>
+
+                @if (\App\Support\Demo::enabled())
+                    <section aria-label="{{ __('messages.demo_accounts') }}" class="mt-4 border-b border-gray-200 pb-4">
+                        <h2 class="text-xs font-medium uppercase tracking-wide text-gray-500">{{ __('messages.demo_accounts') }}</h2>
+                        <div class="mt-2 flex flex-col gap-2">
+                            @foreach (\App\Support\Demo::ACCOUNTS as $key => $account)
+                                <form method="POST" action="{{ route('demo.sign-in', $key) }}">
+                                    @csrf
+                                    <x-button type="submit" class="w-full justify-between">
+                                        <span>{{ __('messages.demo_sign_in_as', ['name' => $account['name']]) }}</span>
+                                        <span class="text-xs font-normal opacity-75">{{ __('messages.demo_role_'.$key) }}</span>
+                                    </x-button>
+                                </form>
+                            @endforeach
+                        </div>
+                    </section>
+                @endif
 
                 @if ($keycloakConfigured)
                     <div class="my-6 flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-gray-400" role="separator">
