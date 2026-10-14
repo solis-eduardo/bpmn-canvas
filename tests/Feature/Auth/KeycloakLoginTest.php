@@ -460,4 +460,66 @@ class KeycloakLoginTest extends TestCase
 
         $this->assertDatabaseHas('users', ['email' => 'newbie@example.com', 'login_method' => 'keycloak']);
     }
+
+    public function test_linked_login_refreshes_the_name_from_keycloak(): void
+    {
+        $user = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'sub-rename', 'name' => 'Old Name']);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser('sub-rename', 'New Name', $user->email));
+
+        $this->get('/login/keycloak/callback')->assertRedirect(route('home'));
+
+        $this->assertSame('New Name', $user->fresh()->name);
+    }
+
+    public function test_linked_login_refreshes_the_email_when_verified_and_not_taken(): void
+    {
+        $user = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'sub-mail', 'email' => 'old@example.com']);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser('sub-mail', $user->name, 'new@example.com'));
+
+        $this->get('/login/keycloak/callback')->assertRedirect(route('home'));
+
+        $this->assertSame('new@example.com', $user->fresh()->email);
+    }
+
+    public function test_linked_login_does_not_refresh_the_email_when_unverified(): void
+    {
+        $user = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'sub-unverified', 'email' => 'old@example.com']);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser(
+            'sub-unverified', $user->name, 'new@example.com', emailVerified: false,
+        ));
+
+        $this->get('/login/keycloak/callback')->assertRedirect(route('home'));
+
+        $this->assertAuthenticatedAs($user->fresh());
+        $this->assertSame('old@example.com', $user->fresh()->email);
+    }
+
+    public function test_linked_login_does_not_take_an_email_held_by_another_account(): void
+    {
+        $user = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'sub-taken', 'email' => 'old@example.com']);
+        $other = User::factory()->create(['email' => 'taken@example.com', 'keycloak_id' => null]);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser('sub-taken', $user->name, 'TAKEN@example.com'));
+
+        $this->get('/login/keycloak/callback')->assertRedirect(route('home'));
+
+        $this->assertAuthenticatedAs($user->fresh());
+        $this->assertSame('old@example.com', $user->fresh()->email);
+        $this->assertSame('taken@example.com', $other->fresh()->email);
+        $this->assertNull($other->fresh()->keycloak_id);
+    }
+
+    public function test_linked_login_accepts_a_change_of_case_in_its_own_email(): void
+    {
+        $user = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'sub-case', 'email' => 'ana@example.com']);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser('sub-case', $user->name, 'Ana@Example.com'));
+
+        $this->get('/login/keycloak/callback')->assertRedirect(route('home'));
+
+        $this->assertSame('Ana@Example.com', $user->fresh()->email);
+    }
 }

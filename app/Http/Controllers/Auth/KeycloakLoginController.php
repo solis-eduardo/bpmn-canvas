@@ -82,6 +82,7 @@ class KeycloakLoginController extends Controller
 
         if ($user) {
             $user->login_method = User::LOGIN_METHOD_KEYCLOAK;
+            $this->refreshProfile($user, $socialiteUser, $emailVerified);
 
             return KeycloakResolution::resolved($user);
         }
@@ -120,6 +121,47 @@ class KeycloakLoginController extends Controller
         $user->login_method = User::LOGIN_METHOD_KEYCLOAK;
 
         return KeycloakResolution::resolved($user);
+    }
+
+    /**
+     * Keeps the name and email of an already linked account in step with the
+     * IdP. The email is only taken from a verified claim and never when another
+     * account already holds it, so a login can't reassign an address it doesn't
+     * own. Changes are written to the log.
+     */
+    private function refreshProfile(User $user, SocialiteUserContract $socialiteUser, bool $emailVerified): void
+    {
+        $changed = [];
+
+        $name = $socialiteUser->getName() ?: $socialiteUser->getNickname();
+
+        if (is_string($name) && $name !== '' && $name !== $user->name) {
+            $user->name = $name;
+            $changed[] = 'name';
+        }
+
+        $email = $socialiteUser->getEmail();
+
+        if ($emailVerified && is_string($email) && $email !== '' && $email !== $user->email) {
+            $holder = $this->users->findByEmail($email);
+
+            if ($holder === null || $holder->is($user)) {
+                $user->email = $email;
+                $changed[] = 'email';
+            } else {
+                Log::warning('Keycloak login did not update the email: the address belongs to another account.', [
+                    'user_id' => $user->id,
+                    'holder_user_id' => $holder->id,
+                ]);
+            }
+        }
+
+        if ($changed !== []) {
+            Log::info('Keycloak login refreshed the account profile.', [
+                'user_id' => $user->id,
+                'fields' => $changed,
+            ]);
+        }
     }
 
     /**
