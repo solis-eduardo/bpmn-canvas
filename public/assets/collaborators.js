@@ -271,13 +271,27 @@ import { toast, errorMessage, httpError, togglePanel } from './common.js';
     info.appendChild(badge);
   }
 
-  function formatExpiry(isoString) {
+  function formatDateTime(isoString) {
     const date = new Date(isoString);
     const locale = (document.documentElement.lang || '').replace('_', '-') || undefined;
-    const formatted = date.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
+    return date.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
+  }
 
+  function formatExpiry(isoString) {
     const template = body.dataset.expiresLabelTemplate || 'Expires EXPIRES_AT';
-    return template.replace('EXPIRES_AT', formatted);
+    return template.replace('EXPIRES_AT', formatDateTime(isoString));
+  }
+
+  // "Created by NAME on DATE"; null when the creator's account no longer exists.
+  function formatCreator(share) {
+    if (!share.created_by) return null;
+
+    const template = body.dataset.shareCreatedByTemplate || 'Created by CREATOR_NAME on CREATED_AT';
+    // Date first: a creator name could contain the placeholder text, so it must
+    // be substituted last to avoid being rewritten by the second replace().
+    return template
+      .replace('CREATED_AT', () => formatDateTime(share.created_at))
+      .replace('CREATOR_NAME', () => share.created_by);
   }
 
   async function loadShares() {
@@ -313,6 +327,14 @@ import { toast, errorMessage, httpError, togglePanel } from './common.js';
       const expiry = document.createElement('span');
       expiry.textContent = formatExpiry(share.expires_at);
       info.appendChild(expiry);
+
+      const creator = formatCreator(share);
+      if (creator) {
+        const createdBy = document.createElement('span');
+        createdBy.className = 'share-created-by';
+        createdBy.textContent = creator;
+        info.appendChild(createdBy);
+      }
 
       addBadge(
         info,

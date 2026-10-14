@@ -68,7 +68,7 @@ class UserRepository
      */
     public function allOrderedByName(): Collection
     {
-        return User::orderBy('name')->get();
+        return User::active()->orderBy('name')->get();
     }
 
     /**

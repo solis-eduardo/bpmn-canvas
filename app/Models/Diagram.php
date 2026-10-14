@@ -27,6 +27,16 @@ class Diagram extends Model
     use HoldsALock;
 
     /**
+     * Answers of isEditableBy() for this instance, keyed by User id. Cleared
+     * whenever the instance is saved or re-read, so a check made after a
+     * change to the Diagram or to its access rows (through the Diagram's
+     * own instance) is never answered from before that change.
+     *
+     * @var array<int, bool>
+     */
+    private array $editableByCache = [];
+
+    /**
      * Template for a newly created Diagram's seed BPMN XML. The start
      * event's label is filled in per the current locale by emptyBpmn()
      * (see "messages.start_event_label"), instead of being fixed here.
@@ -178,7 +188,28 @@ BPMN;
             return false;
         }
 
-        return static::query()->whereKey($this->getKey())->editableBy($user)->exists();
+        return $this->editableByCache[$user->id] ??= static::query()
+            ->whereKey($this->getKey())
+            ->editableBy($user)
+            ->exists();
+    }
+
+    /**
+     * Re-reads the Diagram from the database, so the memoized answers of
+     * isEditableBy() are dropped along with the stale attributes.
+     */
+    public function refresh(): static
+    {
+        $this->editableByCache = [];
+
+        return parent::refresh();
+    }
+
+    protected static function booted(): void
+    {
+        static::saved(function (Diagram $diagram): void {
+            $diagram->editableByCache = [];
+        });
     }
 
     /**

@@ -65,7 +65,12 @@
             <tbody class="divide-y divide-gray-200 bg-white">
                 @forelse ($users as $user)
                     <tr>
-                        <td class="whitespace-nowrap px-4 py-3 font-medium text-gray-900">{{ $user->name }}</td>
+                        <td class="whitespace-nowrap px-4 py-3 font-medium text-gray-900">
+                            {{ $user->name }}
+                            @if ($user->isDeactivated())
+                                <span class="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">{{ __('messages.deactivated_badge') }}</span>
+                            @endif
+                        </td>
                         <td class="whitespace-nowrap px-4 py-3 text-sm text-gray-600">{{ $user->email }}</td>
                         <td class="whitespace-nowrap px-4 py-3 text-center">
                             <span class="rounded-full bg-gray-100 px-2.5 py-1 text-sm text-gray-600">

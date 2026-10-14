@@ -26,6 +26,11 @@ class DemoController extends Controller
 
         $user = User::where('email', Demo::ACCOUNTS[$account]['email'])->firstOrFail();
 
+        // A deactivated account never gets a session, demo sign-in included (ADR-0020).
+        if ($user->isDeactivated()) {
+            return redirect()->route('login')->with('error', __('messages.account_deactivated'));
+        }
+
         Auth::login($user);
         $request->session()->regenerate();
 

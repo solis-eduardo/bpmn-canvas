@@ -8,7 +8,9 @@ use App\Models\User;
 use App\Models\Workspace;
 use App\Repositories\VersionRepository;
 use App\Services\CollaboratorService;
+use App\Services\LockService;
 use App\Services\MemberService;
+use App\Services\ProvisionalVersionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -349,5 +351,40 @@ class LockExpiryTest extends TestCase
 
         $this->assertSame($before, Storage::disk('diagrams')->get($diagram->disk_path));
         $this->assertNull($diagram->fresh()->locked_by);
+    }
+
+    public function test_a_heartbeat_landing_after_the_expired_chunk_was_read_keeps_its_lock(): void
+    {
+        $this->heldDiagram(User::factory()->create());
+        $secondHolder = User::factory()->create();
+        $second = $this->heldDiagram($secondHolder)->fresh();
+
+        // Releasing the first expired Lock is where the second Holder's
+        // Heartbeat lands: the second was already selected as expired, but
+        // its row is renewed before its own release.
+        $this->app->instance(LockService::class, new class(app(ProvisionalVersionService::class), $second, $secondHolder) extends LockService
+        {
+            private bool $heartbeatSent = false;
+
+            public function __construct(ProvisionalVersionService $provisional, private readonly Diagram $renewed, private readonly User $renewedHolder)
+            {
+                parent::__construct($provisional);
+            }
+
+            public function release(Diagram $diagram, bool $saveDraft = false, ?string $draft = null): void
+            {
+                if (! $this->heartbeatSent) {
+                    $this->heartbeatSent = true;
+                    $this->renewed->heartbeat($this->renewedHolder);
+                }
+
+                parent::release($diagram, $saveDraft, $draft);
+            }
+        });
+
+        $this->travel(5)->minutes();
+        $this->artisan('locks:expire')->expectsOutput('Released 1 expired Lock(s).')->assertSuccessful();
+
+        $this->assertSame($secondHolder->id, $second->fresh()->locked_by);
     }
 }

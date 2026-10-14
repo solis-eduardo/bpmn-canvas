@@ -161,6 +161,27 @@ class DiagramVersionContentTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_an_administrator_can_read_version_content_without_edit_rights(): void
+    {
+        $author = User::factory()->create();
+        $administrator = User::factory()->create(['is_admin' => true]);
+        $diagram = Diagram::factory()->for($author, 'author')->create();
+
+        $this->actingAs($author)->putJson('/diagrams/'.$diagram->slug.'/content', [
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">content</bpmn:definitions>',
+        ])->assertOk();
+
+        $history = collect(
+            $this->actingAs($author)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
+        );
+
+        $version = $history->first();
+
+        $this->actingAs($administrator)
+            ->getJson('/diagrams/'.$diagram->slug.'/versions/'.$version['id'].'/content')
+            ->assertOk();
+    }
+
     public function test_no_api_response_exposes_git_vocabulary(): void
     {
         $user = User::factory()->create();

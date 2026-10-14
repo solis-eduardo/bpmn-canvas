@@ -19,6 +19,7 @@ class DiagramOwnerService
     public function __construct(
         private readonly DiagramRepository $diagrams,
         private readonly CollaboratorRepository $collaborators,
+        private readonly LockService $locks,
     ) {}
 
     /**
@@ -42,13 +43,11 @@ class DiagramOwnerService
                 return;
             }
 
-            if ($giveUpAccess) {
-                $this->collaborators->removeFor($diagram, $previousOwner);
+            $this->settlePreviousOwner($diagram, $previousOwner, $giveUpAccess);
 
-                return;
-            }
-
-            $this->collaborators->upsertApproved($diagram, $previousOwner, Collaborator::ROLE_COLLABORATOR);
+            // A previous Diagram Owner who gave up access loses edit rights
+            // here, and the Lock follows, as for any other access change.
+            $this->locks->reconcile($diagram);
         });
 
         if ($changesHands) {
@@ -56,5 +55,20 @@ class DiagramOwnerService
             // rolled-back submission never tells the new owner about a transfer.
             DB::afterCommit(fn () => $newOwner->notify(new DiagramOwnershipTransferred($diagram)));
         }
+    }
+
+    /**
+     * The previous Diagram Owner keeps access as a Collaborator, or loses it
+     * entirely when $giveUpAccess is set.
+     */
+    private function settlePreviousOwner(Diagram $diagram, User $previousOwner, bool $giveUpAccess): void
+    {
+        if ($giveUpAccess) {
+            $this->collaborators->removeFor($diagram, $previousOwner);
+
+            return;
+        }
+
+        $this->collaborators->upsertApproved($diagram, $previousOwner, Collaborator::ROLE_COLLABORATOR);
     }
 }

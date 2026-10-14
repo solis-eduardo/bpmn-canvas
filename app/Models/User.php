@@ -7,6 +7,7 @@ use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -39,6 +40,7 @@ class User extends Authenticatable
             'is_admin' => 'boolean',
             'is_admin_via_keycloak_claim' => 'boolean',
             'email_notifications_enabled' => 'boolean',
+            'deactivated_at' => 'datetime',
         ];
     }
 
@@ -57,6 +59,24 @@ class User extends Authenticatable
     public function inDisplayTimezone(CarbonInterface $at): CarbonInterface
     {
         return $at->copy()->timezone($this->displayTimezone());
+    }
+
+    /**
+     * Whether an Administrator deactivated this account (ADR-0020): it can't
+     * sign in by either method, and it's hidden from pickers.
+     */
+    public function isDeactivated(): bool
+    {
+        return $this->deactivated_at !== null;
+    }
+
+    /**
+     * @param  Builder<User>  $query
+     * @return Builder<User>
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereNull('deactivated_at');
     }
 
     /**
@@ -81,8 +101,9 @@ class User extends Authenticatable
 
     /**
      * Whether this User's current Administrator status can be revoked from the
-     * User management screen. Per ADR 0005, a role granted via the Keycloak
-     * claim is displayed but only a manual origin can be turned off here.
+     * User management screen. Per ADR 0005 (as amended), a role granted via the
+     * Keycloak claim is displayed but not revocable here while the claim is
+     * present; the flag is cleared at the next login without the claim.
      */
     public function adminRoleIsManuallyRevocable(): bool
     {

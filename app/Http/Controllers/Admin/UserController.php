@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Repositories\ListSort;
 use App\Repositories\UserListFilters;
 use App\Repositories\UserRepository;
+use App\Services\Identity\UserDeactivationService;
 use App\Services\Identity\UserSessionRevoker;
 use App\Support\KeycloakConfig;
 use Illuminate\Http\RedirectResponse;
@@ -27,6 +28,7 @@ class UserController extends Controller
     public function __construct(
         private readonly UserRepository $users,
         private readonly UserSessionRevoker $sessionRevoker,
+        private readonly UserDeactivationService $deactivation,
     ) {}
 
     /**
@@ -60,7 +62,60 @@ class UserController extends Controller
     {
         $this->authorize('manage-users');
 
-        return view('admin.users.edit', ['user' => $user, 'keycloakConfigured' => KeycloakConfig::isConfigured()]);
+        return view('admin.users.edit', [
+            'user' => $user,
+            'keycloakConfigured' => KeycloakConfig::isConfigured(),
+            'ownedDiagrams' => $this->deactivation->ownedDiagrams($user),
+            'ownedWorkspaces' => $this->deactivation->ownedWorkspaces($user),
+            'successors' => $this->users->allOrderedByName()->reject(fn (User $candidate) => $candidate->is($user)),
+        ]);
+    }
+
+    public function deactivate(Request $request, User $user): RedirectResponse
+    {
+        $this->authorize('manage-users');
+
+        if ($user->is($request->user())) {
+            throw ValidationException::withMessages(['deactivated' => __('messages.cannot_deactivate_self')]);
+        }
+
+        // The acting Administrator is active (EnsureUserIsActive) and isn't the
+        // target, so deactivating another User always leaves one Administrator.
+        $this->deactivation->deactivate($user);
+
+        return redirect()->route('admin.users.edit', $user)->with('status', __('messages.user_deactivated'));
+    }
+
+    public function reactivate(User $user): RedirectResponse
+    {
+        $this->authorize('manage-users');
+
+        $this->deactivation->reactivate($user);
+
+        return redirect()->route('admin.users.edit', $user)->with('status', __('messages.user_reactivated'));
+    }
+
+    /**
+     * Bulk hand-over of every Diagram and Workspace the User owns to an
+     * active successor (CONTEXT.md, "Diagram Owner" and "Workspace Owner").
+     */
+    public function transferOwnership(Request $request, User $user): RedirectResponse
+    {
+        $this->authorize('manage-users');
+
+        $data = $request->validate([
+            'successor_id' => ['required', 'integer', 'exists:users,id'],
+        ]);
+
+        $successor = $this->users->findOrFail($data['successor_id']);
+
+        if ($successor->is($user) || $successor->isDeactivated()) {
+            throw ValidationException::withMessages(['successor_id' => __('messages.successor_must_be_active')]);
+        }
+
+        $this->deactivation->transferOwnership($user, $successor);
+
+        return redirect()->route('admin.users.edit', $user)->with('status', __('messages.ownership_transferred'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -135,7 +190,8 @@ class UserController extends Controller
      */
     private function assertAnotherAdministratorRemains(User $user): void
     {
-        if (! User::where('is_admin', true)->whereKeyNot($user->getKey())->lockForUpdate()->exists()) {
+        // Deactivated Administrators can't act, so they don't count as remaining.
+        if (! User::where('is_admin', true)->active()->whereKeyNot($user->getKey())->lockForUpdate()->exists()) {
             throw ValidationException::withMessages([
                 'is_admin' => __('messages.last_administrator_not_removable'),
             ]);

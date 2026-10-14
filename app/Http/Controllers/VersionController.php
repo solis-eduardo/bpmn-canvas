@@ -60,7 +60,10 @@ class VersionController extends Controller
     {
         $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
-        $this->authorize('update', $diagram);
+        // Reading a Version is read access, same as the current content
+        // (DiagramContentController::show()), so Administrators who only
+        // "see and open" the Diagram can compare Versions too.
+        $this->authorize('view', $diagram);
 
         try {
             $content = $versions->get($diagram, $version);

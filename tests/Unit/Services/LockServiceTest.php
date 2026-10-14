@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Services\LockService;
@@ -216,5 +217,85 @@ class LockServiceTest extends TestCase
         $this->assertFalse($this->service->enter($diagram->fresh(), $other));
         $this->assertSame($holder->id, $diagram->fresh()->locked_by);
         $this->assertNull($diagram->fresh()->lock_requested_by);
+    }
+
+    public function test_reconcile_releases_the_lock_of_a_holder_who_lost_edit_rights(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = Diagram::factory()->create();
+        $diagram->collaborators()->create([
+            'user_id' => $holder->id,
+            'status' => Collaborator::STATUS_APPROVED,
+        ]);
+        $this->service->openOrRequest($diagram, $holder);
+        $this->service->renew($diagram, $holder, '<definitions/>');
+        $this->service->openOrRequest($diagram->fresh(), User::factory()->create());
+        $diagram->collaborators()->where('user_id', $holder->id)->delete();
+
+        $this->service->reconcile($diagram);
+
+        $fresh = $diagram->fresh();
+        $this->assertNull($fresh->locked_by);
+        $this->assertNull($fresh->lock_draft);
+        $this->assertNull($fresh->lock_requested_by);
+    }
+
+    public function test_reconcile_keeps_the_lock_while_the_holder_can_still_edit(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'owner')->create();
+        $this->service->openOrRequest($diagram, $holder);
+
+        $this->service->reconcile($diagram);
+
+        $this->assertSame($holder->id, $diagram->fresh()->locked_by);
+    }
+
+    /**
+     * Both Users loaded the Diagram while the Lock was free; the first to
+     * write takes it, and the second must not overwrite that holder.
+     */
+    public function test_opening_a_diagram_another_user_just_locked_waits_instead_of_overwriting(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $diagram = Diagram::factory()->create();
+        $stale = Diagram::findOrFail($diagram->id);
+
+        $this->service->openOrRequest($diagram, $first);
+        $outcome = $this->service->openOrRequest($stale, $second);
+
+        $this->assertFalse($outcome->acquired);
+        $this->assertSame($first->id, $diagram->fresh()->locked_by);
+        $this->assertSame($second->id, $diagram->fresh()->lock_requested_by);
+    }
+
+    /** Acquiring one Diagram's Lock must not rewrite the User's other Locks. */
+    public function test_acquiring_a_lock_leaves_the_users_other_locks_untouched(): void
+    {
+        $user = User::factory()->create();
+        $held = Diagram::factory()->create();
+        $free = Diagram::factory()->create();
+        $this->service->openOrRequest($held, $user);
+        $lockedAt = $held->fresh()->locked_at;
+
+        $this->travel(5)->minutes();
+        $this->assertTrue($this->service->openOrRequest($free, $user)->acquired);
+
+        $this->assertEquals($lockedAt, $held->fresh()->locked_at);
+        $this->assertSame($user->id, $free->fresh()->locked_by);
+    }
+
+    public function test_entering_a_diagram_another_user_just_locked_is_refused(): void
+    {
+        $first = User::factory()->create();
+        $second = User::factory()->create();
+        $diagram = Diagram::factory()->create();
+        $stale = Diagram::findOrFail($diagram->id);
+
+        $this->service->enter($diagram, $first);
+
+        $this->assertFalse($this->service->enter($stale, $second));
+        $this->assertSame($first->id, $diagram->fresh()->locked_by);
     }
 }

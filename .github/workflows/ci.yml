@@ -18,6 +18,7 @@ jobs:
       pull-requests: read
     outputs:
       php: ${{ steps.filter.outputs.php }}
+      front: ${{ steps.filter.outputs.front }}
     steps:
       - uses: actions/checkout@v5
 
@@ -37,6 +38,43 @@ jobs:
               - 'vite.config.*'
               - '.github/workflows/ci.yml'
               - '.github/actions/**'
+            front:
+              - 'public/assets/**'
+              - 'resources/js/**'
+              - 'resources/css/**'
+              - 'standalone/**'
+              - 'tests/js/**'
+              - 'vitest.config.js'
+              - 'vite.config.*'
+              - 'package.json'
+              - 'package-lock.json'
+              - '.github/workflows/ci.yml'
+              - '.github/actions/**'
+
+  js:
+    name: Front-end tests and build
+    needs: changes
+    if: needs.changes.outputs.front == 'true'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install npm dependencies
+        run: npm ci
+
+      - name: Run JavaScript tests
+        run: npm test
+
+      - name: Build front-end assets
+        # The PHP suite renders views through the built manifest, and this
+        # job runs without PHP, so a broken bundle is caught here first.
+        run: npm run build
 
   pint:
     name: Pint (code style)

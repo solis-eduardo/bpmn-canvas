@@ -403,7 +403,7 @@ class WorkspaceTest extends TestCase
             return $ids->contains($candidate->id) && $ids->contains($member->id) && ! $ids->contains($owner->id);
         });
         $response->assertSee('Candidate Person');
-        $response->assertSee('candidate@example.test');
+        $response->assertDontSee('candidate@example.test');
         $response->assertDontSee('name="keycloak_group"', false);
         $response->assertDontSee('data-user-select', false);
         $response->assertDontSee('type="search"', false);
@@ -525,7 +525,8 @@ class WorkspaceTest extends TestCase
             ->assertSee('name="owner"', false)
             ->assertSee('name="member"', false)
             ->assertSee('data-tag-select', false)
-            ->assertSee('Pick Me (pick@example.test)')
+            ->assertSee('Pick Me')
+            ->assertDontSee('pick@example.test')
             ->assertSee('value="'.$user->id.'" selected', false);
     }
 

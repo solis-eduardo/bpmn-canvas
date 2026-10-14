@@ -100,6 +100,8 @@ class ShareController extends Controller
         $data = [
             'id' => $share->id,
             'url' => $share->showUrl(),
+            'created_by' => $share->author?->name,
+            'created_at' => $share->created_at->toIso8601String(),
             'expires_at' => $share->expires_at->toIso8601String(),
             'allow_download' => $share->allow_download,
             'pinned_version' => $this->presentPinnedVersion($share, $versionsById),

@@ -32,11 +32,10 @@ class LockPolicy
 
     /**
      * Heartbeat: the current holder, nobody else — and only while they can
-     * still edit. Holding the Lock is stale state: nothing releases it when
-     * a Collaborator is removed or a Member leaves the Workspace, and the
-     * Heartbeat carries content (the draft a Lock expiry turns into a
-     * Version), so edit rights are re-checked live here exactly as
-     * {@see acquire()} and saving do.
+     * still edit. Access changes release a lapsed holder's Lock through
+     * {@see LockService::reconcile()}, but the Heartbeat carries content (the
+     * draft a Lock expiry turns into a Version), so edit rights are also
+     * re-checked live here exactly as {@see acquire()} and saving do.
      */
     public function renew(User $user, Diagram $diagram): bool
     {

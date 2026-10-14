@@ -38,6 +38,9 @@
         data-delete-url="{{ route('diagrams.destroy', $diagram->slug) }}"
         data-index-url="{{ route('diagrams.index') }}"
         data-heartbeat-url="{{ route('diagrams.lock.update', $diagram->slug) }}"
+        data-lock-url="{{ route('diagrams.lock.store', $diagram->slug) }}"
+        data-lock-lost-notice="{{ __('messages.lock_lost_notice') }}"
+        data-reacquire-lock-failed-notice="{{ __('messages.reacquire_lock_failed') }}"
         data-lock-requested-by-notice="{{ __('messages.lock_requested_by_notice', ['name' => ':name']) }}"
         data-unlock-url="{{ route('diagrams.lock.destroy', $diagram->slug) }}"
         data-is-lock-holder="{{ (int) $diagram->locked_by === auth()->id() ? '1' : '0' }}"
@@ -95,6 +98,7 @@
             data-link-copied-notice="{{ __('messages.link_copied') }}"
             data-link-copy-failed-notice="{{ __('messages.link_copy_failed') }}"
             data-expires-label-template="{{ __('messages.expires_label', ['time' => 'EXPIRES_AT']) }}"
+            data-share-created-by-template="{{ __('messages.share_created_by', ['name' => 'CREATOR_NAME', 'date' => 'CREATED_AT']) }}"
             data-download-allowed-label="{{ __('messages.download_allowed') }}"
             data-download-not-allowed-label="{{ __('messages.download_not_allowed') }}"
             data-follow-latest-version-label="{{ __('messages.follow_latest_version') }}"
@@ -109,6 +113,11 @@
                 role="status"
                 hidden
             ></div>
+            <div id="lock-lost-banner" class="lock-request-banner lock-lost-banner" role="alert" hidden>
+                <span class="lock-lost-text"></span>
+                <button type="button" class="lock-lost-reacquire">{{ __('messages.reacquire_lock') }}</button>
+                <button type="button" class="lock-lost-dismiss">{{ __('messages.lock_lost_dismiss') }}</button>
+            </div>
             <header>
                 <x-button :href="route('diagrams.index')" id="btn-back-to-list" variant="secondary" size="sm">
                     <x-icon name="arrow-left" />
