@@ -62,19 +62,77 @@ export function createHeartbeat({ editor, send, idleAfterMs = IDLE_AFTER_MS, now
 }
 
 /**
+ * The timer that sends a Heartbeat every HEARTBEAT_INTERVAL_MS. A 403 or 423
+ * answer means the Lock is gone: the loop stops and reports it once through
+ * onLost, instead of retrying a Lock the server no longer grants.
+ *
+ * @param {Object} options
+ * @param {{beat: () => Promise<?{lockRequestedBy: ?string}>}} options.heartbeat
+ * @param {(requestedBy: ?string) => void} options.onRequested
+ * @param {() => void} options.onLost
+ * @param {number} [options.intervalMs]
+ */
+export function createHeartbeatLoop({ heartbeat, onRequested, onLost, intervalMs = HEARTBEAT_INTERVAL_MS }) {
+  let timer = null;
+
+  // Bumped by resume(). A beat sent before a save or a re-acquire that then
+  // fails says nothing about the Lock as it is now, so it is ignored.
+  let epoch = 0;
+
+  function start() {
+    if (timer === null) timer = setInterval(beatNow, intervalMs);
+  }
+
+  function stop() {
+    clearInterval(timer);
+    timer = null;
+  }
+
+  async function beatNow() {
+    const sentEpoch = epoch;
+
+    try {
+      const answer = await heartbeat.beat();
+      if (answer) onRequested(answer.lockRequestedBy);
+    } catch (e) {
+      console.error(e);
+
+      if ((e.status === 403 || e.status === 423) && sentEpoch === epoch) {
+        stop();
+        onLost();
+      }
+    }
+  }
+
+  return {
+    start,
+    stop,
+    beatNow,
+
+    /** The Lock is held again (a save took it back or it was re-acquired): renews it from now on. */
+    resume() {
+      epoch += 1;
+      start();
+    },
+  };
+}
+
+/**
  * Wires the Lock session into the Editor page: periodic Heartbeats, the
- * lock-request banner and the release button.
+ * lock-request banner, the lost-Lock banner and the release button.
  *
  * @param {Object} options
  * @param {Object} options.editor  the Editor core's public API
  * @param {(method: string, url: string, payload?: Object) => Promise<any>} options.request
- * @param {{heartbeat: string, unlock: string, index: string}} options.urls
+ * @param {{heartbeat: string, lock: string, unlock: string, index: string}} options.urls
  * @param {boolean} options.isHolder  whether the viewer holds the Lock (else an Administrator)
  * @param {(key: string) => string} options.t  localized UI string by key
  * @param {?HTMLElement} options.banner  the lock-request banner
  * @param {?HTMLButtonElement} options.releaseButton
+ * @param {?HTMLElement} options.lostBanner  shown when the Lock is lost; holds
+ *   a `.lock-lost-text`, a `.lock-lost-reacquire` and a `.lock-lost-dismiss` button
  */
-export function startLockSession({ editor, request, urls, isHolder, t, banner, releaseButton }) {
+export function startLockSession({ editor, request, urls, isHolder, t, banner, releaseButton, lostBanner }) {
   // The Lock holder's only signal that someone else wants the Lock is this
   // same heartbeat poll (see LockController::update) — no separate poll
   // loop is started just for this (issue #9).
@@ -91,27 +149,60 @@ export function startLockSession({ editor, request, urls, isHolder, t, banner, r
     banner.hidden = false;
   }
 
+  function showLockLost() {
+    if (!lostBanner) {
+      toast(t('lockLostNotice'), true);
+      return;
+    }
+
+    lostBanner.querySelector('.lock-lost-text').textContent = t('lockLostNotice');
+    lostBanner.hidden = false;
+  }
+
+  function hideLockLost() {
+    if (lostBanner) lostBanner.hidden = true;
+  }
+
   const heartbeat = createHeartbeat({ editor, send: payload => request('PATCH', urls.heartbeat, payload) });
   ACTIVITY_EVENTS.forEach(name => document.addEventListener(name, heartbeat.touch, { passive: true }));
 
-  let timer;
+  const loop = createHeartbeatLoop({
+    heartbeat,
+    onRequested: showLockRequestedNotice,
+    onLost: showLockLost,
+  });
+  loop.start();
 
-  async function sendHeartbeat() {
-    try {
-      const answer = await heartbeat.beat();
-      if (answer) showLockRequestedNotice(answer.lockRequestedBy);
-    } catch (e) {
-      console.error(e);
+  // A successful save takes a free Lock back (DiagramContentController::update),
+  // so the Heartbeat resumes and the lost notice no longer applies.
+  editor.on('saved', () => {
+    hideLockLost();
+    loop.resume();
+  });
 
-      // The Lock is gone (expired or taken): stop renewing and say so, once.
-      if (e.status === 403 || e.status === 423) {
-        clearInterval(timer);
-        toast(errorMessage(e, t('saveFailedNotice')), true);
+  if (lostBanner) {
+    lostBanner.querySelector('.lock-lost-dismiss').addEventListener('click', hideLockLost);
+
+    const reacquire = lostBanner.querySelector('.lock-lost-reacquire');
+
+    reacquire.addEventListener('click', async () => {
+      reacquire.disabled = true;
+
+      try {
+        // Asks for the Lock: it is taken when free, otherwise the holder is
+        // asked for it and the next Heartbeat reports the Lock still lost.
+        await request('POST', urls.lock);
+        hideLockLost();
+        loop.resume();
+        await loop.beatNow();
+      } catch (e) {
+        console.error(e);
+        toast(errorMessage(e, t('reacquireLockFailedNotice')), true);
+      } finally {
+        reacquire.disabled = false;
       }
-    }
+    });
   }
-
-  timer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
 
   if (!releaseButton) return;
 
