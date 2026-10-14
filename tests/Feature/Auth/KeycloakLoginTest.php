@@ -167,6 +167,96 @@ class KeycloakLoginTest extends TestCase
         $this->assertTrue($user->fresh()->is_admin);
     }
 
+    public function test_admin_role_claim_at_login_marks_the_claim_flag(): void
+    {
+        $this->mockSocialiteUser($this->fakeSocialiteUser(
+            'keycloak-sub-claim-flag', 'Fabio Admin', 'fabio@example.com', ['bpmn-admin']
+        ));
+
+        $this->get('/login/keycloak/callback');
+
+        $user = User::sole();
+        $this->assertTrue($user->is_admin);
+        $this->assertTrue($user->is_admin_via_keycloak_claim);
+    }
+
+    public function test_absence_of_admin_role_claim_at_login_clears_a_claim_granted_administrator(): void
+    {
+        $user = User::factory()->create([
+            'login_method' => 'keycloak', 'keycloak_id' => 'keycloak-sub-revoke',
+            'is_admin' => true, 'is_admin_via_keycloak_claim' => true,
+        ]);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser('keycloak-sub-revoke', $user->name, $user->email));
+
+        $this->get('/login/keycloak/callback');
+
+        $user->refresh();
+        $this->assertFalse($user->is_admin);
+        $this->assertFalse($user->is_admin_via_keycloak_claim);
+    }
+
+    public function test_manual_revocation_is_allowed_once_a_login_without_the_claim_cleared_the_flag(): void
+    {
+        $provider = Mockery::mock(SocialiteProvider::class);
+        $provider->shouldReceive('user')->andReturn(
+            $this->fakeSocialiteUser('keycloak-sub-revocable', 'Gabi Admin', 'gabi@example.com', ['bpmn-admin']),
+            $this->fakeSocialiteUser('keycloak-sub-revocable', 'Gabi Admin', 'gabi@example.com'),
+        );
+        Socialite::shouldReceive('driver')->with('keycloak')->andReturn($provider);
+
+        $this->get('/login/keycloak/callback');
+        $this->post('/logout');
+
+        $claimAdmin = User::sole();
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->put("/admin/users/{$claimAdmin->id}", ['is_admin' => false])
+            ->assertForbidden();
+
+        $this->get('/login/keycloak/callback');
+        $this->post('/logout');
+
+        $this->actingAs($admin)->put("/admin/users/{$claimAdmin->id}", ['is_admin' => false])
+            ->assertSessionHasNoErrors();
+
+        $this->assertFalse($claimAdmin->fresh()->is_admin);
+    }
+
+    public function test_claim_absent_at_login_keeps_a_manually_granted_administrator_as_manual(): void
+    {
+        $user = User::factory()->create([
+            'login_method' => 'keycloak', 'keycloak_id' => 'keycloak-sub-manual',
+            'is_admin' => true, 'is_admin_via_keycloak_claim' => false,
+        ]);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser('keycloak-sub-manual', $user->name, $user->email));
+
+        $this->get('/login/keycloak/callback');
+
+        $user->refresh();
+        $this->assertTrue($user->is_admin);
+        $this->assertFalse($user->is_admin_via_keycloak_claim);
+    }
+
+    public function test_unverified_login_with_the_claim_is_treated_as_claim_absent(): void
+    {
+        $user = User::factory()->create([
+            'login_method' => 'keycloak', 'keycloak_id' => 'keycloak-sub-unverified',
+            'is_admin' => true, 'is_admin_via_keycloak_claim' => true,
+        ]);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser(
+            'keycloak-sub-unverified', $user->name, $user->email, ['bpmn-admin'], emailVerified: false
+        ));
+
+        $this->get('/login/keycloak/callback');
+
+        $user->refresh();
+        $this->assertFalse($user->is_admin);
+        $this->assertFalse($user->is_admin_via_keycloak_claim);
+    }
+
     public function test_keycloak_login_links_to_an_existing_local_account_with_the_same_email_instead_of_duplicating(): void
     {
         $localUser = User::factory()->create([

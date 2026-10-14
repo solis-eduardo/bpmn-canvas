@@ -50,10 +50,7 @@ class KeycloakLoginController extends Controller
 
         // Only a verified identity may be elevated: the claim is trusted, the
         // unverified email behind it is not.
-        if ($emailVerified && $this->hasAdminRoleClaim($tokenPayload)) {
-            $user->is_admin = true;
-            $user->is_admin_via_keycloak_claim = true;
-        }
+        $this->syncAdminFromClaim($user, $emailVerified && $this->hasAdminRoleClaim($tokenPayload));
 
         $user->save();
         $groups = $this->keycloakGroups($tokenPayload);
@@ -120,6 +117,27 @@ class KeycloakLoginController extends Controller
         $user->login_method = User::LOGIN_METHOD_KEYCLOAK;
 
         return KeycloakResolution::resolved($user);
+    }
+
+    /**
+     * The Keycloak claim is the source of truth for an Administrator granted by
+     * it (ADR 0005, as amended): present at login grants the flag, absent at
+     * login clears it. A manual Administrator grant is left as it is.
+     */
+    private function syncAdminFromClaim(User $user, bool $claimPresent): void
+    {
+        if ($claimPresent) {
+            $user->is_admin = true;
+            $user->is_admin_via_keycloak_claim = true;
+
+            return;
+        }
+
+        if ($user->is_admin_via_keycloak_claim) {
+            $user->is_admin = false;
+        }
+
+        $user->is_admin_via_keycloak_claim = false;
     }
 
     /**

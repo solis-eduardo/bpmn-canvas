@@ -132,6 +132,17 @@ class AdminUserManagementTest extends TestCase
         $this->assertFalse($admin->fresh()->is_admin);
     }
 
+    public function test_manual_revocation_of_a_claim_administrator_is_refused_while_the_claim_is_present(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $claimAdmin = User::factory()->create(['is_admin' => true, 'is_admin_via_keycloak_claim' => true]);
+
+        $this->actingAs($admin)->put("/admin/users/{$claimAdmin->id}", ['is_admin' => false])
+            ->assertForbidden();
+
+        $this->assertTrue($claimAdmin->fresh()->is_admin);
+    }
+
     public function test_admin_can_update_a_local_user_and_replace_the_password(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);
