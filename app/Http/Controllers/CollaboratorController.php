@@ -75,9 +75,9 @@ class CollaboratorController extends Controller
         $this->authorize('collaborator.invite', [$diagram, $target]);
         $this->authorizeRole($diagram, $data['role'] ?? null);
 
-        $this->rejectDiagramOwner($diagram, $target, $data);
+        $skipped = $this->refuseDiagramOwnerAsTarget($diagram, $target, $this->targetedByEmail($data));
 
-        $collaborator = $target && ! $diagram->isOwnedBy($target)
+        $collaborator = $target && ! $skipped
             ? $this->service->invite($diagram, $target, Gate::allows('collaborator.grant', $diagram), $data['role'] ?? null)
             : null;
 
@@ -97,14 +97,23 @@ class CollaboratorController extends Controller
 
     /**
      * The Diagram Owner already has full access, so a Collaborator row for
-     * them would only list them twice. A picked `user_id` is told plainly;
-     * an email stays silent so it can't probe who owns the Diagram.
+     * them would only list them twice. A picked `user_id` is refused with a
+     * 422; an $emailed target is skipped silently (the caller still sees the
+     * generic success) so the response can't probe who owns the Diagram.
+     *
+     * @return bool true if $target is the Diagram Owner and was silently skipped
      */
-    private function rejectDiagramOwner(Diagram $diagram, ?User $target, array $data): void
+    private function refuseDiagramOwnerAsTarget(Diagram $diagram, ?User $target, bool $emailed): bool
     {
-        if ($target && $diagram->isOwnedBy($target) && ! $this->targetedByEmail($data)) {
-            throw ValidationException::withMessages(['user_id' => __('messages.cannot_invite_diagram_owner')]);
+        if (! $target || ! $diagram->isOwnedBy($target)) {
+            return false;
         }
+
+        if ($emailed) {
+            return true;
+        }
+
+        throw ValidationException::withMessages(['user_id' => __('messages.cannot_invite_diagram_owner')]);
     }
 
     private function requestRedirect(Request $request): RedirectResponse
@@ -125,7 +134,7 @@ class CollaboratorController extends Controller
 
         $this->authorize('collaborator.grant', $diagram);
         $this->authorizeRole($diagram, $data['role'] ?? null);
-        $this->rejectDiagramOwner($diagram, $user, []);
+        $this->refuseDiagramOwnerAsTarget($diagram, $user, false);
 
         $collaborator = $this->service->approve($diagram, $user, $data['role'] ?? null);
 

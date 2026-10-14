@@ -93,7 +93,10 @@ class DiagramCollaboratorTest extends TestCase
         $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
 
         $this->actingAs($owner)->putJson("/diagrams/{$diagram->slug}/collaborators/{$owner->id}")
-            ->assertUnprocessable();
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('user_id');
+
+        $this->assertSame(0, Collaborator::count());
     }
 
     public function test_the_author_alone_cannot_invite_a_collaborator_directly_once_ownership_diverges(): void
