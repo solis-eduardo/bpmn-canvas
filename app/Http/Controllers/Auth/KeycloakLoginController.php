@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Repositories\UserRepository;
 use App\Services\MemberService;
+use App\Support\KeycloakProvider;
 use App\Support\KeycloakResolution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,6 +19,11 @@ use Throwable;
 
 class KeycloakLoginController extends Controller
 {
+    /**
+     * Session key holding the Keycloak ID token, used as `id_token_hint` on logout.
+     */
+    public const ID_TOKEN_SESSION_KEY = 'keycloak_id_token';
+
     public function __construct(
         private readonly UserRepository $users,
     ) {}
@@ -29,8 +35,11 @@ class KeycloakLoginController extends Controller
 
     public function callback(Request $request, MemberService $members): RedirectResponse
     {
+        /** @var KeycloakProvider $provider */
+        $provider = Socialite::driver('keycloak');
+
         try {
-            $socialiteUser = Socialite::driver('keycloak')->user();
+            $socialiteUser = $provider->user();
         } catch (Throwable $e) {
             report($e);
 
@@ -59,8 +68,20 @@ class KeycloakLoginController extends Controller
         Auth::login($user);
 
         $request->session()->regenerate();
+        $this->rememberIdToken($request, $provider->idToken());
 
         return redirect()->intended(route('home'));
+    }
+
+    private function rememberIdToken(Request $request, ?string $idToken): void
+    {
+        if ($idToken === null) {
+            $request->session()->forget(self::ID_TOKEN_SESSION_KEY);
+
+            return;
+        }
+
+        $request->session()->put(self::ID_TOKEN_SESSION_KEY, $idToken);
     }
 
     /**
