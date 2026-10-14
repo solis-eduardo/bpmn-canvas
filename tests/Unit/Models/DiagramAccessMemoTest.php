@@ -15,7 +15,9 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Tests\TestCase;
+use Tests\Traits\BuildsAccessScenarios;
 
 /**
  * Issue #241: the access predicates are memoized per request, across Diagram
@@ -23,6 +25,7 @@ use Tests\TestCase;
  */
 class DiagramAccessMemoTest extends TestCase
 {
+    use BuildsAccessScenarios;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -39,7 +42,7 @@ class DiagramAccessMemoTest extends TestCase
         $other = Diagram::find($diagram->id);
         $stranger = User::factory()->create();
 
-        $queries = $this->countQueries(function () use ($diagram, $other, $stranger) {
+        $queries = $this->queriesRunBy(function () use ($diagram, $other, $stranger) {
             $this->assertTrue($diagram->isEditableBy($diagram->owner));
             $this->assertTrue($other->isEditableBy($diagram->owner));
             $this->assertFalse($diagram->isEditableBy($stranger));
@@ -52,7 +55,7 @@ class DiagramAccessMemoTest extends TestCase
 
         // $diagram->owner (one lookup), two editable checks, one collaborator
         // check, one manager check, and the refresh() read.
-        $this->assertSame(6, $queries);
+        $this->assertCount(6, $queries);
     }
 
     public function test_a_member_removed_through_the_member_service_loses_access(): void
@@ -199,32 +202,35 @@ class DiagramAccessMemoTest extends TestCase
         $this->assertTrue($diagram->isEditableBy($user));
     }
 
-    /**
-     * @return array{Workspace, Diagram, User}
-     */
-    private function workspaceDiagramWithMember(): array
+    public function test_a_rolled_back_transaction_does_not_leave_a_stale_answer(): void
     {
-        $workspace = Workspace::factory()->create();
-        $diagram = Diagram::factory()->create(['workspace_id' => $workspace->id]);
-        $member = User::factory()->create();
-        Member::create(['workspace_id' => $workspace->id, 'user_id' => $member->id, 'origin' => Member::ORIGIN_MANUAL]);
+        $diagram = Diagram::factory()->create();
+        $user = User::factory()->create();
 
-        return [$workspace, $diagram, $member];
+        try {
+            DB::transaction(function () use ($diagram, $user) {
+                app(CollaboratorService::class)->grant($diagram, $user);
+                $this->assertTrue($diagram->isEditableBy($user), 'read inside the transaction');
+
+                throw new RuntimeException('roll back');
+            });
+        } catch (RuntimeException) {
+        }
+
+        $this->assertFalse($diagram->isEditableBy($user));
     }
 
-    /**
-     * @param  callable(): void  $callback
-     */
-    private function countQueries(callable $callback): int
+    public function test_writes_that_cannot_change_access_keep_the_memo(): void
     {
-        $count = 0;
+        [, $diagram, $member] = $this->workspaceDiagramWithMember();
+        $this->assertTrue($diagram->isEditableBy($member));
 
-        DB::listen(function () use (&$count) {
-            $count++;
+        $queries = $this->queriesRunBy(function () use ($diagram, $member) {
+            $member->update(['name' => 'Renamed']);
+            $diagram->update(['title' => 'Renamed']);
+            $this->assertTrue(Diagram::find($diagram->id)->isEditableBy($member));
         });
 
-        $callback();
-
-        return $count;
+        $this->assertCount(3, $queries, 'two updates and the find, no new access query');
     }
 }

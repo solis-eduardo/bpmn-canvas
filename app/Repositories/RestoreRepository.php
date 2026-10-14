@@ -3,6 +3,7 @@
 namespace App\Repositories;
 
 use App\Services\Backup\DatabaseRestorer;
+use App\Support\AccessMemo;
 use App\Support\ProcessRunner;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -22,7 +23,7 @@ class RestoreRepository
 {
     private const MANIFEST_FORMAT = 1;
 
-    public function __construct(private DatabaseRestorer $databaseRestorer) {}
+    public function __construct(private DatabaseRestorer $databaseRestorer, private AccessMemo $access) {}
 
     /**
      * Restores the database and Diagrams directory from $artifact (a
@@ -50,6 +51,10 @@ class RestoreRepository
             // Only once the artifact has been extracted and validated does
             // anything existing get touched.
             $this->databaseRestorer->restore($stagingDir.'/database.dump');
+
+            // The restore swaps every access row without a model event.
+            $this->access->forget();
+
             $this->replaceDiagrams($stagingDir.'/diagrams');
         } finally {
             $this->removeDirectory($stagingDir);

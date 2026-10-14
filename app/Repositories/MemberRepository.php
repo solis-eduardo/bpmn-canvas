@@ -13,6 +13,8 @@ use App\Support\AccessMemo;
  */
 class MemberRepository
 {
+    public function __construct(private readonly AccessMemo $access) {}
+
     public function findFor(Workspace $workspace, User $user): ?Member
     {
         return Member::where('workspace_id', $workspace->id)
@@ -55,7 +57,7 @@ class MemberRepository
     {
         $removed = $workspace->members()->where('user_id', $user->id)->delete() > 0;
 
-        app(AccessMemo::class)->forget();
+        $this->access->forget();
 
         return $removed;
     }
@@ -73,7 +75,7 @@ class MemberRepository
             ->whereDoesntHave('workspace', fn ($query) => $query->whereIn('keycloak_group', $groups))
             ->delete();
 
-        app(AccessMemo::class)->forget();
+        $this->access->forget();
 
         return $removed;
     }

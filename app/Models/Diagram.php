@@ -6,6 +6,7 @@ use App\Models\Concerns\FiltersDiagramList;
 use App\Models\Concerns\HoldsALock;
 use App\Rules\BpmnXml;
 use App\Support\AccessMemo;
+use App\Support\AccessPredicate;
 use Database\Factories\DiagramFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -131,7 +132,7 @@ BPMN;
      */
     public function hasManagerRole(User $user): bool
     {
-        return $this->memoize('manager', $user, fn () => $this->collaborators()
+        return $this->memoize(AccessPredicate::Manager, $user, fn () => $this->collaborators()
             ->where('user_id', $user->id)
             ->where('status', Collaborator::STATUS_APPROVED)
             ->where('role', Collaborator::ROLE_MANAGER)
@@ -160,7 +161,7 @@ BPMN;
      */
     public function hasApprovedCollaborator(User $user): bool
     {
-        return $this->memoize('collaborator', $user, fn () => $this->collaborators()
+        return $this->memoize(AccessPredicate::Collaborator, $user, fn () => $this->collaborators()
             ->where('user_id', $user->id)
             ->where('status', Collaborator::STATUS_APPROVED)
             ->exists());
@@ -174,9 +175,14 @@ BPMN;
      *
      * @param  callable(): bool  $resolve
      */
-    private function memoize(string $predicate, User $user, callable $resolve): bool
+    private function memoize(AccessPredicate $predicate, User $user, callable $resolve): bool
     {
-        return app(AccessMemo::class)->remember($predicate, $this->getKey(), $user->id, $resolve);
+        // An unsaved Diagram has no id to key the memo by.
+        if (! $this->exists) {
+            return $resolve();
+        }
+
+        return app(AccessMemo::class)->remember($predicate, (int) $this->getKey(), $user->id, $resolve);
     }
 
     /**
@@ -192,7 +198,7 @@ BPMN;
             return false;
         }
 
-        return $this->memoize('editable', $user, fn () => static::query()
+        return $this->memoize(AccessPredicate::Editable, $user, fn () => static::query()
             ->whereKey($this->getKey())
             ->editableBy($user)
             ->exists());

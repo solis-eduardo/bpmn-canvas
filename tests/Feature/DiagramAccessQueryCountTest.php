@@ -2,14 +2,10 @@
 
 namespace Tests\Feature;
 
-use App\Models\Diagram;
-use App\Models\Member;
-use App\Models\User;
-use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
+use Tests\Traits\BuildsAccessScenarios;
 
 /**
  * Repeatable query-count measurement for issue #241. Run with
@@ -19,6 +15,7 @@ use Tests\TestCase;
  */
 class DiagramAccessQueryCountTest extends TestCase
 {
+    use BuildsAccessScenarios;
     use RefreshDatabase;
 
     protected function setUp(): void
@@ -30,7 +27,7 @@ class DiagramAccessQueryCountTest extends TestCase
 
     public function test_opening_the_editor_evaluates_each_access_predicate_once(): void
     {
-        [$diagram, $member] = $this->workspaceDiagramWithMember();
+        [, $diagram, $member] = $this->workspaceDiagramWithMember();
 
         $access = $this->measure('GET /diagrams/{slug}', function () use ($diagram, $member) {
             $this->actingAs($member)->get('/diagrams/'.$diagram->slug)->assertOk();
@@ -41,7 +38,7 @@ class DiagramAccessQueryCountTest extends TestCase
 
     public function test_a_heartbeat_evaluates_each_access_predicate_once(): void
     {
-        [$diagram, $member] = $this->workspaceDiagramWithMember();
+        [, $diagram, $member] = $this->workspaceDiagramWithMember();
         $this->actingAs($member)->get('/diagrams/'.$diagram->slug)->assertOk();
 
         $access = $this->measure('PATCH /diagrams/{slug}/lock', function () use ($diagram, $member) {
@@ -53,44 +50,21 @@ class DiagramAccessQueryCountTest extends TestCase
     }
 
     /**
-     * @return array{Diagram, User}
-     */
-    private function workspaceDiagramWithMember(): array
-    {
-        $workspace = Workspace::factory()->create();
-        $diagram = Diagram::factory()->create(['workspace_id' => $workspace->id]);
-        $member = User::factory()->create();
-        Member::create(['workspace_id' => $workspace->id, 'user_id' => $member->id, 'origin' => Member::ORIGIN_MANUAL]);
-
-        return [$diagram, $member];
-    }
-
-    /**
      * Runs $callback and returns the access-predicate queries it ran (the
      * "select exists" ones behind isEditableBy, hasApprovedCollaborator and
-     * hasManagerRole), as SQL plus bindings. With MEASURE_QUERIES set, also
-     * prints their count and the total query count.
+     * hasManagerRole). With MEASURE_QUERIES set, also prints their count and
+     * the total query count.
      *
      * @param  callable(): void  $callback
      * @return list<string>
      */
     private function measure(string $label, callable $callback): array
     {
-        $total = 0;
-        $access = [];
-
-        DB::listen(function ($query) use (&$total, &$access) {
-            $total++;
-
-            if (str_starts_with($query->sql, 'select exists')) {
-                $access[] = $query->sql.json_encode($query->bindings);
-            }
-        });
-
-        $callback();
+        $queries = $this->queriesRunBy($callback);
+        $access = array_values(array_filter($queries, fn (string $sql) => str_starts_with($sql, 'select exists')));
 
         if (getenv('MEASURE_QUERIES')) {
-            fwrite(STDERR, sprintf("\n[queries] %s: total=%d access=%d\n", $label, $total, count($access)));
+            fwrite(STDERR, sprintf("\n[queries] %s: total=%d access=%d\n", $label, count($queries), count($access)));
         }
 
         return $access;

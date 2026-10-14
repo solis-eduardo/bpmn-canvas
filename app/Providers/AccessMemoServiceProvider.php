@@ -8,40 +8,51 @@ use App\Models\Member;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\AccessMemo;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Events\TransactionRolledBack;
 use Illuminate\Foundation\Http\Events\RequestHandled;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 
 /**
  * Wires the request-scoped AccessMemo (issue #241) and the invalidation that
- * keeps it correct.
+ * keeps it correct. See AccessMemo for the rules.
  */
 class AccessMemoServiceProvider extends ServiceProvider
 {
-    /**
-     * The models whose rows the memoized access predicates read.
-     */
-    private const ACCESS_MODELS = [Diagram::class, Collaborator::class, Member::class, Workspace::class, User::class];
-
     public function register(): void
     {
         // Per request (and per queued job): see AccessMemo.
         $this->app->scoped(AccessMemo::class);
     }
 
-    /**
-     * Any save or delete of an access row clears the memo, whichever model
-     * instance made it. Writes through the query builder fire no model
-     * event; their repositories clear the memo themselves.
-     */
     public function boot(): void
     {
-        foreach (self::ACCESS_MODELS as $model) {
-            foreach (['saved', 'deleted'] as $event) {
-                Event::listen("eloquent.{$event}: {$model}", fn () => $this->app->make(AccessMemo::class)->forget());
-            }
+        $forget = fn () => app(AccessMemo::class)->forget();
+
+        // The rows that grant access: any change matters.
+        foreach ([Collaborator::class, Member::class] as $model) {
+            Event::listen("eloquent.saved: {$model}", $forget);
+            Event::listen("eloquent.deleted: {$model}", $forget);
         }
 
-        Event::listen(RequestHandled::class, fn () => $this->app->make(AccessMemo::class)->forget());
+        // The Diagram's owner and Workspace decide access; its title, Lock
+        // columns and the like do not.
+        Event::listen('eloquent.saved: '.Diagram::class, function (Model $diagram) use ($forget) {
+            if ($diagram->wasChanged(['owner_id', 'workspace_id'])) {
+                $forget();
+            }
+        });
+
+        // A new Diagram can have answers memoized for its (reused) id.
+        Event::listen('eloquent.created: '.Diagram::class, $forget);
+
+        // Deleting these cascades access rows away in the database.
+        foreach ([Diagram::class, Workspace::class, User::class] as $model) {
+            Event::listen("eloquent.deleted: {$model}", $forget);
+        }
+
+        Event::listen(TransactionRolledBack::class, $forget);
+        Event::listen(RequestHandled::class, $forget);
     }
 }
