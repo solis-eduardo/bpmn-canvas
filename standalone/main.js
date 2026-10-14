@@ -21,7 +21,7 @@ import es from '../public/assets/lang/es.json';
 import pt_BR from '../public/assets/lang/pt_BR.json';
 import { openDb } from './db.js';
 import {
-  createDiagram, deleteDiagram, exportAll, fileNameOf, getDiagram, importBpmn, listDiagrams, titleFromFileName,
+  createDiagram, deleteDiagram, exportAll, exportDiagram, fileNameOf, getDiagram, importBpmn, listDiagrams, titleFromFileName,
 } from './library.js';
 import { createLocalDiagramStore } from './local-store.js';
 
@@ -115,14 +115,29 @@ async function startLibrary(db) {
       const actions = row.insertCell();
       const openButton = Object.assign(document.createElement('button'), { type: 'button', textContent: t('messages.open_diagram') });
       const deleteButton = Object.assign(document.createElement('button'), { type: 'button', textContent: t('messages.delete'), className: 'danger' });
+      const exportButton = Object.assign(document.createElement('button'), { type: 'button', textContent: t('standalone.export') });
       openButton.addEventListener('click', () => open(diagram.id));
+      exportButton.addEventListener('click', async () => {
+        try {
+          const { fileName, xml } = await exportDiagram(db, diagram.id);
+          download(new Blob([xml], { type: 'application/xml' }), fileName);
+        } catch (e) {
+          console.error(e);
+          toast(t('standalone.export_failed'), true);
+        }
+      });
       deleteButton.addEventListener('click', async () => {
         if (!confirm(t('standalone.delete_diagram_confirm', { title: diagram.title }))) return;
 
-        await deleteDiagram(db, diagram.id);
+        try {
+          await deleteDiagram(db, diagram.id);
+        } catch (e) {
+          console.error(e);
+          toast(errorMessage(e, t('standalone.diagrams_load_failed')), true);
+        }
         await render();
       });
-      actions.append(openButton, ' ', deleteButton);
+      actions.append(openButton, ' ', exportButton, ' ', deleteButton);
     });
   }
 
@@ -236,10 +251,18 @@ async function startEditor(db, diagramId) {
 window.addEventListener('hashchange', () => location.reload());
 
 const { diagramId } = route();
-const db = await openDb();
+let db;
 
-if (diagramId) {
+try {
+  db = await openDb();
+} catch (e) {
+  // Private windows and blocked site data can refuse IndexedDB.
+  console.error(e);
+  toast(t('standalone.diagrams_load_failed'), true);
+}
+
+if (db && diagramId) {
   await startEditor(db, diagramId);
-} else {
+} else if (db) {
   await startLibrary(db);
 }

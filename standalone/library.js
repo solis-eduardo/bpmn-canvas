@@ -6,7 +6,7 @@
  */
 import { strToU8, zipSync } from 'fflate';
 import { get, getAll, inTransaction, newId, put, remove, versionsOf } from './db.js';
-import { createLocalDiagramStore } from './local-store.js';
+import { recordVersion } from './local-store.js';
 
 export const EMPTY_DIAGRAM = `<?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
@@ -72,15 +72,22 @@ export function titleFromFileName(fileName) {
  * Diagram. The content is unchanged and becomes Version 1.
  *
  * @param {IDBDatabase} db
- * @param {{title: string, xml: string}} file
+ * @param {{title: string, xml: string, now?: () => Date}} file
  * @returns {Promise<string>} the new Diagram's id
  * @throws when the text isn't a BPMN document
  */
-export async function importBpmn(db, { title, xml }) {
+export async function importBpmn(db, { title, xml, now = () => new Date() }) {
   if (!/<([\w-]+:)?definitions[\s>]/.test(xml)) throw new Error('Not a BPMN document');
 
-  const id = await createDiagram(db, { title, xml });
-  await createLocalDiagramStore({ db, diagramId: id, t: key => key }).save(xml);
+  const at = now();
+  const id = newId();
+  const diagram = { id, title, xml, createdAt: at.toISOString(), updatedAt: at.toISOString() };
+
+  // One transaction: a Diagram never exists without its Version 1.
+  await inTransaction(db, async stores => {
+    await put(stores.diagrams, diagram);
+    await recordVersion(stores, diagram, xml, at);
+  }, 'readwrite');
 
   return id;
 }

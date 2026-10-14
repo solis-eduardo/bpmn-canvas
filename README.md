@@ -92,6 +92,7 @@ docker compose exec app php artisan backup:restore backup-2026-01-01_000000-abcd
 ```
 
 `backup:restore` validates the artifact's `manifest.json` before touching anything, then **overwrites** the current database and Diagrams directory with the artifact's contents — nothing is merged. It is an operator command, run manually; unlike `backup:run` it is not on the scheduler. After a restore, Diagrams open normally, their Version history lists and restores as before, and existing Share links keep working — the round trip has been exercised end to end against this stack.
+
 ## Standalone build
 
 A single HTML file that runs the Editor entirely in the browser, with no server, login or database (ADR-0018). Diagrams and their Versions are stored in the browser's IndexedDB, so they live in the browser profile and are lost if the site data is cleared: use **Export all (.zip)** for a backup.
@@ -228,6 +229,7 @@ docker compose exec app php artisan backup:restore backup-2026-01-01_000000-abcd
 ```
 
 `backup:restore` valida o `manifest.json` do artefato antes de tocar em qualquer coisa, e então **sobrescreve** o banco de dados e o diretório de Diagramas atuais com o conteúdo do artefato — nada é mesclado. É um comando de operador, executado manualmente; diferente de `backup:run`, não está no scheduler. Após uma restauração, os Diagramas abrem normalmente, o histórico de Versões lista e restaura como antes, e links de Compartilhamento existentes continuam funcionando — o ciclo completo já foi executado de ponta a ponta nesta stack.
+
 ## Build standalone
 
 Um único arquivo HTML que roda o Editor inteiramente no navegador, sem servidor, login ou banco de dados (ADR-0018). Os Diagramas e suas Versões ficam no IndexedDB do navegador, ou seja, no perfil do navegador, e se perdem se os dados do site forem limpos: use **Exportar tudo (.zip)** para fazer backup.

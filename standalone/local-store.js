@@ -2,10 +2,33 @@
  * LocalDiagramStore: the standalone build's DiagramStore (ADR-0018), on
  * IndexedDB. It re-implements only the Version rules the core needs:
  * sequential numbers, the default name "Version N" (localized through `t`),
- * restore as Version N+1 and soft delete keeping numbers stable. There is no
- * author and no provisional Version here.
+ * restore as Version N+1 and numbers that are never reused. There is no author
+ * and no provisional Version here, so nothing can be deleted.
  */
 import { get, inTransaction, newId, put, versionsOf } from './db.js';
+
+// Version numbers never repeat: the next one is one past the highest recorded.
+async function nextNumber(stores, diagramId) {
+  const all = await versionsOf(stores.versions, diagramId);
+
+  return all.reduce((highest, version) => Math.max(highest, version.number), 0) + 1;
+}
+
+/**
+ * Makes `xml` the Diagram's content and records it as its next Version, inside
+ * the caller's transaction.
+ *
+ * @param {{diagrams: IDBObjectStore, versions: IDBObjectStore}} stores
+ * @param {import('./db.js').DiagramRecord} diagram
+ * @param {string} xml
+ * @param {Date} at
+ */
+export async function recordVersion(stores, diagram, xml, at) {
+  const savedAt = at.toISOString();
+
+  await put(stores.versions, { id: newId(), diagramId: diagram.id, number: await nextNumber(stores, diagram.id), name: null, xml, savedAt });
+  await put(stores.diagrams, { ...diagram, xml, updatedAt: savedAt });
+}
 
 /**
  * @param {Object} options
@@ -22,28 +45,9 @@ export function createLocalDiagramStore({ db, diagramId, t, now = () => new Date
     return diagram;
   }
 
-  async function liveVersions(stores) {
-    return (await versionsOf(stores.versions, diagramId)).filter(version => !version.deleted);
-  }
-
-  // Version numbers count deleted ones too, so a number is never reused.
-  async function nextNumber(stores) {
-    const all = await versionsOf(stores.versions, diagramId);
-
-    return all.reduce((highest, version) => Math.max(highest, version.number), 0) + 1;
-  }
-
-  // Makes `xml` the Diagram's content and records it as a new Version.
-  async function record(stores, diagram, xml) {
-    const savedAt = now().toISOString();
-
-    await put(stores.versions, { id: newId(), diagramId, number: await nextNumber(stores), name: null, xml, savedAt });
-    await put(stores.diagrams, { ...diagram, xml, updatedAt: savedAt });
-  }
-
   async function versionOf(stores, id) {
     const version = await get(stores.versions, id);
-    if (!version || version.diagramId !== diagramId || version.deleted) throw new Error('Unknown version ' + id);
+    if (!version || version.diagramId !== diagramId) throw new Error('Unknown version ' + id);
 
     return version;
   }
@@ -54,12 +58,12 @@ export function createLocalDiagramStore({ db, diagramId, t, now = () => new Date
     },
 
     async save(xml) {
-      await inTransaction(db, async stores => record(stores, await diagramOf(stores), xml), 'readwrite');
+      await inTransaction(db, async stores => recordVersion(stores, await diagramOf(stores), xml, now()), 'readwrite');
     },
 
     async versions() {
       return inTransaction(db, async stores => {
-        const versions = (await liveVersions(stores)).sort((a, b) => b.number - a.number);
+        const versions = (await versionsOf(stores.versions, diagramId)).sort((a, b) => b.number - a.number);
 
         return versions.map((version, index) => ({
           id: version.id,
@@ -80,7 +84,7 @@ export function createLocalDiagramStore({ db, diagramId, t, now = () => new Date
     async restoreVersion(id) {
       await inTransaction(db, async stores => {
         const version = await versionOf(stores, id);
-        await record(stores, await diagramOf(stores), version.xml);
+        await recordVersion(stores, await diagramOf(stores), version.xml, now());
       }, 'readwrite');
     },
 
