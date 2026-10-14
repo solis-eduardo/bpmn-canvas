@@ -71,7 +71,7 @@ trait SharedVersionRepository
 
         $versionId = $this->recordVersion($diagram, $author, $message ?? self::MESSAGE_DEFAULT, $allowEmpty);
 
-        $this->afterCommit($diagram, $content);
+        $this->afterCommit($diagram, $content, recorded: $versionId !== null);
 
         return $versionId;
     }
@@ -160,17 +160,25 @@ trait SharedVersionRepository
      * Version is safely recorded: reindexing ahead of a commit that then throws
      * would leave searchable_text describing content that was never saved.
      */
-    protected function afterCommit(Diagram $diagram, ?string $content): void
+    protected function afterCommit(Diagram $diagram, ?string $content, bool $recorded): void
     {
         // $content is reused when the caller has it; otherwise the content on
         // disk is indexed. Only an explicit save settles the holder's draft.
         $indexed = $content ?? Storage::disk('diagrams')->get($diagram->disk_path);
 
         // A plain query builder update, so "last modified" (updated_at) keeps
-        // meaning the Diagram's own content, not this derived index.
-        DB::table('diagrams')->where('id', $diagram->id)->update([
+        // meaning the Diagram's own content, not this derived index. A new
+        // Version is the one thing that does count as a change to the Diagram
+        // (issue #220); Lock writes never do.
+        $changes = [
             'searchable_text' => is_string($indexed) ? BpmnSearchableText::extract($indexed) : '',
-        ]);
+        ];
+
+        if ($recorded) {
+            $changes['updated_at'] = now();
+        }
+
+        DB::table('diagrams')->where('id', $diagram->id)->update($changes);
 
         // Settling the content settles the holder's draft with it (ADR-0003).
         if ($content !== null) {

@@ -4,6 +4,8 @@ namespace App\Models\Concerns;
 
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Facades\DB;
 
 /**
  * A Diagram's Lock (CONTEXT.md, "Lock"; ADR-0003, ADR-0009,
@@ -71,9 +73,32 @@ trait HoldsALock
         ];
     }
 
+    /**
+     * This Diagram's row through the base query builder. Not the Eloquent
+     * builder: that stamps updated_at on every update(), which the Diagram
+     * list reports as "Modified" (issue #220). Opening the Editor, a
+     * Heartbeat or a blocked request is not a change to the Diagram.
+     */
+    private function lockRow(): QueryBuilder
+    {
+        return DB::table($this->getTable())->where($this->getKeyName(), $this->getKey());
+    }
+
+    /**
+     * Writes Lock columns to the row and mirrors them onto the model.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function persistLockState(array $attributes): void
+    {
+        $this->lockRow()->update($attributes);
+
+        $this->forceFill($attributes)->syncOriginalAttributes(array_keys($attributes));
+    }
+
     public function acquireLock(User $user): void
     {
-        $this->forceFill($this->lockHeldBy($user))->save();
+        $this->persistLockState($this->lockHeldBy($user));
     }
 
     /**
@@ -87,8 +112,7 @@ trait HoldsALock
     {
         $held = $this->lockHeldBy($user);
 
-        $won = static::query()
-            ->whereKey($this->getKey())
+        $won = $this->lockRow()
             ->whereNull('locked_by')
             ->update($held) === 1;
 
@@ -112,17 +136,17 @@ trait HoldsALock
             return false;
         }
 
-        $this->forceFill([
+        $attributes = [
             'last_heartbeat_at' => now(),
             'lock_requested_by' => null,
             'lock_requested_at' => null,
-        ]);
+        ];
 
         if ($draft !== null) {
-            $this->lock_draft = $draft;
+            $attributes['lock_draft'] = $draft;
         }
 
-        $this->save();
+        $this->persistLockState($attributes);
 
         return true;
     }
@@ -133,7 +157,7 @@ trait HoldsALock
      */
     public function clearLockDraft(): void
     {
-        static::query()->whereKey($this->getKey())->update(['lock_draft' => null]);
+        $this->lockRow()->update(['lock_draft' => null]);
         $this->setAttribute('lock_draft', null);
     }
 
@@ -147,14 +171,14 @@ trait HoldsALock
             return false;
         }
 
-        $this->forceFill([
+        $this->persistLockState([
             'locked_by' => null,
             'locked_at' => null,
             'last_heartbeat_at' => null,
             'lock_draft' => null,
             'lock_requested_by' => null,
             'lock_requested_at' => null,
-        ])->save();
+        ]);
 
         return true;
     }
@@ -165,10 +189,10 @@ trait HoldsALock
      */
     public function transferLockTo(User $newHolder): void
     {
-        $this->forceFill($this->lockHeldBy($newHolder) + [
+        $this->persistLockState($this->lockHeldBy($newHolder) + [
             'lock_requested_by' => null,
             'lock_requested_at' => null,
-        ])->save();
+        ]);
     }
 
     /**
@@ -189,9 +213,9 @@ trait HoldsALock
             return;
         }
 
-        $this->forceFill([
+        $this->persistLockState([
             'lock_requested_by' => $user->id,
             'lock_requested_at' => now(),
-        ])->save();
+        ]);
     }
 }
