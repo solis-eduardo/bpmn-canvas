@@ -6,7 +6,7 @@ Status: **GO, with conditions** (see "Not verified in a browser"). Throwaway cod
 
 | File | Purpose |
 |---|---|
-| `build-stage.sh`, `patch-stage.php`, `overlay/` | Builds a throwaway app copy: `composer install --no-dev`, `vite build`, vendored bpmn-js, migrated + seeded SQLite, stub `VersionRepository`, sub-path fix, CSP `frame-ancestors 'self'`. |
+| `build-stage.sh`, `patch-stage.php` | Builds a throwaway app copy: `composer install --no-dev`, `vite build`, vendored bpmn-js, `.env.demo`, SQLite migrated + seeded with `DemoSeeder`, database Version store, sub-path fix, CSP `frame-ancestors 'self'`. |
 | `check-extensions.mjs` | PHP version and extensions of the php-wasm 8.4 build. |
 | `node-flow.mjs` | Headless HTTP flow against the app inside php-wasm under Node (`BUNDLE=1` = unzip `bundle/app.zip` into the in-memory FS like the browser; `BASE=/bpmn-canvas/app` = Pages-style sub-path). |
 | `build-bundle.sh`, `web/` | Static site: shell page (boots php-wasm, unzips the app, mounts OPFS, answers the Service Worker), `sw.js`, `app.zip`. Built, **never run in a browser**. |
@@ -48,7 +48,7 @@ Measured (`measure-size.mjs`, one 8.4 variant, shipped files only):
 
 ### 5. Other subprocess / network / service paths
 Only `app/Support/ProcessRunner.php` (Symfony Process) spawns processes. Users: `VersionRepository` (git) and the Pg backup/restore (`PgDumpDatabaseDumper`, `PgRestoreDatabaseRestorer`, `BackupRepository`). Everything else to disable/replace in the demo:
-- Version store: stubbed here (`StubVersionRepository`); #210 replaces it. `proc_open` exists as a function in php-wasm Node but there is no git binary.
+- Version store: originally stubbed here; now `VERSION_STORE=database` (#210, merged). `proc_open` exists as a function in php-wasm Node but there is no git binary.
 - Backups (`backup:run`, `backup:restore`, pg_dump/pg_restore): not applicable with SQLite; disable.
 - Scheduler (`backup:run`, `shares:warn-expiring`, `locks:expire` every minute): nothing runs cron in the browser. Lock expiry needs a replacement (run lazily on request or on a timer in the shell).
 - Keycloak/Socialite login: outbound OAuth redirect; disable, use local login (`/login` works).
@@ -79,6 +79,6 @@ Service Worker registration/control and the shell <-> SW message relay (`web/src
 **GO** on the server side: the real app runs unchanged on PHP 8.4 in php-wasm, including login, CRUD, and Editor save. The browser layer is plausible but untested; the gating risks are Service Worker + OPFS behaviour and the Pages visibility decision.
 
 ## Adjustments to follow-ups
-- **#210 Version store without Git:** the seam is `VersionRepository` (bound in `AppServiceProvider`); the stub shows the binding point. Need a non-git implementation (e.g. versions as rows/files in SQLite) honouring `initialize/save/list` and whatever `DiagramVersionService`/`ProvisionalVersionService` call; also decide how the Version diff views behave. Disable `pg_dump`-based backup in the demo.
-- **#211 Demo env/seeder:** SQLite (`DB_DATABASE=/persist/db.sqlite`), `SESSION_DRIVER=database`, `QUEUE_CONNECTION=sync`, `MAIL_MAILER=log`, `LOG_CHANNEL=stderr`, `APP_DEBUG=false`; seed users and sample Diagrams, with no Keycloak. Add a "reset demo data" action (clear OPFS + localStorage jar). Decide a lock-expiry replacement.
+- **#210 Version store without Git (done, merged):** the seam is `VersionRepository` (bound in `AppServiceProvider`); the database adapter is bound there. Needed a non-git implementation (e.g. versions as rows/files in SQLite) honouring `initialize/save/list` and whatever `DiagramVersionService`/`ProvisionalVersionService` call; also decide how the Version diff views behave. Disable `pg_dump`-based backup in the demo.
+- **#211 Demo env/seeder (done, merged; the spike stage now uses `.env.demo` and `DemoSeeder`):** SQLite (`DB_DATABASE=/persist/db.sqlite`; the shipped `.env.demo` settled on `SESSION_DRIVER=file`), `QUEUE_CONNECTION=sync`, `MAIL_MAILER=log`, `LOG_CHANNEL=stderr`, `APP_DEBUG=false`; seed users and sample Diagrams, with no Keycloak. Add a "reset demo data" action (clear OPFS + localStorage jar). Decide a lock-expiry replacement.
 - **#212 Pages deploy:** build in CI (composer no-dev, vite, php-wasm bundle with only 8.4 and no intl), project-site sub-path via relative base plus `X-App-Base`, `404.html`/SW fallback, cache strategy for wasm/zip, size budget ~13-16 MiB first load. Blocked on the visibility/plan decision above. The `patch-stage.php` hacks (sub-path, CSP) should become proper config or build-time options.
