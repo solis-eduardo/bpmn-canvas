@@ -232,14 +232,9 @@ class DiagramRepository
         $slugChanged = $newSlug !== $oldSlug;
 
         if ($slugChanged) {
-            // Same reasoning as create(): `throw => false` means a failed
-            // move reports itself via a false return, not an exception.
-            // Surface it explicitly — nothing has touched the database yet,
-            // so there's nothing to compensate, just a clean failure.
-            $this->assertDiskSucceeded(
-                Storage::disk('diagrams')->move($oldSlug, $newSlug),
-                "Could not move the Diagram directory from {$oldSlug} to {$newSlug}."
-            );
+            // Nothing has touched the database yet, so a failed move is a
+            // clean failure with nothing to compensate.
+            $this->moveDirectory($oldSlug, $newSlug);
         }
 
         try {
@@ -278,10 +273,7 @@ class DiagramRepository
                 $alsoInTransaction($diagram);
 
                 if ($slugChanged) {
-                    $this->assertDiskSucceeded(
-                        Storage::disk('diagrams')->move($oldSlug, $newSlug),
-                        "Could not move the Diagram directory from {$oldSlug} to {$newSlug}."
-                    );
+                    $this->moveDirectory($oldSlug, $newSlug);
                     $directoryMoved = true;
                 }
             });
@@ -294,6 +286,19 @@ class DiagramRepository
         }
 
         return $diagram;
+    }
+
+    /**
+     * Moves the Diagram's directory on the "diagrams" disk. The disk is
+     * configured with `throw => false`, so a failed move comes back as a
+     * false return; surface it as an exception here.
+     */
+    private function moveDirectory(string $oldSlug, string $newSlug): void
+    {
+        $this->assertDiskSucceeded(
+            Storage::disk('diagrams')->move($oldSlug, $newSlug),
+            "Could not move the Diagram directory from {$oldSlug} to {$newSlug}."
+        );
     }
 
     /**

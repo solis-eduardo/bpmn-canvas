@@ -8,6 +8,7 @@ use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
+use RuntimeException;
 use Tests\TestCase;
 
 /**
@@ -311,7 +312,7 @@ class DiagramSettingsTest extends TestCase
         $oldSlug = $diagram->slug;
 
         Tag::creating(function (): void {
-            throw new \RuntimeException('forced tag failure');
+            throw new RuntimeException('forced tag failure');
         });
 
         $this->withoutExceptionHandling();
@@ -322,7 +323,7 @@ class DiagramSettingsTest extends TestCase
                 'tags' => ['Forced'],
             ]);
             $this->fail('The forced tag failure should surface.');
-        } catch (\RuntimeException $e) {
+        } catch (RuntimeException $e) {
             $this->assertSame('forced tag failure', $e->getMessage());
         }
 
@@ -352,7 +353,7 @@ class DiagramSettingsTest extends TestCase
                 'user_id' => $newOwner->id,
             ]);
             $this->fail('The failed directory move should surface.');
-        } catch (\RuntimeException $e) {
+        } catch (RuntimeException $e) {
             $this->assertStringContainsString('Could not move the Diagram directory', $e->getMessage());
         }
 
