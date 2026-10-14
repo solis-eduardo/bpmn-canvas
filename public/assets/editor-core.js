@@ -37,8 +37,9 @@ import { resolveSaveConflict } from './save-conflict.js';
  *   save ran into and show how the canvas differs from it (the dialog offers
  *   "compare" only when one is registered); `forked` handlers get the Fork
  *   ({url}) the canvas was saved as, before the page moves to it. revision()
- *   counts edits, so a caller can tell whether the content changed without serializing it. markClean() drops the unsaved state
- *   without saving, once the content was kept or discarded some other way.
+ *   counts edits, so a caller can tell whether the content changed without
+ *   serializing it. markClean() drops the unsaved state without saving, once
+ *   the content was kept or discarded some other way.
  */
 export function createEditor({ container, store, t, timeZone, Modeler }) {
   const modeler = new Modeler({ container });

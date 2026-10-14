@@ -6,6 +6,7 @@ use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Rules\BpmnXml;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -123,6 +124,18 @@ class ForkTest extends TestCase
 
         $this->actingAs($owner)->postJson('/diagrams/'.$diagram->slug.'/fork', ['content' => '<not-bpmn/>'])
             ->assertStatus(422);
+
+        $this->assertSame(0, Diagram::where('forked_from_id', $diagram->id)->count());
+    }
+
+    public function test_a_fork_from_unsaved_content_refuses_oversized_content(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+
+        $this->actingAs($owner)->postJson('/diagrams/'.$diagram->slug.'/fork', [
+            'content' => $this->bpmn(str_repeat(' ', BpmnXml::MAX_LENGTH)),
+        ])->assertStatus(422)->assertJsonValidationErrors('content');
 
         $this->assertSame(0, Diagram::where('forked_from_id', $diagram->id)->count());
     }
