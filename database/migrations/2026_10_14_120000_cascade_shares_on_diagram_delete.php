@@ -5,8 +5,8 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Deleting a Diagram removes its Shares: a deleted Diagram's public links
- * must stop working. The original `shares.diagram_id` foreign key was
+ * Deleting a Diagram removes its Shares, so none of its share links keep
+ * working. The original `shares.diagram_id` foreign key was
  * created without a delete rule (NO ACTION), so deleting a Diagram that had
  * ever been shared failed with a database constraint violation. Every other
  * table referencing `diagrams` already cascades.
