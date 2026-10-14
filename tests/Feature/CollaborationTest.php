@@ -248,7 +248,7 @@ class CollaborationTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_a_self_request_never_downgrades_an_already_approved_collaborator(): void
+    public function test_an_already_approved_collaborator_cannot_file_a_self_request_and_stays_approved(): void
     {
         $author = User::factory()->create();
         $collaborator = User::factory()->create();
@@ -262,7 +262,7 @@ class CollaborationTest extends TestCase
 
         $this->actingAs($collaborator)->postJson("/diagrams/{$diagram->slug}/collaborators", [
             'user_id' => $collaborator->id,
-        ])->assertCreated()->assertJson(['status' => Collaborator::STATUS_APPROVED]);
+        ])->assertForbidden();
 
         $this->assertDatabaseHas('collaborators', [
             'diagram_id' => $diagram->id,
