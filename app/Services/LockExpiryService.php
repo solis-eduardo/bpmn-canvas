@@ -55,7 +55,7 @@ class LockExpiryService
     {
         try {
             return $this->releaseIfStillExpired($id, $cutoff);
-        } catch (VersionHistoryBusyException $busy) {
+        } catch (VersionHistoryBusyException) {
             Log::warning('Lock expiry skipped a Diagram: its Version history is busy; the Lock stays for the next run.', [
                 'diagram_id' => $id,
             ]);
