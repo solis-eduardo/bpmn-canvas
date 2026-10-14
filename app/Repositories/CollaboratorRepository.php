@@ -41,24 +41,12 @@ class CollaboratorRepository
         return $this->upsertStatus($diagram, $user, Collaborator::STATUS_APPROVED, $role);
     }
 
-    public function approve(Collaborator $collaborator): Collaborator
-    {
-        $collaborator->update(['status' => Collaborator::STATUS_APPROVED]);
-
-        return $collaborator;
-    }
-
     public function upsertStatus(Diagram $diagram, User $user, string $status, ?string $role = null): Collaborator
     {
         return Collaborator::updateOrCreate(
             ['diagram_id' => $diagram->id, 'user_id' => $user->id],
             $role === null ? ['status' => $status] : ['status' => $status, 'role' => $role],
         );
-    }
-
-    public function deleteFor(Diagram $diagram, User $user): void
-    {
-        $this->rowFor($diagram, $user)->delete();
     }
 
     /**
