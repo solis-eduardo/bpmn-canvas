@@ -35,6 +35,17 @@ class DemoModeTest extends TestCase
         $this->actingAs($user)->get('/home')->assertDontSee('data-demo-banner', false);
     }
 
+    public function test_demo_mode_is_ignored_outside_sqlite(): void
+    {
+        $this->demoOn();
+        $this->assertTrue(Demo::enabled());
+
+        $default = config('database.default');
+        config(['database.connections.fake' => ['driver' => 'pgsql'], 'database.default' => 'fake']);
+        $this->assertFalse(Demo::enabled());
+        config(['database.default' => $default]);
+    }
+
     public function test_demo_routes_are_not_found_when_demo_mode_is_off(): void
     {
         $this->post(route('demo.sign-in', 'author'))->assertNotFound();

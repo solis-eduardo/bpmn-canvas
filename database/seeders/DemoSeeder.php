@@ -51,7 +51,7 @@ class DemoSeeder extends Seeder
         $this->orderFulfilment($author, $collaborator, $operations);
         $this->expenseApproval($author, $collaborator);
         $this->customerOnboarding($admin, $author);
-        $this->incidentResponse($collaborator, $author, $operations);
+        $this->incidentResponse($collaborator, $operations);
     }
 
     /**
@@ -99,7 +99,7 @@ class DemoSeeder extends Seeder
         $this->collaborators->requestAccess($diagram, $author);
     }
 
-    private function incidentResponse(User $owner, User $author, Workspace $workspace): void
+    private function incidentResponse(User $owner, Workspace $workspace): void
     {
         $diagram = $this->createDiagram('Incident response', $owner, ['Operations'], $workspace);
         $this->saveVersion($diagram, $owner, ['Detect incident', 'Triage', 'Mitigate', 'Write post-mortem']);

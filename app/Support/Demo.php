@@ -25,13 +25,21 @@ final class Demo
         'collaborator' => ['name' => 'Caio Collaborator', 'email' => 'collaborator@demo.test', 'is_admin' => false],
     ];
 
+    /**
+     * Only on SQLite: the reset wipes the whole database, so a DEMO_MODE
+     * left on by mistake in a real deployment must not expose it.
+     */
     public static function enabled(): bool
     {
-        return (bool) config('bpmn.demo_mode');
+        return (bool) config('bpmn.demo_mode')
+            && config('database.connections.'.config('database.default').'.driver') === 'sqlite';
     }
 
-    public static function isAccount(User $user): bool
+    /**
+     * The demo's shared accounts keep their known password.
+     */
+    public static function locksPassword(User $user): bool
     {
-        return collect(self::ACCOUNTS)->contains('email', $user->email);
+        return self::enabled() && collect(self::ACCOUNTS)->contains('email', $user->email);
     }
 }
