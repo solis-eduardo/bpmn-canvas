@@ -60,10 +60,10 @@ class ExportLangTest extends TestCase
         $this->artisan('lang:export', ['--path' => $this->path])->assertSuccessful()->doesntExpectOutputToContain('No translation');
 
         foreach (['en', 'es', 'pt_BR'] as $locale) {
-            foreach (ExportLang::CORE_SOURCES as $source) {
-                preg_match_all("/\\bt\\(\\s*'([A-Za-z0-9_.]+)'/", File::get(base_path($source)), $matches);
+            foreach (ExportLang::sources() as $source) {
+                preg_match_all(ExportLang::KEY_PATTERN, File::get($source), $matches);
 
-                foreach ($matches[1] as $key) {
+                foreach (array_filter(array_merge($matches[1], $matches[2])) as $key) {
                     $this->assertTrue(
                         collect($this->exported($locale))->keys()->contains(fn ($exported) => str_starts_with($exported, $key)),
                         "'{$key}' missing from {$locale}.json",
