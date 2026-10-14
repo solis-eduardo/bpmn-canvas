@@ -16,6 +16,7 @@ return [
     'save_to_file_failed' => 'Não foi possível salvar no arquivo.',
     'delete_diagram_confirm' => 'Excluir ":title" e todas as suas versões? Isso não pode ser desfeito.',
     'diagrams_load_failed' => 'Não foi possível ler os diagramas guardados neste navegador.',
+    'delete_failed' => 'Não foi possível excluir o diagrama.',
     'modified' => 'Modificado',
     'storage_notice' => 'Seus diagramas ficam neste navegador. Limpar os dados do site os apaga: use "Exportar tudo" para manter um backup.',
 ];
