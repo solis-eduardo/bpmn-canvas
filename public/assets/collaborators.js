@@ -287,9 +287,11 @@ import { toast, errorMessage, httpError, togglePanel } from './common.js';
     if (!share.created_by) return null;
 
     const template = body.dataset.shareCreatedByTemplate || 'Created by CREATOR_NAME on CREATED_AT';
+    // Date first: a creator name could contain the placeholder text, so it must
+    // be substituted last to avoid being rewritten by the second replace().
     return template
-      .replace('CREATOR_NAME', () => share.created_by)
-      .replace('CREATED_AT', () => formatDateTime(share.created_at));
+      .replace('CREATED_AT', () => formatDateTime(share.created_at))
+      .replace('CREATOR_NAME', () => share.created_by);
   }
 
   async function loadShares() {
