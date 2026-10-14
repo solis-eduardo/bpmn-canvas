@@ -15,17 +15,17 @@ use Illuminate\Support\Facades\View;
 use Illuminate\Support\ViewErrorBag;
 
 /**
- * Renders the standalone build's page from the same Blade layout, Editor
- * components and Diagram listing as the server build (ADR-0019), once per
- * language, so the two builds share one markup. standalone/main.js picks the
- * language's page, fills in the rows from the browser's storage and wires the
- * Editor.
+ * Renders the standalone build's pages from the server build's own views
+ * (ADR-0019): the Diagram listing is diagrams/index itself, the Editor uses the
+ * same layout and components as diagrams/show. One set per language;
+ * standalone/main.js picks the page for the route, fills in the rows from the
+ * browser's storage and wires the Editor.
  */
 class RenderStandalone extends Command
 {
     private const ROW_TOKENS = ['title' => '__title__', 'slug' => '__slug__'];
 
-    protected $signature = 'standalone:render {--path= : Directory to write to (default: standalone/pages)}';
+    protected $signature = 'standalone:render {--path= : Directory to write to (default: standalone/pages/<language>/<page>.html)}';
 
     protected $description = 'Render the standalone build pages (one per language) from the shared Blade views';
 
@@ -41,7 +41,11 @@ class RenderStandalone extends Command
         try {
             foreach (SetLocale::SUPPORTED_LOCALES as $locale) {
                 app()->setLocale($locale);
-                File::put("{$path}/{$locale}.html", $this->page());
+                File::ensureDirectoryExists("{$path}/{$locale}");
+
+                foreach ($this->pages() as $name => $html) {
+                    File::put("{$path}/{$locale}/{$name}.html", $html);
+                }
             }
         } finally {
             Ui::renderingStandalone(false);
@@ -53,12 +57,22 @@ class RenderStandalone extends Command
         return self::SUCCESS;
     }
 
-    private function page(): string
+    /**
+     * The pages main.js switches between, in the current language: the
+     * server's own Diagram listing (plus the row template), the Editor and the
+     * stand-in for screens the standalone build does not have yet.
+     *
+     * @return array<string, string>
+     */
+    private function pages(): array
     {
-        return view('standalone.index', [
-            'list' => $this->listData(collect()),
-            'rowTemplate' => $this->rowTemplate(),
-        ])->render();
+        $library = view('diagrams.index', $this->listData(collect()))->render();
+
+        return [
+            'library' => str_replace('</body>', '<template id="diagram-row">'.$this->rowTemplate().'</template></body>', $library),
+            'editor' => view('standalone.editor')->render(),
+            'placeholder' => view('standalone.placeholder')->render(),
+        ];
     }
 
     /** The one row of the listing, as markup with tokens main.js fills in per Diagram. */

@@ -29,22 +29,24 @@ class RenderStandaloneTest extends TestCase
         $this->artisan('standalone:render', ['--path' => $this->path])->assertSuccessful();
 
         foreach (['en', 'es', 'pt_BR'] as $locale) {
-            $this->assertFileExists("{$this->path}/{$locale}.html");
+            foreach (['library', 'editor', 'placeholder'] as $page) {
+                $this->assertFileExists("{$this->path}/{$locale}/{$page}.html");
+            }
         }
 
-        $html = File::get("{$this->path}/pt_BR.html");
+        $this->assertStringContainsString(__('messages.create_diagram', [], 'pt_BR'), File::get("{$this->path}/pt_BR/library.html"));
 
-        $this->assertStringContainsString('id="library"', $html);
-        $this->assertStringContainsString('id="btn-save"', $html);
-        $this->assertStringContainsString(__('messages.versions', [], 'pt_BR'), $html);
-        $this->assertStringContainsString(__('messages.create_diagram', [], 'pt_BR'), File::get("{$this->path}/pt_BR.html"));
+        $editor = File::get("{$this->path}/pt_BR/editor.html");
+
+        $this->assertStringContainsString('id="btn-save"', $editor);
+        $this->assertStringContainsString(__('messages.versions', [], 'pt_BR'), $editor);
     }
 
     public function test_the_listing_is_the_server_listing_with_a_row_template(): void
     {
         $this->artisan('standalone:render', ['--path' => $this->path])->assertSuccessful();
 
-        $html = File::get("{$this->path}/en.html");
+        $html = File::get("{$this->path}/en/library.html");
 
         $this->assertStringContainsString('id="diagram-search-results"', $html);
         $this->assertStringContainsString('data-sort-column="title"', $html);
@@ -53,11 +55,11 @@ class RenderStandaloneTest extends TestCase
         $this->assertStringContainsString('<time data-timestamp', $html);
     }
 
-    public function test_the_standalone_page_needs_no_server(): void
+    public function test_the_standalone_pages_need_no_server(): void
     {
         $this->artisan('standalone:render', ['--path' => $this->path])->assertSuccessful();
 
-        $html = File::get("{$this->path}/en.html");
+        $html = File::get("{$this->path}/en/library.html");
 
         $this->assertStringNotContainsString('/build/assets', $html);
         $this->assertStringNotContainsString('name="_token"', $html);

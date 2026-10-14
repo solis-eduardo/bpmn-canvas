@@ -78,7 +78,10 @@
                             <x-icon name="user-circle" />
                             {{ __('messages.profile') }}
                         </a>
-                        {{ $languageSwitcher ?? '' }}
+                        <label class="inline-flex items-center gap-2 text-sm font-medium text-gray-600">
+                            {{ __('messages.language') }}
+                            <select id="language" class="rounded-md border border-gray-300 py-1.5 pl-3 pr-8 text-sm shadow-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"></select>
+                        </label>
                     @else
                     @auth
                         @include('partials.notification-bell')

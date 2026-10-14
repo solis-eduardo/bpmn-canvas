@@ -16,9 +16,7 @@ import { errorMessage, exportBpmn, exportPng, exportSvg, setupDropdowns, setupPa
 import { createEditor } from '../public/assets/editor-core.js';
 import { createTranslator } from '../public/assets/translator.js';
 import { createVersionHistory } from '../public/assets/versions.js';
-import enPage from './pages/en.html?raw';
-import esPage from './pages/es.html?raw';
-import ptPage from './pages/pt_BR.html?raw';
+const PAGES = import.meta.glob('./pages/*/*.html', { query: '?raw', import: 'default', eager: true });
 import en from '../public/assets/lang/en.json';
 import es from '../public/assets/lang/es.json';
 import pt_BR from '../public/assets/lang/pt_BR.json';
@@ -28,11 +26,10 @@ import {
 } from './library.js';
 import { createLocalDiagramStore } from './local-store.js';
 
-// `page` is what `php artisan standalone:render` rendered from the shared Blade views, in that language.
 const LOCALES = {
-  en: { messages: en, page: enPage, name: 'English' },
-  pt_BR: { messages: pt_BR, page: ptPage, name: 'Português (Brasil)' },
-  es: { messages: es, page: esPage, name: 'Español' },
+  en: { messages: en, name: 'English' },
+  pt_BR: { messages: pt_BR, name: 'Português (Brasil)' },
+  es: { messages: es, name: 'Español' },
 };
 const LOCALE_KEY = 'bpmn-canvas.locale';
 
@@ -64,15 +61,6 @@ const htmlLocale = locale.replace('_', '-');
 document.documentElement.lang = locale;
 document.title = t('standalone.app_title');
 
-// The page rendered for this language replaces the empty shell in index.html.
-const rendered = new DOMParser().parseFromString(LOCALES[locale].page, 'text/html');
-document.body.className = rendered.body.className;
-Object.assign(document.body.dataset, rendered.body.dataset);
-document.body.replaceChildren(...rendered.body.childNodes);
-
-// Tom Select, for the listing's filters: the server build's own script.
-await import('../resources/js/app.js');
-
 const SCREENS = ['home', 'workspaces', 'users', 'account'];
 
 function route() {
@@ -98,12 +86,12 @@ function showPlaceholder(screen) {
   const current = screen in titles ? 'diagrams' : screen;
 
   $('placeholder-title').textContent = titles[screen] ?? document.querySelector(`[data-nav="${screen}"]`).textContent.trim();
-  $('placeholder').hidden = false;
   markCurrentNav(current);
 }
 
 // The same classes as the server build's <x-button size="sm">.
 const BUTTON_CLASSES = {
+  secondaryMd: 'inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500',
   secondary: 'inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500',
   destructive: 'inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium bg-red-600 text-white shadow-sm hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600',
 };
@@ -111,6 +99,19 @@ const BUTTON_CLASSES = {
 function button(text, variant = 'secondary') {
   return Object.assign(document.createElement('button'), { type: 'button', textContent: text, className: BUTTON_CLASSES[variant] });
 }
+
+
+// The page `php artisan standalone:render` rendered for this route and language, from the
+// server build's own views, replaces the empty shell in index.html.
+const { diagramId, screen } = route();
+const view = diagramId ? 'editor' : (screen ? 'placeholder' : 'library');
+const rendered = new DOMParser().parseFromString(PAGES[`./pages/${locale}/${view}.html`], 'text/html');
+document.body.className = rendered.body.className;
+Object.assign(document.body.dataset, rendered.body.dataset);
+document.body.replaceChildren(...rendered.body.childNodes);
+
+// Tom Select, for the listing's filters: the server build's own script.
+await import('../resources/js/app.js');
 
 // The language picker lives in the page header, so it works on both screens.
 function setupLanguagePicker() {
@@ -134,7 +135,6 @@ async function startLibrary(db) {
   const emptyRow = tbody.innerHTML; // the listing's own "no diagrams" row
   const rowTemplate = $('diagram-row').innerHTML;
   const state = { query: '', column: 'title', direction: 'asc' };
-  $('library').hidden = false;
 
   function goToDiagram(id) {
     location.hash = '#/diagram/' + encodeURIComponent(id);
@@ -234,8 +234,24 @@ async function startLibrary(db) {
     goToDiagram(await createDiagram(db, { title: title.trim() || t('standalone.untitled') }));
   });
 
-  $('btn-import').addEventListener('click', () => $('import-file').click());
-  $('import-file').addEventListener('change', async event => {
+  // What only the standalone build has, next to the listing's own controls: importing, backing up
+  // and where the data lives.
+  const createLink = document.querySelector('a[href="#/diagrams/new"]');
+  const importButton = Object.assign(button(t('standalone.import_bpmn'), 'secondaryMd'), { id: 'btn-import' });
+  const exportAllButton = Object.assign(button(t('standalone.export_all'), 'secondaryMd'), { id: 'btn-export-all' });
+  const importFile = Object.assign(document.createElement('input'), {
+    type: 'file', id: 'import-file', accept: '.bpmn,.xml,application/xml,text/xml', hidden: true,
+  });
+  const actions = Object.assign(document.createElement('div'), { className: 'flex flex-wrap items-center gap-2' });
+  createLink.replaceWith(actions);
+  actions.append(importButton, exportAllButton, importFile, createLink);
+  actions.parentElement.after(Object.assign(document.createElement('p'), {
+    className: 'mt-4 text-sm text-gray-500',
+    textContent: t('standalone.storage_notice'),
+  }));
+
+  importButton.addEventListener('click', () => importFile.click());
+  importFile.addEventListener('change', async event => {
     const [file] = event.target.files;
     event.target.value = '';
     if (!file) return;
@@ -248,7 +264,7 @@ async function startLibrary(db) {
     }
   });
 
-  $('btn-export-all').addEventListener('click', async () => {
+  exportAllButton.addEventListener('click', async () => {
     try {
       download(new Blob([await exportAll(db)], { type: 'application/zip' }), 'bpmn-canvas-backup.zip');
     } catch (e) {
@@ -336,7 +352,6 @@ async function startEditor(db, diagramId) {
 
 window.addEventListener('hashchange', () => location.reload());
 
-const { diagramId, screen } = route();
 setupLanguagePicker();
 let db;
 
