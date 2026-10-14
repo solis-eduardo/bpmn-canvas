@@ -18,10 +18,13 @@ class Share extends Model
     /** @use HasFactory<ShareFactory> */
     use HasFactory;
 
+    /** Length of the random public-link token; the `token` column is 64 wide. */
+    public const TOKEN_LENGTH = 48;
+
     protected static function booted(): void
     {
         static::creating(function (Share $share) {
-            $share->token ??= Str::random(48);
+            $share->token ??= Str::random(self::TOKEN_LENGTH);
         });
     }
 

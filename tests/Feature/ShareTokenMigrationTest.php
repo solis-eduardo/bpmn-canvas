@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Diagram;
+use App\Models\Share;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -24,23 +25,23 @@ class ShareTokenMigrationTest extends TestCase
         $migration = require database_path('migrations/2026_10_14_130000_add_token_to_shares_table.php');
         $migration->down();
 
-        foreach (range(1, 150) as $i) {
-            DB::table('shares')->insert([
-                'diagram_id' => $diagram->id,
-                'expires_at' => now()->addDays(7),
-                'allow_download' => false,
-                'created_by' => $author->id,
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-        }
+        $count = 150;
+
+        DB::table('shares')->insert(array_map(fn () => [
+            'diagram_id' => $diagram->id,
+            'expires_at' => now()->addDays(7),
+            'allow_download' => false,
+            'created_by' => $author->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ], range(1, $count)));
 
         $migration->up();
 
         $tokens = DB::table('shares')->pluck('token');
 
-        $this->assertCount(150, $tokens);
-        $this->assertTrue($tokens->every(fn ($token) => is_string($token) && strlen($token) === 48));
-        $this->assertCount(150, $tokens->unique());
+        $this->assertCount($count, $tokens);
+        $this->assertTrue($tokens->every(fn ($token) => is_string($token) && strlen($token) === Share::TOKEN_LENGTH));
+        $this->assertCount($count, $tokens->unique());
     }
 }

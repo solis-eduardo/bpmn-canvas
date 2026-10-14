@@ -25,14 +25,14 @@ return new class extends Migration
             $table->string('token', 64)->nullable()->after('id');
         });
 
-        DB::table('shares')->whereNull('token')->orderBy('id')->chunkById(100, function ($shares) {
+        DB::table('shares')->whereNull('token')->chunkById(100, function ($shares) {
             foreach ($shares as $share) {
                 DB::table('shares')->where('id', $share->id)->update(['token' => Str::random(48)]);
             }
         });
 
         Schema::table('shares', function (Blueprint $table) {
-            $table->string('token', 64)->nullable(false)->change();
+            $table->string('token', 64)->change();
             $table->unique('token');
         });
     }

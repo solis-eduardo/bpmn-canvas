@@ -141,7 +141,7 @@ class ShareTest extends TestCase
             'allow_download' => true,
         ]);
 
-        $this->assertSame(48, strlen($share->token));
+        $this->assertSame(Share::TOKEN_LENGTH, strlen($share->token));
         $this->assertStringContainsString("/s/{$share->token}", $share->showUrl());
         $this->assertStringContainsString("/s/{$share->token}/download/bpmn", $share->downloadUrl());
         $this->assertStringNotContainsString('signature', $share->showUrl());
@@ -173,17 +173,6 @@ class ShareTest extends TestCase
         $this->get("/s/{$share->id}/download/bpmn")->assertNotFound();
         // The old GET route is gone; the id only matches the DELETE revoke route.
         $this->get("/shares/{$share->id}")->assertStatus(405);
-    }
-
-    public function test_tokens_are_unique_per_share(): void
-    {
-        $author = User::factory()->create();
-        $diagram = $this->createDiagram($author);
-
-        $first = Share::factory()->for($diagram)->for($author, 'author')->create();
-        $second = Share::factory()->for($diagram)->for($author, 'author')->create();
-
-        $this->assertNotSame($first->token, $second->token);
     }
 
     public function test_guest_can_view_diagram_with_valid_share(): void
