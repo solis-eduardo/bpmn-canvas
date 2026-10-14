@@ -105,9 +105,7 @@ trait HoldsALock
      */
     public function acquireLock(User $user): bool
     {
-        return $this->writeLockWhere($user, fn (QueryBuilder $constrain) => $constrain->where(
-            fn (QueryBuilder $lock) => $lock->whereNull('locked_by')->orWhere('locked_by', $user->id),
-        ));
+        return $this->writeLockIfFree($user, allowHolder: true);
     }
 
     /**
@@ -118,23 +116,26 @@ trait HoldsALock
      */
     public function claimFreeLock(User $user): bool
     {
-        return $this->writeLockWhere($user, fn (QueryBuilder $constrain) => $constrain->whereNull('locked_by'));
+        return $this->writeLockIfFree($user, allowHolder: false);
     }
 
     /**
-     * Writes the Lock for $user onto the row only where $constrain allows it,
-     * and reports whether the row matched.
-     *
-     * @param  \Closure(QueryBuilder): mixed  $constrain
+     * Writes the Lock for $user onto the row only while it is free (or, when
+     * $allowHolder, already theirs), and reports whether the row matched.
      */
-    private function writeLockWhere(User $user, \Closure $constrain): bool
+    private function writeLockIfFree(User $user, bool $allowHolder): bool
     {
         $held = $this->lockHeldBy($user);
 
-        $query = $this->lockRow();
-        $constrain($query);
+        $won = $this->lockRow()
+            ->where(function (QueryBuilder $lock) use ($user, $allowHolder): void {
+                $lock->whereNull('locked_by');
 
-        $won = $query->update($held) === 1;
+                if ($allowHolder) {
+                    $lock->orWhere('locked_by', $user->id);
+                }
+            })
+            ->update($held) === 1;
 
         if ($won) {
             // The lock columns now match the row, so a later save() won't

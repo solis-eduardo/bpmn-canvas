@@ -100,11 +100,7 @@ class LockService
             return false;
         }
 
-        if ($this->renew($diagram, $user)) {
-            return true;
-        }
-
-        if ($diagram->acquireLock($user)) {
+        if ($this->renew($diagram, $user) || $diagram->acquireLock($user)) {
             return true;
         }
 
