@@ -58,7 +58,8 @@ ls "$DIST"/assets/php_8_4-*.wasm > /dev/null
 cd "$STAGE"
 zip -qr9 "$DIST/app.zip" . -x \
     'vendor/*/*/tests/*' 'vendor/*/*/Tests/*' 'vendor/*/*/docs/*' 'vendor/*/*/.git*' \
-    'storage/logs/*' 'node_modules/*' 'tests/*' 'backups/*' 'diagrams/*' '.git/*'
+    'storage/logs/*' 'node_modules/*' 'tests/*' 'backups/*' 'diagrams/*' '.git/*' \
+    '.env.prod' '.env.example' 'docker/*'
 touch "$DIST/.nojekyll"
 
 # 4. Bundle size: reported in the job summary to catch regressions. The browser fetches one of the
