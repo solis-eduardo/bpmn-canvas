@@ -66,12 +66,12 @@ class WorkspaceController extends Controller
      * typing an email: Users already in the target role are left out.
      *
      * @param  Collection<int, User>  $candidates
-     * @return array<int, array{id: int, name: string, email: string}>
+     * @return array<int, array{id: int, name: string}>
      */
     private function asOptions(Collection $candidates): array
     {
         return $candidates
-            ->map(fn (User $candidate) => ['id' => $candidate->id, 'name' => $candidate->name, 'email' => $candidate->email])
+            ->map(fn (User $candidate) => ['id' => $candidate->id, 'name' => $candidate->name])
             ->values()
             ->all();
     }

@@ -31,7 +31,7 @@
         @foreach (['owner' => 'filter_workspace_owner', 'member' => 'filter_workspace_member'] as $filterKey => $filterLabel)
             <x-filter-select
                 :name="$filterKey"
-                :options="collect($users)->mapWithKeys(fn ($user) => [$user['id'] => $user['name'].' ('.$user['email'].')'])->all()"
+                :options="collect($users)->mapWithKeys(fn ($user) => [$user['id'] => $user['name']])->all()"
                 :selected="$filters->{$filterKey}"
                 :label="__('messages.'.$filterLabel)"
             />
