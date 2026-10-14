@@ -73,12 +73,21 @@ class CollaboratorController extends Controller
         // Authorized whether or not the email matched anybody, so a refusal
         // never tells the caller if the email belongs to a User.
         $this->authorize('collaborator.invite', [$diagram, $target]);
+
+        // A self-request (the caller can't grant) must also pass requestAccess,
+        // so someone who already edits the Diagram can't file one.
+        $canGrant = Gate::allows('collaborator.grant', $diagram);
+
+        if (! $canGrant) {
+            $this->authorize('collaborator.requestAccess', $diagram);
+        }
+
         $this->authorizeRole($diagram, $data['role'] ?? null);
 
         $skipped = $this->refuseDiagramOwnerAsTarget($diagram, $target, $this->targetedByEmail($data));
 
         $collaborator = $target && ! $skipped
-            ? $this->service->invite($diagram, $target, Gate::allows('collaborator.grant', $diagram), $data['role'] ?? null)
+            ? $this->service->invite($diagram, $target, $canGrant, $data['role'] ?? null)
             : null;
 
         if ($this->targetedByEmail($data)) {

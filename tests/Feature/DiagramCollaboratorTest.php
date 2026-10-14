@@ -5,7 +5,10 @@ namespace Tests\Feature;
 use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
+use App\Models\Workspace;
+use App\Notifications\DiagramAccessRequested;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 use Tests\Traits\TestsEmailEnumerationPrevention;
@@ -114,6 +117,22 @@ class DiagramCollaboratorTest extends TestCase
         ]);
 
         $response->assertForbidden();
+    }
+
+    public function test_a_workspace_member_who_already_edits_the_diagram_cannot_file_an_access_request(): void
+    {
+        Notification::fake();
+        $owner = User::factory()->create();
+        $member = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $this->addMember($workspace, $member);
+        $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create(['workspace_id' => $workspace->id]);
+
+        $this->actingAs($member)->postJson("/diagrams/{$diagram->slug}/collaborators", ['user_id' => $member->id])
+            ->assertForbidden();
+
+        $this->assertDatabaseMissing('collaborators', ['diagram_id' => $diagram->id, 'user_id' => $member->id]);
+        Notification::assertNotSentTo($owner, DiagramAccessRequested::class);
     }
 
     public function test_only_the_diagram_owner_or_an_admin_approves_a_pending_request(): void
