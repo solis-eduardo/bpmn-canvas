@@ -158,15 +158,12 @@ class LockService
      */
     public function reconcileHeldBy(User $user, ?Workspace $workspace = null): void
     {
-        $query = Diagram::query()->where('locked_by', $user->id)->with('lockedBy');
-
-        if ($workspace !== null) {
-            $query->where('workspace_id', $workspace->id);
-        } else {
-            $query->whereNotNull('workspace_id');
-        }
-
-        $query->each(fn (Diagram $diagram) => $this->releaseIfLapsed($diagram));
+        Diagram::query()
+            ->where('locked_by', $user->id)
+            ->with('lockedBy')
+            ->whereNotNull('workspace_id')
+            ->when($workspace !== null, fn ($query) => $query->where('workspace_id', $workspace?->id))
+            ->each(fn (Diagram $diagram) => $this->releaseIfLapsed($diagram));
     }
 
     /**
