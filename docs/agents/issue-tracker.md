@@ -41,7 +41,7 @@ git checkout -b issue/NNN-slug
 
 ### 3. Review and refactor
 
-- Run `/code-review` for bugs and for gaps against the issue's requirements, and fix both
+- Run `/code-review` and fix every finding, including Spec gaps (any requirement of the issue the change does not meet), not only bugs. A gap is never "not a bug"
 - Run `/simplify` for code quality improvements
 - Commit fixes with clear messages
 
@@ -49,11 +49,18 @@ git checkout -b issue/NNN-slug
 
 ```bash
 git push -u origin issue/NNN-slug
-gh pr create --title "..." --body "Fixes #NNN\n..."
+gh pr create --title "..." --body "Fixes #NNN ..."   # or "Refs #NNN ..." if any requirement is unmet
 ```
 
-Include "Fixes #NNN" in the PR body to auto-close the issue when merged. The keyword must be directly followed by the number ("Fixes #NNN"); "Fixes issue #NNN" does not link or close the issue.
+Re-read the issue and check every requirement before writing the PR body.
+
+- All requirements met: use "Fixes #NNN" to auto-close the issue when merged. The keyword must be directly followed by the number ("Fixes #NNN"); "Fixes issue #NNN" does not link or close the issue.
+- Any requirement unmet: use "Refs #NNN" (never "Fixes"), so merging does not close the issue. Add a "## Not done" heading listing each unmet requirement and why.
 
 ### 5. After merge
 
-The issue closes automatically via the PR commit message. If closed manually before merge, that's fine — the merged commit won't re-open it.
+For a PR using "Fixes", the issue closes automatically via the PR commit message; a "Refs" PR leaves it open. If closed manually before merge, that's fine — the merged commit won't re-open it.
+
+### 6. Final report
+
+The first line of the agent's final report states completeness: "Complete: all requirements of #NNN are met" or "Incomplete: <what is missing>". Report gaps before anything else. An unmet requirement is a failure to report, never "out of scope" or a "follow-up".
