@@ -16,6 +16,9 @@ import { errorMessage, exportBpmn, exportPng, exportSvg, setupDropdowns, setupPa
 import { createEditor } from '../public/assets/editor-core.js';
 import { createTranslator } from '../public/assets/translator.js';
 import { createVersionHistory } from '../public/assets/versions.js';
+import enPage from './pages/en.html?raw';
+import esPage from './pages/es.html?raw';
+import ptPage from './pages/pt_BR.html?raw';
 import en from '../public/assets/lang/en.json';
 import es from '../public/assets/lang/es.json';
 import pt_BR from '../public/assets/lang/pt_BR.json';
@@ -25,7 +28,12 @@ import {
 } from './library.js';
 import { createLocalDiagramStore } from './local-store.js';
 
-const LOCALES = { en: { messages: en, name: 'English' }, pt_BR: { messages: pt_BR, name: 'Português (Brasil)' }, es: { messages: es, name: 'Español' } };
+// `page` is what `php artisan standalone:render` rendered from the shared Blade views, in that language.
+const LOCALES = {
+  en: { messages: en, page: enPage, name: 'English' },
+  pt_BR: { messages: pt_BR, page: ptPage, name: 'Português (Brasil)' },
+  es: { messages: es, page: esPage, name: 'Español' },
+};
 const LOCALE_KEY = 'bpmn-canvas.locale';
 
 const $ = id => document.getElementById(id);
@@ -56,22 +64,23 @@ const htmlLocale = locale.replace('_', '-');
 document.documentElement.lang = locale;
 document.title = t('standalone.app_title');
 
-// Static text of index.html: data-i18n sets the text, data-i18n-<attribute> an attribute.
-document.querySelectorAll('*').forEach(element => {
-  for (const { name, value } of [...element.attributes]) {
-    if (name === 'data-i18n') {
-      element.textContent = t(value);
-    } else if (name.startsWith('data-i18n-')) {
-      element.setAttribute(name.slice('data-i18n-'.length), t(value));
-    }
-  }
-});
+// The page rendered for this language replaces the empty shell in index.html.
+const rendered = new DOMParser().parseFromString(LOCALES[locale].page, 'text/html');
+document.body.className = rendered.body.className;
+Object.assign(document.body.dataset, rendered.body.dataset);
+document.body.replaceChildren(...rendered.body.childNodes);
+
+// Tom Select, for the listing's filters: the server build's own script.
+await import('../resources/js/app.js');
 
 const SCREENS = ['home', 'workspaces', 'users', 'account'];
 
 function route() {
   const match = location.hash.match(/^#\/diagram\/([^/]+)$/);
   if (match) return { diagramId: decodeURIComponent(match[1]) };
+
+  if (/^#\/diagram\/[^/]+\/edit$/.test(location.hash)) return { screen: 'diagram-edit' };
+  if (location.hash === '#/diagrams/new') return { screen: 'diagram-create' };
 
   const screen = location.hash.match(/^#\/([a-z]+)$/)?.[1];
 
@@ -85,11 +94,12 @@ function markCurrentNav(name) {
 
 // A screen of the server build that the standalone page does not have yet.
 function showPlaceholder(screen) {
-  const link = document.querySelector(`[data-nav="${screen}"]`);
+  const titles = { 'diagram-create': t('messages.create_diagram'), 'diagram-edit': t('messages.edit') };
+  const current = screen in titles ? 'diagrams' : screen;
 
-  $('placeholder-title').textContent = link.textContent.trim();
+  $('placeholder-title').textContent = titles[screen] ?? document.querySelector(`[data-nav="${screen}"]`).textContent.trim();
   $('placeholder').hidden = false;
-  markCurrentNav(screen);
+  markCurrentNav(current);
 }
 
 // The same classes as the server build's <x-button size="sm">.
@@ -117,12 +127,59 @@ function setupLanguagePicker() {
   });
 }
 
+const escapeHtml = text => Object.assign(document.createElement('span'), { textContent: text }).innerHTML;
+
 async function startLibrary(db) {
-  const list = $('library-list');
+  const tbody = document.querySelector('#diagram-search-results tbody');
+  const emptyRow = tbody.innerHTML; // the listing's own "no diagrams" row
+  const rowTemplate = $('diagram-row').innerHTML;
+  const state = { query: '', column: 'title', direction: 'asc' };
   $('library').hidden = false;
 
   function goToDiagram(id) {
     location.hash = '#/diagram/' + encodeURIComponent(id);
+  }
+
+  // The listing's row, from the server build's markup, filled in for one Diagram.
+  function rowFor(diagram) {
+    const holder = document.createElement('tbody');
+    holder.innerHTML = rowTemplate
+      .replaceAll('__slug__', encodeURIComponent(diagram.id))
+      .replaceAll('__title__', escapeHtml(diagram.title));
+    const row = holder.firstElementChild;
+
+    const date = new Date(diagram.updatedAt);
+    const time = row.querySelector('time[data-timestamp]');
+    time.dateTime = date.toISOString();
+    time.textContent = date.toLocaleString(htmlLocale, { dateStyle: 'short', timeStyle: 'short' });
+
+    // Export and delete, which the server build's listing doesn't have.
+    const exportButton = button(t('standalone.export'));
+    const deleteButton = button(t('messages.delete'), 'destructive');
+    row.querySelector('td:last-child > div').append(exportButton, deleteButton);
+
+    exportButton.addEventListener('click', async () => {
+      try {
+        const { fileName, xml } = await exportDiagram(db, diagram.id);
+        download(new Blob([xml], { type: 'application/xml' }), fileName);
+      } catch (e) {
+        console.error(e);
+        toast(t('standalone.export_failed'), true);
+      }
+    });
+    deleteButton.addEventListener('click', async () => {
+      if (!confirm(t('standalone.delete_diagram_confirm', { title: diagram.title }))) return;
+
+      try {
+        await deleteDiagram(db, diagram.id);
+      } catch (e) {
+        console.error(e);
+        toast(errorMessage(e, t('standalone.delete_failed')), true);
+      }
+      await render();
+    });
+
+    return row;
   }
 
   async function render() {
@@ -136,49 +193,41 @@ async function startLibrary(db) {
       return;
     }
 
-    list.replaceChildren();
-    $('library-empty').hidden = diagrams.length > 0;
+    const query = state.query.trim().toLowerCase();
+    const shown = diagrams
+      .filter(diagram => diagram.title.toLowerCase().includes(query))
+      .sort((a, b) => {
+        const order = state.column === 'title' ? a.title.localeCompare(b.title, htmlLocale) : new Date(a.updatedAt) - new Date(b.updatedAt);
 
-    diagrams.forEach(diagram => {
-      const row = list.insertRow();
-      const title = row.insertCell();
-      title.className = 'px-4 py-3 font-medium text-gray-900';
-      title.textContent = diagram.title;
-      const modified = row.insertCell();
-      modified.className = 'px-4 py-3 text-gray-500';
-      modified.textContent = new Date(diagram.updatedAt).toLocaleString(htmlLocale, { dateStyle: 'medium', timeStyle: 'short' });
-
-      const actions = row.insertCell();
-      actions.className = 'w-px whitespace-nowrap px-4 py-3';
-      const openButton = button(t('messages.open_diagram'));
-      const deleteButton = button(t('messages.delete'), 'destructive');
-      const exportButton = button(t('standalone.export'));
-      openButton.addEventListener('click', () => goToDiagram(diagram.id));
-      exportButton.addEventListener('click', async () => {
-        try {
-          const { fileName, xml } = await exportDiagram(db, diagram.id);
-          download(new Blob([xml], { type: 'application/xml' }), fileName);
-        } catch (e) {
-          console.error(e);
-          toast(t('standalone.export_failed'), true);
-        }
+        return state.direction === 'asc' ? order : -order;
       });
-      deleteButton.addEventListener('click', async () => {
-        if (!confirm(t('standalone.delete_diagram_confirm', { title: diagram.title }))) return;
 
-        try {
-          await deleteDiagram(db, diagram.id);
-        } catch (e) {
-          console.error(e);
-          toast(errorMessage(e, t('standalone.delete_failed')), true);
-        }
-        await render();
-      });
-      actions.append(openButton, ' ', exportButton, ' ', deleteButton);
-    });
+    if (shown.length === 0) {
+      tbody.innerHTML = emptyRow;
+      if (query) tbody.querySelector('td').textContent = t('messages.no_diagrams_match_search');
+      return;
+    }
+
+    tbody.replaceChildren(...shown.map(rowFor));
   }
 
-  $('btn-new').addEventListener('click', async () => {
+  // The listing's search and sort links work on what is stored here.
+  document.querySelector('form[action="#/"]').addEventListener('submit', event => {
+    event.preventDefault();
+    state.query = new FormData(event.target).get('q') ?? '';
+    render();
+  });
+  document.querySelectorAll('[data-sort-column]').forEach(link => link.addEventListener('click', event => {
+    event.preventDefault();
+    const column = link.dataset.sortColumn;
+    state.direction = state.column === column && state.direction === 'asc' ? 'desc' : (column === 'updated_at' ? 'desc' : 'asc');
+    state.column = column;
+    render();
+  }));
+
+  // Creating a Diagram has no screen of its own here yet: ask for the title.
+  document.querySelector('a[href="#/diagrams/new"]').addEventListener('click', async event => {
+    event.preventDefault();
     const title = prompt(t('standalone.new_diagram_title_prompt'), t('standalone.untitled'));
     if (title === null) return;
 

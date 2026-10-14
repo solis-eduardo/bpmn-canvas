@@ -3,7 +3,7 @@
  * (shared with the server build). Tailwind scans the same Blade views the page
  * is rendered from.
  */
-@import 'tailwindcss';
+@import '../resources/css/app.css';
 @source '../resources/views';
 @source './main.js';
 @import '../resources/css/editor.css';

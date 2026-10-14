@@ -17,7 +17,7 @@
         @php($fluidHeader = ($fluid ?? false) && ! ($standardHeader ?? false))
         <header class="shrink-0 border-b border-gray-200 bg-white">
             <div class="{{ $fluidHeader ? 'flex w-full flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 sm:flex-nowrap sm:px-6' : 'mx-auto flex max-w-6xl items-center gap-4 px-4 py-3 sm:px-6' }}">
-                <a href="{{ \App\Support\Ui::standalone() ? '#/' : url('/home') }}" class="text-lg font-semibold text-gray-900">
+                <a href="{{ \App\Support\Ui::route(\App\Support\Ui::standalone() ? 'diagrams.index' : 'home') }}" class="text-lg font-semibold text-gray-900">
                     {{ config('app.name') }}
                 </a>
 
@@ -27,37 +27,37 @@
                 {{-- In the standalone page the links are hash routes and standalone/main.js marks the current one. --}}
                 <nav class="{{ $fluidHeader ? 'flex w-full min-w-0 flex-wrap items-center gap-1 sm:w-auto sm:flex-1' : 'flex flex-1 items-center gap-1' }}">
                     <a
-                        href="{{ $standalone ? '#/home' : url('/home') }}"
+                        href="{{ \App\Support\Ui::route('home') }}"
                         @if ($standalone) data-nav="home" @endif
                         class="{{ $navLink }} {{ ! $standalone && request()->is('home') ? $navActive : '' }}"
                     >
                         <x-icon name="home" />
-                        {{ \App\Support\Ui::text('messages.home') }}
+                        {{ __('messages.home') }}
                     </a>
                     <a
-                        href="{{ $standalone ? '#/' : route('diagrams.index') }}"
+                        href="{{ \App\Support\Ui::route('diagrams.index') }}"
                         @if ($standalone) data-nav="diagrams" @endif
                         class="{{ $navLink }} {{ ! $standalone && request()->routeIs('diagrams.*') ? $navActive : '' }}"
                     >
                         <x-icon name="diagrams" />
-                        {{ \App\Support\Ui::text('messages.diagrams') }}
+                        {{ __('messages.diagrams') }}
                     </a>
                     <a
-                        href="{{ $standalone ? '#/workspaces' : route('workspaces.index') }}"
+                        href="{{ \App\Support\Ui::route('workspaces.index') }}"
                         @if ($standalone) data-nav="workspaces" @endif
                         class="{{ $navLink }} {{ ! $standalone && request()->routeIs('workspaces.*') ? $navActive : '' }}"
                     >
                         <x-icon name="workspaces" />
-                        {{ \App\Support\Ui::text('messages.workspaces') }}
+                        {{ __('messages.workspaces') }}
                     </a>
                     @if ($standalone || (auth()->check() && auth()->user()->is_admin))
                         <a
-                            href="{{ $standalone ? '#/users' : route('admin.users.index') }}"
+                            href="{{ \App\Support\Ui::route('admin.users.index') }}"
                             @if ($standalone) data-nav="users" @endif
                             class="{{ $navLink }} {{ ! $standalone && request()->routeIs('admin.users.*') ? $navActive : '' }}"
                         >
                             <x-icon name="users" />
-                            {{ \App\Support\Ui::text('messages.users') }}
+                            {{ __('messages.users') }}
                         </a>
                     @endif
                 </nav>
@@ -70,13 +70,13 @@
                     @if ($standalone)
                         {{-- Nobody to notify in the standalone page: the bell is only there to keep the header the same. --}}
                         <div class="relative">
-                            <button type="button" id="btn-notification-bell" class="relative flex h-8 w-8 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900"{!! \App\Support\Ui::attr('messages.notifications') !!}>
+                            <button type="button" id="btn-notification-bell" class="relative flex h-8 w-8 items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900" title="{{ __('messages.notifications') }}" aria-label="{{ __('messages.notifications') }}">
                                 <x-icon name="bell" class="h-5 w-5" />
                             </button>
                         </div>
-                        <a href="#/account" data-nav="account" class="{{ $navLink }}">
+                        <a href="{{ \App\Support\Ui::route('account.edit') }}" data-nav="account" class="{{ $navLink }}">
                             <x-icon name="user-circle" />
-                            {{ \App\Support\Ui::text('messages.profile') }}
+                            {{ __('messages.profile') }}
                         </a>
                         {{ $languageSwitcher ?? '' }}
                     @else

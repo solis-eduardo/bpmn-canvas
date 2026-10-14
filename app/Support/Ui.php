@@ -2,17 +2,27 @@
 
 namespace App\Support;
 
-use Illuminate\Support\HtmlString;
-
 /**
- * Lets the views shared by the server and standalone builds (ADR-0019) say
- * their text once. On the server the strings are translated while rendering;
- * in the standalone page, rendered once at build time, they carry a
- * `data-i18n` key that standalone/main.js fills in for the chosen language.
+ * The views shared by the server and standalone builds (ADR-0019) render the
+ * same markup in both. The standalone page is rendered once per language at
+ * build time (`php artisan standalone:render`), with this flag on, so links
+ * point at its hash routes instead of server URLs.
  */
 final class Ui
 {
     private static bool $standalone = false;
+
+    /** Where the standalone page's own routes live, by server route name. */
+    private const STANDALONE_ROUTES = [
+        'home' => '#/home',
+        'diagrams.index' => '#/',
+        'diagrams.create' => '#/diagrams/new',
+        'diagrams.show' => '#/diagram/{slug}',
+        'diagrams.edit' => '#/diagram/{slug}/edit',
+        'workspaces.index' => '#/workspaces',
+        'admin.users.index' => '#/users',
+        'account.edit' => '#/account',
+    ];
 
     public static function standalone(): bool
     {
@@ -25,24 +35,15 @@ final class Ui
     }
 
     /**
-     * @param  array<string, string|int>  $replace
+     * A link target: the server route, or its hash route in the standalone
+     * page. The Diagram parameter is the Slug, or a token the page fills in.
      */
-    public static function text(string $key, array $replace = []): HtmlString
+    public static function route(string $name, string $slug = ''): string
     {
-        return new HtmlString(self::$standalone
-            ? '<span data-i18n="'.e($key).'"></span>'
-            : e(__($key, $replace)));
-    }
+        if (! self::$standalone) {
+            return $slug === '' ? route($name) : route($name, $slug);
+        }
 
-    /**
-     * One or more attributes (e.g. title, aria-label) taking the same string.
-     */
-    public static function attr(string $key, string ...$names): HtmlString
-    {
-        $names = $names ?: ['title', 'aria-label'];
-
-        return new HtmlString(collect($names)->map(fn (string $name): string => self::$standalone
-            ? ' data-i18n-'.$name.'="'.e($key).'"'
-            : ' '.$name.'="'.e(__($key)).'"')->implode(''));
+        return str_replace('{slug}', $slug, self::STANDALONE_ROUTES[$name]);
     }
 }
