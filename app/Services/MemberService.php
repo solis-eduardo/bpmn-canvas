@@ -71,7 +71,7 @@ class MemberService
     public function syncFromKeycloakGroups(User $user, array $groups): void
     {
         DB::transaction(function () use ($user, $groups) {
-            $this->members->removeGroupMembershipsOutside($user, $groups);
+            $removed = $this->members->removeGroupMembershipsOutside($user, $groups);
 
             $this->workspaces->linkedToKeycloakGroups($groups)
                 ->each(function (Workspace $workspace) use ($user) {
@@ -80,8 +80,10 @@ class MemberService
                     }
                 });
 
-            // Group-managed removals can take edit rights away from a holder.
-            $this->locks->reconcileHeldBy($user);
+            // Only dropped group memberships can take edit rights away from a holder.
+            if ($removed > 0) {
+                $this->locks->reconcileHeldBy($user);
+            }
         });
     }
 }

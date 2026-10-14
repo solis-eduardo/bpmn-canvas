@@ -146,6 +146,34 @@ class LockService
     {
         $diagram->refresh();
 
+        $this->releaseIfLapsed($diagram);
+    }
+
+    /**
+     * Reconciles every Lock $user holds on a Diagram in $workspace, or in any
+     * Workspace when none is given. Membership changes can cost a User edit
+     * rights on several Diagrams at once, so they go through here. The rows
+     * are fresh from the query and the holder is eager-loaded, so this skips
+     * the per-Diagram refresh and holder lookup that reconcile() does.
+     */
+    public function reconcileHeldBy(User $user, ?Workspace $workspace = null): void
+    {
+        $query = Diagram::query()->where('locked_by', $user->id)->with('lockedBy');
+
+        if ($workspace !== null) {
+            $query->where('workspace_id', $workspace->id);
+        } else {
+            $query->whereNotNull('workspace_id');
+        }
+
+        $query->each(fn (Diagram $diagram) => $this->releaseIfLapsed($diagram));
+    }
+
+    /**
+     * Releases the Lock if its (already loaded) holder can no longer edit.
+     */
+    private function releaseIfLapsed(Diagram $diagram): void
+    {
         $holder = $diagram->lockedBy;
 
         if ($holder === null || $diagram->isEditableBy($holder)) {
@@ -153,22 +181,5 @@ class LockService
         }
 
         $this->release($diagram);
-    }
-
-    /**
-     * Reconciles every Lock $user holds on a Diagram in $workspace, or in any
-     * Workspace when none is given. Membership changes can cost a User edit
-     * rights on several Diagrams at once, so they go through here.
-     */
-    public function reconcileHeldBy(User $user, ?Workspace $workspace = null): void
-    {
-        Diagram::query()
-            ->where('locked_by', $user->id)
-            ->when(
-                $workspace !== null,
-                fn ($query) => $query->where('workspace_id', $workspace->id),
-                fn ($query) => $query->whereNotNull('workspace_id'),
-            )
-            ->each(fn (Diagram $diagram) => $this->reconcile($diagram));
     }
 }
