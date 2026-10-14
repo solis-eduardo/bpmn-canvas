@@ -67,9 +67,10 @@ trait SharedVersionRepository
      * The content already on disk becomes the initial Version BEFORE it is
      * overwritten, so the first save never loses what was there.
      *
-     * Writes to one Diagram's history are serialized (issue #242): the request
+     * Recording a Version is serialized per Diagram (issue #242): the request
      * and the scheduler (locks:expire) share the cache store, so the lock holds
-     * across processes. The write and the commit form one critical section.
+     * across processes. The file write and the commit form one critical section.
+     * Version state changes (names, provisional and hidden flags) are not locked.
      */
     public function save(Diagram $diagram, User $author, ?string $content = null, ?string $message = null, bool $allowEmpty = false): ?string
     {
