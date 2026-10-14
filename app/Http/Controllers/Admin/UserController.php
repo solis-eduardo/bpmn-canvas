@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
@@ -99,7 +100,9 @@ class UserController extends Controller
 
         $this->assertPasswordRulesForLoginMethod($user, $loginMethod, $data['password'] ?? null);
 
-        if (array_key_exists('is_admin', $data) && ! $data['is_admin'] && $user->is_admin_via_keycloak_claim) {
+        $revokesAdmin = array_key_exists('is_admin', $data) && ! $data['is_admin'];
+
+        if ($revokesAdmin && $user->is_admin_via_keycloak_claim) {
             abort(403, __('messages.keycloak_admin_role_not_revocable'));
         }
 
@@ -111,11 +114,32 @@ class UserController extends Controller
             $user->is_admin = $data['is_admin'];
         }
 
-        $user->save();
+        DB::transaction(function () use ($user, $revokesAdmin): void {
+            if ($revokesAdmin && $user->getOriginal('is_admin')) {
+                $this->assertAnotherAdministratorRemains($user);
+            }
+
+            $user->save();
+        });
 
         return $methodChanged
             ? $this->endSessionsAfterMethodChange($request, $user)
             : $this->afterSave($request, 'admin.users.index', 'admin.users.edit', [$user]);
+    }
+
+    /**
+     * Locks the other Administrator rows so two concurrent demotions can't both
+     * see "another Administrator remains" and leave zero.
+     *
+     * @throws ValidationException
+     */
+    private function assertAnotherAdministratorRemains(User $user): void
+    {
+        if (! User::where('is_admin', true)->whereKeyNot($user->getKey())->lockForUpdate()->exists()) {
+            throw ValidationException::withMessages([
+                'is_admin' => __('messages.last_administrator_not_removable'),
+            ]);
+        }
     }
 
     /**
