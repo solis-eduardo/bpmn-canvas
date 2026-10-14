@@ -1,6 +1,6 @@
 # BPMN Canvas
 
-Internal, self-hosted BPMN 2.0 process modeling tool, with Keycloak authentication, per-user authorship/collaboration, and public sharing via signed, expiring links.
+Internal, self-hosted BPMN 2.0 process modeling tool, with Keycloak authentication, per-user authorship/collaboration, and public sharing via unguessable, expiring links.
 
 ## Language
 
@@ -32,7 +32,7 @@ _Avoid_: Manager (unqualified; collides with Administrator and Workspace Owner)
 A User with the privilege to grant Collaborator access on any Diagram regardless of its Diagram Owner, transfer any Diagram's ownership, to create accounts manually, and to manage any Workspace (including transferring Workspace ownership). Sees every Diagram, including those hidden inside Workspaces they're not a Member of. The role can come from two coexisting sources: set manually by another Administrator, or granted automatically by the corresponding role/claim in the Keycloak token (see User). A claim-granted Administrator follows the claim at each Keycloak login: the claim's absence turns the role off, and it can only be revoked manually while the claim is present; a manually set Administrator is never turned off by the claim's absence (ADR-0005, as amended).
 
 **Share**:
-A public, signed link with an expiration (`expires_at`) set in days (default 7, max 60), granting read access to a Diagram without requiring login. A Share either follows the Diagram's latest Version or is pinned to one specific Version. Has a download permission (`allow_download`, disabled by default) and can be revoked before it expires (`revoked_at`). A Diagram can have multiple active Shares simultaneously, each with its own expiration/permission. The Diagram Owner and the Diagram's Collaborators create and revoke Shares (Workspace Members who are not Collaborators, and Administrators, cannot). A Share keeps working when its Diagram is hidden inside a Workspace — visibility in the Diagram list doesn't affect Shares.
+A link reachable by anyone holding its random, unguessable address, with an expiration (`expires_at`) set in days (default 7, max 60), granting read access to a Diagram without requiring login. A Share either follows the Diagram's latest Version or is pinned to one specific Version. Has a download permission (`allow_download`, disabled by default) and can be revoked before it expires (`revoked_at`). A Diagram can have multiple active Shares simultaneously, each with its own expiration/permission. The Diagram Owner and the Diagram's Collaborators create and revoke Shares (Workspace Members who are not Collaborators, and Administrators, cannot). A Share keeps working when its Diagram is hidden inside a Workspace — visibility in the Diagram list doesn't affect Shares.
 _Avoid_: Share token, public link (use "Share" for the entity; the URL itself can be called a "share link")
 
 **Editor**:

@@ -47,10 +47,8 @@ Route::middleware(EnsureDemoMode::class)->prefix('demo')->name('demo.')->group(f
     Route::post('/reset', [DemoController::class, 'reset'])->name('reset');
 });
 
-Route::middleware('signed')->group(function () {
-    Route::get('/shares/{share}', [PublicShareController::class, 'show'])->name('shares.show');
-    Route::get('/shares/{share}/download/{format}', [PublicShareController::class, 'download'])->name('shares.download');
-});
+Route::get('/s/{share:token}', [PublicShareController::class, 'show'])->name('shares.show');
+Route::get('/s/{share:token}/download/{format}', [PublicShareController::class, 'download'])->name('shares.download');
 
 Route::middleware('auth')->group(function () {
     Route::get('/account/notifications', fn () => redirect()->route('account.edit'))->name('account.notifications.edit');
