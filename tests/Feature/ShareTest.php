@@ -10,7 +10,6 @@ use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 class ShareTest extends TestCase
@@ -37,13 +36,9 @@ class ShareTest extends TestCase
      * prove the server refuses access, since Share::downloadUrl() returns
      * null in that case.
      */
-    private function signedDownloadUrlIgnoringPermission(Share $share): string
+    private function downloadUrlIgnoringPermission(Share $share): string
     {
-        return URL::temporarySignedRoute(
-            'shares.download',
-            now()->addYears(10),
-            ['share' => $share->id, 'format' => 'bpmn'],
-        );
+        return route('shares.download', ['share' => $share->token, 'format' => 'bpmn']);
     }
 
     public function test_author_can_create_share_with_default_seven_days(): void
@@ -120,8 +115,8 @@ class ShareTest extends TestCase
         $url = $response->json('url');
         $this->assertStringStartsWith('https://', $url);
 
-        // The signature must still validate for the https URL actually handed
-        // to the client (not just for a locally-rebuilt http:// one).
+        // The URL must still resolve for the https link actually handed to
+        // the client (not just for a locally-rebuilt http:// one).
         $visit = $this->withHeaders(['X-Forwarded-Proto' => 'https'])->get($url);
         $visit->assertOk();
     }
@@ -136,6 +131,59 @@ class ShareTest extends TestCase
 
         $response->assertStatus(403);
         $this->assertDatabaseCount('shares', 0);
+    }
+
+    public function test_share_gets_an_unguessable_token_and_its_link_is_built_from_it(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author);
+        $share = Share::factory()->for($diagram)->for($author, 'author')->create([
+            'allow_download' => true,
+        ]);
+
+        $this->assertSame(48, strlen($share->token));
+        $this->assertStringContainsString("/s/{$share->token}", $share->showUrl());
+        $this->assertStringContainsString("/s/{$share->token}/download/bpmn", $share->downloadUrl());
+        $this->assertStringNotContainsString('signature', $share->showUrl());
+        $this->assertStringNotContainsString('expires=', $share->showUrl());
+    }
+
+    public function test_share_link_does_not_depend_on_app_key(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author, '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">content</bpmn:definitions>');
+        $share = Share::factory()->for($diagram)->for($author, 'author')->create();
+
+        $url = $share->showUrl();
+
+        config(['app.key' => 'base64:'.base64_encode(random_bytes(32))]);
+
+        $this->get($url)->assertOk();
+    }
+
+    public function test_share_is_not_reachable_by_its_id(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author);
+        $share = Share::factory()->for($diagram)->for($author, 'author')->create([
+            'allow_download' => true,
+        ]);
+
+        $this->get("/s/{$share->id}")->assertNotFound();
+        $this->get("/s/{$share->id}/download/bpmn")->assertNotFound();
+        // The old GET route is gone; the id only matches the DELETE revoke route.
+        $this->get("/shares/{$share->id}")->assertStatus(405);
+    }
+
+    public function test_tokens_are_unique_per_share(): void
+    {
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author);
+
+        $first = Share::factory()->for($diagram)->for($author, 'author')->create();
+        $second = Share::factory()->for($diagram)->for($author, 'author')->create();
+
+        $this->assertNotSame($first->token, $second->token);
     }
 
     public function test_guest_can_view_diagram_with_valid_share(): void
@@ -259,7 +307,7 @@ class ShareTest extends TestCase
             'allow_download' => false,
         ]);
 
-        $response = $this->get($this->signedDownloadUrlIgnoringPermission($share));
+        $response = $this->get($this->downloadUrlIgnoringPermission($share));
 
         $response->assertStatus(403);
     }
@@ -356,7 +404,7 @@ class ShareTest extends TestCase
         $this->get($withoutDownload->showUrl())->assertOk();
 
         $this->get($withDownload->downloadUrl())->assertOk();
-        $this->get($this->signedDownloadUrlIgnoringPermission($withoutDownload))->assertStatus(403);
+        $this->get($this->downloadUrlIgnoringPermission($withoutDownload))->assertStatus(403);
 
         $list = $this->actingAs($author)->getJson("/diagrams/{$diagram->slug}/shares");
         $list->assertOk();

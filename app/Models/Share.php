@@ -10,13 +10,20 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 
 #[Fillable(['diagram_id', 'expires_at', 'allow_download', 'revoked_at', 'created_by', 'pinned_version_id', 'expiry_warned_at'])]
 class Share extends Model
 {
     /** @use HasFactory<ShareFactory> */
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        static::creating(function (Share $share) {
+            $share->token ??= Str::random(48);
+        });
+    }
 
     protected function casts(): array
     {
@@ -99,11 +106,7 @@ class Share extends Model
 
     public function showUrl(): string
     {
-        return URL::temporarySignedRoute(
-            'shares.show',
-            $this->signatureExpiration(),
-            ['share' => $this->id],
-        );
+        return route('shares.show', ['share' => $this->token]);
     }
 
     public function downloadUrl(): ?string
@@ -112,20 +115,6 @@ class Share extends Model
             return null;
         }
 
-        return URL::temporarySignedRoute(
-            'shares.download',
-            $this->signatureExpiration(),
-            ['share' => $this->id, 'format' => 'bpmn'],
-        );
-    }
-
-    /**
-     * The URL signature isn't the share's expiration mechanism: isValid()
-     * handles that via expires_at/revoked_at. That's why the signature lasts
-     * far longer than any valid expires_at (max 60 days).
-     */
-    private function signatureExpiration(): \DateTimeInterface
-    {
-        return now()->addYears(10);
+        return route('shares.download', ['share' => $this->token, 'format' => 'bpmn']);
     }
 }
