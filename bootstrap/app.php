@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AddContentSecurityPolicy;
+use App\Http\Middleware\EnsureUserIsActive;
 use App\Http\Middleware\KeepJsonOutOfPreviousUrl;
 use App\Http\Middleware\SetLocale;
 use App\Support\LocalizedJsonError;
@@ -44,6 +45,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ], append: [
             AddContentSecurityPolicy::class,
             SetLocale::class,
+            EnsureUserIsActive::class,
         ]);
     })
     ->withSchedule(function (Schedule $schedule): void {

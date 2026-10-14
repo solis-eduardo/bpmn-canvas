@@ -48,6 +48,12 @@ class KeycloakLoginController extends Controller
 
         $user = $resolution->user;
 
+        // Checked before anything is saved: a deactivated account, whether
+        // matched by `sub` or by a verified email, never gets a session (ADR-0020).
+        if ($user->isDeactivated()) {
+            return redirect('/login')->with('error', __('messages.account_deactivated'));
+        }
+
         // Only a verified identity may be elevated: the claim is trusted, the
         // unverified email behind it is not.
         if ($emailVerified && $this->hasAdminRoleClaim($tokenPayload)) {
