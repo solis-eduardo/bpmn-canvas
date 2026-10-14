@@ -1,5 +1,8 @@
+import {
+  exportBpmn, exportSvg, exportPng, setupDropdowns, setupZoom, baseName, httpError, chooseRelease, toast, errorMessage,
+} from './common.js';
+
 (async function () {
-  const { exportBpmn, exportSvg, exportPng, setupDropdowns, setupZoom, baseName } = window.BpmnCommon;
   const msg = document.getElementById('message');
   const body = document.getElementById('viewer');
   const name = baseName(body.dataset.title) + '.bpmn';
@@ -36,7 +39,7 @@
           },
           body: payload ? JSON.stringify(payload) : undefined,
         });
-        if (!res.ok) throw await window.BpmnCommon.httpError(res);
+        if (!res.ok) throw await httpError(res);
         return res;
       };
 
@@ -49,7 +52,7 @@
         let payload;
 
         if (hasDraft) {
-          const choice = await window.BpmnCommon.chooseRelease({
+          const choice = await chooseRelease({
             message: releaseButton.dataset.releaseDraftMessage,
             saveLabel: releaseButton.dataset.releaseSaveLabel,
             discardLabel: releaseButton.dataset.releaseDiscardLabel,
@@ -64,7 +67,7 @@
         location.reload();
       } catch (e) {
         console.error(e);
-        window.BpmnCommon.toast(window.BpmnCommon.errorMessage(e, releaseButton.dataset.releaseFailedNotice), true);
+        toast(errorMessage(e, releaseButton.dataset.releaseFailedNotice), true);
       } finally {
         releaseButton.disabled = false;
       }

@@ -70,27 +70,6 @@ class DatabaseVersionRepository implements VersionRepository
         return $content;
     }
 
-    /**
-     * One query for all the ids, keyed back in the order they were asked for.
-     */
-    public function getMany(Diagram $diagram, array $versionIds): array
-    {
-        foreach ($versionIds as $version) {
-            $this->validateIdentifier($version);
-        }
-
-        $contents = $this->query($diagram)
-            ->whereIn('version_id', $versionIds)
-            ->pluck('content', 'version_id');
-
-        $result = [];
-        foreach ($versionIds as $version) {
-            $result[$version] = $contents[$version] ?? throw new RuntimeException('Version not found.');
-        }
-
-        return $result;
-    }
-
     protected function openHistory(Diagram $diagram): bool
     {
         return $this->query($diagram)->exists();

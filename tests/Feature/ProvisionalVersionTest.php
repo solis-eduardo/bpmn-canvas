@@ -59,7 +59,7 @@ class ProvisionalVersionTest extends TestCase
     {
         return collect(
             $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
-        )->flatMap(fn ($day) => $day['items']);
+        );
     }
 
     public function test_the_history_flags_provisional_versions_even_after_a_rename(): void

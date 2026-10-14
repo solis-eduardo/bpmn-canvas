@@ -196,22 +196,6 @@ abstract class VersionRepositoryContract extends TestCase
         $this->assertFalse($repository->exists($diagram, '--output=x'));
     }
 
-    public function test_get_many_returns_the_contents_of_several_versions_keyed_by_id(): void
-    {
-        $diagram = $this->bareDiagram('<bpmn>1</bpmn>');
-        $repository = $this->adapter();
-        $repository->initialize($diagram, $this->author($diagram));
-        $repository->save($diagram, $this->author($diagram), '<bpmn>2</bpmn>');
-        $history = $repository->list($diagram);
-
-        $contents = $repository->getMany($diagram, [$history[1]['id'], $history[0]['id']]);
-
-        $this->assertSame([
-            $history[1]['id'] => '<bpmn>1</bpmn>',
-            $history[0]['id'] => '<bpmn>2</bpmn>',
-        ], $contents);
-    }
-
     public function test_restore_creates_a_new_version_on_top_and_keeps_the_history(): void
     {
         $diagram = $this->bareDiagram('<bpmn>A</bpmn>');

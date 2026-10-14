@@ -24,6 +24,7 @@ backups/*
 /.zed
 /auth.json
 /node_modules
+/public/assets/lang
 /public/build
 /public/fonts-manifest.dev.json
 /public/hot
@@ -51,3 +52,4 @@ Thumbs.db
 /.claude/
 /skills-lock.json
 /storage/app/
+/standalone/dist

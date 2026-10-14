@@ -17,7 +17,7 @@ use RuntimeException;
  * (initial Version, write, record, bookkeeping), the Version state kept in
  * `diagram_version_names` (names, provisional and hidden flags), the numbering
  * and naming of the history, and restore. An adapter only supplies the storage
- * steps: openHistory(), recordVersion(), exists(), get(), getMany() and list().
+ * steps: openHistory(), recordVersion(), exists(), get() and list().
  */
 trait SharedVersionRepository
 {

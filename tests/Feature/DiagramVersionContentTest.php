@@ -42,7 +42,7 @@ class DiagramVersionContentTest extends TestCase
 
         $history = collect(
             $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
-        )->flatMap(fn ($day) => $day['items']);
+        );
 
         // Oldest version is the one created by the factory, before either save above.
         $originalVersion = $history->last();
@@ -70,7 +70,7 @@ class DiagramVersionContentTest extends TestCase
 
         $history = collect(
             $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
-        )->flatMap(fn ($day) => $day['items']);
+        );
 
         $latestVersion = $history->first();
 
@@ -92,6 +92,27 @@ class DiagramVersionContentTest extends TestCase
             ->assertNotFound();
     }
 
+    public function test_it_returns_404_for_a_version_belonging_to_another_diagram(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+        $otherDiagram = Diagram::factory()->for($user, 'author')->create();
+
+        // Distinct content, so the other Diagram's Version can't share a Git
+        // hash with one in $diagram's own history by coincidence.
+        $this->actingAs($user)->putJson('/diagrams/'.$otherDiagram->slug.'/content', [
+            'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">only in the other diagram</bpmn:definitions>',
+        ])->assertOk();
+
+        $foreignVersion = collect(
+            $this->actingAs($user)->getJson('/diagrams/'.$otherDiagram->slug.'/versions')->json('versions')
+        )->first();
+
+        $this->actingAs($user)
+            ->getJson('/diagrams/'.$diagram->slug.'/versions/'.$foreignVersion['id'].'/content')
+            ->assertNotFound();
+    }
+
     public function test_a_collaborator_can_read_version_content(): void
     {
         $author = User::factory()->create();
@@ -110,7 +131,7 @@ class DiagramVersionContentTest extends TestCase
 
         $history = collect(
             $this->actingAs($author)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
-        )->flatMap(fn ($day) => $day['items']);
+        );
 
         $version = $history->first();
 
@@ -131,7 +152,7 @@ class DiagramVersionContentTest extends TestCase
 
         $history = collect(
             $this->actingAs($author)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
-        )->flatMap(fn ($day) => $day['items']);
+        );
 
         $version = $history->first();
 
@@ -151,7 +172,7 @@ class DiagramVersionContentTest extends TestCase
 
         $history = collect(
             $this->actingAs($user)->getJson('/diagrams/'.$diagram->slug.'/versions')->json('versions')
-        )->flatMap(fn ($day) => $day['items']);
+        );
 
         $version = $history->first();
 

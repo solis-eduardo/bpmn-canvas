@@ -100,16 +100,6 @@ interface VersionRepository
     public function get(Diagram $diagram, string $version): string;
 
     /**
-     * Content of the Diagram at several Versions, keyed by id.
-     *
-     * @param  array<int, string>  $versionIds
-     * @return array<string, string>
-     *
-     * @throws \RuntimeException if any Version doesn't exist in this Diagram.
-     */
-    public function getMany(Diagram $diagram, array $versionIds): array;
-
-    /**
      * Restores the content of an old Version and creates a new Version on top
      * of the history (revert-style). Never deletes intermediate Versions.
      */

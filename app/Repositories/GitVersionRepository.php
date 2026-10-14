@@ -133,43 +133,6 @@ class GitVersionRepository implements VersionRepository
     }
 
     /**
-     * Each Version is an independent `git show` subprocess, so they're started
-     * concurrently and only then waited on, instead of paying for sequential
-     * subprocess round trips when comparing two Versions.
-     */
-    public function getMany(Diagram $diagram, array $versionIds): array
-    {
-        foreach ($versionIds as $version) {
-            $this->validateIdentifier($version);
-        }
-
-        $directory = $this->directory($diagram);
-        $file = $this->file($diagram);
-
-        $processes = [];
-
-        foreach ($versionIds as $version) {
-            $process = $this->git(['git', 'show', $version.':'.$file], $directory);
-            $process->start();
-            $processes[$version] = $process;
-        }
-
-        $content = [];
-
-        foreach ($processes as $version => $process) {
-            $process->wait();
-
-            if (! $process->isSuccessful()) {
-                throw new RuntimeException('Version not found.', previous: new ProcessFailedException($process));
-            }
-
-            $content[$version] = $process->getOutput();
-        }
-
-        return $content;
-    }
-
-    /**
      * @return bool true if the repository already existed (nothing to do);
      *              false if it was just initialized now.
      */

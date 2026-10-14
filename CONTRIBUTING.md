@@ -35,6 +35,18 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm dev vend
 docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm dev vendor/bin/pint --test
 ```
 
+The Editor's browser-side modules (`public/assets/`) have their own suite, run with Vitest on the host:
+
+```bash
+npm test
+```
+
+The Editor loads its UI strings from JSON generated from `lang/` (`public/assets/lang/<locale>.json`, git-ignored; the Docker build runs the same command). After adding a string to the shared core, or changing one in `lang/`, regenerate it:
+
+```bash
+php artisan lang:export
+```
+
 ## Coding standards
 
 This project uses [Laravel Pint](https://laravel.com/docs/pint) for PHP formatting:
@@ -47,7 +59,7 @@ Run it before opening a PR. Keep changes focused — avoid unrelated refactors o
 
 ## Internationalization
 
-User-facing strings live in `lang/{en,pt_BR,es}/messages.php`, referenced from Blade views via `__('messages.key')`. If you add or change UI text, update all three locale files, not just English.
+User-facing strings live in `lang/{en,pt_BR,es}/messages.php`, referenced from Blade views via `__('messages.key')`. If you add or change UI text, update all three locale files, not just English. The Editor's shared core gets its strings from JSON exported from these files (`php artisan lang:export`, see above).
 
 ## Submitting a pull request
 
@@ -100,6 +112,12 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm dev vend
 docker compose -f docker-compose.yml -f docker-compose.dev.yml run --rm dev vendor/bin/pint --test
 ```
 
+O núcleo compartilhado do Editor carrega suas strings de um JSON gerado a partir de `lang/` (`public/assets/lang/<locale>.json`, ignorado pelo git; o build do Docker roda o mesmo comando). Depois de adicionar ou alterar uma string do núcleo, regenere:
+
+```bash
+php artisan lang:export
+```
+
 ## Padrões de código
 
 Este projeto usa o [Laravel Pint](https://laravel.com/docs/pint) para formatação PHP:
@@ -112,7 +130,7 @@ Rode antes de abrir um PR. Mantenha as mudanças focadas — evite refatoraçõe
 
 ## Internacionalização
 
-As strings voltadas ao usuário ficam em `lang/{en,pt_BR,es}/messages.php`, referenciadas nas views Blade via `__('messages.key')`. Ao adicionar ou alterar texto de UI, atualize os três arquivos de idioma, não só o inglês.
+As strings voltadas ao usuário ficam em `lang/{en,pt_BR,es}/messages.php`, referenciadas nas views Blade via `__('messages.key')`. Ao adicionar ou alterar texto de UI, atualize os três arquivos de idioma, não só o inglês. O núcleo compartilhado do Editor recebe suas strings de um JSON exportado desses arquivos (`php artisan lang:export`).
 
 ## Enviando um pull request
 

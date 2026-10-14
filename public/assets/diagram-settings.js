@@ -2,8 +2,9 @@
    Title, Tags saved as the chips change, and a modal to transfer the Diagram
    Owner role. Every change goes through the JSON endpoints and applies at once,
    without leaving the Diagram. */
+import { toast, errorMessage, httpError } from './common.js';
+
 (function () {
-  const { toast, errorMessage } = window.BpmnCommon;
 
   const editor = document.getElementById('editor');
   const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
@@ -20,7 +21,7 @@
       },
       body: JSON.stringify(payload),
     });
-    if (!res.ok) throw await window.BpmnCommon.httpError(res);
+    if (!res.ok) throw await httpError(res);
     return res.json();
   }
 

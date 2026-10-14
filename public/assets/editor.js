@@ -1,206 +1,79 @@
-(function () {
-  const { toast, setupZoom, errorMessage } = window.BpmnCommon;
+/*
+ * The server build's Editor page: wires the shared Editor core to the
+ * Laravel endpoints (HttpDiagramStore) and to the Lock session.
+ */
+import { setupPanels } from './common.js';
+import { createEditor } from './editor-core.js';
+import { createHttpDiagramStore, createJsonClient } from './http-store.js';
+import { startLockSession } from './lock-session.js';
+import { createTranslator } from './translator.js';
+import { createVersionHistory } from './versions.js';
 
-  const body = document.getElementById('editor');
-  const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
-  const contentUrl = body.dataset.contentUrl;
-  const saveUrl = body.dataset.saveUrl;
-  const indexUrl = body.dataset.indexUrl;
-  const heartbeatUrl = body.dataset.heartbeatUrl;
-  const unlockUrl = body.dataset.unlockUrl;
-  const lockRequestedByNoticeTemplate = body.dataset.lockRequestedByNotice;
+const body = document.getElementById('editor');
+const csrfToken = document.querySelector('meta[name="csrf-token"]').content;
 
-  const modeler = new BpmnJS({ container: '#canvas' });
-  const $ = id => document.getElementById(id);
+// One JSON client for the page: the translations, the store and the Lock
+// session all use it.
+const request = createJsonClient({ csrfToken });
 
-  // Exposed so the version-comparison module (loaded separately, see
-  // versions.js/diff.js) can reuse this same live Modeler/canvas instead of
-  // creating a second one.
-  window.BpmnEditor = { modeler, contentUrl, versionsUrl: body.dataset.versionsUrl };
+// The core's UI strings: the JSON `php artisan lang:export` writes from lang/,
+// for the page's locale. Without it the Editor still starts, showing the keys
+// instead of the strings.
+async function loadMessages(url) {
+  try {
+    return await request('GET', url);
+  } catch (e) {
+    console.error('Could not load ' + url + ' (run "php artisan lang:export")', e);
 
-  let dirty = false;
-
-  // The draft the server was last told about, so a Heartbeat can skip
-  // re-sending content that hasn't changed since.
-  let lastSentDraft = null;
-
-  setupZoom(modeler);
-
-  function setDirty(v) {
-    dirty = v;
-    $('dirty').classList.toggle('on', v);
-
-    // A save settles the content and clears the server's draft, so what it
-    // holds is no longer what we last sent.
-    if (!v) lastSentDraft = null;
+    return {};
   }
+}
 
-  async function api(method, url, body) {
-    const res = await fetch(url, {
-      method,
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        'X-CSRF-TOKEN': csrfToken,
-      },
-      body: body !== undefined ? JSON.stringify(body) : undefined,
-    });
-    if (!res.ok) {
-      throw await window.BpmnCommon.httpError(res);
-    }
-    return res;
-  }
+const messages = await loadMessages(body.dataset.langUrl);
+const t = createTranslator(messages);
 
-  async function loadContent() {
-    try {
-      const res = await fetch(contentUrl, {
-        credentials: 'same-origin',
-        headers: { Accept: 'application/json' },
-      });
-      const data = await res.json();
-      const { warnings } = await modeler.importXML(data.content);
-      if (warnings && warnings.length) console.warn('Import warnings:', warnings);
-      modeler.get('canvas').zoom('fit-viewport', 'auto');
-      setDirty(false);
-    } catch (e) {
-      console.error(e);
-      toast(errorMessage(e, body.dataset.loadFailedNotice), true);
-    }
-  }
+// The Lock session is server-only and keeps its strings on data-* attributes.
+const lockT = key => body.dataset[key];
 
-  async function save() {
-    try {
-      const { xml } = await modeler.saveXML({ format: true });
-      await api('PUT', saveUrl, { content: xml });
-      setDirty(false);
-      document.dispatchEvent(new CustomEvent('diagram:saved'));
-      toast(body.dataset.savedNotice);
-    } catch (e) {
-      console.error(e);
-      toast(errorMessage(e, body.dataset.saveFailedNotice), true);
-    }
-  }
+const store = createHttpDiagramStore({
+  urls: {
+    contentUrl: body.dataset.contentUrl,
+    saveUrl: body.dataset.saveUrl,
+    versionsUrl: body.dataset.versionsUrl,
+    versionContentUrlTemplate: body.dataset.versionContentUrlTemplate,
+    versionRestoreUrlTemplate: body.dataset.versionRestoreUrlTemplate,
+    versionRenameUrlTemplate: body.dataset.versionRenameUrlTemplate,
+    versionPromoteUrlTemplate: body.dataset.versionPromoteUrlTemplate,
+    versionDeleteUrlTemplate: body.dataset.versionDeleteUrlTemplate,
+  },
+  request,
+});
 
-  $('btn-save').addEventListener('click', save);
-  document.addEventListener('keydown', e => {
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-      e.preventDefault();
-      save();
-    }
-  });
+setupPanels();
 
-  const releaseLockButton = $('btn-release-lock');
-  if (releaseLockButton) {
-    releaseLockButton.addEventListener('click', async () => {
-      // Disabled while asking and releasing, so a second click can't open a second dialog.
-      releaseLockButton.disabled = true;
+const editor = createEditor({
+  container: '#canvas',
+  store,
+  t,
+  timeZone: body.dataset.timeZone,
+  Modeler: window.BpmnJS,
+});
 
-      try {
-        // The holder's own unsaved content lives here; for an Administrator
-        // releasing someone else's Lock, only the server knows whether the
-        // holder left a draft.
-        const isHolder = body.dataset.isLockHolder === '1';
-        const hasDraft = isHolder
-          ? dirty
-          : (await (await api('GET', unlockUrl)).json()).has_draft;
+// The server-only scripts (collaborators.js) listen for saves on the document.
+editor.on('saved', () => document.dispatchEvent(new CustomEvent('diagram:saved')));
 
-        let payload;
+createVersionHistory({ editor, canEdit: body.dataset.canEditVersions === 'true' });
 
-        if (hasDraft) {
-          const choice = await window.BpmnCommon.chooseRelease({
-            message: isHolder ? body.dataset.releaseDraftHolderMessage : body.dataset.releaseDraftAdminMessage,
-            saveLabel: body.dataset.releaseSaveLabel,
-            discardLabel: body.dataset.releaseDiscardLabel,
-            cancelLabel: body.dataset.releaseCancelLabel,
-          });
-
-          if (choice === 'cancel') return;
-
-          if (choice === 'save') {
-            payload = { save_draft: true };
-            if (isHolder) payload.draft = (await modeler.saveXML({ format: true })).xml;
-          }
-        }
-
-        await api('DELETE', unlockUrl, payload);
-        setDirty(false);
-        location.href = indexUrl;
-      } catch (e) {
-        console.error(e);
-        toast(errorMessage(e, body.dataset.releaseLockFailedNotice), true);
-      } finally {
-        releaseLockButton.disabled = false;
-      }
-    });
-  }
-
-  modeler.on('commandStack.changed', () => setDirty(true));
-  window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
-
-  const lockRequestBanner = $('lock-request-banner');
-
-  // The Lock holder's only signal that someone else wants the Lock is this
-  // same heartbeat poll (see LockController::update) — no separate
-  // poll loop is started just for this (issue #9).
-  function showLockRequestedNotice(requestedByName) {
-    if (!lockRequestBanner) return;
-
-    if (!requestedByName) {
-      lockRequestBanner.hidden = true;
-      lockRequestBanner.textContent = '';
-      return;
-    }
-
-    lockRequestBanner.textContent = (lockRequestedByNoticeTemplate || ':name')
-      .replace(':name', requestedByName);
-    lockRequestBanner.hidden = false;
-  }
-
-  // The Lock expires after a few minutes without a Heartbeat (ADR-0003), so
-  // the Heartbeat only goes out while the holder is actually using the
-  // Editor: an abandoned tab stops renewing and its Lock is released. When
-  // there are unsaved changes, the Heartbeat carries them along so the
-  // server can keep them as a provisional Version if the Lock expires.
-  const HEARTBEAT_INTERVAL_MS = 30000;
-  const IDLE_AFTER_MS = 3 * 60 * 1000;
-  let lastActivityAt = Date.now();
-  ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'].forEach(name => {
-    document.addEventListener(name, () => { lastActivityAt = Date.now(); }, { passive: true });
-  });
-
-  async function sendHeartbeat() {
-    if (Date.now() - lastActivityAt > IDLE_AFTER_MS) return;
-
-    try {
-      // `dirty` stays true until a save, so without this the whole diagram
-      // would be re-serialized, re-uploaded, re-parsed and rewritten on
-      // every beat of an editing session. The server only needs the draft
-      // when it differs from the one it already holds.
-      let payload;
-
-      if (dirty) {
-        const xml = (await modeler.saveXML({ format: true })).xml;
-
-        if (xml !== lastSentDraft) payload = { draft: xml };
-      }
-
-      const res = await api('PATCH', heartbeatUrl, payload);
-      const data = await res.json();
-      if (payload) lastSentDraft = payload.draft;
-      showLockRequestedNotice(data.lock_requested_by);
-    } catch (e) {
-      console.error(e);
-
-      // The Lock is gone (expired or taken): stop renewing and say so, once.
-      if (e.status === 403 || e.status === 423) {
-        clearInterval(heartbeatTimer);
-        toast(errorMessage(e, body.dataset.saveFailedNotice), true);
-      }
-    }
-  }
-
-  const heartbeatTimer = setInterval(sendHeartbeat, HEARTBEAT_INTERVAL_MS);
-
-  loadContent();
-})();
+startLockSession({
+  editor,
+  request,
+  urls: {
+    heartbeat: body.dataset.heartbeatUrl,
+    unlock: body.dataset.unlockUrl,
+    index: body.dataset.indexUrl,
+  },
+  isHolder: body.dataset.isLockHolder === '1',
+  t: lockT,
+  banner: document.getElementById('lock-request-banner'),
+  releaseButton: document.getElementById('btn-release-lock'),
+});
