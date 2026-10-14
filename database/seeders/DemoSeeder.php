@@ -4,10 +4,10 @@ namespace Database\Seeders;
 
 use App\Models\Collaborator;
 use App\Models\Diagram;
+use App\Models\Share;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Repositories\DiagramRepository;
-use App\Repositories\ShareRepository;
 use App\Repositories\VersionRepository;
 use App\Repositories\WorkspaceRepository;
 use App\Services\CollaboratorService;
@@ -27,7 +27,6 @@ class DemoSeeder extends Seeder
         private readonly VersionRepository $versions,
         private readonly WorkspaceRepository $workspaces,
         private readonly CollaboratorService $collaborators,
-        private readonly ShareRepository $shares,
     ) {}
 
     public function run(): void
@@ -108,12 +107,10 @@ class DemoSeeder extends Seeder
 
     private function share(Diagram $diagram, User $creator, int $days, bool $allowDownload = false): void
     {
-        $this->shares->create([
-            'diagram_id' => $diagram->id,
+        Share::factory()->for($diagram)->create([
             'expires_at' => now()->addDays($days),
             'allow_download' => $allowDownload,
             'created_by' => $creator->id,
-            'pinned_version_id' => null,
         ]);
     }
 
