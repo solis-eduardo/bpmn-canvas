@@ -106,6 +106,7 @@ class KeycloakLoginController extends Controller
 
         if ($user) {
             $user->login_method = User::LOGIN_METHOD_KEYCLOAK;
+            $this->refreshProfile($user, $socialiteUser, $emailVerified);
 
             return KeycloakResolution::resolved($user);
         }
@@ -165,6 +166,64 @@ class KeycloakLoginController extends Controller
         }
 
         $user->is_admin_via_keycloak_claim = false;
+    }
+
+    /**
+     * Keeps the name and email of an already linked account in step with the
+     * IdP. The email is only taken from a verified claim and never when another
+     * account already holds it, so a login can't reassign an address it doesn't
+     * own. Changes are written to the log.
+     */
+    private function refreshProfile(User $user, SocialiteUserContract $socialiteUser, bool $emailVerified): void
+    {
+        $changed = array_values(array_filter([
+            $this->refreshName($user, $socialiteUser->getName()) ? 'name' : null,
+            $this->refreshEmail($user, $socialiteUser->getEmail(), $emailVerified) ? 'email' : null,
+        ]));
+
+        if ($changed !== []) {
+            Log::info('Keycloak login refreshed the account profile.', [
+                'user_id' => $user->id,
+                'fields' => $changed,
+            ]);
+        }
+    }
+
+    /**
+     * Only the `name` claim: falling back to the nickname (the IdP username)
+     * would overwrite a real display name when the claim is absent.
+     */
+    private function refreshName(User $user, ?string $name): bool
+    {
+        if ($name === null || $name === '' || $name === $user->name) {
+            return false;
+        }
+
+        $user->name = $name;
+
+        return true;
+    }
+
+    private function refreshEmail(User $user, ?string $email, bool $emailVerified): bool
+    {
+        if (! $emailVerified || $email === null || $email === '' || $email === $user->email) {
+            return false;
+        }
+
+        $holder = $this->users->findByEmail($email);
+
+        if ($holder !== null && ! $holder->is($user)) {
+            Log::warning('Keycloak login did not update the email: the address belongs to another account.', [
+                'user_id' => $user->id,
+                'holder_user_id' => $holder->id,
+            ]);
+
+            return false;
+        }
+
+        $user->email = $email;
+
+        return true;
     }
 
     /**
