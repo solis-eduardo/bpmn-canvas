@@ -210,7 +210,7 @@ class KeycloakLoginController extends Controller
             return false;
         }
 
-        $holder = $this->users->findByEmail($email);
+        $holder = $this->users->findByEmailForLogin($email);
 
         if ($holder !== null && ! $holder->is($user)) {
             Log::warning('Keycloak login did not update the email: the address belongs to another account.', [

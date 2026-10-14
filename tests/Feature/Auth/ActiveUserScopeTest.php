@@ -449,4 +449,15 @@ class ActiveUserScopeTest extends TestCase
 
         $this->assertDatabaseHas('collaborators', ['diagram_id' => $diagram->id, 'user_id' => $gone->id]);
     }
+
+    public function test_keycloak_email_refresh_treats_a_deactivated_holder_as_holding_the_email(): void
+    {
+        $gone = $this->deactivated(['email' => 'taken'.'@example.com']);
+        $user = User::factory()->create(['keycloak_id' => 'kc-live', 'login_method' => User::LOGIN_METHOD_KEYCLOAK]);
+        $this->mockKeycloak('kc-live', $gone->email);
+
+        $this->get('/login/keycloak/callback')->assertRedirect(route('home'));
+
+        $this->assertNotSame($gone->email, $user->refresh()->email);
+    }
 }
