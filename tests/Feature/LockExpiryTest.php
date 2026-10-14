@@ -366,7 +366,7 @@ class LockExpiryTest extends TestCase
         {
             private bool $heartbeatSent = false;
 
-            public function __construct(ProvisionalVersionService $provisional, private readonly Diagram $other, private readonly User $otherHolder)
+            public function __construct(ProvisionalVersionService $provisional, private readonly Diagram $renewed, private readonly User $renewedHolder)
             {
                 parent::__construct($provisional);
             }
@@ -375,7 +375,7 @@ class LockExpiryTest extends TestCase
             {
                 if (! $this->heartbeatSent) {
                     $this->heartbeatSent = true;
-                    $this->other->heartbeat($this->otherHolder);
+                    $this->renewed->heartbeat($this->renewedHolder);
                 }
 
                 parent::release($diagram, $saveDraft, $draft);
