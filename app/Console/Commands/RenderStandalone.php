@@ -48,6 +48,7 @@ class RenderStandalone extends Command
         'workspaces' => '/workspaces',
         'users' => '/admin/users',
         'account' => '/account',
+        'notifications' => '/notifications/history',
     ];
 
     protected $signature = 'standalone:render {--path= : Directory to write to (default: standalone/pages)}';

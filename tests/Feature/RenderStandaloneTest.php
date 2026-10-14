@@ -38,7 +38,7 @@ class RenderStandaloneTest extends TestCase
         $this->artisan('standalone:render', ['--path' => $this->path])->assertSuccessful();
 
         foreach (['en', 'es', 'pt_BR'] as $locale) {
-            foreach (['home', 'library', 'library-row', 'create', 'edit', 'editor', 'workspaces', 'users', 'account'] as $name) {
+            foreach (['home', 'library', 'library-row', 'create', 'edit', 'editor', 'workspaces', 'users', 'account', 'notifications'] as $name) {
                 $this->assertFileExists("{$this->path}/{$locale}/{$name}.html");
             }
         }

@@ -23,6 +23,7 @@ import en from '../public/assets/lang/en.json';
 import es from '../public/assets/lang/es.json';
 import pt_BR from '../public/assets/lang/pt_BR.json';
 import { openDb } from './db.js';
+import { createLocalServer, installLocalServer } from './local-server.js';
 import { createDiagram, getDiagram, listDiagrams } from './library.js';
 import { createLocalDiagramStore } from './local-store.js';
 
@@ -46,6 +47,7 @@ const ROUTES = [
   [/^\/workspaces$/, 'workspaces'],
   [/^\/admin\/users$/, 'users'],
   [/^\/account$/, 'account'],
+  [/^\/notifications\/history$/, 'notifications'],
 ];
 
 const $ = id => document.getElementById(id);
@@ -101,13 +103,19 @@ if (diagram) html = html.replaceAll(SLUG_TOKEN, encodeURIComponent(diagram.id)).
 
 const rendered = new DOMParser().parseFromString(html, 'text/html');
 document.documentElement.lang = htmlLocale;
+document.documentElement.className = rendered.documentElement.className;
 document.title = rendered.title.replaceAll(TITLE_TOKEN, diagram ? diagram.title : '');
 document.body.className = rendered.body.className;
 Object.assign(document.body.dataset, rendered.body.dataset);
 document.body.replaceChildren(...rendered.body.childNodes);
+// The server's scripts read the CSRF token from the head.
+document.head.append(...rendered.head.querySelectorAll('meta[name="csrf-token"]'));
 
-// Tom Select, for the pages' pickers: the server build's own script.
+// Tom Select, for the pages' pickers, and the notification bell: the server build's own scripts.
+// The bell asks the server for its count and list, which the local server answers.
+installLocalServer(createLocalServer(ORIGIN));
 await import('../resources/js/app.js');
+await import('../public/assets/notifications.js');
 
 // What the server would do on the paths the pages link to or post to.
 function pathOf(url) {
