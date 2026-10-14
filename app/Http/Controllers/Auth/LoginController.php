@@ -34,6 +34,10 @@ class LoginController extends Controller
         // generic error as a wrong password avoids revealing the method.
         $credentials['login_method'] = User::LOGIN_METHOD_LOCAL;
 
+        // A deactivated User can't sign in either (ADR-0020); the same generic
+        // error hides that from anyone guessing credentials.
+        $credentials['deactivated_at'] = null;
+
         if (! Auth::attempt($credentials)) {
             throw ValidationException::withMessages([
                 'email' => __('messages.invalid_credentials'),
