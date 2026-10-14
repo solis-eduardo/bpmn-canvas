@@ -30,10 +30,12 @@ class ShareService
      */
     public function create(Diagram $diagram, User $creator, int $days = 7, bool $allowDownload = false, ?string $pinnedVersionId = null): Share
     {
-        if ($pinnedVersionId !== null && ! $this->versions->exists($diagram, $pinnedVersionId)) {
-            throw ValidationException::withMessages([
-                'pinned_version_id' => 'The selected version does not exist.',
-            ]);
+        if ($pinnedVersionId !== null) {
+            // Pin the full id, so an abbreviation can never be stored.
+            $pinnedVersionId = $this->versions->resolve($diagram, $pinnedVersionId)
+                ?? throw ValidationException::withMessages([
+                    'pinned_version_id' => 'The selected version does not exist.',
+                ]);
         }
 
         return $this->shares->create([

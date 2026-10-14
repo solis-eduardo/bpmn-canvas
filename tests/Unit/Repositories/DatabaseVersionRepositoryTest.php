@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Repositories;
 
+use App\Models\Diagram;
 use App\Repositories\Concerns\SharedVersionRepository;
 use App\Repositories\DatabaseVersionRepository;
 use App\Repositories\VersionRepository;
@@ -13,6 +14,15 @@ class DatabaseVersionRepositoryTest extends VersionRepositoryContract
     protected function adapter(): VersionRepository
     {
         return new DatabaseVersionRepository;
+    }
+
+    #[Test]
+    public function it_takes_only_full_ids_so_a_short_id_resolves_to_nothing(): void
+    {
+        $diagram = Diagram::factory()->create();
+        $id = $this->adapter()->list($diagram)[0]['id'];
+
+        $this->assertNull($this->adapter()->resolve($diagram, substr($id, 0, 7)));
     }
 
     /**

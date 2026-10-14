@@ -253,6 +253,21 @@ class DiagramVersionTest extends TestCase
         $this->assertTrue($renamedItem['renamed']);
     }
 
+    public function test_renaming_by_a_short_id_names_the_version_and_answers_with_its_full_id(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+
+        $versionId = $this->versionItems($user, $diagram)->first()['id'];
+
+        $this->actingAs($user)->putJson(
+            '/diagrams/'.$diagram->slug.'/versions/'.substr($versionId, 0, 7).'/rename',
+            ['name' => 'Milestone']
+        )->assertOk()->assertJson(['id' => $versionId, 'number' => 1, 'name' => 'Milestone']);
+
+        $this->assertSame('Milestone', $this->versionItems($user, $diagram)->first()['name']);
+    }
+
     public function test_version_names_need_not_be_unique(): void
     {
         $user = User::factory()->create();
