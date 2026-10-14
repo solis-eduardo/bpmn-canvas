@@ -2,10 +2,12 @@
 
 namespace App\Services;
 
+use App\Exceptions\VersionHistoryBusyException;
 use App\Models\Diagram;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Releases Locks whose holder stopped sending Heartbeats for the configured
@@ -34,13 +36,32 @@ class LockExpiryService
             // skip rows as the result set shrinks under it.
             ->chunkById(100, function ($diagrams) use ($cutoff, &$released): void {
                 foreach ($diagrams as $candidate) {
-                    if ($this->releaseIfStillExpired($candidate->getKey(), $cutoff)) {
+                    if ($this->tryRelease($candidate->getKey(), $cutoff)) {
                         $released++;
                     }
                 }
             });
 
         return $released;
+    }
+
+    /**
+     * Releases one Diagram, or skips it when its Version history stayed busy
+     * for the whole wait (issue #242). The release is rolled back, so the Lock
+     * and the draft are untouched and the next run (a minute later) retries;
+     * one Diagram must not abort the run for the others.
+     */
+    private function tryRelease(int|string $id, Carbon $cutoff): bool
+    {
+        try {
+            return $this->releaseIfStillExpired($id, $cutoff);
+        } catch (VersionHistoryBusyException $busy) {
+            Log::warning('Lock expiry skipped a Diagram: its Version history is busy; the Lock stays for the next run.', [
+                'diagram_id' => $id,
+            ]);
+
+            return false;
+        }
     }
 
     /**

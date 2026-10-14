@@ -2,12 +2,14 @@
 
 namespace App\Repositories\Concerns;
 
+use App\Exceptions\VersionHistoryBusyException;
 use App\Models\Diagram;
 use App\Models\DiagramVersionName;
 use App\Models\User;
 use App\Support\BpmnSearchableText;
 use App\Support\VersionName;
 use Carbon\CarbonInterface;
+use Illuminate\Contracts\Cache\LockTimeoutException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -27,11 +29,6 @@ trait SharedVersionRepository
     private const MESSAGE_INITIAL = 'Initial version';
 
     private const MESSAGE_RESTORE = 'Restored a previous version';
-
-    /**
-     * Seconds a writer waits for the Diagram's history lock before giving up.
-     */
-    private const LOCK_WAIT_SECONDS = 30;
 
     /**
      * Seconds after which the history lock lapses on its own, so a writer that
@@ -71,11 +68,20 @@ trait SharedVersionRepository
      * and the scheduler (locks:expire) share the cache store, so the lock holds
      * across processes. The file write and the commit form one critical section.
      * Version state changes (names, provisional and hidden flags) are not locked.
+     *
+     * @throws VersionHistoryBusyException if the lock stayed taken for the whole
+     *                                     wait (config `bpmn.version_lock_wait_seconds`).
+     *                                     Nothing was written; each caller decides
+     *                                     how to retry (ADR-0018).
      */
     public function save(Diagram $diagram, User $author, ?string $content = null, ?string $message = null, bool $allowEmpty = false): ?string
     {
-        return Cache::lock('diagram-versions:'.$diagram->getKey(), self::LOCK_TTL_SECONDS)
-            ->block(self::LOCK_WAIT_SECONDS, fn (): ?string => $this->writeVersion($diagram, $author, $content, $message, $allowEmpty));
+        try {
+            return Cache::lock('diagram-versions:'.$diagram->getKey(), self::LOCK_TTL_SECONDS)
+                ->block(config('bpmn.version_lock_wait_seconds'), fn (): ?string => $this->writeVersion($diagram, $author, $content, $message, $allowEmpty));
+        } catch (LockTimeoutException $timeout) {
+            throw VersionHistoryBusyException::fromTimeout($timeout);
+        }
     }
 
     private function writeVersion(Diagram $diagram, User $author, ?string $content, ?string $message, bool $allowEmpty): ?string

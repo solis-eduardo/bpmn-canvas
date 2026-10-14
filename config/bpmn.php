@@ -15,6 +15,10 @@ return [
     // default) or "database" (rows in diagram_versions, no subprocesses; ADR-0018).
     'version_store' => env('VERSION_STORE', 'git'),
 
+    // Seconds a writer waits for a Diagram's Version history lock before giving
+    // up with a retryable 503 (ADR-0018, issue #242).
+    'version_lock_wait_seconds' => (int) env('VERSION_LOCK_WAIT_SECONDS', 30),
+
     // Browser demo affordances (ADR-0018): demo sign-in, banner and reset.
     // Off by default; only .env.demo turns it on.
     'demo_mode' => (bool) env('DEMO_MODE', false),

@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Exceptions\VersionHistoryBusyException;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
@@ -38,6 +39,11 @@ class LocalizedJsonError
     {
         // Validation errors are already localized, field by field.
         if ($e instanceof ValidationException) {
+            return null;
+        }
+
+        // A 503 with a message of its own: retryable, not an unexpected error.
+        if ($e instanceof VersionHistoryBusyException) {
             return null;
         }
 
