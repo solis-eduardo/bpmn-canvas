@@ -43,6 +43,9 @@ touch database/demo-seed.sqlite
 DB_DATABASE="$STAGE/database/demo-seed.sqlite" \
     php artisan migrate --force --seed --seeder='Database\Seeders\DemoSeeder'
 php artisan lang:export
+# No config, route or view cache: the cached files bake in build-time paths (the stage directory,
+# not the /www the browser unpacks to) and the cached routes answer GET /login with 405 under the
+# Pages sub-path. Both were checked in the browser smoke test.
 
 # 3. The shell (Vite) and the zipped app, trimmed of what the running app never reads.
 cd "$DEMO"

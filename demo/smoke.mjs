@@ -140,6 +140,10 @@ try {
     // The shell's boot log says which step of the boot broke (unzip, OPFS, ...).
     const bootLog = page ? await page.$eval('#log', (log) => log.textContent).catch(() => '') : '';
     if (bootLog.trim()) console.error(`shell boot log:\n${bootLog}`);
+    // What the app rendered instead (an error page, usually), when the app frame got that far.
+    const frame = page ? page.frames().find((candidate) => candidate.url().includes(`${PREFIX}app/`)) : undefined;
+    const appText = frame ? await frame.evaluate(() => document.body?.innerText ?? '').catch(() => '') : '';
+    if (appText.trim()) console.error(`app page text:\n${appText.slice(0, 2000)}`);
 } finally {
     await browser.close();
     server.close();
