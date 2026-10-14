@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds the throwaway "stage" tree that gets bundled into php-wasm:
 #   composer install --no-dev + vite build + vendored bpmn-js + SQLite file
-#   + the spike overlay (stub VersionRepository). Output: $OUT (default ./stage)
+#   + the demo env (.env.demo) and database (DemoSeeder). Output: $OUT (default ./stage)
 # Needs: git, docker (composer image), node/npm, php (any 8.x, host) for migrating.
 set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -24,21 +24,15 @@ cp "$N/bpmn-js-differ/dist/index.esm.js" "$V/bpmn-js-differ/"
 cp "$N/min-dash/dist/index.js" "$V/bpmn-js-differ/min-dash.esm.js"
 rm -rf "$OUT/docker"
 
-# Spike overlay: stub the git-backed VersionRepository (no git/proc_open in wasm).
-cp -r "$HERE/overlay/." "$OUT/"
+# Sub-path and CSP patches (spike-only, applied to the staged copy).
 php "$HERE/patch-stage.php" "$OUT"
 
-# Env + pre-migrated, seeded SQLite. In wasm the DB lives at /persist/db.sqlite (OPFS-backed).
-cp "$REPO/.env.example" "$OUT/.env"
-sed -i -e 's/^APP_ENV=.*/APP_ENV=production/' -e 's/^APP_DEBUG=.*/APP_DEBUG=true/' \
-  -e 's#^APP_URL=.*#APP_URL=http://localhost:8080#' -e 's/^DB_CONNECTION=.*/DB_CONNECTION=sqlite/' \
-  -e '/^DB_HOST/d;/^DB_PORT/d;/^DB_DATABASE/d;/^DB_USERNAME/d;/^DB_PASSWORD/d' \
-  -e 's/^SESSION_DRIVER=.*/SESSION_DRIVER=database/' -e 's/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=sync/' \
-  -e 's/^CACHE_STORE=.*/CACHE_STORE=file/' -e 's/^ADMIN_EMAIL=.*/ADMIN_EMAIL=demo@example.com/' \
-  -e 's/^ADMIN_PASSWORD=.*/ADMIN_PASSWORD=demo-password/' "$OUT/.env"
-printf 'DB_DATABASE=/persist/db.sqlite\nLOG_CHANNEL=stderr\n' >> "$OUT/.env"
-grep -q '^ADMIN_PASSWORD=' "$OUT/.env" || printf 'ADMIN_EMAIL=demo@example.com\nADMIN_PASSWORD=demo-password\n' >> "$OUT/.env"
-( cd "$OUT" && php artisan key:generate --force >/dev/null \
-  && touch db.sqlite && DB_DATABASE="$OUT/db.sqlite" php artisan migrate --force --seed )
+# Env: the real demo's .env.demo (ADR-0018), only APP_URL and the DB path changed. In wasm the DB lives
+# at /persist/db.sqlite (OPFS-backed; the shell hardcodes that name). Seeded with DemoSeeder at build time.
+cp "$REPO/.env.demo" "$OUT/.env"
+sed -i -e 's#^APP_URL=.*#APP_URL=http://localhost:8080#' -e 's#^DB_DATABASE=.*#DB_DATABASE=/persist/db.sqlite#' "$OUT/.env"
+( cd "$OUT" && touch db.sqlite \
+  && DB_DATABASE="$OUT/db.sqlite" php artisan migrate --force \
+  && DB_DATABASE="$OUT/db.sqlite" php artisan db:seed --class=DemoSeeder --force )
 mkdir -p "$OUT"/storage/{app/diagrams,framework/{sessions,cache,views},logs} "$OUT/bootstrap/cache"
 echo "stage ready: $OUT"
