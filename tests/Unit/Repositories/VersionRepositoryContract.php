@@ -360,8 +360,8 @@ abstract class VersionRepositoryContract extends TestCase
     {
         $diagram = $this->bareDiagram('<bpmn>A</bpmn>');
 
-        // Serialization is checked by the lock's contract rather than by a
-        // real contention: the block() callback must run the whole write.
+        // Checks the contract rather than real contention: save() must take the
+        // Diagram's lock and perform the whole write inside block()'s callback.
         $lock = Mockery::mock(Lock::class);
         $lock->shouldReceive('block')
             ->once()

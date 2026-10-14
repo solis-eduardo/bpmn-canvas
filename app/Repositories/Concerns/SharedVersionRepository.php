@@ -29,6 +29,17 @@ trait SharedVersionRepository
     private const MESSAGE_RESTORE = 'Restored a previous version';
 
     /**
+     * Seconds a writer waits for the Diagram's history lock before giving up.
+     */
+    private const LOCK_WAIT_SECONDS = 30;
+
+    /**
+     * Seconds after which the history lock lapses on its own, so a writer that
+     * dies mid-save cannot block the Diagram forever.
+     */
+    private const LOCK_TTL_SECONDS = 120;
+
+    /**
      * Makes the Diagram's history ready to be written. Returns true when the
      * history already existed before this call.
      */
@@ -51,17 +62,6 @@ trait SharedVersionRepository
     {
         $this->save($diagram, $author);
     }
-
-    /**
-     * Seconds a writer waits for the Diagram's history lock before giving up.
-     */
-    private const LOCK_WAIT_SECONDS = 30;
-
-    /**
-     * Seconds after which the history lock lapses on its own, so a writer that
-     * dies mid-save cannot block the Diagram forever.
-     */
-    private const LOCK_TTL_SECONDS = 120;
 
     /**
      * The content already on disk becomes the initial Version BEFORE it is
