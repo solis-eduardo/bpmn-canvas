@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Scopes\ActiveUserScope;
 use App\Repositories\VersionRepository;
 use Database\Factories\ShareFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -48,7 +47,7 @@ class Share extends Model
     /** @return BelongsTo<User, $this> */
     public function author(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by')->withoutGlobalScope(ActiveUserScope::class);
+        return $this->belongsTo(User::class, 'created_by')->withDeactivated();
     }
 
     /**

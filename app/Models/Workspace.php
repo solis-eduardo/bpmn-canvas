@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Scopes\ActiveUserScope;
 use Database\Factories\WorkspaceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -27,7 +26,7 @@ class Workspace extends Model
     /** @return BelongsTo<User, $this> */
     public function owner(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'owner_id')->withoutGlobalScope(ActiveUserScope::class);
+        return $this->belongsTo(User::class, 'owner_id')->withDeactivated();
     }
 
     /** @return HasMany<Member, $this> */

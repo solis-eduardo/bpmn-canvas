@@ -437,4 +437,16 @@ class ActiveUserScopeTest extends TestCase
         $this->assertDatabaseHas('members', ['workspace_id' => $workspace->id, 'user_id' => $added->id]);
         $this->assertDatabaseHas('members', ['workspace_id' => $workspace->id, 'user_id' => $gone->id]);
     }
+
+    public function test_collaborator_and_member_routes_do_not_resolve_a_deactivated_user(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
+        $gone = $this->deactivated();
+        Collaborator::create(['diagram_id' => $diagram->id, 'user_id' => $gone->id, 'status' => Collaborator::STATUS_APPROVED]);
+
+        $this->actingAs($owner)->deleteJson("/diagrams/{$diagram->slug}/collaborators/{$gone->id}")->assertNotFound();
+
+        $this->assertDatabaseHas('collaborators', ['diagram_id' => $diagram->id, 'user_id' => $gone->id]);
+    }
 }

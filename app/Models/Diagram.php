@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Models\Concerns\FiltersDiagramList;
 use App\Models\Concerns\HoldsALock;
-use App\Models\Scopes\ActiveUserScope;
 use App\Rules\BpmnXml;
 use Database\Factories\DiagramFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -87,7 +86,7 @@ BPMN;
     /** @return BelongsTo<User, $this> */
     public function author(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'author_id')->withoutGlobalScope(ActiveUserScope::class);
+        return $this->belongsTo(User::class, 'author_id')->withDeactivated();
     }
 
     /**
@@ -100,7 +99,7 @@ BPMN;
     /** @return BelongsTo<User, $this> */
     public function owner(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'owner_id')->withoutGlobalScope(ActiveUserScope::class);
+        return $this->belongsTo(User::class, 'owner_id')->withDeactivated();
     }
 
     /**

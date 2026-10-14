@@ -17,6 +17,7 @@ class UserRepository
      */
     public const SORT_COLUMNS = ['name' => 'asc', 'updated_at' => 'desc'];
 
+    /** Active Users only (default scope); use the ForLogin lookups to find a deactivated account. */
     public function find(int $id): ?User
     {
         return User::find($id);

@@ -2,7 +2,6 @@
 
 namespace App\Models;
 
-use App\Models\Scopes\ActiveUserScope;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -35,7 +34,7 @@ class Collaborator extends Model
     /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class)->withoutGlobalScope(ActiveUserScope::class);
+        return $this->belongsTo(User::class)->withDeactivated();
     }
 
     /**
