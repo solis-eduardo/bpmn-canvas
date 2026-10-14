@@ -147,9 +147,7 @@ async function boot() {
     // 6. The app runs in the iframe, under the same origin so the Service Worker answers it.
     const frame = document.getElementById('app');
     frame.addEventListener('load', () => {
-        if (document.getElementById('timing').textContent === '') {
-            document.getElementById('timing').textContent = `first page: ${Math.round(performance.now() - startedAt)} ms`;
-        }
+        document.getElementById('timing').textContent = `first page: ${Math.round(performance.now() - startedAt)} ms`;
     }, { once: true });
     frame.src = APP_PREFIX;
     document.getElementById('boot').style.display = 'none';
