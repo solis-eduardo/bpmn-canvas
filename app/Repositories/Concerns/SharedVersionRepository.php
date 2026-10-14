@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\BpmnSearchableText;
 use App\Support\VersionName;
 use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -26,6 +27,17 @@ trait SharedVersionRepository
     private const MESSAGE_INITIAL = 'Initial version';
 
     private const MESSAGE_RESTORE = 'Restored a previous version';
+
+    /**
+     * Seconds a writer waits for the Diagram's history lock before giving up.
+     */
+    private const LOCK_WAIT_SECONDS = 30;
+
+    /**
+     * Seconds after which the history lock lapses on its own, so a writer that
+     * dies mid-save cannot block the Diagram forever.
+     */
+    private const LOCK_TTL_SECONDS = 120;
 
     /**
      * Makes the Diagram's history ready to be written. Returns true when the
@@ -54,8 +66,19 @@ trait SharedVersionRepository
     /**
      * The content already on disk becomes the initial Version BEFORE it is
      * overwritten, so the first save never loses what was there.
+     *
+     * Recording a Version is serialized per Diagram (issue #242): the request
+     * and the scheduler (locks:expire) share the cache store, so the lock holds
+     * across processes. The file write and the commit form one critical section.
+     * Version state changes (names, provisional and hidden flags) are not locked.
      */
     public function save(Diagram $diagram, User $author, ?string $content = null, ?string $message = null, bool $allowEmpty = false): ?string
+    {
+        return Cache::lock('diagram-versions:'.$diagram->getKey(), self::LOCK_TTL_SECONDS)
+            ->block(self::LOCK_WAIT_SECONDS, fn (): ?string => $this->writeVersion($diagram, $author, $content, $message, $allowEmpty));
+    }
+
+    private function writeVersion(Diagram $diagram, User $author, ?string $content, ?string $message, bool $allowEmpty): ?string
     {
         $disk = Storage::disk('diagrams');
 
