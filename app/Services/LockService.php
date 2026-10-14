@@ -29,11 +29,12 @@ class LockService
      */
     public function openOrRequest(Diagram $diagram, User $user): LockOutcome
     {
-        if (! $diagram->isLockedByOther($user)) {
-            $diagram->acquireLock($user);
-
+        if ($diagram->acquireLock($user)) {
             return LockOutcome::acquired();
         }
+
+        // Someone else won the Lock after this request loaded the Diagram.
+        $diagram->refresh();
 
         $alreadyPending = $diagram->pendingLockRequestIsFrom($user);
 
@@ -99,11 +100,14 @@ class LockService
             return false;
         }
 
-        if (! $this->renew($diagram, $user)) {
-            $this->openOrRequest($diagram, $user);
+        if ($this->renew($diagram, $user) || $diagram->acquireLock($user)) {
+            return true;
         }
 
-        return true;
+        // Lost the race for a free Lock: report it as held by someone else.
+        $diagram->refresh();
+
+        return false;
     }
 
     /**
