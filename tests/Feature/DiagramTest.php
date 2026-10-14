@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Diagram;
 use App\Models\DiagramOldSlug;
+use App\Models\Share;
 use App\Models\User;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -254,6 +255,20 @@ class DiagramTest extends TestCase
         $this->actingAs($user)->get('/diagrams/'.$renamedSlug)->assertNotFound();
         $this->actingAs($user)->get('/diagrams/'.$currentSlug)->assertNotFound();
         $this->actingAs($user)->getJson('/diagrams/'.$renamedSlug.'/content')->assertNotFound();
+    }
+
+    public function test_deleting_a_diagram_that_has_revoked_and_active_shares_removes_them_too(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+        $revokedShare = Share::factory()->for($diagram)->for($user, 'author')->create(['revoked_at' => now()]);
+        $activeShare = Share::factory()->for($diagram)->for($user, 'author')->create();
+
+        $this->actingAs($user)->delete('/diagrams/'.$diagram->slug)->assertOk();
+
+        $this->assertDatabaseMissing('diagrams', ['id' => $diagram->id]);
+        $this->assertDatabaseMissing('shares', ['id' => $revokedShare->id]);
+        $this->assertDatabaseMissing('shares', ['id' => $activeShare->id]);
     }
 
     public function test_creating_a_diagram_leaves_no_record_when_the_disk_write_fails(): void
