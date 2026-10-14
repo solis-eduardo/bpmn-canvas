@@ -61,6 +61,9 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                // UPDATE reports matched rows, not changed ones: a holder
+                // re-acquiring within the same second must still count as won.
+                Mysql::ATTR_FOUND_ROWS => true,
             ]) : [],
         ],
 
@@ -81,6 +84,9 @@ return [
             'engine' => null,
             'options' => extension_loaded('pdo_mysql') ? array_filter([
                 Mysql::ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+                // UPDATE reports matched rows, not changed ones: a holder
+                // re-acquiring within the same second must still count as won.
+                Mysql::ATTR_FOUND_ROWS => true,
             ]) : [],
         ],
 

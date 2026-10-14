@@ -105,7 +105,7 @@ trait HoldsALock
      */
     public function acquireLock(User $user): bool
     {
-        return $this->takeLockWhere($user, fn (QueryBuilder $query) => $query->where(
+        return $this->writeLockWhere($user, fn (QueryBuilder $constrain) => $constrain->where(
             fn (QueryBuilder $lock) => $lock->whereNull('locked_by')->orWhere('locked_by', $user->id),
         ));
     }
@@ -118,24 +118,27 @@ trait HoldsALock
      */
     public function claimFreeLock(User $user): bool
     {
-        return $this->takeLockWhere($user, fn (QueryBuilder $query) => $query->whereNull('locked_by'));
+        return $this->writeLockWhere($user, fn (QueryBuilder $constrain) => $constrain->whereNull('locked_by'));
     }
 
     /**
-     * @param  \Closure(QueryBuilder): mixed  $predicate
+     * Writes the Lock for $user onto the row only where $constrain allows it,
+     * and reports whether the row matched.
+     *
+     * @param  \Closure(QueryBuilder): mixed  $constrain
      */
-    private function takeLockWhere(User $user, \Closure $predicate): bool
+    private function writeLockWhere(User $user, \Closure $constrain): bool
     {
         $held = $this->lockHeldBy($user);
 
         $query = $this->lockRow();
-        $predicate($query);
+        $constrain($query);
 
         $won = $query->update($held) === 1;
 
         if ($won) {
-            // The row now *is* this, so nothing stays pending for a later
-            // save() to rewrite.
+            // The lock columns now match the row, so a later save() won't
+            // rewrite them. Other dirty attributes are left as they were.
             $this->forceFill($held)->syncOriginalAttributes(array_keys($held));
         }
 
