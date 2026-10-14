@@ -1,10 +1,13 @@
 /*
- * The standalone build's entry (ADR-0019): the page around the shared Editor
- * core. A hash route picks the view, and a change of route reloads the page,
- * so each page load wires exactly one Editor to one Diagram.
- *
- *   #/                 the list of Diagrams (library.js)
- *   #/diagram/<id>     the Editor, on a LocalDiagramStore
+ * The standalone build's entry (ADR-0019). The pages are the server build's own
+ * routes, rendered at build time by `php artisan standalone:render` (one set per
+ * language, in ./pages), so this file only
+ *   - picks the page for the hash route (`#/diagrams`, `#/diagrams/<id>`, ...),
+ *   - fills in what lives in the browser instead of the server: the Diagram
+ *     list and the Editor's content,
+ *   - turns the page's links and forms into hash navigation, and
+ *   - wires the shared Editor core.
+ * A change of route reloads the page, so each load wires one Editor to one Diagram.
  */
 import BpmnModeler from 'bpmn-js/lib/Modeler';
 import 'bpmn-js/dist/assets/diagram-js.css';
@@ -12,40 +15,50 @@ import 'bpmn-js/dist/assets/bpmn-js.css';
 import 'bpmn-js/dist/assets/bpmn-font/css/bpmn-embedded.css';
 import './standalone.css';
 
-import { errorMessage, exportBpmn, exportPng, exportSvg, setupDropdowns, setupPanels, toast, download } from '../public/assets/common.js';
+import { errorMessage, setupPanels, toast } from '../public/assets/common.js';
 import { createEditor } from '../public/assets/editor-core.js';
 import { createTranslator } from '../public/assets/translator.js';
 import { createVersionHistory } from '../public/assets/versions.js';
-const PAGES = import.meta.glob('./pages/*/*.html', { query: '?raw', import: 'default', eager: true });
 import en from '../public/assets/lang/en.json';
 import es from '../public/assets/lang/es.json';
 import pt_BR from '../public/assets/lang/pt_BR.json';
 import { openDb } from './db.js';
-import {
-  createDiagram, deleteDiagram, exportAll, exportDiagram, fileNameOf, getDiagram, importBpmn, listDiagrams, titleFromFileName,
-} from './library.js';
+import { createDiagram, getDiagram, listDiagrams } from './library.js';
 import { createLocalDiagramStore } from './local-store.js';
 
-const LOCALES = {
-  en: { messages: en, name: 'English' },
-  pt_BR: { messages: pt_BR, name: 'Português (Brasil)' },
-  es: { messages: es, name: 'Español' },
-};
+const PAGES = import.meta.glob('./pages/*/*.html', { query: '?raw', import: 'default', eager: true });
+
+const MESSAGES = { en, pt_BR, es };
 const LOCALE_KEY = 'bpmn-canvas.locale';
 
-const $ = id => document.getElementById(id);
+// Where the rendered pages' links point, and the tokens standing for the Diagram they were rendered for.
+const ORIGIN = 'http://standalone.invalid';
+const SLUG_TOKEN = '__slug__';
+const TITLE_TOKEN = '__title__';
 
-function readStoredLocale() {
-  try {
-    return localStorage.getItem(LOCALE_KEY);
-  } catch (e) {
-    return null; // storage can be blocked
-  }
-}
+// Server path -> page, in matching order.
+const ROUTES = [
+  [/^\/home$/, 'home'],
+  [/^\/diagrams$/, 'library'],
+  [/^\/diagrams\/create$/, 'create'],
+  [/^\/diagrams\/([^/]+)\/edit$/, 'edit'],
+  [/^\/diagrams\/([^/]+)$/, 'editor'],
+  [/^\/workspaces$/, 'workspaces'],
+  [/^\/admin\/users$/, 'users'],
+  [/^\/account$/, 'account'],
+];
+
+const $ = id => document.getElementById(id);
+const escapeHtml = text => Object.assign(document.createElement('span'), { textContent: text }).innerHTML;
 
 function pickLocale() {
-  const stored = readStoredLocale();
-  if (stored in LOCALES) return stored;
+  let stored = null;
+  try {
+    stored = localStorage.getItem(LOCALE_KEY);
+  } catch (e) {
+    // storage can be blocked
+  }
+  if (stored in MESSAGES) return stored;
 
   const browser = (navigator.language || 'en').toLowerCase();
   if (browser.startsWith('pt')) return 'pt_BR';
@@ -54,139 +67,144 @@ function pickLocale() {
 }
 
 const locale = pickLocale();
-const t = createTranslator(LOCALES[locale].messages);
+const t = createTranslator(MESSAGES[locale]);
 const htmlLocale = locale.replace('_', '-');
 
-// versions.js formats dates in the page's language.
-document.documentElement.lang = locale;
-document.title = t('standalone.app_title');
+function resolve(path) {
+  for (const [pattern, page] of ROUTES) {
+    const match = path.match(pattern);
+    if (match) return { page, id: match[1] ? decodeURIComponent(match[1]) : null };
+  }
 
-const SCREENS = ['home', 'workspaces', 'users', 'account'];
-
-function route() {
-  const match = location.hash.match(/^#\/diagram\/([^/]+)$/);
-  if (match) return { diagramId: decodeURIComponent(match[1]) };
-
-  if (/^#\/diagram\/[^/]+\/edit$/.test(location.hash)) return { screen: 'diagram-edit' };
-  if (location.hash === '#/diagrams/new') return { screen: 'diagram-create' };
-
-  const screen = location.hash.match(/^#\/([a-z]+)$/)?.[1];
-
-  return SCREENS.includes(screen) ? { screen } : {};
+  return { page: 'library', id: null };
 }
 
-// Marks the header link of the current screen, as the server build does.
-function markCurrentNav(name) {
-  document.querySelector(`[data-nav="${name}"]`)?.classList.add('bg-gray-100', 'text-gray-900');
+const { page, id } = resolve(location.hash.slice(1) || '/diagrams');
+
+let db;
+try {
+  db = await openDb();
+} catch (e) {
+  // Private windows and blocked site data can refuse IndexedDB.
+  console.error(e);
 }
 
-// A screen of the server build that the standalone page does not have yet.
-function showPlaceholder(screen) {
-  const titles = { 'diagram-create': t('messages.create_diagram'), 'diagram-edit': t('messages.edit') };
-  const current = screen in titles ? 'diagrams' : screen;
-
-  $('placeholder-title').textContent = titles[screen] ?? document.querySelector(`[data-nav="${screen}"]`).textContent.trim();
-  markCurrentNav(current);
+const diagram = id && db ? await getDiagram(db, id) : null;
+if (id && !diagram) {
+  location.hash = '#/diagrams';
+  throw new Error('No such Diagram'); // the hash change reloads the page
 }
 
-// The same classes as the server build's <x-button size="sm">.
-const BUTTON_CLASSES = {
-  secondaryMd: 'inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md px-4 py-2 text-sm font-medium border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500',
-  secondary: 'inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-500',
-  destructive: 'inline-flex items-center justify-center gap-1 whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium bg-red-600 text-white shadow-sm hover:bg-red-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600',
-};
+// The server's own page for this route and language replaces the empty shell in index.html.
+let html = PAGES[`./pages/${locale}/${page}.html`];
+if (diagram) html = html.replaceAll(SLUG_TOKEN, encodeURIComponent(diagram.id)).replaceAll(TITLE_TOKEN, escapeHtml(diagram.title));
 
-function button(text, variant = 'secondary') {
-  return Object.assign(document.createElement('button'), { type: 'button', textContent: text, className: BUTTON_CLASSES[variant] });
-}
-
-
-// The page `php artisan standalone:render` rendered for this route and language, from the
-// server build's own views, replaces the empty shell in index.html.
-const { diagramId, screen } = route();
-const view = diagramId ? 'editor' : (screen ? 'placeholder' : 'library');
-const rendered = new DOMParser().parseFromString(PAGES[`./pages/${locale}/${view}.html`], 'text/html');
+const rendered = new DOMParser().parseFromString(html, 'text/html');
+document.documentElement.lang = htmlLocale;
+document.title = rendered.title.replaceAll(TITLE_TOKEN, diagram ? diagram.title : '');
 document.body.className = rendered.body.className;
 Object.assign(document.body.dataset, rendered.body.dataset);
 document.body.replaceChildren(...rendered.body.childNodes);
 
-// Tom Select, for the listing's filters: the server build's own script.
+// Tom Select, for the pages' pickers: the server build's own script.
 await import('../resources/js/app.js');
 
-// The language picker lives in the page header, so it works on both screens.
-function setupLanguagePicker() {
-  const select = $('language');
+// What the server would do on the paths the pages link to or post to.
+function pathOf(url) {
+  const target = new URL(url, location.href);
 
-  Object.entries(LOCALES).forEach(([code, { name }]) => select.add(new Option(name, code, false, code === locale)));
-  select.addEventListener('change', () => {
+  return target.origin === ORIGIN ? target : null;
+}
+
+function go(path) {
+  location.hash = '#' + path;
+}
+
+function unavailable() {
+  toast(t('standalone.screen_unavailable'), true);
+}
+
+document.addEventListener('click', event => {
+  const link = event.target.closest('a[href]');
+  const target = link && pathOf(link.href);
+  if (!target || event.defaultPrevented) return;
+
+  event.preventDefault();
+  if (link.dataset.sortColumn) return; // handled by the listing
+
+  const known = ROUTES.some(([pattern]) => pattern.test(target.pathname));
+  if (known) go(target.pathname);
+  else unavailable();
+});
+
+document.addEventListener('submit', async event => {
+  const form = event.target;
+  const action = pathOf(form.action);
+  if (!action || event.defaultPrevented) return;
+
+  event.preventDefault();
+  const language = action.pathname.match(/^\/locale\/([A-Za-z_]+)$/)?.[1];
+
+  if (language in MESSAGES) {
     try {
-      localStorage.setItem(LOCALE_KEY, select.value);
+      localStorage.setItem(LOCALE_KEY, language);
     } catch (e) {
       // not remembered, but the page still reloads in the chosen language
     }
     location.reload();
-  });
-}
+  } else if (form.method.toLowerCase() === 'post' && action.pathname === '/diagrams' && db) {
+    const title = new FormData(form).get('title')?.toString().trim();
+    go('/diagrams/' + encodeURIComponent(await createDiagram(db, { title: title || t('standalone.untitled') })));
+  } else if (form.method.toLowerCase() === 'get' && action.pathname === '/diagrams') {
+    // the listing's search, handled by startLibrary()
+  } else {
+    unavailable();
+  }
+});
 
-const escapeHtml = text => Object.assign(document.createElement('span'), { textContent: text }).innerHTML;
+window.addEventListener('hashchange', () => location.reload());
 
-async function startLibrary(db) {
+// The header link of the current screen, as the server marks it.
+document.querySelectorAll('header nav a[href]').forEach(link => {
+  const target = pathOf(link.href);
+  const linked = target && resolve(target.pathname).page;
+  const here = linked === page || (linked === 'library' && ['create', 'edit', 'editor'].includes(page));
+
+  link.classList.toggle('bg-gray-100', here);
+  link.classList.toggle('text-gray-900', here);
+});
+
+// The listing: the server's own table, with the Diagrams stored in this browser as its rows.
+async function startLibrary() {
   const tbody = document.querySelector('#diagram-search-results tbody');
   const emptyRow = tbody.innerHTML; // the listing's own "no diagrams" row
-  const rowTemplate = $('diagram-row').innerHTML;
+  const withRow = new DOMParser().parseFromString(PAGES[`./pages/${locale}/library-row.html`], 'text/html');
+  const rowTemplate = withRow.querySelector('#diagram-search-results tbody tr').outerHTML;
   const state = { query: '', column: 'title', direction: 'asc' };
 
-  function goToDiagram(id) {
-    location.hash = '#/diagram/' + encodeURIComponent(id);
-  }
-
-  // The listing's row, from the server build's markup, filled in for one Diagram.
-  function rowFor(diagram) {
+  function rowFor(stored) {
     const holder = document.createElement('tbody');
     holder.innerHTML = rowTemplate
-      .replaceAll('__slug__', encodeURIComponent(diagram.id))
-      .replaceAll('__title__', escapeHtml(diagram.title));
+      .replaceAll(SLUG_TOKEN, encodeURIComponent(stored.id))
+      .replaceAll(TITLE_TOKEN, escapeHtml(stored.title));
     const row = holder.firstElementChild;
 
-    const date = new Date(diagram.updatedAt);
-    const time = row.querySelector('time[data-timestamp]');
-    time.dateTime = date.toISOString();
-    time.textContent = date.toLocaleString(htmlLocale, { dateStyle: 'short', timeStyle: 'short' });
-
-    // Export and delete, which the server build's listing doesn't have.
-    const exportButton = button(t('standalone.export'));
-    const deleteButton = button(t('messages.delete'), 'destructive');
-    row.querySelector('td:last-child > div').append(exportButton, deleteButton);
-
-    exportButton.addEventListener('click', async () => {
-      try {
-        const { fileName, xml } = await exportDiagram(db, diagram.id);
-        download(new Blob([xml], { type: 'application/xml' }), fileName);
-      } catch (e) {
-        console.error(e);
-        toast(t('standalone.export_failed'), true);
-      }
-    });
-    deleteButton.addEventListener('click', async () => {
-      if (!confirm(t('standalone.delete_diagram_confirm', { title: diagram.title }))) return;
-
-      try {
-        await deleteDiagram(db, diagram.id);
-      } catch (e) {
-        console.error(e);
-        toast(errorMessage(e, t('standalone.delete_failed')), true);
-      }
-      await render();
-    });
+    const date = new Date(stored.updatedAt);
+    const time = row.querySelector('time');
+    if (time) {
+      time.dateTime = date.toISOString();
+      time.removeAttribute('title');
+      time.textContent = date.toLocaleString(htmlLocale, { dateStyle: 'short', timeStyle: 'short' });
+    }
 
     return row;
   }
 
   async function render() {
-    let diagrams;
+    let stored;
 
     try {
-      diagrams = await listDiagrams(db);
+      stored = await listDiagrams(db);
     } catch (e) {
       console.error(e);
       toast(errorMessage(e, t('standalone.diagrams_load_failed')), true);
@@ -194,8 +212,8 @@ async function startLibrary(db) {
     }
 
     const query = state.query.trim().toLowerCase();
-    const shown = diagrams
-      .filter(diagram => diagram.title.toLowerCase().includes(query))
+    const shown = stored
+      .filter(item => item.title.toLowerCase().includes(query))
       .sort((a, b) => {
         const order = state.column === 'title' ? a.title.localeCompare(b.title, htmlLocale) : new Date(a.updatedAt) - new Date(b.updatedAt);
 
@@ -204,7 +222,6 @@ async function startLibrary(db) {
 
     if (shown.length === 0) {
       tbody.innerHTML = emptyRow;
-      if (query) tbody.querySelector('td').textContent = t('messages.no_diagrams_match_search');
       return;
     }
 
@@ -212,163 +229,36 @@ async function startLibrary(db) {
   }
 
   // The listing's search and sort links work on what is stored here.
-  document.querySelector('form[action="#/"]').addEventListener('submit', event => {
-    event.preventDefault();
-    state.query = new FormData(event.target).get('q') ?? '';
+  document.querySelector('form[action$="/diagrams"][method="GET"]')?.addEventListener('submit', event => {
+    state.query = new FormData(event.target).get('q')?.toString() ?? '';
     render();
   });
-  document.querySelectorAll('[data-sort-column]').forEach(link => link.addEventListener('click', event => {
-    event.preventDefault();
+  document.querySelectorAll('[data-sort-column]').forEach(link => link.addEventListener('click', () => {
     const column = link.dataset.sortColumn;
     state.direction = state.column === column && state.direction === 'asc' ? 'desc' : (column === 'updated_at' ? 'desc' : 'asc');
     state.column = column;
     render();
   }));
 
-  // Creating a Diagram has no screen of its own here yet: ask for the title.
-  document.querySelector('a[href="#/diagrams/new"]').addEventListener('click', async event => {
-    event.preventDefault();
-    const title = prompt(t('standalone.new_diagram_title_prompt'), t('standalone.untitled'));
-    if (title === null) return;
-
-    goToDiagram(await createDiagram(db, { title: title.trim() || t('standalone.untitled') }));
-  });
-
-  // What only the standalone build has, next to the listing's own controls: importing, backing up
-  // and where the data lives.
-  const createLink = document.querySelector('a[href="#/diagrams/new"]');
-  const importButton = Object.assign(button(t('standalone.import_bpmn'), 'secondaryMd'), { id: 'btn-import' });
-  const exportAllButton = Object.assign(button(t('standalone.export_all'), 'secondaryMd'), { id: 'btn-export-all' });
-  const importFile = Object.assign(document.createElement('input'), {
-    type: 'file', id: 'import-file', accept: '.bpmn,.xml,application/xml,text/xml', hidden: true,
-  });
-  const actions = Object.assign(document.createElement('div'), { className: 'flex flex-wrap items-center gap-2' });
-  createLink.replaceWith(actions);
-  actions.append(importButton, exportAllButton, importFile, createLink);
-  actions.parentElement.after(Object.assign(document.createElement('p'), {
-    className: 'mt-4 text-sm text-gray-500',
-    textContent: t('standalone.storage_notice'),
-  }));
-
-  importButton.addEventListener('click', () => importFile.click());
-  importFile.addEventListener('change', async event => {
-    const [file] = event.target.files;
-    event.target.value = '';
-    if (!file) return;
-
-    try {
-      goToDiagram(await importBpmn(db, { title: titleFromFileName(file.name) || t('standalone.untitled'), xml: await file.text() }));
-    } catch (e) {
-      console.error(e);
-      toast(t('standalone.import_failed'), true);
-    }
-  });
-
-  exportAllButton.addEventListener('click', async () => {
-    try {
-      download(new Blob([await exportAll(db)], { type: 'application/zip' }), 'bpmn-canvas-backup.zip');
-    } catch (e) {
-      console.error(e);
-      toast(t('standalone.export_failed'), true);
-    }
-  });
-
   await render();
 }
 
-async function startEditor(db, diagramId) {
-  const diagram = await getDiagram(db, diagramId);
-  if (!diagram) {
-    location.hash = '#/';
-    return;
-  }
-
-  $('editor-view').hidden = false;
-  $('editor-brand').textContent = diagram.title;
-  document.title = diagram.title + ' | ' + t('standalone.app_title');
-
+// The Editor: the shared core on this browser's storage.
+function startEditor() {
   const editor = createEditor({
     container: '#canvas',
-    store: createLocalDiagramStore({ db, diagramId, t }),
+    store: createLocalDiagramStore({ db, diagramId: diagram.id, t }),
     t,
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     Modeler: BpmnModeler,
   });
 
   setupPanels();
-  setupDropdowns();
   createVersionHistory({ editor });
-
-  const exporters = { png: exportPng, svg: exportSvg, bpmn: exportBpmn };
-  document.querySelectorAll('[data-export]').forEach(button => button.addEventListener('click', async () => {
-    try {
-      await exporters[button.dataset.export](editor.modeler, diagram.title);
-    } catch (e) {
-      console.error(e);
-      toast(t('standalone.export_failed'), true);
-    }
-  }));
-
-  // Chromium can save to a chosen file and keep writing to it on every save;
-  // elsewhere the button downloads the .bpmn instead.
-  let fileHandle = null;
-
-  async function writeToFile() {
-    const writable = await fileHandle.createWritable();
-    await writable.write(await editor.currentXml());
-    await writable.close();
-    toast(t('standalone.saved_to_file', { name: fileHandle.name }));
-  }
-
-  $('btn-save-to-file').addEventListener('click', async () => {
-    try {
-      if (!window.showSaveFilePicker) {
-        await exportBpmn(editor.modeler, diagram.title);
-        return;
-      }
-
-      fileHandle = await window.showSaveFilePicker({
-        suggestedName: fileNameOf(diagram.title),
-        types: [{ description: t('messages.bpmn_file'), accept: { 'application/xml': ['.bpmn'] } }],
-      });
-      await writeToFile();
-    } catch (e) {
-      if (e && e.name === 'AbortError') return; // the picker was dismissed
-
-      console.error(e);
-      toast(t('standalone.save_to_file_failed'), true);
-    }
-  });
-
-  editor.on('saved', () => {
-    if (!fileHandle) return;
-
-    writeToFile().catch(e => {
-      console.error(e);
-      toast(t('standalone.save_to_file_failed'), true);
-    });
-  });
 }
 
-window.addEventListener('hashchange', () => location.reload());
-
-setupLanguagePicker();
-let db;
-
-try {
-  db = await openDb();
-} catch (e) {
-  // Private windows and blocked site data can refuse IndexedDB.
-  console.error(e);
-  toast(t('standalone.diagrams_load_failed'), true);
-}
-
-if (screen) {
-  showPlaceholder(screen);
-} else if (db && diagramId) {
-  markCurrentNav('diagrams');
-  await startEditor(db, diagramId);
-} else if (db) {
-  markCurrentNav('diagrams');
-  await startLibrary(db);
+if (db && page === 'library') {
+  await startLibrary();
+} else if (db && page === 'editor') {
+  startEditor();
 }

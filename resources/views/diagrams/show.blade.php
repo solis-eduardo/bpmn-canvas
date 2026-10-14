@@ -109,7 +109,13 @@
                 role="status"
                 hidden
             ></div>
-            <x-editor.toolbar :back-href="route('diagrams.index')" :title="$diagram->title">
+            <header>
+                <x-button :href="route('diagrams.index')" id="btn-back-to-list" variant="secondary" size="sm">
+                    <x-icon name="arrow-left" />
+                    {{ __('messages.back') }}
+                </x-button>
+                <span class="brand" id="editor-brand">{{ $diagram->title }}</span>
+                <span class="spacer"></span>
                 <form method="POST" action="{{ route('diagrams.fork', $diagram->slug) }}">
                     @csrf
                     <button type="submit" id="btn-fork">
@@ -124,7 +130,8 @@
                         {{ __($isHolder ? 'messages.release_lock' : 'messages.force_release_lock') }}
                     </button>
                 @endif
-            </x-editor.toolbar>
+                <span class="dirty" id="dirty" title="{{ __('messages.unsaved_changes') }}">●</span>
+                <button type="button" class="primary" id="btn-save" title="Ctrl+S"><x-icon name="save" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.save') }}</button>            </header>
             <aside id="info-panel" hidden>
                 <div class="aside-head">
                     <span>{{ __('messages.diagram_info') }}</span>
@@ -187,7 +194,18 @@
                     <a id="info-edit-link" href="{{ route('diagrams.edit', $diagram->slug) }}">{{ __('messages.edit_diagram') }}</a>
                 </p>
             </aside>
-            <x-editor.version-panel />
+            <aside id="version-panel" hidden>
+                <div class="aside-head">
+                    <span>{{ __('messages.versions') }}</span>
+                    <button type="button" id="btn-history-close" data-panel-close aria-label="{{ __('messages.close') }}"><x-icon name="x-mark" /></button>
+                </div>
+                <p class="version-hint">{{ __('messages.select_two_versions_hint') }}</p>
+                <ul id="version-list"></ul>
+                <div class="version-compare-bar">
+                    <span id="version-compare-count">0/2</span>
+                    <button type="button" id="btn-compare-selected" disabled><x-icon name="transfer" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.compare_selected') }}</button>
+                </div>
+            </aside>
             @can('manageCollaborators', $diagram)
                 <aside id="collaborators-panel" hidden>
                     <div class="aside-head">
@@ -255,7 +273,14 @@
                     title="{{ __('messages.diagram_info') }}"
                     aria-label="{{ __('messages.diagram_info') }}"
                 ><x-icon name="information-circle" /></button>
-                <x-editor.version-toggle />
+                <button
+                    type="button"
+                    id="btn-version-history-entry"
+                    class="panel-toggle"
+                    data-panel-toggle="version-panel"
+                    title="{{ __('messages.version_history') }}"
+                    aria-label="{{ __('messages.version_history') }}"
+                ><x-icon name="clock" /></button>
                 @can('manageCollaborators', $diagram)
                     <button
                         type="button"
@@ -277,7 +302,25 @@
                     ><x-icon name="link" /></button>
                 @endcan
             </nav>
-            <x-editor.canvas />
+            <main>
+                <div id="canvas"></div>
+                <div class="zoom">
+                    <button type="button" id="zoom-in" title="{{ __('messages.zoom_in') }}" aria-label="{{ __('messages.zoom_in') }}"><x-icon name="plus" /></button>
+                    <button type="button" id="zoom-out" title="{{ __('messages.zoom_out') }}" aria-label="{{ __('messages.zoom_out') }}"><x-icon name="minus" /></button>
+                    <button type="button" id="zoom-fit" title="{{ __('messages.fit_to_screen') }}" aria-label="{{ __('messages.fit_to_screen') }}"><x-icon name="fit" /></button>
+                </div>
+                <div class="diff-banner" id="diff-banner" hidden>
+                    <strong id="diff-banner-label"></strong>
+                    <span class="legend"><span class="swatch added"></span>{{ __('messages.diff_added') }}</span>
+                    <span class="legend"><span class="swatch changed"></span>{{ __('messages.diff_changed') }}</span>
+                    <span class="legend"><span class="swatch removed"></span>{{ __('messages.diff_removed') }}</span>
+                    <button type="button" id="btn-diff-exit"><x-icon name="x-mark" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.exit_comparison') }}</button>
+                </div>
+                <div class="diff-removed-panel" id="diff-removed-panel" hidden>
+                    <div class="head">{{ __('messages.diff_removed_elements') }}</div>
+                    <ul id="diff-removed-list"></ul>
+                </div>
+            </main>
             @can('diagram-owner.transfer', $diagram)
                 <dialog id="owner-transfer-dialog" class="owner-transfer-dialog" aria-labelledby="owner-transfer-title">
                     <form id="owner-transfer-form">

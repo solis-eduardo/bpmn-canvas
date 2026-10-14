@@ -5,51 +5,85 @@ namespace App\Console\Commands;
 use App\Http\Middleware\SetLocale;
 use App\Models\Diagram;
 use App\Models\User;
-use App\Repositories\DiagramListCriteria;
-use App\Repositories\ListSort;
-use App\Support\Ui;
+use App\Repositories\DiagramRepository;
+use App\Repositories\VersionRepository;
 use Illuminate\Console\Command;
-use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Contracts\Http\Kernel;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
-use Illuminate\Support\Facades\View;
-use Illuminate\Support\ViewErrorBag;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\Vite;
+use Illuminate\Support\Str;
+use RuntimeException;
 
 /**
- * Renders the standalone build's pages from the server build's own views
- * (ADR-0019): the Diagram listing is diagrams/index itself, the Editor uses the
- * same layout and components as diagrams/show. One set per language;
- * standalone/main.js picks the page for the route, fills in the rows from the
- * browser's storage and wires the Editor.
+ * Renders the standalone build's pages by running the server build's own
+ * routes (ADR-0019) against a throwaway in-memory database and a local User,
+ * so every page is the real Blade view, byte for byte, with nothing in the
+ * views made aware of the standalone build. One set per language;
+ * standalone/main.js picks the page for the route, fills in the Diagrams from
+ * the browser's storage and wires the Editor.
+ *
+ * The Diagram the pages are rendered for is a placeholder: its Slug and title
+ * are tokens (`__slug__`, `__title__`) main.js replaces with the real ones.
  */
 class RenderStandalone extends Command
 {
-    private const ROW_TOKENS = ['title' => '__title__', 'slug' => '__slug__'];
+    /** The origin the rendered links point at; main.js treats it as "this page". */
+    public const ORIGIN = 'http://standalone.invalid';
 
-    protected $signature = 'standalone:render {--path= : Directory to write to (default: standalone/pages/<language>/<page>.html)}';
+    public const SLUG_TOKEN = '__slug__';
 
-    protected $description = 'Render the standalone build pages (one per language) from the shared Blade views';
+    public const TITLE_TOKEN = '__title__';
+
+    /** Pages that exist before any Diagram does, by page name. */
+    private const PAGES = [
+        'home' => '/home',
+        'library' => '/diagrams',
+        'create' => '/diagrams/create',
+        'workspaces' => '/workspaces',
+        'users' => '/admin/users',
+        'account' => '/account',
+    ];
+
+    protected $signature = 'standalone:render {--path= : Directory to write to (default: standalone/pages)}';
+
+    protected $description = 'Render the standalone build pages (one per language) from the server routes';
 
     public function handle(): int
     {
         $path = $this->option('path') ?: base_path('standalone/pages');
-        File::ensureDirectoryExists($path);
-        $original = app()->getLocale();
+        File::deleteDirectory($path);
 
-        Ui::renderingStandalone();
-        View::share('errors', new ViewErrorBag);
+        $scratch = sys_get_temp_dir().'/standalone-render-'.Str::random(8);
+        $restore = $this->isolate($scratch);
 
         try {
-            foreach (SetLocale::SUPPORTED_LOCALES as $locale) {
-                app()->setLocale($locale);
-                File::ensureDirectoryExists("{$path}/{$locale}");
+            $this->migrate();
+            $user = $this->signIn();
 
-                foreach ($this->pages() as $name => $html) {
-                    File::put("{$path}/{$locale}/{$name}.html", $html);
+            foreach ($this->locales() as $locale => $language) {
+                foreach (self::PAGES as $name => $uri) {
+                    $this->write($path, $locale, $name, $this->render($uri, $language));
                 }
             }
+
+            $diagram = $this->createPlaceholderDiagram($user);
+
+            foreach ($this->locales() as $locale => $language) {
+                // Before the Editor, which takes the placeholder's Lock for the local User.
+                $this->write($path, $locale, 'library-row', $this->withRow($this->render('/diagrams', $language)));
+                $this->write($path, $locale, 'edit', $this->render("/diagrams/{$diagram->slug}/edit", $language));
+                $this->write($path, $locale, 'editor', $this->render("/diagrams/{$diagram->slug}", $language));
+                $diagram->refresh()->releaseLock();
+            }
         } finally {
-            Ui::renderingStandalone(false);
-            app()->setLocale($original);
+            $restore();
+            File::deleteDirectory($scratch);
         }
 
         $this->info('Standalone pages rendered.');
@@ -58,59 +92,123 @@ class RenderStandalone extends Command
     }
 
     /**
-     * The pages main.js switches between, in the current language: the
-     * server's own Diagram listing (plus the row template), the Editor and the
-     * stand-in for screens the standalone build does not have yet.
-     *
-     * @return array<string, string>
+     * Points the app at an in-memory database, an empty Diagram disk and
+     * array-backed session and cache for the render, so nothing of the real
+     * installation is read or written. Returns what puts everything back.
      */
-    private function pages(): array
+    private function isolate(string $scratch): \Closure
     {
-        $library = view('diagrams.index', $this->listData(collect()))->render();
-
-        return [
-            'library' => str_replace('</body>', '<template id="diagram-row">'.$this->rowTemplate().'</template></body>', $library),
-            'editor' => view('standalone.editor')->render(),
-            'placeholder' => view('standalone.placeholder')->render(),
+        $settings = [
+            'database.default', 'cache.default', 'session.driver', 'queue.default',
+            'bpmn.version_store', 'filesystems.disks.diagrams.root',
         ];
+        $original = array_combine($settings, array_map(config(...), $settings));
+        $request = request();
+
+        File::ensureDirectoryExists($scratch);
+        File::put("{$scratch}/hot", 'http://127.0.0.1:5173');
+
+        config([
+            'database.connections.standalone' => ['driver' => 'sqlite', 'database' => ':memory:', 'foreign_key_constraints' => true],
+            'database.default' => 'standalone',
+            'cache.default' => 'array',
+            'session.driver' => 'array',
+            'queue.default' => 'sync',
+            'bpmn.version_store' => 'database',
+            'filesystems.disks.diagrams.root' => "{$scratch}/diagrams",
+        ]);
+        DB::purge('standalone');
+        Storage::forgetDisk('diagrams');
+        // The pages are rendered for the browser's markup only: the dev-server tags @vite
+        // writes into <head> are never used, so no built assets are needed.
+        Vite::useHotFile("{$scratch}/hot");
+        URL::forceRootUrl(self::ORIGIN);
+
+        return function () use ($original, $request): void {
+            config($original);
+            // Each rendered page replaced the current request with its own.
+            app()->instance('request', $request);
+            URL::setRequest($request);
+            DB::purge('standalone');
+            Storage::forgetDisk('diagrams');
+            Vite::useHotFile(public_path('hot'));
+            URL::forceRootUrl(null);
+            Auth::forgetGuards();
+        };
     }
 
-    /** The one row of the listing, as markup with tokens main.js fills in per Diagram. */
-    private function rowTemplate(): string
+    private function migrate(): void
     {
-        $diagram = (new Diagram(['title' => self::ROW_TOKENS['title'], 'slug' => self::ROW_TOKENS['slug']]))
-            ->setRelation('author', new User(['name' => '']))
-            ->setRelation('owner', new User(['name' => '']))
-            ->setRelation('workspace', null)
-            ->setRelation('tags', collect())
-            ->setAttribute('is_discoverable', false);
+        Artisan::call('migrate', ['--force' => true, '--database' => 'standalone']);
+    }
 
-        $html = view('diagrams.partials.list', $this->listData(collect([$diagram])))->render();
-        preg_match('~<tbody[^>]*>(.*?)</tbody>~s', $html, $body);
+    /** The browser's one User: an Administrator, so every screen of the server build opens. */
+    private function signIn(): User
+    {
+        $user = (new User)->forceFill([
+            'name' => 'Local',
+            'email' => 'local@standalone.invalid',
+            'password' => Str::random(40),
+            'is_admin' => true,
+            'timezone' => 'UTC',
+        ]);
+        $user->save();
 
-        return trim($body[1]);
+        Auth::shouldUse('web');
+        Auth::guard('web')->setUser($user);
+
+        return $user;
+    }
+
+    private function createPlaceholderDiagram(User $user): Diagram
+    {
+        $diagram = app(DiagramRepository::class)->create([
+            'title' => self::TITLE_TOKEN,
+            'slug' => self::SLUG_TOKEN,
+            'author_id' => $user->id,
+            'owner_id' => $user->id,
+            'disk_path' => self::SLUG_TOKEN.'/diagram.bpmn',
+        ], Diagram::emptyBpmn());
+
+        app(VersionRepository::class)->initialize($diagram, $user);
+
+        return $diagram;
+    }
+
+    /** @return array<string, string> locale => Accept-Language */
+    private function locales(): array
+    {
+        return array_combine(SetLocale::SUPPORTED_LOCALES, array_map(fn (string $locale): string => str_replace('_', '-', $locale), SetLocale::SUPPORTED_LOCALES));
+    }
+
+    private function render(string $uri, string $language): string
+    {
+        $request = Request::create(self::ORIGIN.$uri, 'GET', server: ['HTTP_ACCEPT_LANGUAGE' => $language]);
+        $response = app(Kernel::class)->handle($request);
+
+        if ($response->getStatusCode() !== 200) {
+            throw new RuntimeException("Rendering {$uri} answered {$response->getStatusCode()}.");
+        }
+
+        return $response->getContent();
     }
 
     /**
-     * What DiagramController::index() hands the listing, for a browser that
-     * stores only the signed-out User's own Diagrams.
-     *
-     * @return array<string, mixed>
+     * The listing with the placeholder Diagram's row: main.js clones that row
+     * for each stored Diagram, so the row stays the server's own markup.
      */
-    private function listData($diagrams): array
+    private function withRow(string $listing): string
     {
-        return [
-            'diagrams' => new LengthAwarePaginator($diagrams, $diagrams->count(), max(1, $diagrams->count())),
-            'search' => '',
-            'selectedTags' => [],
-            'ownerId' => null,
-            'authorId' => null,
-            'users' => [],
-            'filters' => ['owner' => false, 'collaborator' => false],
-            'sort' => new ListSort(DiagramListCriteria::SORT_COLUMNS, array_key_first(DiagramListCriteria::SORT_COLUMNS), 'asc'),
-            'workspaceFilter' => 'all',
-            'workspaces' => collect(),
-            'tagNames' => [],
-        ];
+        if (! preg_match('~<tbody[^>]*>\s*<tr>.*?</tr>\s*</tbody>~s', $listing)) {
+            throw new RuntimeException('The Diagram listing has no row to use as a template.');
+        }
+
+        return $listing;
+    }
+
+    private function write(string $path, string $locale, string $name, string $html): void
+    {
+        File::ensureDirectoryExists("{$path}/{$locale}");
+        File::put("{$path}/{$locale}/{$name}.html", $html);
     }
 }

@@ -2,12 +2,16 @@
 
 namespace Tests\Feature;
 
-use App\Support\Ui;
+use App\Models\Diagram;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Tests\TestCase;
 
 class RenderStandaloneTest extends TestCase
 {
+    use RefreshDatabase;
+
     private string $path;
 
     protected function setUp(): void
@@ -24,55 +28,59 @@ class RenderStandaloneTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_renders_one_page_per_language_from_the_shared_views(): void
+    private function page(string $locale, string $name): string
+    {
+        return File::get("{$this->path}/{$locale}/{$name}.html");
+    }
+
+    public function test_renders_every_page_for_every_language(): void
     {
         $this->artisan('standalone:render', ['--path' => $this->path])->assertSuccessful();
 
         foreach (['en', 'es', 'pt_BR'] as $locale) {
-            foreach (['library', 'editor', 'placeholder'] as $page) {
-                $this->assertFileExists("{$this->path}/{$locale}/{$page}.html");
+            foreach (['home', 'library', 'library-row', 'create', 'edit', 'editor', 'workspaces', 'users', 'account'] as $name) {
+                $this->assertFileExists("{$this->path}/{$locale}/{$name}.html");
             }
         }
-
-        $this->assertStringContainsString(__('messages.create_diagram', [], 'pt_BR'), File::get("{$this->path}/pt_BR/library.html"));
-
-        $editor = File::get("{$this->path}/pt_BR/editor.html");
-
-        $this->assertStringContainsString('id="btn-save"', $editor);
-        $this->assertStringContainsString(__('messages.versions', [], 'pt_BR'), $editor);
     }
 
-    public function test_the_listing_is_the_server_listing_with_a_row_template(): void
+    public function test_the_pages_are_the_server_views_in_the_pages_language(): void
     {
         $this->artisan('standalone:render', ['--path' => $this->path])->assertSuccessful();
 
-        $html = File::get("{$this->path}/en/library.html");
-
-        $this->assertStringContainsString('id="diagram-search-results"', $html);
-        $this->assertStringContainsString('data-sort-column="title"', $html);
-        $this->assertStringContainsString('<template id="diagram-row">', $html);
-        $this->assertStringContainsString('href="#/diagram/__slug__"', $html);
-        $this->assertStringContainsString('<time data-timestamp', $html);
+        $this->assertStringContainsString(__('messages.create_diagram', [], 'pt_BR'), $this->page('pt_BR', 'library'));
+        $this->assertStringContainsString(__('messages.create_diagram', [], 'en'), $this->page('en', 'library'));
+        $this->assertStringContainsString('id="diagram-search-results"', $this->page('en', 'library'));
+        $this->assertStringContainsString('id="btn-save"', $this->page('en', 'editor'));
+        $this->assertStringContainsString('id="version-panel"', $this->page('en', 'editor'));
     }
 
-    public function test_the_standalone_pages_need_no_server(): void
+    public function test_the_listing_and_the_editor_carry_the_tokens_main_js_replaces(): void
     {
         $this->artisan('standalone:render', ['--path' => $this->path])->assertSuccessful();
 
-        $html = File::get("{$this->path}/en/library.html");
-
-        $this->assertStringNotContainsString('/build/assets', $html);
-        $this->assertStringNotContainsString('name="_token"', $html);
-        $this->assertStringNotContainsString('/logout', $html);
-        $this->assertStringContainsString('href="#/workspaces"', $html);
+        $this->assertStringNotContainsString('__slug__', $this->page('en', 'library'));
+        $this->assertMatchesRegularExpression('~<tbody[^>]*>\s*<tr>.*__title__.*__slug__.*</tr>\s*</tbody>~s', $this->page('en', 'library-row'));
+        $this->assertStringContainsString('__title__', $this->page('en', 'editor'));
+        $this->assertStringContainsString('/diagrams/__slug__', $this->page('en', 'editor'));
     }
 
-    public function test_the_server_pages_are_not_affected_by_a_standalone_render(): void
+    public function test_links_point_at_the_standalone_origin(): void
     {
         $this->artisan('standalone:render', ['--path' => $this->path])->assertSuccessful();
 
-        $this->assertFalse(Ui::standalone());
-        $this->assertSame(url('/diagrams'), Ui::route('diagrams.index'));
-        $this->assertSame(app()->getLocale(), config('app.locale'));
+        $this->assertStringContainsString('href="http://standalone.invalid/diagrams"', $this->page('en', 'library'));
+    }
+
+    public function test_it_leaves_the_real_installation_untouched(): void
+    {
+        $before = ['connection' => config('database.default'), 'store' => config('bpmn.version_store'), 'root' => url('/')];
+        $user = User::factory()->create();
+
+        $this->artisan('standalone:render', ['--path' => $this->path])->assertSuccessful();
+
+        $this->assertSame($before, ['connection' => config('database.default'), 'store' => config('bpmn.version_store'), 'root' => url('/')]);
+        $this->assertSame(0, Diagram::count());
+        $this->assertSame([$user->id], User::pluck('id')->all());
     }
 }
