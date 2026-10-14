@@ -9,8 +9,9 @@
     $errorId = $id.'-error';
 @endphp
 {{-- Picker over existing Users (Tom Select, see resources/js/app.js): searchable
-     by name or email, never creates a new entry. Single choice, or with
-     `multiple` removable chips for the `selected` user ids. --}}
+     by name, never creates a new entry. Single choice, or with `multiple`
+     removable chips for the `selected` user ids. Options carry no emails
+     (issue #233). --}}
 <div class="flex flex-col gap-1 sm:flex-1">
     @if ($scope)
         <input type="hidden" name="_form" value="{{ $scope }}">
@@ -30,7 +31,7 @@
             <option value=""></option>
         @endunless
         @foreach ($options as $option)
-            <option value="{{ $option['id'] }}"{{ in_array($option['id'], $selected) ? ' selected' : '' }}>{{ $option['name'] }} ({{ $option['email'] }})</option>
+            <option value="{{ $option['id'] }}"{{ in_array($option['id'], $selected) ? ' selected' : '' }}>{{ $option['name'] }}</option>
         @endforeach
     </select>
     @if ($invalid)

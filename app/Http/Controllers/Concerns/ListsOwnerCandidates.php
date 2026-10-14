@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Gate;
 trait ListsOwnerCandidates
 {
     /**
-     * @return array<int, array{id: int, name: string, email: string}>
+     * @return array<int, array{id: int, name: string}>
      */
     private function ownerCandidates(Diagram $diagram): array
     {

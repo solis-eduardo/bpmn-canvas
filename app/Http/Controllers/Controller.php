@@ -12,15 +12,18 @@ abstract class Controller
 
     /**
      * The options of a User picker (components/user-select), skipping `$except`.
+     * Only id and name are exposed: a directory listing with emails would let
+     * any signed-in User map emails to accounts, which the generic answers of
+     * the email-targeted endpoints are there to prevent (issue #233).
      *
      * @param  Collection<int, User>  $users
-     * @return array<int, array{id: int, name: string, email: string}>
+     * @return array<int, array{id: int, name: string}>
      */
     protected function userOptions(Collection $users, ?User $except = null): array
     {
         return $users
             ->reject(fn (User $candidate) => $except !== null && $candidate->is($except))
-            ->map(fn (User $candidate) => ['id' => $candidate->id, 'name' => $candidate->name, 'email' => $candidate->email])
+            ->map(fn (User $candidate) => ['id' => $candidate->id, 'name' => $candidate->name])
             ->values()
             ->all();
     }
