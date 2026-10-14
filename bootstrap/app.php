@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Middleware\AddContentSecurityPolicy;
+use App\Http\Middleware\KeepJsonOutOfPreviousUrl;
 use App\Http\Middleware\SetLocale;
 use App\Support\LocalizedJsonError;
 use Illuminate\Console\Scheduling\Schedule;
@@ -37,7 +38,10 @@ return Application::configure(basePath: dirname(__DIR__))
                 | Request::HEADER_X_FORWARDED_PROTO,
         );
 
-        $middleware->web(append: [
+        // Before StartSession, which records the previous URL.
+        $middleware->web(prepend: [
+            KeepJsonOutOfPreviousUrl::class,
+        ], append: [
             AddContentSecurityPolicy::class,
             SetLocale::class,
         ]);
