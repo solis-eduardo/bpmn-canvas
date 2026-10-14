@@ -152,7 +152,8 @@ trait HoldsALock
      * Takes over an *expired* Lock held by someone else, in one conditional
      * write (a compare-and-swap), and reports whether it was won. The UPDATE
      * only matches while the row still shows the holder and the last-seen
-     * moment the caller observed, and that moment is still older than the TTL.
+     * moment and draft the caller observed (a save clears the draft without a
+     * Heartbeat, so it is compared too), and that moment is still older than the TTL.
      * So two takeovers at once, or a takeover against the old holder's late
      * Heartbeat, can't both win: whichever writes second matches no row. A
      * false leaves the model stale; the caller refreshes it.
@@ -160,7 +161,7 @@ trait HoldsALock
      * The previous holder's draft is dropped by this write: the caller keeps it
      * as a provisional Version, from what it observed, when this returns true.
      */
-    public function takeOverExpiredLock(User $user, User|int $observedHolder, CarbonInterface $observedLastSeen): bool
+    public function takeOverExpiredLock(User $user, int $observedHolder, CarbonInterface $observedLastSeen, ?string $observedDraft): bool
     {
         $held = $this->lockHeldBy($user) + [
             'lock_requested_by' => null,
@@ -170,7 +171,10 @@ trait HoldsALock
         $lastSeen = 'coalesce(last_heartbeat_at, locked_at)';
 
         $won = $this->lockRow()
-            ->where('locked_by', $observedHolder instanceof User ? $observedHolder->id : $observedHolder)
+            ->where('locked_by', $observedHolder)
+            ->where(fn (QueryBuilder $draft) => $observedDraft === null
+                ? $draft->whereNull('lock_draft')
+                : $draft->where('lock_draft', $observedDraft))
             ->whereRaw("$lastSeen = ?", [$this->fromDateTime($observedLastSeen)])
             ->whereRaw("$lastSeen <= ?", [$this->fromDateTime(static::lockExpiryCutoff())])
             ->update($held) === 1;

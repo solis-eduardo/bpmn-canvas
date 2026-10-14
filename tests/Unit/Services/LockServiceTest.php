@@ -420,4 +420,35 @@ class LockServiceTest extends TestCase
         $this->assertSame($taker->id, $diagram->fresh()->locked_by);
         $this->assertNull($diagram->fresh()->lock_draft);
     }
+
+    public function test_a_takeover_loses_when_the_former_holder_saved_and_cleared_the_draft_meanwhile(): void
+    {
+        $former = User::factory()->create();
+        $taker = User::factory()->create();
+        $diagram = $this->diagramHeldFor($former, config('bpmn.lock_ttl_minutes'));
+        $this->approved($diagram, $taker);
+        $stale = Diagram::findOrFail($diagram->id);
+        $versions = app(VersionRepository::class);
+        $before = count($versions->list($diagram));
+
+        Diagram::findOrFail($diagram->id)->clearLockDraft();
+
+        $this->assertFalse($this->service->acquire($stale, $taker));
+        $this->assertSame($former->id, $diagram->fresh()->locked_by);
+        $this->assertCount($before, $versions->list($diagram->fresh()));
+    }
+
+    public function test_acquire_claims_the_lock_when_expiry_released_it_during_the_takeover(): void
+    {
+        $former = User::factory()->create();
+        $taker = User::factory()->create();
+        $diagram = $this->diagramHeldFor($former, config('bpmn.lock_ttl_minutes'));
+        $this->approved($diagram, $taker);
+        $stale = Diagram::findOrFail($diagram->id);
+
+        Diagram::findOrFail($diagram->id)->releaseLock();
+
+        $this->assertTrue($this->service->acquire($stale, $taker));
+        $this->assertSame($taker->id, $diagram->fresh()->locked_by);
+    }
 }

@@ -87,6 +87,18 @@ async function openEditor() {
   });
 }
 
+// A prerendered page or a tab restored in the background runs this script
+// without a person looking at it: the Lock is only taken once it is shown.
+if (document.prerendering) {
+  await new Promise(resolve => document.addEventListener('prerenderingchange', resolve, { once: true }));
+}
+
+if (document.visibilityState !== 'visible') {
+  await new Promise(resolve => document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') resolve();
+  }));
+}
+
 let acquired;
 
 try {

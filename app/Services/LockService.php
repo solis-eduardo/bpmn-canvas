@@ -98,8 +98,14 @@ class LockService
     public function acquire(Diagram $diagram, User $user): bool
     {
         // Renew the User's own Lock, claim a free one, or take over one that
-        // expired under someone else (not yet released by locks:expire).
-        if ($this->renew($diagram, $user) || $diagram->acquireLock($user) || $this->takeOverExpired($diagram, $user)) {
+        // expired under someone else (not yet released by locks:expire). A
+        // lost takeover may mean locks:expire released it first, so the free
+        // Lock is tried once more.
+        if ($this->renew($diagram, $user) || $diagram->acquireLock($user)) {
+            return true;
+        }
+
+        if ($this->takeOverOrClaim($diagram, $user)) {
             return true;
         }
 
@@ -108,6 +114,12 @@ class LockService
         $diagram->refresh();
 
         return false;
+    }
+
+    /** Takes over an expired Lock; a lost takeover may have left the Lock free, so claim that. */
+    private function takeOverOrClaim(Diagram $diagram, User $user): bool
+    {
+        return $this->takeOverExpired($diagram, $user) || $diagram->acquireLock($user);
     }
 
     /**
@@ -128,7 +140,7 @@ class LockService
         $previous = clone $diagram;
 
         return DB::transaction(function () use ($diagram, $previous, $user): bool {
-            if (! $diagram->takeOverExpiredLock($user, $previous->locked_by, $previous->lockLastSeenAt())) {
+            if (! $diagram->takeOverExpiredLock($user, $previous->locked_by, $previous->lockLastSeenAt(), $previous->lock_draft)) {
                 return false;
             }
 
