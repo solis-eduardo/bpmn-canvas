@@ -21,10 +21,10 @@ class UserRepositoryTest extends TestCase
         $this->assertTrue($repository->find($user->id)->is($user));
         $this->assertTrue($repository->findOrFail($user->id)->is($user));
         $this->assertTrue($repository->findByEmail($user->email)->is($user));
-        $this->assertTrue($repository->findByKeycloakId('kc-1')->is($user));
+        $this->assertTrue($repository->findByKeycloakIdForLogin('kc-1')->is($user));
         $this->assertNull($repository->find(0));
         $this->assertNull($repository->findByEmail('nobody@example.com'));
-        $this->assertNull($repository->findByKeycloakId('missing'));
+        $this->assertNull($repository->findByKeycloakIdForLogin('missing'));
     }
 
     public function test_find_or_fail_throws_for_a_missing_user(): void

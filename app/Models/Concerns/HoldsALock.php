@@ -2,6 +2,7 @@
 
 namespace App\Models\Concerns;
 
+use App\Models\Scopes\ActiveUserScope;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Query\Builder as QueryBuilder;
@@ -19,13 +20,13 @@ trait HoldsALock
     /** @return BelongsTo<User, $this> */
     public function lockedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'locked_by');
+        return $this->belongsTo(User::class, 'locked_by')->withoutGlobalScope(ActiveUserScope::class);
     }
 
     /** @return BelongsTo<User, $this> */
     public function lockRequestedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'lock_requested_by');
+        return $this->belongsTo(User::class, 'lock_requested_by')->withoutGlobalScope(ActiveUserScope::class);
     }
 
     /**

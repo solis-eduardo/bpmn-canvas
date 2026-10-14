@@ -52,6 +52,26 @@ class DiagramRepository
     }
 
     /**
+     * The Diagrams $user owns, by title.
+     *
+     * @return Collection<int, Diagram>
+     */
+    public function ownedBy(User $user): Collection
+    {
+        return Diagram::query()->ownedBy($user)->orderBy('title')->get();
+    }
+
+    /**
+     * The Diagrams whose Lock $user holds.
+     *
+     * @return Collection<int, Diagram>
+     */
+    public function lockedBy(User $user): Collection
+    {
+        return Diagram::query()->where('locked_by', $user->getKey())->get();
+    }
+
+    /**
      * The $limit most recently modified Diagrams $user can open.
      *
      * @return Collection<int, Diagram>

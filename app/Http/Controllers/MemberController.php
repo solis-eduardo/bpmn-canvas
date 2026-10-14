@@ -50,7 +50,7 @@ class MemberController extends Controller
 
         $data = $request->validate([
             'members' => ['nullable', 'array'],
-            'members.*' => ['integer', 'exists:users,id'],
+            'members.*' => ['integer', $this->activeUserRule()],
         ]);
 
         $wanted = collect($data['members'] ?? [])->map(fn ($id) => (int) $id)->unique();

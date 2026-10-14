@@ -24,7 +24,7 @@ class DemoController extends Controller
     {
         abort_unless(array_key_exists($account, Demo::ACCOUNTS), 404);
 
-        $user = User::where('email', Demo::ACCOUNTS[$account]['email'])->firstOrFail();
+        $user = User::withDeactivated()->where('email', Demo::ACCOUNTS[$account]['email'])->firstOrFail();
 
         // A deactivated account never gets a session, demo sign-in included (ADR-0020).
         if ($user->isDeactivated()) {

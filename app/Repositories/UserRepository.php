@@ -42,12 +42,22 @@ class UserRepository
     }
 
     /**
-     * A local account with this email that isn't linked to a Keycloak
-     * identity yet.
+     * Login lookups: they see deactivated accounts too, so the sign-in flow
+     * can refuse them with the proper message instead of provisioning a
+     * duplicate or linking a stranger (ADR-0020).
      */
-    public function findUnlinkedByEmail(string $email): ?User
+    public function findByEmailForLogin(string $email): ?User
     {
-        return $this->byEmail($email)->whereNull('keycloak_id')->first();
+        return $this->byEmail($email)->withDeactivated()->first();
+    }
+
+    /**
+     * A local account with this email that isn't linked to a Keycloak
+     * identity yet. A login lookup (see findByEmailForLogin()).
+     */
+    public function findUnlinkedByEmailForLogin(string $email): ?User
+    {
+        return $this->byEmail($email)->withDeactivated()->whereNull('keycloak_id')->first();
     }
 
     /**
@@ -58,17 +68,32 @@ class UserRepository
         return User::whereRaw('LOWER(email) = ?', [mb_strtolower($email)]);
     }
 
-    public function findByKeycloakId(string $keycloakId): ?User
+    /**
+     * A login lookup (see findByEmailForLogin()).
+     */
+    public function findByKeycloakIdForLogin(string $keycloakId): ?User
     {
-        return User::where('keycloak_id', $keycloakId)->first();
+        return User::withDeactivated()->where('keycloak_id', $keycloakId)->first();
     }
 
     /**
+     * Every User the default scope returns (the active ones), by name.
+     *
      * @return Collection<int, User>
      */
     public function allOrderedByName(): Collection
     {
-        return User::active()->orderBy('name')->get();
+        return User::orderBy('name')->get();
+    }
+
+    /**
+     * Whether an active Administrator other than $user exists, locking their
+     * rows so two concurrent demotions can't both see one and leave zero.
+     * Deactivated Administrators can't act, so they don't count.
+     */
+    public function otherAdministratorExistsLocked(User $user): bool
+    {
+        return User::where('is_admin', true)->whereKeyNot($user->getKey())->lockForUpdate()->exists();
     }
 
     /**
@@ -78,7 +103,8 @@ class UserRepository
      */
     public function search(UserListFilters $filters, ListSort $sort): LengthAwarePaginator
     {
-        return User::query()
+        // User administration lists deactivated accounts too.
+        return User::withDeactivated()
             ->when($filters->name !== '', function (Builder $q) use ($filters) {
                 $like = '%'.$filters->name.'%';
 

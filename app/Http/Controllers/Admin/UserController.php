@@ -58,64 +58,66 @@ class UserController extends Controller
         return view('admin.users.create');
     }
 
-    public function edit(User $user): View
+    public function edit(User $managedUser): View
     {
         $this->authorize('manage-users');
 
         return view('admin.users.edit', [
-            'user' => $user,
+            'user' => $managedUser,
             'keycloakConfigured' => KeycloakConfig::isConfigured(),
-            'ownedDiagrams' => $this->deactivation->ownedDiagrams($user),
-            'ownedWorkspaces' => $this->deactivation->ownedWorkspaces($user),
-            'successors' => $this->users->allOrderedByName()->reject(fn (User $candidate) => $candidate->is($user)),
+            'ownedDiagrams' => $this->deactivation->ownedDiagrams($managedUser),
+            'ownedWorkspaces' => $this->deactivation->ownedWorkspaces($managedUser),
+            'successors' => $this->users->allOrderedByName()->reject(fn (User $candidate) => $candidate->is($managedUser)),
         ]);
     }
 
-    public function deactivate(Request $request, User $user): RedirectResponse
+    public function deactivate(Request $request, User $managedUser): RedirectResponse
     {
         $this->authorize('manage-users');
 
-        if ($user->is($request->user())) {
+        if ($managedUser->is($request->user())) {
             throw ValidationException::withMessages(['deactivated' => __('messages.cannot_deactivate_self')]);
         }
 
         // The acting Administrator is active (EnsureUserIsActive) and isn't the
         // target, so deactivating another User always leaves one Administrator.
-        $this->deactivation->deactivate($user);
+        $this->deactivation->deactivate($managedUser);
 
-        return redirect()->route('admin.users.edit', $user)->with('status', __('messages.user_deactivated'));
+        return redirect()->route('admin.users.edit', $managedUser)->with('status', __('messages.user_deactivated'));
     }
 
-    public function reactivate(User $user): RedirectResponse
+    public function reactivate(User $managedUser): RedirectResponse
     {
         $this->authorize('manage-users');
 
-        $this->deactivation->reactivate($user);
+        $this->deactivation->reactivate($managedUser);
 
-        return redirect()->route('admin.users.edit', $user)->with('status', __('messages.user_reactivated'));
+        return redirect()->route('admin.users.edit', $managedUser)->with('status', __('messages.user_reactivated'));
     }
 
     /**
      * Bulk hand-over of every Diagram and Workspace the User owns to an
      * active successor (CONTEXT.md, "Diagram Owner" and "Workspace Owner").
      */
-    public function transferOwnership(Request $request, User $user): RedirectResponse
+    public function transferOwnership(Request $request, User $managedUser): RedirectResponse
     {
         $this->authorize('manage-users');
 
         $data = $request->validate([
-            'successor_id' => ['required', 'integer', 'exists:users,id'],
+            'successor_id' => ['required', 'integer', $this->activeUserRule()],
+        ], [
+            'successor_id.exists' => __('messages.successor_must_be_active'),
         ]);
 
         $successor = $this->users->findOrFail($data['successor_id']);
 
-        if ($successor->is($user) || $successor->isDeactivated()) {
+        if ($successor->is($managedUser)) {
             throw ValidationException::withMessages(['successor_id' => __('messages.successor_must_be_active')]);
         }
 
-        $this->deactivation->transferOwnership($user, $successor);
+        $this->deactivation->transferOwnership($managedUser, $successor);
 
-        return redirect()->route('admin.users.edit', $user)->with('status', __('messages.ownership_transferred'));
+        return redirect()->route('admin.users.edit', $managedUser)->with('status', __('messages.ownership_transferred'));
     }
 
     public function store(Request $request): RedirectResponse
@@ -140,7 +142,7 @@ class UserController extends Controller
         return $this->afterSave($request, 'admin.users.index', 'admin.users.edit', [$created]);
     }
 
-    public function update(Request $request, User $user): RedirectResponse
+    public function update(Request $request, User $managedUser): RedirectResponse
     {
         $this->authorize('manage-users');
 
@@ -151,35 +153,35 @@ class UserController extends Controller
             'is_admin' => ['sometimes', 'boolean'],
         ]);
 
-        $loginMethod = $data['login_method'] ?? $user->login_method;
+        $loginMethod = $data['login_method'] ?? $managedUser->login_method;
 
-        $this->assertPasswordRulesForLoginMethod($user, $loginMethod, $data['password'] ?? null);
+        $this->assertPasswordRulesForLoginMethod($managedUser, $loginMethod, $data['password'] ?? null);
 
         $revokesAdmin = array_key_exists('is_admin', $data) && ! $data['is_admin'];
 
-        if ($revokesAdmin && $user->is_admin_via_keycloak_claim) {
+        if ($revokesAdmin && $managedUser->is_admin_via_keycloak_claim) {
             abort(403, __('messages.keycloak_admin_role_not_revocable'));
         }
 
-        $user->fill(array_filter(Arr::only($data, ['name', 'password']), filled(...)));
-        $methodChanged = $user->login_method !== $loginMethod;
-        $user->login_method = $loginMethod;
+        $managedUser->fill(array_filter(Arr::only($data, ['name', 'password']), filled(...)));
+        $methodChanged = $managedUser->login_method !== $loginMethod;
+        $managedUser->login_method = $loginMethod;
 
         if (array_key_exists('is_admin', $data)) {
-            $user->is_admin = $data['is_admin'];
+            $managedUser->is_admin = $data['is_admin'];
         }
 
-        DB::transaction(function () use ($user, $revokesAdmin): void {
-            if ($revokesAdmin && $user->getOriginal('is_admin')) {
-                $this->assertAnotherAdministratorRemains($user);
+        DB::transaction(function () use ($managedUser, $revokesAdmin): void {
+            if ($revokesAdmin && $managedUser->getOriginal('is_admin')) {
+                $this->assertAnotherAdministratorRemains($managedUser);
             }
 
-            $user->save();
+            $managedUser->save();
         });
 
         return $methodChanged
-            ? $this->endSessionsAfterMethodChange($request, $user)
-            : $this->afterSave($request, 'admin.users.index', 'admin.users.edit', [$user]);
+            ? $this->endSessionsAfterMethodChange($request, $managedUser)
+            : $this->afterSave($request, 'admin.users.index', 'admin.users.edit', [$managedUser]);
     }
 
     /**
@@ -190,8 +192,7 @@ class UserController extends Controller
      */
     private function assertAnotherAdministratorRemains(User $user): void
     {
-        // Deactivated Administrators can't act, so they don't count as remaining.
-        if (! User::where('is_admin', true)->active()->whereKeyNot($user->getKey())->lockForUpdate()->exists()) {
+        if (! $this->users->otherAdministratorExistsLocked($user)) {
             throw ValidationException::withMessages([
                 'is_admin' => __('messages.last_administrator_not_removable'),
             ]);

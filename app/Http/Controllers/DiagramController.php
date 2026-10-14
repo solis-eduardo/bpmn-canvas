@@ -144,7 +144,7 @@ class DiagramController extends Controller
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string', 'max:255'],
             'collaborators' => ['nullable', 'array'],
-            'collaborators.*' => ['integer', 'exists:users,id'],
+            'collaborators.*' => ['integer', $this->activeUserRule()],
         ]);
 
         $slug = $this->diagrams->uniqueSlug($data['title']);
@@ -206,7 +206,7 @@ class DiagramController extends Controller
         }
 
         $diagram->loadMissing(['author', 'owner', 'tags', 'workspace', 'lockedBy']);
-        $diagram->loadCount(['collaborators as approved_collaborators_count' => fn ($query) => $query->where('status', 'approved')]);
+        $diagram->loadCount(['collaborators as approved_collaborators_count' => fn ($query) => $query->where('status', 'approved')->ofActiveUsers()]);
         $tagNames = Tag::sortedNames();
         $collaboratorOptions = Gate::allows('manageCollaborators', $diagram)
             ? $this->userOptions($this->users->allOrderedByName(), $diagram->owner)

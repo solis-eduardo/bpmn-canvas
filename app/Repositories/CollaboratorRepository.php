@@ -29,7 +29,7 @@ class CollaboratorRepository
      */
     public function listWithUser(Diagram $diagram): Collection
     {
-        return $diagram->collaborators()->with('user')->get();
+        return $diagram->collaborators()->ofActiveUsers()->with('user')->get();
     }
 
     /**
