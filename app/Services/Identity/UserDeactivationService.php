@@ -72,7 +72,7 @@ class UserDeactivationService
      */
     public function ownedDiagrams(User $user): Collection
     {
-        return Diagram::query()->where('owner_id', $user->getKey())->orderBy('title')->get();
+        return Diagram::query()->ownedBy($user)->orderBy('title')->get();
     }
 
     /**
