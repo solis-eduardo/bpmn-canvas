@@ -12,13 +12,16 @@
   <!-- The list of Diagrams -->
   <div id="library" class="library" hidden>
     <header class="library-header">
+      <div class="library-header-inner">
       <h1 data-i18n="standalone.app_title"></h1>
       <span class="spacer"></span>
       <label class="language">
         <span data-i18n="messages.language"></span>
         <select id="language"></select>
       </label>
+      </div>
     </header>
+    <div class="library-body">
     <div class="library-actions">
       <button type="button" id="btn-new" class="primary" data-i18n="standalone.new_diagram"></button>
       <button type="button" id="btn-import" data-i18n="standalone.import_bpmn"></button>
@@ -37,6 +40,7 @@
       <tbody id="library-list"></tbody>
     </table>
     <p id="library-empty" class="library-empty" data-i18n="messages.no_diagrams_yet" hidden></p>
+    </div>
   </div>
 
   <!-- The Editor: the same markup the server page has, minus what needs a server -->
