@@ -7,10 +7,10 @@ use App\Models\Diagram;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Repositories\DiagramRepository;
+use App\Repositories\ShareRepository;
 use App\Repositories\VersionRepository;
 use App\Repositories\WorkspaceRepository;
 use App\Services\CollaboratorService;
-use App\Services\ShareService;
 use App\Support\Demo;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -27,7 +27,7 @@ class DemoSeeder extends Seeder
         private readonly VersionRepository $versions,
         private readonly WorkspaceRepository $workspaces,
         private readonly CollaboratorService $collaborators,
-        private readonly ShareService $shares,
+        private readonly ShareRepository $shares,
     ) {}
 
     public function run(): void
@@ -72,7 +72,7 @@ class DemoSeeder extends Seeder
         $provisional = $this->saveVersion($diagram, $collaborator, ['Receive order', 'Check stock', 'Pick items', 'Pack and ship', 'Send invoice']);
         $this->versions->markProvisional($diagram, $provisional);
 
-        $this->shares->create($diagram, $author, days: 30, allowDownload: true);
+        $this->share($diagram, $author, days: 30, allowDownload: true);
     }
 
     /**
@@ -103,7 +103,18 @@ class DemoSeeder extends Seeder
     {
         $diagram = $this->createDiagram('Incident response', $owner, ['Operations'], $workspace);
         $this->saveVersion($diagram, $owner, ['Detect incident', 'Triage', 'Mitigate', 'Write post-mortem']);
-        $this->shares->create($diagram, $owner, days: 7);
+        $this->share($diagram, $owner, days: 7);
+    }
+
+    private function share(Diagram $diagram, User $creator, int $days, bool $allowDownload = false): void
+    {
+        $this->shares->create([
+            'diagram_id' => $diagram->id,
+            'expires_at' => now()->addDays($days),
+            'allow_download' => $allowDownload,
+            'created_by' => $creator->id,
+            'pinned_version_id' => null,
+        ]);
     }
 
     /**
