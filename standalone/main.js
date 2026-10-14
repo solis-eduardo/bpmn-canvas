@@ -1,5 +1,5 @@
 /*
- * The standalone build's entry (ADR-0018): the page around the shared Editor
+ * The standalone build's entry (ADR-0019): the page around the shared Editor
  * core. A hash route picks the view, and a change of route reloads the page,
  * so each page load wires exactly one Editor to one Diagram.
  *

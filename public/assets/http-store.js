@@ -1,5 +1,5 @@
 /*
- * HttpDiagramStore: the server build's DiagramStore (ADR-0018). Everything
+ * HttpDiagramStore: the server build's DiagramStore (ADR-0019). Everything
  * the Editor knows about where a Diagram lives goes through this module,
  * which talks to DiagramContentController and VersionController.
  *

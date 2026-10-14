@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\KeycloakLoginController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CollaboratorController;
+use App\Http\Controllers\DemoController;
 use App\Http\Controllers\DiagramContentController;
 use App\Http\Controllers\DiagramController;
 use App\Http\Controllers\DiagramOwnerController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\ShareController;
 use App\Http\Controllers\VersionController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceOwnerController;
+use App\Http\Middleware\EnsureDemoMode;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -39,6 +41,11 @@ Route::post('/logout', [LoginController::class, 'destroy'])->middleware('auth')-
 
 Route::get('/login/keycloak', [KeycloakLoginController::class, 'redirect'])->name('login.keycloak');
 Route::get('/login/keycloak/callback', [KeycloakLoginController::class, 'callback'])->name('login.keycloak.callback');
+
+Route::middleware(EnsureDemoMode::class)->prefix('demo')->name('demo.')->group(function () {
+    Route::post('/sign-in/{account}', [DemoController::class, 'signIn'])->name('sign-in');
+    Route::post('/reset', [DemoController::class, 'reset'])->name('reset');
+});
 
 Route::middleware('signed')->group(function () {
     Route::get('/shares/{share}', [PublicShareController::class, 'show'])->name('shares.show');

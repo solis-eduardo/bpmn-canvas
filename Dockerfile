@@ -59,7 +59,7 @@ ENTRYPOINT ["/entrypoint.sh"]
 CMD ["php-fpm"]
 
 # --- Stage 4a: UI strings of the shared Editor core, exported from lang/ ---
-# The nginx image serves them as static files (ADR-0018).
+# The nginx image serves them as static files (ADR-0019).
 FROM app AS lang-export
 RUN php artisan lang:export
 

@@ -1,5 +1,5 @@
 /*
- * LocalDiagramStore: the standalone build's DiagramStore (ADR-0018), on
+ * LocalDiagramStore: the standalone build's DiagramStore (ADR-0019), on
  * IndexedDB. It re-implements only the Version rules the core needs:
  * sequential numbers, the default name "Version N" (localized through `t`),
  * restore as Version N+1 and numbers that are never reused. There is no author

@@ -95,7 +95,7 @@ docker compose exec app php artisan backup:restore backup-2026-01-01_000000-abcd
 
 ## Standalone build
 
-A single HTML file that runs the Editor entirely in the browser, with no server, login or database (ADR-0018). Diagrams and their Versions are stored in the browser's IndexedDB, so they live in the browser profile and are lost if the site data is cleared: use **Export all (.zip)** for a backup.
+A single HTML file that runs the Editor entirely in the browser, with no server, login or database (ADR-0019). Diagrams and their Versions are stored in the browser's IndexedDB, so they live in the browser profile and are lost if the site data is cleared: use **Export all (.zip)** for a backup.
 
 ```bash
 npm install
@@ -109,7 +109,7 @@ The result is `standalone/dist/bpmn-canvas.html`. Open it from disk (`file://`) 
 ```
 app/Http/Controllers/       # Diagram, Collaborators, Shares, Auth
 app/Models/                 # Diagram, User, DiagramCollaborator, Share
-app/Repositories/           # DiagramRepository, VersionRepository (Git-backed versioning, ADR-0004)
+app/Repositories/           # DiagramRepository, VersionRepository (port: GitVersionRepository by default, DatabaseVersionRepository; ADR-0004, ADR-0018)
 app/Actions/                # Editing Lock, Collaborators
 app/Policies/                # DiagramPolicy
 database/migrations/
@@ -232,7 +232,7 @@ docker compose exec app php artisan backup:restore backup-2026-01-01_000000-abcd
 
 ## Build standalone
 
-Um único arquivo HTML que roda o Editor inteiramente no navegador, sem servidor, login ou banco de dados (ADR-0018). Os Diagramas e suas Versões ficam no IndexedDB do navegador, ou seja, no perfil do navegador, e se perdem se os dados do site forem limpos: use **Exportar tudo (.zip)** para fazer backup.
+Um único arquivo HTML que roda o Editor inteiramente no navegador, sem servidor, login ou banco de dados (ADR-0019). Os Diagramas e suas Versões ficam no IndexedDB do navegador, ou seja, no perfil do navegador, e se perdem se os dados do site forem limpos: use **Exportar tudo (.zip)** para fazer backup.
 
 ```bash
 npm install

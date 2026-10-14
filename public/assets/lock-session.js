@@ -1,5 +1,5 @@
 /*
- * Lock session (server build only, ADR-0018): keeps the holder's Lock alive
+ * Lock session (server build only, ADR-0019): keeps the holder's Lock alive
  * with Heartbeats, releases it on request and shows who is asking for it.
  * Built only on the Editor's public API (isDirty, revision, currentXml,
  * markClean, on), so the Editor core itself knows nothing about Locks.

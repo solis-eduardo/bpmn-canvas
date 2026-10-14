@@ -1,0 +1,230 @@
+<?php
+
+namespace App\Repositories\Concerns;
+
+use App\Models\Diagram;
+use App\Models\DiagramVersionName;
+use App\Models\User;
+use App\Support\BpmnSearchableText;
+use App\Support\VersionName;
+use Carbon\CarbonInterface;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use RuntimeException;
+
+/**
+ * Behaviour every VersionRepository adapter shares: the save orchestration
+ * (initial Version, write, record, bookkeeping), the Version state kept in
+ * `diagram_version_names` (names, provisional and hidden flags), the numbering
+ * and naming of the history, and restore. An adapter only supplies the storage
+ * steps: openHistory(), recordVersion(), exists(), get() and list().
+ */
+trait SharedVersionRepository
+{
+    private const MESSAGE_DEFAULT = 'Saved version';
+
+    private const MESSAGE_INITIAL = 'Initial version';
+
+    private const MESSAGE_RESTORE = 'Restored a previous version';
+
+    /**
+     * Makes the Diagram's history ready to be written. Returns true when the
+     * history already existed before this call.
+     */
+    abstract protected function openHistory(Diagram $diagram): bool;
+
+    /**
+     * Records the Diagram's content currently on disk as a new Version, unless
+     * it repeats the last one and $allowEmpty is false. Returns the new
+     * Version's identifier, or null when nothing was recorded.
+     */
+    abstract protected function recordVersion(Diagram $diagram, User $author, string $message, bool $allowEmpty): ?string;
+
+    public function initialize(Diagram $diagram, User $author): void
+    {
+        $this->save($diagram, $author);
+    }
+
+    /**
+     * The content already on disk becomes the initial Version BEFORE it is
+     * overwritten, so the first save never loses what was there.
+     */
+    public function save(Diagram $diagram, User $author, ?string $content = null, ?string $message = null, bool $allowEmpty = false): ?string
+    {
+        $disk = Storage::disk('diagrams');
+
+        $existed = $this->openHistory($diagram);
+
+        if (! $existed && $disk->exists($diagram->disk_path)) {
+            $this->recordVersion($diagram, $author, self::MESSAGE_INITIAL, allowEmpty: false);
+        }
+
+        if ($content !== null) {
+            $disk->put($diagram->disk_path, $content);
+        }
+
+        $versionId = $this->recordVersion($diagram, $author, $message ?? self::MESSAGE_DEFAULT, $allowEmpty);
+
+        $this->afterCommit($diagram, $content);
+
+        return $versionId;
+    }
+
+    /**
+     * Gives a Version a custom name to mark a milestone (see the interface).
+     * No storage tag is used for it (ADR-0004): a dedicated table keeps the
+     * name reachable/queryable outside of the storage engine.
+     */
+    public function rename(Diagram $diagram, string $version, string $name): void
+    {
+        // Confirms the Version actually exists in this Diagram's history
+        // before naming it, otherwise a bogus id would leave an orphaned row.
+        $this->assertExists($diagram, $version);
+
+        $this->setState($diagram, $version, ['name' => $name]);
+    }
+
+    public function markProvisional(Diagram $diagram, string $version): void
+    {
+        $this->setState($diagram, $version, ['is_provisional' => true]);
+    }
+
+    public function makePermanent(Diagram $diagram, string $version): bool
+    {
+        return $this->clearProvisional($diagram, $version, ['is_provisional' => false]);
+    }
+
+    /**
+     * Flags a provisional Version as hidden. It also stops being provisional,
+     * so the history keeps it as a regular, hidden Version.
+     */
+    public function hide(Diagram $diagram, string $version): bool
+    {
+        return $this->clearProvisional($diagram, $version, ['is_provisional' => false, 'is_hidden' => true]);
+    }
+
+    public function restore(Diagram $diagram, string $version, User $author): void
+    {
+        $content = $this->get($diagram, $version);
+
+        $this->save($diagram, $author, $content, self::MESSAGE_RESTORE, allowEmpty: true);
+    }
+
+    /**
+     * Turns the adapter's Versions (most recent first, as [id, saved_at,
+     * author] rows) into the history shape: numbering derived from position,
+     * and names/flags from the state table.
+     *
+     * @param  array<int, array{0: string, 1: CarbonInterface, 2: string}>  $newestFirst
+     * @return array<int, array{id: string, saved_at: CarbonInterface, author: string, number: int, name: string, renamed: bool, provisional: bool, hidden: bool}>
+     */
+    protected function describeHistory(Diagram $diagram, array $newestFirst): array
+    {
+        $total = count($newestFirst);
+
+        if ($total === 0) {
+            return [];
+        }
+
+        $states = DiagramVersionName::where('diagram_id', $diagram->id)->get()->keyBy('version_id');
+
+        return array_map(function (array $entry, int $index) use ($total, $states): array {
+            [$id, $savedAt, $author] = $entry;
+
+            // $index 0 is the newest, so the oldest (index $total - 1) is number 1.
+            $number = $total - $index;
+            $state = $states->get($id);
+            $customName = $state?->name;
+            $provisional = (bool) $state?->is_provisional;
+
+            return [
+                'id' => $id,
+                'saved_at' => $savedAt,
+                'author' => $author,
+                'number' => $number,
+                'name' => $customName ?? ($provisional ? __('messages.provisional_version') : VersionName::default($number)),
+                'renamed' => $customName !== null,
+                'provisional' => $provisional,
+                'hidden' => (bool) $state?->is_hidden,
+            ];
+        }, $newestFirst, array_keys($newestFirst));
+    }
+
+    /**
+     * Keeps Diagram::searchable_text (issue #41) in sync with the content on
+     * disk, and settles the Lock draft. Called by an adapter only once the
+     * Version is safely recorded: reindexing ahead of a commit that then throws
+     * would leave searchable_text describing content that was never saved.
+     */
+    protected function afterCommit(Diagram $diagram, ?string $content): void
+    {
+        // $content is reused when the caller has it; otherwise the content on
+        // disk is indexed. Only an explicit save settles the holder's draft.
+        $indexed = $content ?? Storage::disk('diagrams')->get($diagram->disk_path);
+
+        // A plain query builder update, so "last modified" (updated_at) keeps
+        // meaning the Diagram's own content, not this derived index.
+        DB::table('diagrams')->where('id', $diagram->id)->update([
+            'searchable_text' => is_string($indexed) ? BpmnSearchableText::extract($indexed) : '',
+        ]);
+
+        // Settling the content settles the holder's draft with it (ADR-0003).
+        if ($content !== null) {
+            $diagram->clearLockDraft();
+        }
+    }
+
+    /**
+     * The shape of a valid Version identifier. Adapters narrow it when they
+     * accept fewer forms (the database store only takes full 40-character ids).
+     */
+    protected function identifierPattern(): string
+    {
+        return '/^[0-9a-f]{4,40}$/i';
+    }
+
+    protected function isValidIdentifier(string $version): bool
+    {
+        return (bool) preg_match($this->identifierPattern(), $version);
+    }
+
+    protected function validateIdentifier(string $version): void
+    {
+        if (! $this->isValidIdentifier($version)) {
+            throw new RuntimeException('Invalid version identifier.');
+        }
+    }
+
+    protected function assertExists(Diagram $diagram, string $version): void
+    {
+        $this->validateIdentifier($version);
+
+        if (! $this->exists($diagram, $version)) {
+            throw new RuntimeException('Version not found.');
+        }
+    }
+
+    /**
+     * @param  array<string, bool|string>  $state
+     */
+    private function clearProvisional(Diagram $diagram, string $version, array $state): bool
+    {
+        $this->assertExists($diagram, $version);
+
+        return DiagramVersionName::where('diagram_id', $diagram->id)
+            ->where('version_id', $version)
+            ->where('is_provisional', true)
+            ->update($state) > 0;
+    }
+
+    /**
+     * @param  array<string, mixed>  $state
+     */
+    private function setState(Diagram $diagram, string $version, array $state): void
+    {
+        DiagramVersionName::updateOrCreate(
+            ['diagram_id' => $diagram->id, 'version_id' => $version],
+            $state,
+        );
+    }
+}

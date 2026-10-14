@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Lang;
 
 /**
  * Exports the `lang/` strings the shared Editor core uses to one JSON file per
- * locale (ADR-0018), so the core gets them through `t(key)` instead of from
+ * locale (ADR-0019), so the core gets them through `t(key)` instead of from
  * `data-*` attributes. `lang/` stays the only source of truth: the keys come
  * from the `t('…')` calls in the core's source, so using a new key in the core
  * is all it takes. A key ending in a dot (`t('messages.group.' + name)`) takes

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-// ADR-0018: the shared core is plain ES modules that import what they use and
+// ADR-0019: the shared core is plain ES modules that import what they use and
 // get their UI strings through `t`, so it can be bundled into the standalone build.
 const CORE = ['common', 'editor-core', 'versions', 'version-history', 'diff', 'http-store', 'translator'];
 

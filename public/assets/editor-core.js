@@ -1,5 +1,5 @@
 /*
- * The Editor core (ADR-0018), shared by the server and standalone builds:
+ * The Editor core (ADR-0019), shared by the server and standalone builds:
  * the bpmn-js Modeler, loading and saving through a DiagramStore, and the
  * unsaved-changes state. It knows nothing about Locks, URLs or CSRF; the
  * page around it (e.g. the Lock session) works only through the API that

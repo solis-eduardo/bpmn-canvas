@@ -62,7 +62,7 @@
                 <p id="email_notifications_enabled-error" role="alert" class="text-sm text-red-600">{{ $message }}</p>
             @enderror
 
-            @unless ($user->usesKeycloak())
+            @unless ($user->usesKeycloak() || \App\Support\Demo::locksPassword($user))
                 <h2 class="pt-2 text-lg font-semibold text-gray-900">{{ __('messages.change_password') }}</h2>
                 <x-form.field name="current_password" type="password" :label="__('messages.current_password')" autocomplete="current-password" />
                 <x-form.field name="password" type="password" :label="__('messages.new_password')" autocomplete="new-password" />

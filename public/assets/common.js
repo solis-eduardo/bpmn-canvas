@@ -1,6 +1,6 @@
 /*
  * Utilities shared by the Editor core, the share viewer and the server-only
- * Editor scripts (ADR-0018). Plain ES module: import what you need.
+ * Editor scripts (ADR-0019). Plain ES module: import what you need.
  */
 export function toast(msg, isError) {
   let el = document.querySelector('.toast');

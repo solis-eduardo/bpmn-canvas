@@ -48,7 +48,7 @@ deleteVersion(id)         // → Promise<void>       soft delete, provisional on
 **Why:** a shared core with a persistence seam centralizes everything the two builds really have in common while keeping the server's domain rules in PHP, where they're enforced. The duplicated domain logic is small: `LocalDiagramStore` re-implements only Version numbering, the default "Version N" name, restore as N+1 and soft delete. Two real adapters also make the seam testable with one contract suite run against both (`LocalDiagramStore` with `fake-indexeddb`, `HttpDiagramStore` with a stubbed `fetch`).
 
 Rejected alternatives:
-- **Running Laravel in the browser via PHP WebAssembly:** total code sharing, but tens of MB to download, no `git` binary for Versions (ADR-0004), and the queue and scheduler would have to be emulated.
+- **Running Laravel in the browser via PHP WebAssembly:** total code sharing, but tens of MB to download (the browser demo of ADR-0018 does take this route, as a hosted showcase of the server build; it does not replace this single-file, offline build), no `git` binary for Versions (ADR-0004), and the queue and scheduler would have to be emulated.
 - **Moving the domain to TypeScript, with Laravel as API and persistence only:** centralizes everything but amounts to rewriting the backend.
 - **A desktop wrapper (Electron/Tauri/NativePHP) around the full app:** carries the whole multi-User domain into a single-User context where most of it is dead weight.
 

@@ -1,6 +1,6 @@
 /*
  * The standalone build's IndexedDB: one record per Diagram plus one snapshot
- * per Version (ADR-0018). Only the helpers the local store and the library
+ * per Version (ADR-0019). Only the helpers the local store and the library
  * need, promisified.
  */
 

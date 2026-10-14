@@ -30,7 +30,7 @@ class VersionController extends Controller
         $currentId = $history->first()['id'] ?? null;
 
         // Flat and newest first: grouping by day is a display concern of the
-        // Editor, done in the User's timezone (ADR-0018).
+        // Editor, done in the User's timezone (ADR-0019).
         $items = $history
             ->reject(fn (array $version) => $version['hidden'])
             ->map(fn (array $version) => [

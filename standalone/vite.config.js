@@ -4,7 +4,7 @@ import { viteSingleFile } from 'vite-plugin-singlefile';
 
 // Bundles the standalone build into one self-contained HTML file: ES modules
 // and import maps don't load over file://, so bpmn-js, bpmn-js-differ, the CSS,
-// the fonts and the translations are all inlined (ADR-0018).
+// the fonts and the translations are all inlined (ADR-0019).
 export default defineConfig({
   root: import.meta.dirname,
   base: './',

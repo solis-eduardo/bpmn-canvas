@@ -1,6 +1,6 @@
 <?php
 
-// Strings of the standalone build (ADR-0018): the page around the Editor core, which has no Blade.
+// Strings of the standalone build (ADR-0019): the page around the Editor core, which has no Blade.
 return [
     'app_title' => 'BPMN Canvas',
     'new_diagram' => 'Novo diagrama',

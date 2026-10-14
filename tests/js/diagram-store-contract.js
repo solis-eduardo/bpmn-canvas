@@ -1,5 +1,5 @@
 /*
- * The DiagramStore contract (ADR-0018): behavior every adapter must show
+ * The DiagramStore contract (ADR-0019): behavior every adapter must show
  * through the interface alone. Run it against each adapter with a factory
  * that returns a fresh, empty-history store whose current content is
  * `initialXml`.

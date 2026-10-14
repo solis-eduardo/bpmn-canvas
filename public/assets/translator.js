@@ -1,5 +1,5 @@
 /*
- * Translations for the shared Editor core (ADR-0018). The core never reads
+ * Translations for the shared Editor core (ADR-0019). The core never reads
  * UI strings from the page: it gets a `t(key, replacements)` function built
  * from the JSON that `php artisan lang:export` writes from `lang/`.
  */

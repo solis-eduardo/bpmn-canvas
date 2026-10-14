@@ -1,5 +1,5 @@
 /*
- * The standalone build's list of Diagrams (ADR-0018): create, delete and open
+ * The standalone build's list of Diagrams (ADR-0019): create, delete and open
  * them, import a `.bpmn` as a new Diagram, export one as `.bpmn` and all of
  * them as a `.zip` backup. This is not part of DiagramStore: only the
  * standalone build needs it.
