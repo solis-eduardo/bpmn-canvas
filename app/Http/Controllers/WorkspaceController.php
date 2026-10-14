@@ -192,7 +192,7 @@ class WorkspaceController extends Controller
             return $wanted->push($workspace->owner_id, $newOwnerId)->unique();
         }
 
-        if (! $wanted->contains($workspace->owner_id)) {
+        if (! $wanted->contains($workspace->owner_id) && ! $workspace->owner->isDeactivated()) {
             throw ValidationException::withMessages(['members' => __('messages.cannot_remove_workspace_owner')]);
         }
 

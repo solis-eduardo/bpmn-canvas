@@ -423,4 +423,18 @@ class ActiveUserScopeTest extends TestCase
         $this->assertSame(0, $gone->notifications()->count());
         $this->assertSame(1, $active->notifications()->count());
     }
+
+    public function test_a_workspace_with_a_deactivated_owner_can_still_save_its_members(): void
+    {
+        $admin = $this->admin();
+        $gone = $this->deactivated();
+        $workspace = Workspace::factory()->create(['owner_id' => $gone->id]);
+        Member::create(['workspace_id' => $workspace->id, 'user_id' => $gone->id, 'origin' => Member::ORIGIN_MANUAL]);
+        $added = User::factory()->create();
+
+        $this->actingAs($admin)->put("/workspaces/{$workspace->id}/members", ['members' => [$added->id]])->assertRedirect();
+
+        $this->assertDatabaseHas('members', ['workspace_id' => $workspace->id, 'user_id' => $added->id]);
+        $this->assertDatabaseHas('members', ['workspace_id' => $workspace->id, 'user_id' => $gone->id]);
+    }
 }
