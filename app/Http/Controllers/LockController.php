@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Exceptions\LockUnavailableException;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Repositories\DiagramRepository;
 use App\Repositories\UserRepository;
@@ -36,10 +37,30 @@ class LockController extends Controller
     }
 
     /**
-     * Acquires the Lock when it is free, or registers a request and answers
-     * "waiting" while someone else holds it.
+     * Acquires the Lock for the Editor that has just loaded (ADR-0003). Only
+     * acquires: a Lock held by someone else is refused (423) and nothing is
+     * requested on the holder's behalf. Requesting is {@see requestLock()}.
      */
     public function store(Request $request, string $slug): JsonResponse
+    {
+        $diagram = $this->resolveDiagramAllowingOldSlug($slug);
+
+        $this->authorize('lock.acquire', $diagram);
+
+        if (! $this->locks->acquire($diagram, $request->user())) {
+            // Reloaded: a free Lock taken by someone else a moment ago isn't
+            // known to this request until the row is read again.
+            throw LockUnavailableException::heldByOther($diagram->refresh());
+        }
+
+        return response()->json(['state' => 'acquired']);
+    }
+
+    /**
+     * Asks for a Lock held by someone else: notifies the holder and answers
+     * "waiting". Also acquires when the Lock is free.
+     */
+    public function requestLock(Request $request, string $slug): JsonResponse
     {
         $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 

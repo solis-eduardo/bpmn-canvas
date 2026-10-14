@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  acquireLock,
   createHeartbeat,
   createHeartbeatLoop,
   handleSaveFailure,
@@ -258,5 +259,35 @@ describe('reacquireLock', () => {
     expect(request).toHaveBeenCalledWith('POST', '/lock');
     expect(calls).toEqual(['hide', 'beat', 'beat']);
     loop.stop();
+  });
+});
+
+describe('acquireLock', () => {
+  const url = '/diagrams/a/lock';
+
+  it('posts to the acquire endpoint and reports the Lock as acquired', async () => {
+    const request = vi.fn(async () => ({ state: 'acquired' }));
+
+    expect(await acquireLock({ request, url })).toBe(true);
+    expect(request).toHaveBeenCalledWith('POST', url);
+  });
+
+  it('reports a refusal (423, someone else holds the Lock) as not acquired', async () => {
+    const request = vi.fn(async () => { throw Object.assign(new Error('locked'), { status: 423 }); });
+
+    expect(await acquireLock({ request, url })).toBe(false);
+  });
+
+  it('reports a refusal (403, the User cannot edit) as not acquired', async () => {
+    const request = vi.fn(async () => { throw Object.assign(new Error('forbidden'), { status: 403 }); });
+
+    expect(await acquireLock({ request, url })).toBe(false);
+  });
+
+  it('rethrows any other failure instead of treating it as a refusal', async () => {
+    const error = Object.assign(new Error('server error'), { status: 500 });
+    const request = vi.fn(async () => { throw error; });
+
+    await expect(acquireLock({ request, url })).rejects.toBe(error);
   });
 });

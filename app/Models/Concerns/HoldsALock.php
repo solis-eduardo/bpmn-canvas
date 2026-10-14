@@ -3,8 +3,10 @@
 namespace App\Models\Concerns;
 
 use App\Models\User;
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Query\Builder as QueryBuilder;
+use Illuminate\Support\Carbon;
 
 /**
  * A Diagram's Lock (CONTEXT.md, "Lock"; ADR-0003, ADR-0009,
@@ -41,6 +43,33 @@ trait HoldsALock
     public function isLockedByOther(User $user): bool
     {
         return $this->hasActiveLock() && (int) $this->locked_by !== $user->id;
+    }
+
+    /**
+     * When the Lock was last known alive: its last Heartbeat or, for a Lock
+     * from before Heartbeats existed, the moment it was taken.
+     */
+    public function lockLastSeenAt(): ?CarbonInterface
+    {
+        return $this->last_heartbeat_at ?? $this->locked_at;
+    }
+
+    /**
+     * True while a User holds the Lock but has gone without a Heartbeat for
+     * the configured TTL: `locks:expire` has not released it yet, but nobody is
+     * keeping it alive (ADR-0003).
+     */
+    public function hasExpiredLock(): bool
+    {
+        $lastSeen = $this->lockLastSeenAt();
+
+        return $this->hasActiveLock() && $lastSeen !== null && $lastSeen->lte(static::lockExpiryCutoff());
+    }
+
+    /** Locks last seen at or before this moment are expired. */
+    public static function lockExpiryCutoff(): Carbon
+    {
+        return Carbon::now()->subMinutes(config('bpmn.lock_ttl_minutes'));
     }
 
     /**
@@ -120,6 +149,41 @@ trait HoldsALock
     }
 
     /**
+     * Takes over an *expired* Lock held by someone else, in one conditional
+     * write (a compare-and-swap), and reports whether it was won. The UPDATE
+     * only matches while the row still shows the holder and the last-seen
+     * moment the caller observed, and that moment is still older than the TTL.
+     * So two takeovers at once, or a takeover against the old holder's late
+     * Heartbeat, can't both win: whichever writes second matches no row. A
+     * false leaves the model stale; the caller refreshes it.
+     *
+     * The previous holder's draft is dropped by this write: the caller keeps it
+     * as a provisional Version, from what it observed, when this returns true.
+     */
+    public function takeOverExpiredLock(User $user, User|int $observedHolder, CarbonInterface $observedLastSeen): bool
+    {
+        $held = $this->lockHeldBy($user) + [
+            'lock_requested_by' => null,
+            'lock_requested_at' => null,
+        ];
+
+        $lastSeen = 'coalesce(last_heartbeat_at, locked_at)';
+
+        $won = $this->lockRow()
+            ->where('locked_by', $observedHolder instanceof User ? $observedHolder->id : $observedHolder)
+            ->whereRaw("$lastSeen = ?", [$this->fromDateTime($observedLastSeen)])
+            ->whereRaw("$lastSeen <= ?", [$this->fromDateTime(static::lockExpiryCutoff())])
+            ->update($held) === 1;
+
+        if ($won) {
+            $this->forceFill($held)->syncOriginalAttributes(array_keys($held));
+            $this->unsetRelation('lockedBy');
+        }
+
+        return $won;
+    }
+
+    /**
      * Writes the Lock for $user onto the row only while it is free (or, when
      * $allowHolder, already theirs), and reports whether the row matched.
      */
@@ -167,7 +231,13 @@ trait HoldsALock
             $attributes['lock_draft'] = $draft;
         }
 
-        $this->persistLockState($attributes);
+        // Conditional on the holder, so a late Heartbeat can't revive a Lock
+        // that was taken over meanwhile (takeOverExpiredLock()).
+        if ($this->lockRow()->where('locked_by', $user->id)->update($attributes) !== 1) {
+            return false;
+        }
+
+        $this->forceFill($attributes)->syncOriginalAttributes(array_keys($attributes));
 
         return true;
     }
