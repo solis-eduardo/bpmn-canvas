@@ -5,9 +5,10 @@
  * it can be reused to compare any two Versions (ticket 36), not just an old
  * Version against the current canvas content (ticket 35).
  *
- * Loaded as a native ES module. Its one non-relative import ("bpmn-js-differ",
- * which itself imports "min-dash") is resolved through the import map
- * declared in resources/views/diagrams/show.blade.php.
+ * An ES module. Its one non-relative import ("bpmn-js-differ", which itself
+ * imports "min-dash") is resolved through the import map declared in
+ * resources/views/diagrams/show.blade.php, or by the bundler in the standalone
+ * build. The bpmn-js constructor is passed in, so this module reads no globals.
  */
 import { diff } from 'bpmn-js-differ';
 
@@ -18,11 +19,12 @@ import { diff } from 'bpmn-js-differ';
  * single vendored diff dependency.
  *
  * @param {string} xml
+ * @param {Function} Modeler  the bpmn-js constructor the page uses
  * @returns {Promise<object>}
  */
-async function parseDefinitions(xml) {
+async function parseDefinitions(xml, Modeler) {
   const container = document.createElement('div');
-  const viewer = new BpmnJS({ container });
+  const viewer = new Modeler({ container });
 
   try {
     await viewer.importXML(xml);
@@ -38,12 +40,13 @@ async function parseDefinitions(xml) {
  *
  * @param {string} xmlA
  * @param {string} xmlB
+ * @param {Function} Modeler  the bpmn-js constructor the page uses
  * @returns {Promise<{added: object, removed: object, changed: object, layoutChanged: object}>}
  */
-export async function compareBpmnXml(xmlA, xmlB) {
+export async function compareBpmnXml(xmlA, xmlB, Modeler) {
   const [definitionsA, definitionsB] = await Promise.all([
-    parseDefinitions(xmlA),
-    parseDefinitions(xmlB),
+    parseDefinitions(xmlA, Modeler),
+    parseDefinitions(xmlB, Modeler),
   ]);
 
   const changes = diff(definitionsA, definitionsB);
@@ -101,14 +104,15 @@ const GHOST_SKIPPED_TYPES = ['bpmn:Process', 'bpmn:Collaboration', 'bpmn:Partici
  * @param {object} bpmnJS  the instance showing the "new" side
  * @param {string} oldXml  the "old" side
  * @param {{removed: object}} result  from compareBpmnXml()
+ * @param {Function} Modeler  the bpmn-js constructor the page uses
  * @returns {Promise<() => void>} a function that removes every ghost.
  */
-export async function renderRemovedGhosts(bpmnJS, oldXml, result) {
+export async function renderRemovedGhosts(bpmnJS, oldXml, result, Modeler) {
   const ids = Object.keys(result.removed);
 
   if (!ids.length) return () => {};
 
-  const oldViewer = new BpmnJS({ container: document.createElement('div') });
+  const oldViewer = new Modeler({ container: document.createElement('div') });
   const added = [];
   let bounds = null;
 
@@ -187,5 +191,3 @@ export async function renderRemovedGhosts(bpmnJS, oldXml, result) {
 
   return clear;
 }
-
-window.BpmnDiff = { compareBpmnXml, highlightDiff, renderRemovedGhosts };

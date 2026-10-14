@@ -1,7 +1,7 @@
 /*
- * Version history panel + comparison. Reads the live Modeler exposed by
- * editor.js (window.BpmnEditor) and uses diff.js (compareBpmnXml/
- * highlightDiff) to compare two BPMN sources.
+ * Version history panel + comparison. Built on the Editor core's public API
+ * (the live Modeler, the DiagramStore, `t`, the time zone) and uses diff.js
+ * (compareBpmnXml/highlightDiff) to compare two BPMN sources.
  *
  * Two comparison flows share this module:
  *  - "Compare with current" (ticket 35): an old Version against whatever is
@@ -14,27 +14,21 @@
  *    restored to whatever it displayed before once the User exits the
  *    comparison.
  */
+import { toast, errorMessage } from './common.js';
 import { compareBpmnXml, highlightDiff, renderRemovedGhosts } from './diff.js';
 import { groupVersionsByDay, oldestFirst } from './version-history.js';
 
-(async function () {
-  const body = document.getElementById('editor');
-  const restoreConfirmMessage = body.dataset.restoreVersionConfirm;
-  const versionRestoredNotice = body.dataset.versionRestoredNotice;
-  const versionRestoreFailedNotice = body.dataset.versionRestoreFailedNotice;
-  const restoreLabel = body.dataset.restoreLabel || 'Restore';
-  const canEdit = body.dataset.canEditVersions === 'true';
-  const label = key => body.dataset[key] || '';
-  const compareWithCurrentLabel = body.dataset.compareWithCurrentLabel || 'Compare with current';
-  // Translated names of the BPMN element types, keyed by type (e.g. "UserTask").
-  const elementTypes = JSON.parse(body.dataset.elementTypes || '{}');
-
-  // editor.js is a module loaded earlier in the document and sets this
-  // synchronously when it creates the Modeler; modules run in document
-  // order, so by the time this runs it is always already set.
-  const { modeler, store } = window.BpmnEditor || {};
-  // The User's display timezone (UTC when they haven't chosen one, as everywhere else).
-  const timeZone = body.dataset.timeZone;
+/**
+ * Wires the Version history panel of the page to the Editor.
+ *
+ * @param {Object} options
+ * @param {Object} options.editor  what createEditor() returned
+ * @param {boolean} [options.canEdit]  whether Versions can be renamed,
+ *   made permanent or deleted
+ * @returns {{reload: () => Promise<void>}}
+ */
+export function createVersionHistory({ editor, canEdit = true }) {
+  const { modeler, store, t, timeZone, Modeler } = editor;
 
   const $ = id => document.getElementById(id);
   const list = $('version-list');
@@ -96,7 +90,7 @@ import { groupVersionsByDay, oldestFirst } from './version-history.js';
       renderVersions(groupVersionsByDay(await store.versions(), timeZone));
     } catch (e) {
       console.error(e);
-      window.BpmnCommon.toast(window.BpmnCommon.errorMessage(e, body.dataset.versionsLoadFailedNotice || 'Could not load version history.'), true);
+      toast(errorMessage(e, t('messages.versions_load_failed')), true);
     }
   }
 
@@ -112,7 +106,7 @@ import { groupVersionsByDay, oldestFirst } from './version-history.js';
     if (!days.length) {
       const empty = document.createElement('li');
       empty.className = 'empty';
-      empty.textContent = body.dataset.noVersionsNotice || 'No versions yet.';
+      empty.textContent = t('messages.no_versions_yet');
       list.appendChild(empty);
       selectedIds = [];
       updateCompareBar();
@@ -184,13 +178,14 @@ import { groupVersionsByDay, oldestFirst } from './version-history.js';
 
     const badges = document.createElement('div');
     badges.className = 'version-badges';
-    if (version.current) addBadge(badges, label('currentBadgeLabel'), 'current');
-    if (version.provisional) addBadge(badges, label('provisionalBadgeLabel'), 'provisional');
+    if (version.current) addBadge(badges, t('messages.current_version_badge'), 'current');
+    if (version.provisional) addBadge(badges, t('messages.provisional_badge'), 'provisional');
     if (badges.childElementCount) li.appendChild(badges);
 
     const meta = document.createElement('small');
     meta.className = 'version-meta';
-    meta.textContent = formatTime(version) + ' · ' + label('versionByTemplate').replace(':name', version.author);
+    meta.textContent = formatTime(version)
+      + (version.author ? ' · ' + t('messages.version_by_author', { name: version.author }) : '');
     li.appendChild(meta);
 
     const actions = document.createElement('div');
@@ -199,16 +194,16 @@ import { groupVersionsByDay, oldestFirst } from './version-history.js';
     // The current Version is what's on the canvas: nothing to restore or
     // compare it against.
     if (!version.current) {
-      addAction(actions, compareWithCurrentLabel, () => compareWithCurrent(version));
-      addAction(actions, restoreLabel, () => restoreVersion(version));
+      addAction(actions, t('messages.compare_with_current'), () => compareWithCurrent(version));
+      addAction(actions, t('messages.restore'), () => restoreVersion(version));
     }
 
     if (canEdit) {
-      addAction(actions, label('renameVersionLabel'), () => renameVersion(version));
+      addAction(actions, t('messages.rename_version'), () => renameVersion(version));
 
       if (version.provisional) {
-        addAction(actions, label('makePermanentLabel'), () => promoteVersion(version));
-        addAction(actions, label('deleteVersionLabel'), () => deleteVersion(version), 'danger');
+        addAction(actions, t('messages.make_permanent'), () => promoteVersion(version));
+        addAction(actions, t('messages.delete'), () => deleteVersion(version), 'danger');
       }
     }
 
@@ -222,41 +217,41 @@ import { groupVersionsByDay, oldestFirst } from './version-history.js';
     try {
       await change();
       await loadVersions();
-      if (doneNotice) window.BpmnCommon.toast(doneNotice);
+      if (doneNotice) toast(doneNotice);
     } catch (e) {
       console.error(e);
-      window.BpmnCommon.toast(window.BpmnCommon.errorMessage(e, failedNotice), true);
+      toast(errorMessage(e, failedNotice), true);
     }
   }
 
   async function renameVersion(version) {
-    const name = (prompt(label('renameVersionPrompt'), version.name) || '').trim();
+    const name = (prompt(t('messages.rename_version_prompt'), version.name) || '').trim();
     if (!name || name === version.name) return;
 
     await changeVersion(
       () => store.renameVersion(version.id, name),
       '',
-      label('versionRenameFailedNotice'),
+      t('messages.version_rename_failed'),
     );
   }
 
   function promoteVersion(version) {
     return changeVersion(
       () => store.promoteVersion(version.id),
-      label('versionMadePermanentNotice'),
-      label('versionPromoteFailedNotice'),
+      t('messages.version_made_permanent'),
+      t('messages.version_promote_failed'),
     );
   }
 
   async function deleteVersion(version) {
-    if (!confirm(label('deleteVersionConfirm'))) return;
+    if (!confirm(t('messages.delete_version_confirm'))) return;
 
     selectedIds = selectedIds.filter(id => id !== version.id);
 
     await changeVersion(
       () => store.deleteVersion(version.id),
-      label('versionDeletedNotice'),
-      label('versionDeleteFailedNotice'),
+      t('messages.version_deleted'),
+      t('messages.version_delete_failed'),
     );
   }
 
@@ -318,7 +313,7 @@ import { groupVersionsByDay, oldestFirst } from './version-history.js';
   // (only present in `oldXml`) as ghosts; returns one function that undoes both.
   async function highlightWithGhosts(oldXml, result) {
     const clearMarkers = highlightDiff(modeler, result);
-    const clearGhosts = await renderRemovedGhosts(modeler, oldXml, result);
+    const clearGhosts = await renderRemovedGhosts(modeler, oldXml, result, Modeler);
 
     // Ghosts can sit outside what the canvas is showing: frame them together with the diagram.
     if (clearGhosts.bounds) frameWith(clearGhosts.bounds);
@@ -338,7 +333,7 @@ import { groupVersionsByDay, oldestFirst } from './version-history.js';
         modeler.saveXML({ format: true }),
       ]);
 
-      const result = await compareBpmnXml(oldXml, currentXml);
+      const result = await compareBpmnXml(oldXml, currentXml, Modeler);
 
       exitComparison();
 
@@ -347,12 +342,12 @@ import { groupVersionsByDay, oldestFirst } from './version-history.js';
       highlightActiveComparison();
 
       showDiffSummary(
-        (body.dataset.comparingWithTemplate || 'Comparing with :version').replace(':version', versionLabel(version)),
+        t('messages.comparing_with', { version: versionLabel(version) }),
         result,
       );
     } catch (e) {
       console.error(e);
-      window.BpmnCommon.toast(window.BpmnCommon.errorMessage(e, body.dataset.versionCompareFailedNotice || 'Could not compare this version.'), true);
+      toast(errorMessage(e, t('messages.version_compare_failed')), true);
     }
   }
 
@@ -381,7 +376,7 @@ import { groupVersionsByDay, oldestFirst } from './version-history.js';
 
       const [olderXml, newerXml] = await contentPromise;
 
-      const result = await compareBpmnXml(olderXml, newerXml);
+      const result = await compareBpmnXml(olderXml, newerXml, Modeler);
 
       // Snapshot whatever the canvas showed before this comparison (the
       // live diagram, or the result of a previous comparison) so it can be
@@ -402,14 +397,12 @@ import { groupVersionsByDay, oldestFirst } from './version-history.js';
       highlightActiveComparison();
 
       showDiffSummary(
-        (body.dataset.comparingVersionsTemplate || 'Comparing :older with :newer')
-          .replace(':older', versionLabel(older))
-          .replace(':newer', versionLabel(newer)),
+        t('messages.comparing_versions', { older: versionLabel(older), newer: versionLabel(newer) }),
         result,
       );
     } catch (e) {
       console.error(e);
-      window.BpmnCommon.toast(window.BpmnCommon.errorMessage(e, body.dataset.versionsCompareFailedNotice || 'Could not compare these versions.'), true);
+      toast(errorMessage(e, t('messages.versions_compare_failed')), true);
     }
   }
 
@@ -428,7 +421,12 @@ import { groupVersionsByDay, oldestFirst } from './version-history.js';
         const type = document.createElement('span');
         type.className = 'type';
         const typeName = (element.$type || '').replace(/^bpmn:/, '');
-        type.textContent = elementTypes[typeName] || typeName.replace(/([a-z])([A-Z])/g, '$1 $2');
+        // Translated name of the element type (e.g. "UserTask"); a type with
+        // no translation comes back as its key.
+        const translatedType = t('messages.bpmn_element_types.' + typeName);
+        type.textContent = !translatedType.startsWith('messages.')
+          ? translatedType
+          : typeName.replace(/([a-z])([A-Z])/g, '$1 $2');
 
         const name = document.createElement('span');
         name.textContent = element.name || element.id;
@@ -464,9 +462,9 @@ import { groupVersionsByDay, oldestFirst } from './version-history.js';
   /**
    * Reloads the live canvas from the Diagram's current content (the
    * restored Version's content, now saved to disk by restoreVersion on the
-   * server — see VersionController::restoreVersion). Reuses the same
-   * Modeler exposed by editor.js rather than navigating away, so the Lock
-   * heartbeat/dirty-guard state in that module is left untouched.
+   * server — see VersionController::restoreVersion). Reuses the Editor's
+   * Modeler rather than navigating away, so the dirty-guard state of the
+   * Editor core is left untouched.
    */
   async function reloadCanvas() {
     if (!modeler) return;
@@ -477,7 +475,7 @@ import { groupVersionsByDay, oldestFirst } from './version-history.js';
   }
 
   async function restoreVersion(version) {
-    const confirmMessage = restoreConfirmMessage || 'Restore this version? This creates a new version on top of the history.';
+    const confirmMessage = t('messages.restore_version_confirm');
     if (!confirm(confirmMessage)) return;
 
     try {
@@ -490,18 +488,20 @@ import { groupVersionsByDay, oldestFirst } from './version-history.js';
       // first).
       await loadVersions();
 
-      window.BpmnCommon.toast(versionRestoredNotice || 'Version restored.');
+      toast(t('messages.version_restored'));
     } catch (e) {
       console.error(e);
-      window.BpmnCommon.toast(window.BpmnCommon.errorMessage(e, versionRestoreFailedNotice || 'Could not restore this version.'), true);
+      toast(errorMessage(e, t('messages.version_restore_failed')), true);
     }
   }
 
   $('btn-diff-exit').addEventListener('click', exitComparison);
   btnCompareSelected.addEventListener('click', compareSelectedVersions);
 
-  // Saving the diagram adds a Version: refresh the history (see editor.js).
-  document.addEventListener('diagram:saved', loadVersions);
+  // Saving the diagram adds a Version: refresh the history.
+  editor.on('saved', loadVersions);
 
   loadVersions();
-})();
+
+  return { reload: loadVersions };
+}

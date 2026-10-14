@@ -7,6 +7,8 @@
  * panel (see versions.js / #10), but lives in its own module so we don't
  * touch that file.
  */
+import { toast, errorMessage, httpError, togglePanel } from './common.js';
+
 (function () {
   const body = document.getElementById('editor');
   if (!body || (!body.dataset.collaboratorsUrl && !body.dataset.sharesUrl)) return; // no panel rendered for this user
@@ -32,12 +34,6 @@
   const shareAllowDownload = $('share-allow-download');
   const sharePinVersion = $('share-pin-version');
 
-  function toast(msg, isError) {
-    if (window.BpmnCommon && window.BpmnCommon.toast) {
-      window.BpmnCommon.toast(msg, isError);
-    }
-  }
-
   function collaboratorUrl(userId) {
     return collaboratorUrlTemplate.replace('USER_ID', encodeURIComponent(userId));
   }
@@ -59,7 +55,7 @@
     });
 
     if (!res.ok) {
-      throw await window.BpmnCommon.httpError(res);
+      throw await httpError(res);
     }
 
     if (res.status === 204) return null;
@@ -75,7 +71,7 @@
       renderCollaborators(collaborators || []);
     } catch (e) {
       console.error(e);
-      toast(window.BpmnCommon.errorMessage(e, body.dataset.collaboratorsLoadFailedNotice || 'Could not load collaborators.'), true);
+      toast(errorMessage(e, body.dataset.collaboratorsLoadFailedNotice || 'Could not load collaborators.'), true);
     }
   }
 
@@ -183,7 +179,7 @@
       toast(body.dataset.roleChangedNotice || 'Role updated.');
     } catch (e) {
       console.error(e);
-      toast(window.BpmnCommon.errorMessage(e, body.dataset.roleChangeFailedNotice || 'Could not change this role.'), true);
+      toast(errorMessage(e, body.dataset.roleChangeFailedNotice || 'Could not change this role.'), true);
     }
     await loadCollaborators();
   }
@@ -195,7 +191,7 @@
       await loadCollaborators();
     } catch (e) {
       console.error(e);
-      toast(window.BpmnCommon.errorMessage(e, body.dataset.approveFailedNotice || 'Could not approve this collaborator.'), true);
+      toast(errorMessage(e, body.dataset.approveFailedNotice || 'Could not approve this collaborator.'), true);
     }
   }
 
@@ -212,7 +208,7 @@
       await loadCollaborators();
     } catch (e) {
       console.error(e);
-      toast(window.BpmnCommon.errorMessage(e, body.dataset.removeFailedNotice || 'Could not remove this collaborator.'), true);
+      toast(errorMessage(e, body.dataset.removeFailedNotice || 'Could not remove this collaborator.'), true);
     }
   }
 
@@ -233,7 +229,7 @@
       await loadCollaborators();
     } catch (e) {
       console.error(e);
-      toast(window.BpmnCommon.errorMessage(e, body.dataset.inviteFailedNotice || 'Could not invite this collaborator.'), true);
+      toast(errorMessage(e, body.dataset.inviteFailedNotice || 'Could not invite this collaborator.'), true);
     }
   });
 
@@ -292,7 +288,7 @@
       renderShares((data && data.shares) || []);
     } catch (e) {
       console.error(e);
-      toast(window.BpmnCommon.errorMessage(e, body.dataset.sharesLoadFailedNotice || 'Could not load shares.'), true);
+      toast(errorMessage(e, body.dataset.sharesLoadFailedNotice || 'Could not load shares.'), true);
     }
   }
 
@@ -386,7 +382,7 @@
       toast(body.dataset.linkCopiedNotice || 'Link copied to clipboard.');
     } catch (e) {
       console.error(e);
-      toast(window.BpmnCommon.errorMessage(e, body.dataset.linkCopyFailedNotice || 'Could not copy the link.'), true);
+      toast(errorMessage(e, body.dataset.linkCopyFailedNotice || 'Could not copy the link.'), true);
     }
   }
 
@@ -401,7 +397,7 @@
       await loadShares();
     } catch (e) {
       console.error(e);
-      toast(window.BpmnCommon.errorMessage(e, body.dataset.shareRevokeFailedNotice || 'Could not revoke this share.'), true);
+      toast(errorMessage(e, body.dataset.shareRevokeFailedNotice || 'Could not revoke this share.'), true);
     }
   }
 
@@ -424,7 +420,7 @@
         await loadShares();
       } catch (e) {
         console.error(e);
-        toast(window.BpmnCommon.errorMessage(e, body.dataset.shareCreateFailedNotice || 'Could not create the share link.'), true);
+        toast(errorMessage(e, body.dataset.shareCreateFailedNotice || 'Could not create the share link.'), true);
       }
     });
   }
@@ -438,6 +434,6 @@
   // Deep link from the notification bell (issue #15): clicking a
   // "requested access" notification lands here with ?open-panel=collaborators.
   if (new URLSearchParams(window.location.search).get('open-panel') === 'collaborators' && $('collaborators-panel')) {
-    window.BpmnCommon.togglePanel('collaborators-panel', true);
+    togglePanel('collaborators-panel', true);
   }
 })();

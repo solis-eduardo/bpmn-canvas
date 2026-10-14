@@ -53,3 +53,9 @@ Rejected alternatives:
 - **A desktop wrapper (Electron/Tauri/NativePHP) around the full app:** carries the whole multi-User domain into a single-User context where most of it is dead weight.
 
 Standalone data lives in the browser profile and is lost if the User clears site data; the standalone build offers an "export all" backup for that reason. Versions there are snapshots, not Git commits: ADR-0004 still governs the server build.
+
+## Implementation notes
+
+- The core modules (`common.js`, `editor-core.js`, `versions.js`, `version-history.js`, `diff.js`, `http-store.js`, `translator.js`) are ES modules that import their dependencies. No `window.Bpmn*` global is left. The remaining globals are `window.BpmnJS`, the vendored bpmn-js, which the server page passes to `createEditor` as `Modeler` (the standalone build passes the bundled one), and the `diagram:saved` document event, which `editor.js` dispatches for the server-only `collaborators.js`.
+- `php artisan lang:export` writes `public/assets/lang/<locale>.json` (git-ignored; the Docker build runs it). The keys are found by scanning the core's source for `t('…')` calls, so using a key in the core is all it takes; a key ending in a dot (`t('messages.group.' + name)`) exports the whole group. `translator.js` turns the JSON into `t(key, replacements)`.
+- Strings only the server-only scripts use (Lock session, Collaborators, Shares, Diagram settings) stay on `data-*` attributes.
