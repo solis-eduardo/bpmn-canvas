@@ -52,11 +52,11 @@ class RestoreRepository
             // anything existing get touched.
             $this->databaseRestorer->restore($stagingDir.'/database.dump');
 
-            // The restore swaps every access row without a model event.
-            $this->access->forget();
-
             $this->replaceDiagrams($stagingDir.'/diagrams');
         } finally {
+            // The restore swaps every access row without a model event, and a
+            // restore that fails midway may have swapped some of them.
+            $this->access->forget();
             $this->removeDirectory($stagingDir);
         }
     }

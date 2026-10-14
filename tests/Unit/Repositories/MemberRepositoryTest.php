@@ -59,7 +59,7 @@ class MemberRepositoryTest extends TestCase
         $workspace = Workspace::factory()->create();
         $user = User::factory()->create();
 
-        $member = (app(MemberRepository::class))->createGroupIfMissing($workspace, $user);
+        $member = app(MemberRepository::class)->createGroupIfMissing($workspace, $user);
 
         $this->assertSame(Member::ORIGIN_GROUP, $member->origin);
     }

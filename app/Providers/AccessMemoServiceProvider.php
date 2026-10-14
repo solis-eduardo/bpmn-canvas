@@ -33,7 +33,6 @@ class AccessMemoServiceProvider extends ServiceProvider
         // The rows that grant access: any change matters.
         foreach ([Collaborator::class, Member::class] as $model) {
             Event::listen("eloquent.saved: {$model}", $forget);
-            Event::listen("eloquent.deleted: {$model}", $forget);
         }
 
         // The Diagram's owner and Workspace decide access; its title, Lock
@@ -47,8 +46,9 @@ class AccessMemoServiceProvider extends ServiceProvider
         // A new Diagram can have answers memoized for its (reused) id.
         Event::listen('eloquent.created: '.Diagram::class, $forget);
 
-        // Deleting these cascades access rows away in the database.
-        foreach ([Diagram::class, Workspace::class, User::class] as $model) {
+        // Deleting an access row, or one of these (which cascade access rows
+        // away in the database), always matters.
+        foreach ([Collaborator::class, Member::class, Diagram::class, Workspace::class, User::class] as $model) {
             Event::listen("eloquent.deleted: {$model}", $forget);
         }
 

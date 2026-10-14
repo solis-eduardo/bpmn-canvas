@@ -35,6 +35,7 @@ class AccessMemoWriteGuardTest extends TestCase
         '/\bDB::(update|delete|insert|statement|unprepared)\(/',
         '/\b(Member|Collaborator|Workspace)::[^;]*->(delete|update|forceDelete)\(/',
         '/->(members|collaborators)\(\)[^;]*->(delete|update|forceDelete)\(/',
+        '/\b(Diagram::[^;]*|->diagrams\(\)[^;]*)->(update|delete|forceDelete)\(/',
         '/\b(Member|Collaborator)::(insert|upsert|destroy)\(/',
     ];
 
