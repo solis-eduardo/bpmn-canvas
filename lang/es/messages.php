@@ -168,6 +168,7 @@ return [
     'share_revoked' => 'Compartición revocada.',
     'share_revoke_failed' => 'No se pudo revocar esta compartición.',
     'expires_label' => 'Expira :time',
+    'share_created_by' => 'Creado por :name el :date',
     'download_allowed' => 'Descarga permitida',
     'download_not_allowed' => 'Descarga no permitida',
     'follow_latest_version' => 'Seguir la última versión',

@@ -19,13 +19,15 @@ class ShareRepository
     }
 
     /**
-     * The Diagram's Shares that are neither revoked nor expired, newest first.
+     * The Diagram's Shares that are neither revoked nor expired, newest first,
+     * with their creator loaded so the list can show who created each one.
      *
      * @return Collection<int, Share>
      */
     public function activeFor(Diagram $diagram): Collection
     {
         return $diagram->shares()
+            ->with('author')
             ->active()
             ->orderByDesc('created_at')
             ->orderByDesc('id')
