@@ -92,6 +92,17 @@ docker compose exec app php artisan backup:restore backup-2026-01-01_000000-abcd
 ```
 
 `backup:restore` validates the artifact's `manifest.json` before touching anything, then **overwrites** the current database and Diagrams directory with the artifact's contents — nothing is merged. It is an operator command, run manually; unlike `backup:run` it is not on the scheduler. After a restore, Diagrams open normally, their Version history lists and restores as before, and existing Share links keep working — the round trip has been exercised end to end against this stack.
+## Standalone build
+
+A single HTML file that runs the Editor entirely in the browser, with no server, login or database (ADR-0018). Diagrams and their Versions are stored in the browser's IndexedDB, so they live in the browser profile and are lost if the site data is cleared: use **Export all (.zip)** for a backup.
+
+```bash
+npm install
+npm run build:standalone    # needs PHP: it first runs `php artisan lang:export`
+```
+
+The result is `standalone/dist/bpmn-canvas.html`. Open it from disk (`file://`) or put it on any static host. It makes no external requests. It can create, edit and save Diagrams, keeps a Version per save (compare, restore, rename), exports PNG, SVG and BPMN, imports a `.bpmn` (including one exported by the server build), and exports every Diagram as a `.zip`. In Chromium, **Save to file…** writes to a `.bpmn` file of your choice on every save; elsewhere it downloads the file. Title and Tags editing, Locks, Collaborators, Workspaces and Shares are not part of it.
+
 ## Structure
 
 ```
@@ -217,6 +228,17 @@ docker compose exec app php artisan backup:restore backup-2026-01-01_000000-abcd
 ```
 
 `backup:restore` valida o `manifest.json` do artefato antes de tocar em qualquer coisa, e então **sobrescreve** o banco de dados e o diretório de Diagramas atuais com o conteúdo do artefato — nada é mesclado. É um comando de operador, executado manualmente; diferente de `backup:run`, não está no scheduler. Após uma restauração, os Diagramas abrem normalmente, o histórico de Versões lista e restaura como antes, e links de Compartilhamento existentes continuam funcionando — o ciclo completo já foi executado de ponta a ponta nesta stack.
+## Build standalone
+
+Um único arquivo HTML que roda o Editor inteiramente no navegador, sem servidor, login ou banco de dados (ADR-0018). Os Diagramas e suas Versões ficam no IndexedDB do navegador, ou seja, no perfil do navegador, e se perdem se os dados do site forem limpos: use **Exportar tudo (.zip)** para fazer backup.
+
+```bash
+npm install
+npm run build:standalone    # precisa do PHP: antes roda `php artisan lang:export`
+```
+
+O resultado é `standalone/dist/bpmn-canvas.html`. Abra-o do disco (`file://`) ou publique em qualquer hospedagem estática. Ele não faz requisições externas. Cria, edita e salva Diagramas, guarda uma Versão por salvamento (comparar, restaurar, renomear), exporta PNG, SVG e BPMN, importa um `.bpmn` (inclusive um exportado pela build do servidor) e exporta todos os Diagramas em um `.zip`. No Chromium, **Salvar em arquivo…** grava a cada salvamento em um `.bpmn` escolhido; nos demais navegadores baixa o arquivo. Edição de título e Tags, Locks, Colaboradores, Workspaces e Shares ficam de fora.
+
 ## Estrutura
 
 ```

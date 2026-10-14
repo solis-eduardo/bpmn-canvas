@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\Lang;
  * `data-*` attributes. `lang/` stays the only source of truth: the keys come
  * from the `t('…')` calls in the core's source, so using a new key in the core
  * is all it takes. A key ending in a dot (`t('messages.group.' + name)`) takes
- * the whole group.
+ * the whole group. The standalone build's own scripts and page are scanned too
+ * (`t('…')` and `data-i18n="…"` attributes), so the one JSON serves both builds.
  */
 class ExportLang extends Command
 {
@@ -25,6 +26,12 @@ class ExportLang extends Command
         'public/assets/diff.js',
         'public/assets/common.js',
     ];
+
+    /** The standalone build's sources: scripts and the HTML shell, relative to the base path. */
+    public const STANDALONE_GLOBS = ['standalone/*.js', 'standalone/*.html'];
+
+    /** `t('key')` calls and `data-i18n="key"` / `data-i18n-title="key"` attributes. */
+    public const KEY_PATTERN = "/\\bt\\(\\s*'([A-Za-z0-9_.]+)'|\\bdata-i18n(?:-[a-z-]+)?=\"([A-Za-z0-9_.]+)\"/";
 
     protected $signature = 'lang:export {--path= : Directory to write to (default: public/assets/lang)}';
 
@@ -63,14 +70,22 @@ class ExportLang extends Command
         return self::SUCCESS;
     }
 
+    /** Absolute paths of every file scanned for keys. @return list<string> */
+    public static function sources(): array
+    {
+        $standalone = array_merge(...array_map(fn ($glob) => glob(base_path($glob)) ?: [], self::STANDALONE_GLOBS));
+
+        return array_merge(array_map(base_path(...), self::CORE_SOURCES), $standalone);
+    }
+
     /** @return list<string> */
     private function coreKeys(): array
     {
         $keys = [];
 
-        foreach (self::CORE_SOURCES as $source) {
-            preg_match_all("/\\bt\\(\\s*'([A-Za-z0-9_.]+)'/", File::get(base_path($source)), $matches);
-            $keys = array_merge($keys, $matches[1]);
+        foreach (self::sources() as $source) {
+            preg_match_all(self::KEY_PATTERN, File::get($source), $matches);
+            $keys = array_merge($keys, array_filter(array_merge($matches[1], $matches[2])));
         }
 
         return array_values(array_unique($keys));
