@@ -206,6 +206,7 @@ return [
     'shares_load_failed' => 'Não foi possível carregar os compartilhamentos.',
     'diagram_open_failed' => 'Não foi possível abrir o diagrama.',
     'keycloak_admin_role_not_revocable' => 'Este papel de Administrador foi concedido pela claim do Keycloak e não pode ser revogado aqui.',
+    'last_administrator_not_removable' => 'Não é possível remover o papel de Administrador: pelo menos um Administrador deve permanecer.',
     'restore' => 'Restaurar',
     'restore_version_confirm' => 'Restaurar esta versão? Isso cria uma nova versão em cima do histórico.',
     'version_restored' => 'Versão restaurada.',

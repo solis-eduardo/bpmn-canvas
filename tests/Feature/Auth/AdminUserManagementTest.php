@@ -98,6 +98,29 @@ class AdminUserManagementTest extends TestCase
         $this->assertFalse($target->fresh()->is_admin);
     }
 
+    public function test_the_last_administrator_cannot_remove_their_own_role(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+
+        $response = $this->actingAs($admin)->from('/admin/users')->put("/admin/users/{$admin->id}", [
+            'is_admin' => false,
+        ]);
+
+        $response->assertSessionHasErrors(['is_admin' => __('messages.last_administrator_not_removable')]);
+        $this->assertTrue($admin->fresh()->is_admin);
+    }
+
+    public function test_an_administrator_can_remove_their_own_role_when_another_remains(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($admin)->put("/admin/users/{$admin->id}", ['is_admin' => false])
+            ->assertSessionHasNoErrors();
+
+        $this->assertFalse($admin->fresh()->is_admin);
+    }
+
     public function test_admin_can_update_a_local_user_and_replace_the_password(): void
     {
         $admin = User::factory()->create(['is_admin' => true]);

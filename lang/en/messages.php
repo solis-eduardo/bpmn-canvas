@@ -206,6 +206,7 @@ return [
     'shares_load_failed' => 'Could not load shares.',
     'diagram_open_failed' => 'Could not open the diagram.',
     'keycloak_admin_role_not_revocable' => 'This Administrator role was granted by the Keycloak claim and cannot be revoked here.',
+    'last_administrator_not_removable' => 'Cannot remove the Administrator role: at least one Administrator must remain.',
     'restore' => 'Restore',
     'restore_version_confirm' => 'Restore this version? This creates a new version on top of the history.',
     'version_restored' => 'Version restored.',

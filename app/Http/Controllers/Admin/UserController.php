@@ -103,6 +103,13 @@ class UserController extends Controller
             abort(403, __('messages.keycloak_admin_role_not_revocable'));
         }
 
+        if (array_key_exists('is_admin', $data) && ! $data['is_admin'] && $user->is_admin
+            && ! User::where('is_admin', true)->whereKeyNot($user->getKey())->exists()) {
+            throw ValidationException::withMessages([
+                'is_admin' => __('messages.last_administrator_not_removable'),
+            ]);
+        }
+
         $user->fill(array_filter(Arr::only($data, ['name', 'password']), filled(...)));
         $methodChanged = $user->login_method !== $loginMethod;
         $user->login_method = $loginMethod;
