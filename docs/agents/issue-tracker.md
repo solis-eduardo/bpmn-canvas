@@ -41,7 +41,7 @@ git checkout -b issue/NNN-slug
 
 ### 3. Review and refactor
 
-- Run `/code-review` for correctness bugs
+- Run `/code-review` for bugs and for gaps against the issue's requirements, and fix both
 - Run `/simplify` for code quality improvements
 - Commit fixes with clear messages
 
