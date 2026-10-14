@@ -60,6 +60,42 @@ class DiagramCollaboratorTest extends TestCase
         $response->assertJsonPath('status', Collaborator::STATUS_APPROVED);
     }
 
+    public function test_the_diagram_owner_cannot_be_invited_as_a_collaborator_by_anyone(): void
+    {
+        $owner = User::factory()->create();
+        $admin = User::factory()->create(['is_admin' => true]);
+        $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
+
+        foreach ([$owner, $admin] as $caller) {
+            $this->actingAs($caller)->postJson("/diagrams/{$diagram->slug}/collaborators", [
+                'user_id' => $owner->id,
+            ])->assertUnprocessable()->assertJsonValidationErrors('user_id');
+        }
+
+        $this->assertSame(0, Collaborator::count());
+    }
+
+    public function test_inviting_the_diagram_owner_by_email_adds_no_collaborator_and_stays_silent(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
+
+        $this->actingAs($owner)->postJson("/diagrams/{$diagram->slug}/collaborators", [
+            'email' => $owner->email,
+        ])->assertCreated();
+
+        $this->assertSame(0, Collaborator::count());
+    }
+
+    public function test_approving_the_diagram_owner_is_a_validation_error(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
+
+        $this->actingAs($owner)->putJson("/diagrams/{$diagram->slug}/collaborators/{$owner->id}")
+            ->assertUnprocessable();
+    }
+
     public function test_the_author_alone_cannot_invite_a_collaborator_directly_once_ownership_diverges(): void
     {
         $author = User::factory()->create();

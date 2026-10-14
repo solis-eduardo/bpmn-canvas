@@ -17,6 +17,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class CollaboratorController extends Controller
 {
@@ -74,7 +75,9 @@ class CollaboratorController extends Controller
         $this->authorize('collaborator.invite', [$diagram, $target]);
         $this->authorizeRole($diagram, $data['role'] ?? null);
 
-        $collaborator = $target
+        $this->rejectDiagramOwner($diagram, $target, $data);
+
+        $collaborator = $target && ! $diagram->isOwnedBy($target)
             ? $this->service->invite($diagram, $target, Gate::allows('collaborator.grant', $diagram), $data['role'] ?? null)
             : null;
 
@@ -90,6 +93,18 @@ class CollaboratorController extends Controller
             'user_id' => $collaborator->user_id,
             'status' => $collaborator->status,
         ], 201);
+    }
+
+    /**
+     * The Diagram Owner already has full access, so a Collaborator row for
+     * them would only list them twice. A picked `user_id` is told plainly;
+     * an email stays silent so it can't probe who owns the Diagram.
+     */
+    private function rejectDiagramOwner(Diagram $diagram, ?User $target, array $data): void
+    {
+        if ($target && $diagram->isOwnedBy($target) && ! $this->targetedByEmail($data)) {
+            throw ValidationException::withMessages(['user_id' => __('messages.cannot_invite_diagram_owner')]);
+        }
     }
 
     private function requestRedirect(Request $request): RedirectResponse
@@ -110,6 +125,7 @@ class CollaboratorController extends Controller
 
         $this->authorize('collaborator.grant', $diagram);
         $this->authorizeRole($diagram, $data['role'] ?? null);
+        $this->rejectDiagramOwner($diagram, $user, []);
 
         $collaborator = $this->service->approve($diagram, $user, $data['role'] ?? null);
 

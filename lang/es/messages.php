@@ -288,6 +288,7 @@ return [
     'transfer_ownership' => 'Transferir propiedad',
     'select_new_owner' => 'Selecciona al nuevo propietario',
     'user_already_member' => 'Ese usuario ya es miembro.',
+    'cannot_invite_diagram_owner' => 'El propietario del diagrama ya tiene acceso y no puede añadirse como colaborador.',
     'user_already_owner' => 'Ese usuario ya es el propietario del Workspace.',
     'select_user_placeholder' => 'Selecciona un usuario',
     'delete_workspace' => 'Eliminar',
