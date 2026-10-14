@@ -11,7 +11,6 @@ use App\Repositories\WorkspaceListFilters;
 use App\Repositories\WorkspaceRepository;
 use App\Services\MemberService;
 use App\Services\WorkspaceOwnerService;
-use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection as SupportCollection;
@@ -49,7 +48,7 @@ class WorkspaceController extends Controller
             ->search($user, $filters, $sort)
             ->appends($request->query());
 
-        $users = $this->asOptions($this->users->allOrderedByName());
+        $users = $this->userOptions($this->users->allOrderedByName());
 
         return view('workspaces.index', compact('workspaces', 'filters', 'users', 'sort'));
     }
@@ -59,21 +58,6 @@ class WorkspaceController extends Controller
         return view('workspaces.create', [
             'memberOptions' => $this->userOptions($this->users->allOrderedByName(), $request->user()),
         ]);
-    }
-
-    /**
-     * Existing Users a Workspace Owner/Administrator may pick from instead of
-     * typing an email: Users already in the target role are left out.
-     *
-     * @param  Collection<int, User>  $candidates
-     * @return array<int, array{id: int, name: string}>
-     */
-    private function asOptions(Collection $candidates): array
-    {
-        return $candidates
-            ->map(fn (User $candidate) => ['id' => $candidate->id, 'name' => $candidate->name])
-            ->values()
-            ->all();
     }
 
     /**
@@ -113,8 +97,8 @@ class WorkspaceController extends Controller
         $everyone = $this->users->allOrderedByName();
         $memberIds = $workspace->members->pluck('user_id');
 
-        $memberOptions = $this->asOptions($everyone);
-        $ownerCandidates = $this->asOptions($everyone->reject(fn (User $candidate) => $workspace->isOwnedBy($candidate)));
+        $memberOptions = $this->userOptions($everyone);
+        $ownerCandidates = $this->userOptions($everyone->reject(fn (User $candidate) => $workspace->isOwnedBy($candidate)));
 
         return view('workspaces.edit', compact('workspace', 'memberOptions', 'memberIds', 'ownerCandidates'));
     }
