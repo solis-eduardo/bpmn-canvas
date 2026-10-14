@@ -8,12 +8,14 @@ use App\Models\DiagramOldSlug;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\Slugger;
+use Closure;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use RuntimeException;
+use Throwable;
 
 /**
  * Keeps the Diagram's database row and its `.bpmn` file on disk consistent
@@ -200,7 +202,7 @@ class DiagramRepository
                 Storage::disk('diagrams')->put($diagram->disk_path, $initialContent),
                 "Could not write the Diagram file to disk: {$diagram->disk_path}"
             );
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             $diagram->delete();
 
             throw $e;
@@ -227,7 +229,6 @@ class DiagramRepository
     public function move(Diagram $diagram, string $newTitle, string $newSlug): Diagram
     {
         $oldSlug = $diagram->slug;
-        $file = basename($diagram->disk_path);
         $slugChanged = $newSlug !== $oldSlug;
 
         if ($slugChanged) {
@@ -242,21 +243,8 @@ class DiagramRepository
         }
 
         try {
-            DB::transaction(function () use ($diagram, $oldSlug, $newSlug, $file, $newTitle, $slugChanged) {
-                if ($slugChanged) {
-                    DiagramOldSlug::create([
-                        'diagram_id' => $diagram->id,
-                        'old_slug' => $oldSlug,
-                    ]);
-                }
-
-                $diagram->update([
-                    'title' => $newTitle,
-                    'slug' => $newSlug,
-                    'disk_path' => $newSlug.'/'.$file,
-                ]);
-            });
-        } catch (\Throwable $e) {
+            DB::transaction(fn () => $this->writeRename($diagram, $newTitle, $newSlug));
+        } catch (Throwable $e) {
             if ($slugChanged) {
                 Storage::disk('diagrams')->move($newSlug, $oldSlug);
             }
@@ -265,6 +253,70 @@ class DiagramRepository
         }
 
         return $diagram;
+    }
+
+    /**
+     * Renames a Diagram like {@see rename()}, but runs $alsoInTransaction in
+     * the same database transaction, right after the row is updated, so a
+     * failure in any of those writes leaves the Diagram's title, Slug and
+     * file as they were. The directory move comes last: if it has already
+     * happened when the transaction fails (including at commit), it is moved
+     * back.
+     *
+     * @param  Closure(Diagram): void  $alsoInTransaction  receives the renamed Diagram
+     */
+    public function renameWithin(Diagram $diagram, string $newTitle, Closure $alsoInTransaction): Diagram
+    {
+        $oldSlug = $diagram->slug;
+        $newSlug = $this->uniqueSlug($newTitle, $diagram->id);
+        $slugChanged = $newSlug !== $oldSlug;
+        $directoryMoved = false;
+
+        try {
+            DB::transaction(function () use ($diagram, $newTitle, $newSlug, $oldSlug, $slugChanged, $alsoInTransaction, &$directoryMoved) {
+                $this->writeRename($diagram, $newTitle, $newSlug);
+                $alsoInTransaction($diagram);
+
+                if ($slugChanged) {
+                    $this->assertDiskSucceeded(
+                        Storage::disk('diagrams')->move($oldSlug, $newSlug),
+                        "Could not move the Diagram directory from {$oldSlug} to {$newSlug}."
+                    );
+                    $directoryMoved = true;
+                }
+            });
+        } catch (Throwable $e) {
+            if ($directoryMoved) {
+                Storage::disk('diagrams')->move($newSlug, $oldSlug);
+            }
+
+            throw $e;
+        }
+
+        return $diagram;
+    }
+
+    /**
+     * The database half of a rename: the old Slug is reserved (when the Slug
+     * changes) and the row takes the new title, Slug and file path. Must run
+     * inside a transaction.
+     */
+    private function writeRename(Diagram $diagram, string $newTitle, string $newSlug): void
+    {
+        $oldSlug = $diagram->slug;
+
+        if ($newSlug !== $oldSlug) {
+            DiagramOldSlug::create([
+                'diagram_id' => $diagram->id,
+                'old_slug' => $oldSlug,
+            ]);
+        }
+
+        $diagram->update([
+            'title' => $newTitle,
+            'slug' => $newSlug,
+            'disk_path' => $newSlug.'/'.basename($diagram->disk_path),
+        ]);
     }
 
     /**

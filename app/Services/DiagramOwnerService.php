@@ -52,7 +52,9 @@ class DiagramOwnerService
         });
 
         if ($changesHands) {
-            $newOwner->notify(new DiagramOwnershipTransferred($diagram));
+            // Held back until the outermost transaction commits, so a
+            // rolled-back submission never tells the new owner about a transfer.
+            DB::afterCommit(fn () => $newOwner->notify(new DiagramOwnershipTransferred($diagram)));
         }
     }
 }
