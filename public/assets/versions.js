@@ -508,8 +508,10 @@ export function createVersionHistory({ editor, canEdit = true }) {
   editor.on('compare', async versionId => {
     await loadVersions();
 
-    const newer = versionsById.get(versionId);
-    if (!newer) throw new Error('The newer Version is not in the history.');
+    // A deleted (hidden) Version is not in the panel's history but can still
+    // be the current one: compare against it all the same.
+    const newer = versionsById.get(versionId)
+      ?? { id: versionId, name: t('messages.current_version_badge'), savedAt: new Date().toISOString() };
 
     await compareWithCurrent(newer, { rethrow: true });
   });

@@ -193,6 +193,20 @@ class DiagramSaveConflictTest extends TestCase
         $this->assertSame($this->xml('continued'), $this->contentOf($holder, $diagram)['content']);
     }
 
+    public function test_the_holders_kept_draft_stays_no_conflict_after_it_was_made_permanent(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $base = $this->contentOf($holder, $diagram)['version'];
+        $this->expireLockKeepingDraft($holder, $diagram);
+
+        $kept = app(VersionRepository::class)->currentVersionId($diagram);
+        $this->assertTrue(app(VersionRepository::class)->makePermanent($diagram, $kept));
+
+        $this->save($holder, $diagram, 'continued', ['base_version' => $base])->assertOk();
+    }
+
     public function test_a_draft_kept_for_someone_else_does_not_excuse_a_stale_save(): void
     {
         $holder = User::factory()->create();

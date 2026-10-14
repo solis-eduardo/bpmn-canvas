@@ -13,8 +13,8 @@ use App\Repositories\VersionRepository;
  * content (CONTEXT.md, "Fork"), titled "Copy of <origin title>" in the
  * application's default language. When the forker brings $content (the edits
  * open in their Editor, not yet saved), the Fork starts from that instead of
- * the origin's saved content (issue #243). Whether the User may fork, or place the
- * Fork in $workspace, is ForkPolicy's call.
+ * the origin's saved content (issue #243). Whether the User may fork, or place
+ * the Fork in $workspace, is ForkPolicy's call.
  */
 class ForkService
 {

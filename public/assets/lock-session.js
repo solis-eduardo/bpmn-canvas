@@ -228,7 +228,12 @@ export function startLockSession({ editor, request, urls, isHolder, t, banner, r
   // The edits went to a Fork and the page is about to move there: the Lock on
   // this Diagram is no use any more, and the draft the Heartbeat left on the
   // server must not become a provisional Version here when it expires.
-  if (isHolder) editor.on('forked', () => releaseLockAfterFork({ request, url: urls.unlock }));
+  if (isHolder) {
+    editor.on('forked', () => {
+      loop.stop();
+      return releaseLockAfterFork({ request, url: urls.unlock });
+    });
+  }
 
   // A save refused for the Lock is the same signal as a refused Heartbeat.
   editor.on('saveFailed', error => handleSaveFailure(error, {

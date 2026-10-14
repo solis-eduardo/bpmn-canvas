@@ -38,8 +38,9 @@ class SaveConflictDetector
     }
 
     /**
-     * True when every Version newer than $base is a provisional Version that
-     * kept this User's own unsaved content. Only reached once the base is
+     * True when every Version newer than $base kept this User's own unsaved
+     * content (only markProvisional() sets `kept_for`, so it stays set after
+     * another editor made the Version permanent or deleted it). Only reached once the base is
      * outdated, so the (costlier) history is read on that path alone.
      */
     private function onlyOwnKeptDraftsSince(Diagram $diagram, User $user, ?string $base): bool
@@ -53,7 +54,7 @@ class SaveConflictDetector
                 return true;
             }
 
-            if (! $version['provisional'] || $version['kept_for'] !== $user->id) {
+            if ($version['kept_for'] !== $user->id) {
                 return false;
             }
         }
