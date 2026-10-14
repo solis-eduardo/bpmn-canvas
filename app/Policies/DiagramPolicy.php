@@ -8,10 +8,11 @@ use App\Models\User;
 class DiagramPolicy
 {
     /**
-     * Open the Editor to edit a Diagram, fetch its content, fork it, or
-     * request the Lock: Diagram Owner, approved Collaborator, or Member of
-     * the Diagram's Workspace (issue #27) — plus an Administrator, who
-     * "sees and opens" every Diagram (issue #28) even without edit rights.
+     * Open the Editor and fetch a Diagram's content: Diagram Owner,
+     * approved Collaborator, or Member of the Diagram's Workspace (issue
+     * #27) — plus an Administrator, who "sees and opens" every Diagram
+     * (issue #28) even without edit rights. Forking and the Lock have their
+     * own policies (ForkPolicy, LockPolicy).
      */
     public function view(User $user, Diagram $diagram): bool
     {

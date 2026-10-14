@@ -9,7 +9,7 @@ A BPMN 2.0 process modeled in the Editor. Persisted as a `.bpmn` file (XML) on d
 _Avoid_: Flow (collides with "Sequence Flow", a native BPMN element), process, file
 
 **Slug**:
-Readable, unique identifier for a Diagram, used in the Editor's URL and as the base of the physical file name. It's mutable: renaming also renames the physical file. The previous Slug stays permanently reserved and redirects to the current Diagram — it's never reused by another Diagram. If creating a new Diagram collides with a reserved Slug, a random alphanumeric suffix is appended automatically (creation is never blocked by this).
+Readable, unique identifier for a Diagram, used in the Editor's URL and as the name of the directory holding the Diagram's file (`<slug>/diagram.bpmn`). It's mutable: renaming also renames that directory (the file itself is always `diagram.bpmn`). The previous Slug stays permanently reserved and redirects to the current Diagram — it's never reused by another Diagram. If creating a new Diagram collides with a reserved Slug, a random alphanumeric suffix is appended automatically (creation is never blocked by this).
 _Avoid_: File name, ID
 
 **Author**:
