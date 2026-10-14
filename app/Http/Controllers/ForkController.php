@@ -34,7 +34,7 @@ class ForkController extends Controller
 
         $data = $request->validate([
             'workspace_id' => ['nullable', 'integer'],
-            'content' => ['sometimes', 'string', 'max:'.BpmnXml::MAX_LENGTH, new BpmnXml],
+            'content' => ['bail', 'sometimes', 'string', 'max:'.BpmnXml::MAX_LENGTH, new BpmnXml],
         ]);
 
         // An unknown Workspace is refused exactly like one the User isn't a
