@@ -114,14 +114,9 @@ class UserController extends Controller
             $user->is_admin = $data['is_admin'];
         }
 
-        // Lock the Administrator rows so two concurrent demotions can't both
-        // see "another Administrator remains" and leave zero.
         DB::transaction(function () use ($user, $revokesAdmin): void {
-            if ($revokesAdmin && $user->getOriginal('is_admin')
-                && ! User::where('is_admin', true)->whereKeyNot($user->getKey())->lockForUpdate()->exists()) {
-                throw ValidationException::withMessages([
-                    'is_admin' => __('messages.last_administrator_not_removable'),
-                ]);
+            if ($revokesAdmin && $user->getOriginal('is_admin')) {
+                $this->assertAnotherAdministratorRemains($user);
             }
 
             $user->save();
@@ -130,6 +125,21 @@ class UserController extends Controller
         return $methodChanged
             ? $this->endSessionsAfterMethodChange($request, $user)
             : $this->afterSave($request, 'admin.users.index', 'admin.users.edit', [$user]);
+    }
+
+    /**
+     * Locks the other Administrator rows so two concurrent demotions can't both
+     * see "another Administrator remains" and leave zero.
+     *
+     * @throws ValidationException
+     */
+    private function assertAnotherAdministratorRemains(User $user): void
+    {
+        if (! User::where('is_admin', true)->whereKeyNot($user->getKey())->lockForUpdate()->exists()) {
+            throw ValidationException::withMessages([
+                'is_admin' => __('messages.last_administrator_not_removable'),
+            ]);
+        }
     }
 
     /**
