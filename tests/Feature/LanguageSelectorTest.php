@@ -2,10 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class LanguageSelectorTest extends TestCase
 {
+    use RefreshDatabase;
+
     public function test_login_page_lists_every_language_with_flag_and_name(): void
     {
         $response = $this->get('/login');
@@ -41,5 +45,16 @@ class LanguageSelectorTest extends TestCase
     {
         $this->post('/locale/es')->assertRedirect();
         $this->assertSame('es', session('locale'));
+    }
+
+    public function test_switching_language_returns_to_the_page_not_to_a_json_poll(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->get('/diagrams')->assertOk();
+        $this->actingAs($user)->getJson('/notifications/unread-count')->assertOk();
+
+        $this->actingAs($user)->post('/locale/pt_BR')
+            ->assertRedirect(url('/diagrams'));
     }
 }
