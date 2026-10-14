@@ -734,4 +734,122 @@ class EditingLockTest extends TestCase
 
         $response->assertStatus(423);
     }
+
+    /**
+     * Pins the Diagram's updated_at ("Modified" in the Diagram list) to a
+     * known past instant, so any later bump is visible.
+     */
+    private function rewindModifiedAt(Diagram $diagram): Carbon
+    {
+        $past = now()->subDay()->startOfSecond();
+
+        $diagram->forceFill(['updated_at' => $past])->saveQuietly();
+
+        return $past;
+    }
+
+    public function test_opening_the_editor_does_not_change_the_diagrams_modified_time(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+        $past = $this->rewindModifiedAt($diagram);
+
+        $this->actingAs($user)->get('/diagrams/'.$diagram->slug)->assertOk();
+
+        $this->assertSame($user->id, $diagram->fresh()->locked_by);
+        $this->assertTrue($diagram->fresh()->updated_at->equalTo($past));
+    }
+
+    public function test_heartbeats_do_not_change_the_diagrams_modified_time(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $past = $this->rewindModifiedAt($diagram);
+
+        $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+        $draft = Diagram::emptyBpmn();
+
+        $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock', [
+            'draft' => $draft,
+        ])->assertOk();
+
+        $this->assertSame($draft, $diagram->fresh()->lock_draft);
+        $this->assertTrue($diagram->fresh()->updated_at->equalTo($past));
+    }
+
+    public function test_a_blocked_lock_request_does_not_change_the_diagrams_modified_time(): void
+    {
+        $holder = User::factory()->create();
+        $requester = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $requester);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $past = $this->rewindModifiedAt($diagram);
+
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+
+        $this->assertSame($requester->id, $diagram->fresh()->lock_requested_by);
+        $this->assertTrue($diagram->fresh()->updated_at->equalTo($past));
+    }
+
+    public function test_releasing_the_lock_does_not_change_the_diagrams_modified_time(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $past = $this->rewindModifiedAt($diagram);
+
+        $this->actingAs($holder)->deleteJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+
+        $this->assertNull($diagram->fresh()->locked_by);
+        $this->assertTrue($diagram->fresh()->updated_at->equalTo($past));
+    }
+
+    public function test_transferring_the_lock_does_not_change_the_diagrams_modified_time(): void
+    {
+        $holder = User::factory()->create();
+        $other = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $other);
+        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $past = $this->rewindModifiedAt($diagram);
+
+        $this->actingAs($holder)->putJson('/diagrams/'.$diagram->slug.'/lock', [
+            'user_id' => $other->id,
+        ])->assertOk();
+
+        $this->assertSame($other->id, $diagram->fresh()->locked_by);
+        $this->assertTrue($diagram->fresh()->updated_at->equalTo($past));
+    }
+
+    public function test_saving_a_new_version_changes_the_diagrams_modified_time(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+        Storage::disk('diagrams')->put($diagram->disk_path, Diagram::emptyBpmn());
+        $this->actingAs($user)->get('/diagrams/'.$diagram->slug);
+        $past = $this->rewindModifiedAt($diagram);
+
+        $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
+            'content' => str_replace('name="', 'name="Changed ', Diagram::emptyBpmn()),
+        ])->assertOk();
+
+        $this->assertTrue($diagram->fresh()->updated_at->greaterThan($past));
+    }
+
+    public function test_saving_unchanged_content_does_not_change_the_diagrams_modified_time(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+        Storage::disk('diagrams')->put($diagram->disk_path, Diagram::emptyBpmn());
+        $this->actingAs($user)->get('/diagrams/'.$diagram->slug);
+        $past = $this->rewindModifiedAt($diagram);
+
+        $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
+            'content' => Diagram::emptyBpmn(),
+        ])->assertOk();
+
+        $this->assertTrue($diagram->fresh()->updated_at->equalTo($past));
+    }
 }
