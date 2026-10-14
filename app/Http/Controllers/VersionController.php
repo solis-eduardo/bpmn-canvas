@@ -108,6 +108,7 @@ class VersionController extends Controller
             abort(404);
         }
 
+        $version = $versions->resolve($diagram, $version) ?? $version;
         $renamed = collect($versions->list($diagram))->firstWhere('id', $version);
 
         return response()->json([

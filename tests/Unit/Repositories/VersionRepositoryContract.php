@@ -3,6 +3,7 @@
 namespace Tests\Unit\Repositories;
 
 use App\Models\Diagram;
+use App\Models\DiagramVersionName;
 use App\Models\User;
 use App\Repositories\VersionRepository;
 use Carbon\CarbonInterface;
@@ -239,6 +240,37 @@ abstract class VersionRepositoryContract extends TestCase
         $this->expectException(RuntimeException::class);
 
         $repository->rename($diagram, str_repeat('b', 40), 'Ghost');
+    }
+
+    public function test_resolve_returns_the_full_id_or_null_never_a_stored_prefix(): void
+    {
+        $diagram = $this->bareDiagram();
+        $repository = $this->adapter();
+        $repository->initialize($diagram, $this->author($diagram));
+        $id = $repository->list($diagram)[0]['id'];
+
+        $this->assertSame($id, $repository->resolve($diagram, $id));
+        $this->assertNull($repository->resolve($diagram, str_repeat('b', 40)));
+        $this->assertNull($repository->resolve($diagram, 'not-a-version'));
+
+        $short = $repository->resolve($diagram, substr($id, 0, 7));
+        $this->assertTrue($short === null || $short === $id);
+    }
+
+    public function test_rename_by_a_short_id_names_the_right_version_or_is_rejected(): void
+    {
+        $diagram = $this->bareDiagram();
+        $repository = $this->adapter();
+        $repository->initialize($diagram, $this->author($diagram));
+        $id = $repository->list($diagram)[0]['id'];
+
+        try {
+            $repository->rename($diagram, substr($id, 0, 7), 'Milestone');
+        } catch (RuntimeException) {
+            // Rejecting a short id is acceptable; naming nothing visible is not.
+        }
+
+        $this->assertSame(0, DiagramVersionName::where('diagram_id', $diagram->id)->where('version_id', '!=', $id)->count());
     }
 
     public function test_a_provisional_version_can_be_made_permanent_once(): void

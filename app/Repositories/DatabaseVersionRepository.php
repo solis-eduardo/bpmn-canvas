@@ -48,13 +48,13 @@ class DatabaseVersionRepository implements VersionRepository
         ])->all());
     }
 
-    public function exists(Diagram $diagram, string $version): bool
+    public function resolve(Diagram $diagram, string $version): ?string
     {
         if (! $this->isValidIdentifier($version)) {
-            return false;
+            return null;
         }
 
-        return $this->query($diagram)->where('version_id', $version)->exists();
+        return $this->query($diagram)->where('version_id', $version)->exists() ? $version : null;
     }
 
     public function get(Diagram $diagram, string $version): string

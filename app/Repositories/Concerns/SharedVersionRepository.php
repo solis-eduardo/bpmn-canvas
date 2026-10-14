@@ -17,7 +17,7 @@ use RuntimeException;
  * (initial Version, write, record, bookkeeping), the Version state kept in
  * `diagram_version_names` (names, provisional and hidden flags), the numbering
  * and naming of the history, and restore. An adapter only supplies the storage
- * steps: openHistory(), recordVersion(), exists(), get() and list().
+ * steps: openHistory(), recordVersion(), resolve(), get() and list().
  */
 trait SharedVersionRepository
 {
@@ -79,9 +79,7 @@ trait SharedVersionRepository
     {
         // Confirms the Version actually exists in this Diagram's history
         // before naming it, otherwise a bogus id would leave an orphaned row.
-        $this->assertExists($diagram, $version);
-
-        $this->setState($diagram, $version, ['name' => $name]);
+        $this->setState($diagram, $this->assertExists($diagram, $version), ['name' => $name]);
     }
 
     public function markProvisional(Diagram $diagram, string $version): void
@@ -195,13 +193,20 @@ trait SharedVersionRepository
         }
     }
 
-    protected function assertExists(Diagram $diagram, string $version): void
+    public function exists(Diagram $diagram, string $version): bool
+    {
+        return $this->resolve($diagram, $version) !== null;
+    }
+
+    /**
+     * Returns the full id of $version, which is what the state table must be
+     * keyed by (an abbreviation would leave an orphan row).
+     */
+    protected function assertExists(Diagram $diagram, string $version): string
     {
         $this->validateIdentifier($version);
 
-        if (! $this->exists($diagram, $version)) {
-            throw new RuntimeException('Version not found.');
-        }
+        return $this->resolve($diagram, $version) ?? throw new RuntimeException('Version not found.');
     }
 
     /**
@@ -209,7 +214,7 @@ trait SharedVersionRepository
      */
     private function clearProvisional(Diagram $diagram, string $version, array $state): bool
     {
-        $this->assertExists($diagram, $version);
+        $version = $this->assertExists($diagram, $version);
 
         return DiagramVersionName::where('diagram_id', $diagram->id)
             ->where('version_id', $version)

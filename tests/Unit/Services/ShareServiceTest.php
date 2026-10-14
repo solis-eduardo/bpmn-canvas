@@ -60,6 +60,16 @@ class ShareServiceTest extends TestCase
         $this->assertSame($versionId, $share->pinned_version_id);
     }
 
+    public function test_create_pins_the_full_id_when_given_an_abbreviation(): void
+    {
+        $diagram = Diagram::factory()->create();
+        $versionId = app(VersionRepository::class)->list($diagram)[0]['id'];
+
+        $share = $this->service->create($diagram, $diagram->owner, pinnedVersionId: substr($versionId, 0, 7));
+
+        $this->assertSame($versionId, $share->pinned_version_id);
+    }
+
     public function test_create_rejects_a_version_the_diagram_does_not_have(): void
     {
         $diagram = Diagram::factory()->create();
