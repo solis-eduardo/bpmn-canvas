@@ -75,14 +75,16 @@ class CollaboratorController extends Controller
 
         // A self-request (the caller can't grant) must also pass requestAccess,
         // so someone who already edits the Diagram can't file one.
-        if (! Gate::allows('collaborator.grant', $diagram)) {
+        $canGrant = Gate::allows('collaborator.grant', $diagram);
+
+        if (! $canGrant) {
             $this->authorize('collaborator.requestAccess', $diagram);
         }
 
         $this->authorizeRole($diagram, $data['role'] ?? null);
 
         $collaborator = $target
-            ? $this->service->invite($diagram, $target, Gate::allows('collaborator.grant', $diagram), $data['role'] ?? null)
+            ? $this->service->invite($diagram, $target, $canGrant, $data['role'] ?? null)
             : null;
 
         if ($this->targetedByEmail($data)) {
