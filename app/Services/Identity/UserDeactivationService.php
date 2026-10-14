@@ -31,7 +31,7 @@ class UserDeactivationService
 
     /**
      * Blocks both login methods, releases the User's Locks (keeping their
-     * unsaved content as provisional Versions) and ends their sessions. Their
+     * unsaved content as provisional Versions), withdraws their Lock requests and ends their sessions. Their
      * authorship and any Diagrams or Workspaces they own are left as they are.
      */
     public function deactivate(User $user): void
@@ -41,6 +41,8 @@ class UserDeactivationService
 
             $this->diagrams->lockedBy($user)
                 ->each(fn (Diagram $diagram) => $this->locks->release($diagram, saveDraft: true));
+
+            $this->diagrams->clearLockRequestsBy($user);
         });
 
         $this->sessionRevoker->revoke($user);

@@ -9,6 +9,8 @@ use App\Models\Member;
 use App\Models\Share;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Notifications\DiagramAccessRequested;
+use App\Notifications\SendQueuedNotificationEmail;
 use App\Notifications\WorkspaceMemberAdded;
 use App\Repositories\ListSort;
 use App\Repositories\UserRepository;
@@ -19,6 +21,7 @@ use App\Services\LockService;
 use App\Support\Demo;
 use App\Support\KeycloakProvider;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Notifications\Channels\MailChannel;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Socialite\Facades\Socialite;
@@ -422,6 +425,34 @@ class ActiveUserScopeTest extends TestCase
 
         $this->assertSame(0, $gone->notifications()->count());
         $this->assertSame(1, $active->notifications()->count());
+    }
+
+    public function test_a_queued_email_for_a_user_deactivated_after_dispatch_is_not_sent(): void
+    {
+        $recipient = User::factory()->create(['email_notifications_enabled' => true]);
+        $job = new SendQueuedNotificationEmail($recipient, new DiagramAccessRequested(Diagram::factory()->create(), User::factory()->create()));
+        $payload = serialize($job);
+        $recipient->forceFill(['deactivated_at' => now()])->save();
+
+        $channel = Mockery::mock(MailChannel::class);
+        $channel->shouldNotReceive('send');
+
+        unserialize($payload)->handle($channel);
+    }
+
+    public function test_deactivation_withdraws_the_lock_requests_the_user_made(): void
+    {
+        $holder = User::factory()->create();
+        $gone = User::factory()->create();
+        $diagram = Diagram::factory()->create(['owner_id' => $holder->id]);
+        $diagram->forceFill(['locked_by' => $holder->id, 'lock_requested_by' => $gone->id, 'lock_requested_at' => now()])->save();
+
+        app(UserDeactivationService::class)->deactivate($gone);
+
+        $fresh = $diagram->fresh();
+        $this->assertNull($fresh->lock_requested_by);
+        $this->assertNull($fresh->lock_requested_at);
+        $this->assertSame($holder->id, $fresh->locked_by);
     }
 
     public function test_a_workspace_with_a_deactivated_owner_can_still_save_its_members(): void

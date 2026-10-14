@@ -72,6 +72,16 @@ class DiagramRepository
     }
 
     /**
+     * Withdraws the Lock requests $user made, so a holder isn't shown a
+     * request from someone who can no longer take the Lock.
+     */
+    public function clearLockRequestsBy(User $user): void
+    {
+        Diagram::query()->where('lock_requested_by', $user->getKey())
+            ->update(['lock_requested_by' => null, 'lock_requested_at' => null]);
+    }
+
+    /**
      * The $limit most recently modified Diagrams $user can open.
      *
      * @return Collection<int, Diagram>
