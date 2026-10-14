@@ -230,7 +230,7 @@ class DiagramRepository
     }
 
     /**
-     * Renames a Diagram: moves the file on disk (if the Slug changed),
+     * Renames a Diagram: moves its directory on disk (if the Slug changed),
      * records the old Slug as a permanent redirect, and updates the row, all
      * within a transaction. If the transaction fails, the already-moved file
      * is moved back to its original place.

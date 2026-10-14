@@ -14,8 +14,9 @@ use Illuminate\Support\Facades\URL;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Public Shares of a Diagram (CONTEXT.md, "Share"). Only the Diagram Owner
- * creates and revokes them; that is DiagramPolicy::manageShares' call.
+ * Public Shares of a Diagram (CONTEXT.md, "Share"). The Diagram Owner and
+ * approved Collaborators create and revoke them; that is
+ * DiagramPolicy::manageShares' call (ADR-0016).
  */
 class ShareService
 {

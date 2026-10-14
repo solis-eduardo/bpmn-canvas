@@ -21,8 +21,9 @@ interface VersionRepository
 {
     /**
      * Commit message for the Version an expiring Lock leaves behind
-     * (ADR-0003). Public because LockExpiryService is the one caller that
-     * passes its own message; the User-facing name of that Version is the
+     * (ADR-0003). Public because ProvisionalVersionService is the one caller
+     * that passes it; it runs on both Lock expiry and manual release, via
+     * LockService::release(). The User-facing name of that Version is the
      * localized `messages.provisional_version`, not this.
      */
     public const MESSAGE_PROVISIONAL = 'Provisional version (Lock expired)';
