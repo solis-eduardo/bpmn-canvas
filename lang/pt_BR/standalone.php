@@ -19,4 +19,5 @@ return [
     'delete_failed' => 'Não foi possível excluir o diagrama.',
     'modified' => 'Modificado',
     'storage_notice' => 'Seus diagramas ficam neste navegador. Limpar os dados do site os apaga: use "Exportar tudo" para manter um backup.',
+    'screen_unavailable' => 'Esta tela ainda não está disponível na versão standalone.',
 ];

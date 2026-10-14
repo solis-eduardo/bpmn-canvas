@@ -6,7 +6,7 @@
         "build": "vite build",
         "dev": "vite",
         "test": "vitest run",
-        "build:standalone": "php artisan lang:export && vite build --config standalone/vite.config.js"
+        "build:standalone": "php artisan standalone:render && php artisan lang:export && vite build --config standalone/vite.config.js"
     },
     "devDependencies": {
         "@tailwindcss/forms": "^0.5.11",
