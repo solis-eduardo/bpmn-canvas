@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
+use App\Models\Workspace;
 use App\Repositories\VersionRepository;
 use App\Services\CollaboratorService;
+use App\Services\MemberService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -263,6 +265,59 @@ class LockExpiryTest extends TestCase
         app(CollaboratorService::class)->revoke($diagram, $collaborator);
 
         $this->assertNull($diagram->fresh()->locked_by);
+    }
+
+    /**
+     * Removing the Collaborator entry of a User who still edits through a
+     * Workspace Member leaves their Lock and draft alone.
+     */
+    public function test_revoking_a_collaborator_who_is_still_a_member_keeps_their_lock_and_draft(): void
+    {
+        $owner = User::factory()->create();
+        $collaborator = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        app(MemberService::class)->add($workspace, $collaborator);
+        $diagram = Diagram::factory()->for($owner, 'author')->create([
+            'owner_id' => $owner->id,
+            'workspace_id' => $workspace->id,
+        ]);
+        app(CollaboratorService::class)->grant($diagram, $collaborator);
+        $this->actingAs($collaborator)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($collaborator)->patchJson('/diagrams/'.$diagram->slug.'/lock', [
+            'draft' => $this->draft('Still a member'),
+        ])->assertOk();
+        $versionsBefore = count(app(VersionRepository::class)->list($diagram));
+
+        app(CollaboratorService::class)->revoke($diagram, $collaborator);
+
+        $diagram = $diagram->fresh();
+        $this->assertSame($collaborator->id, (int) $diagram->locked_by);
+        $this->assertNotNull($diagram->lock_draft);
+        $this->assertCount($versionsBefore, app(VersionRepository::class)->list($diagram));
+        $this->assertDatabaseMissing('collaborators', ['diagram_id' => $diagram->id, 'user_id' => $collaborator->id]);
+    }
+
+    /** A non-member Collaborator loses both the Lock and its draft on removal. */
+    public function test_revoking_a_non_member_collaborator_drops_their_lock_and_draft(): void
+    {
+        $owner = User::factory()->create();
+        $collaborator = User::factory()->create();
+        $workspace = Workspace::factory()->create(['owner_id' => $owner->id]);
+        $diagram = Diagram::factory()->for($owner, 'author')->create([
+            'owner_id' => $owner->id,
+            'workspace_id' => $workspace->id,
+        ]);
+        app(CollaboratorService::class)->grant($diagram, $collaborator);
+        $this->actingAs($collaborator)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($collaborator)->patchJson('/diagrams/'.$diagram->slug.'/lock', [
+            'draft' => $this->draft('Not a member'),
+        ])->assertOk();
+
+        app(CollaboratorService::class)->revoke($diagram, $collaborator);
+
+        $diagram = $diagram->fresh();
+        $this->assertNull($diagram->locked_by);
+        $this->assertNull($diagram->lock_draft);
     }
 
     /**
