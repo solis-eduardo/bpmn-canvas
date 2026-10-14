@@ -268,21 +268,11 @@ BPMN;
      */
     public function scopeSearch(Builder $query, string $search): Builder
     {
-        $escaped = strtr($search, ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']);
-        $pattern = '%'.$escaped.'%';
-        $escapeClause = "ESCAPE '\\'";
+        return $query->where(function (Builder $query) use ($search) {
+            self::whereLikeMatch($query, 'title', $search, 'or');
+            self::whereLikeMatch($query, 'slug', $search, 'or');
 
-        return $query->where(function (Builder $query) use ($search, $escaped, $pattern, $escapeClause) {
-            $isPostgres = DB::getDriverName() === 'pgsql';
-            $term = $isPostgres ? $pattern : '%'.mb_strtolower($escaped).'%';
-            $operator = $isPostgres ? 'ILIKE' : 'LIKE';
-            $wrap = $isPostgres ? fn (string $column) => $column : fn (string $column) => "LOWER({$column})";
-
-            foreach (['title', 'slug'] as $column) {
-                $query->orWhereRaw("{$wrap($column)} {$operator} ? {$escapeClause}", [$term]);
-            }
-
-            if ($isPostgres) {
+            if (DB::getDriverName() === 'pgsql') {
                 $query->orWhereRaw(
                     "to_tsvector('simple', coalesce(searchable_text, '')) @@ plainto_tsquery('simple', ?)",
                     [$search]
@@ -291,7 +281,41 @@ BPMN;
                 return;
             }
 
-            $query->orWhereRaw("LOWER(coalesce(searchable_text, '')) LIKE ? {$escapeClause}", [$term]);
+            $query->orWhereRaw("LOWER(coalesce(searchable_text, '')) LIKE ? ESCAPE '\\'", [self::likeTerm($search)]);
         });
+    }
+
+    /**
+     * Matches $search against the title alone, with the same escaping and
+     * casing rules as scopeSearch(). Used by discovery, which only matches
+     * by title (ADR-0013).
+     */
+    public function scopeTitleMatches(Builder $query, string $search): Builder
+    {
+        return $query->where(fn (Builder $query) => self::whereLikeMatch($query, 'title', $search, 'and'));
+    }
+
+    /**
+     * Adds a LIKE clause on $column: ILIKE on Postgres, LOWER()+LIKE elsewhere.
+     */
+    private static function whereLikeMatch(Builder $query, string $column, string $search, string $boolean): void
+    {
+        $isPostgres = DB::getDriverName() === 'pgsql';
+        $expression = $isPostgres ? $column : "LOWER({$column})";
+        $operator = $isPostgres ? 'ILIKE' : 'LIKE';
+
+        $query->whereRaw("{$expression} {$operator} ? ESCAPE '\\'", [self::likeTerm($search)], $boolean);
+    }
+
+    /**
+     * The LIKE pattern for $search: '%' and '_' (and the escape character
+     * itself) escaped so they match literally, wrapped in '%', and lowercased
+     * on the non-Postgres path, where LIKE is case-sensitive or ASCII-only.
+     */
+    private static function likeTerm(string $search): string
+    {
+        $escaped = strtr($search, ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']);
+
+        return '%'.(DB::getDriverName() === 'pgsql' ? $escaped : mb_strtolower($escaped)).'%';
     }
 }
