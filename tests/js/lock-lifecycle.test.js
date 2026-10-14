@@ -23,7 +23,7 @@ function fakeEditor() {
     dirty: false,
     xml: '<a/>',
     edits: 0,
-    markClean: vi.fn(() => { editor.dirty = false; editor.emit('dirty', false); }),
+    markClean: vi.fn(() => editor.save()),
     isDirty: () => editor.dirty,
     revision: () => editor.edits,
     currentXml: async () => editor.xml,
@@ -42,10 +42,6 @@ function fakeEditor() {
     emit: (event, ...args) => (handlers[event] || []).forEach(h => h(...args)),
   };
   return editor;
-}
-
-async function settle() {
-  for (let i = 0; i < 20; i++) await Promise.resolve();
 }
 
 describe('Lock lifecycle of the Editor page', () => {
@@ -84,8 +80,7 @@ describe('Lock lifecycle of the Editor page', () => {
     banner = { hidden: true, textContent: '' };
     request = vi.fn(async () => ({ lock_requested_by: null }));
     editor = fakeEditor();
-    vi.mocked(chooseRelease).mockReset();
-    vi.mocked(toast).mockReset();
+    vi.clearAllMocks();
   });
 
   afterEach(() => {
@@ -155,8 +150,7 @@ describe('Lock lifecycle of the Editor page', () => {
     open();
     editor.edit('<b/>');
     vi.mocked(chooseRelease).mockResolvedValueOnce('discard');
-    releaseButton.listeners[0]();
-    await settle();
+    await releaseButton.listeners[0]();
 
     expect(request).toHaveBeenCalledWith('DELETE', URLS.unlock, undefined);
     expect(editor.markClean).toHaveBeenCalled();
@@ -167,10 +161,9 @@ describe('Lock lifecycle of the Editor page', () => {
     open();
     editor.edit('<b/>');
     vi.mocked(chooseRelease).mockResolvedValueOnce('cancel');
-    releaseButton.listeners[0]();
-    await settle();
+    await releaseButton.listeners[0]();
 
-    expect(request).not.toHaveBeenCalledWith('DELETE', URLS.unlock, expect.anything());
+    expect(request.mock.calls.filter(([method]) => method === 'DELETE')).toHaveLength(0);
     expect(location.href).toBe('');
     expect(releaseButton.disabled).toBe(false);
   });
@@ -179,17 +172,25 @@ describe('Lock lifecycle of the Editor page', () => {
     open();
     editor.edit('<b/>');
     vi.mocked(chooseRelease).mockResolvedValueOnce('save');
-    releaseButton.listeners[0]();
-    await settle();
+    await releaseButton.listeners[0]();
 
     expect(request).toHaveBeenCalledWith('DELETE', URLS.unlock, { save_draft: true, draft: '<b/>' });
     expect(location.href).toBe(URLS.index);
   });
 
+  it('lets an Administrator release a Lock with someone else\'s draft, saving it on the holder\'s behalf', async () => {
+    request.mockImplementation(async (method, url) => (method === 'GET' ? { has_draft: true } : { lock_requested_by: null }));
+    open({ isHolder: false });
+    vi.mocked(chooseRelease).mockResolvedValueOnce('save');
+    await releaseButton.listeners[0]();
+
+    expect(chooseRelease).toHaveBeenCalledWith(expect.objectContaining({ message: 'releaseDraftAdminMessage' }));
+    expect(request).toHaveBeenCalledWith('DELETE', URLS.unlock, { save_draft: true });
+  });
+
   it('releases without asking when there is no unsaved content', async () => {
     open();
-    releaseButton.listeners[0]();
-    await settle();
+    await releaseButton.listeners[0]();
 
     expect(chooseRelease).not.toHaveBeenCalled();
     expect(request).toHaveBeenCalledWith('DELETE', URLS.unlock, undefined);

@@ -52,7 +52,7 @@ jobs:
               - '.github/actions/**'
 
   js:
-    name: Vitest (Editor and standalone modules)
+    name: Front-end tests and build
     needs: changes
     if: needs.changes.outputs.front == 'true'
     runs-on: ubuntu-24.04
