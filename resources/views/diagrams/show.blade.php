@@ -95,6 +95,7 @@
             data-link-copied-notice="{{ __('messages.link_copied') }}"
             data-link-copy-failed-notice="{{ __('messages.link_copy_failed') }}"
             data-expires-label-template="{{ __('messages.expires_label', ['time' => 'EXPIRES_AT']) }}"
+            data-share-created-by-template="{{ __('messages.share_created_by', ['name' => 'CREATOR_NAME', 'date' => 'CREATED_AT']) }}"
             data-download-allowed-label="{{ __('messages.download_allowed') }}"
             data-download-not-allowed-label="{{ __('messages.download_not_allowed') }}"
             data-follow-latest-version-label="{{ __('messages.follow_latest_version') }}"

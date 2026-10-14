@@ -284,6 +284,26 @@ class ShareTest extends TestCase
         Carbon::setTestNow();
     }
 
+    public function test_shares_list_shows_who_created_each_share_and_when(): void
+    {
+        Carbon::setTestNow('2026-10-10 09:30:00');
+
+        $author = User::factory()->create();
+        $diagram = $this->createDiagram($author);
+        $collaborator = $this->collaboratorOf($diagram);
+        $collaborator->update(['name' => 'Carla Collab']);
+
+        $this->actingAs($collaborator)->postJson("/diagrams/{$diagram->slug}/shares")->assertCreated();
+
+        $response = $this->actingAs($author)->getJson("/diagrams/{$diagram->slug}/shares");
+
+        $response->assertOk();
+        $response->assertJsonPath('shares.0.created_by', 'Carla Collab');
+        $response->assertJsonPath('shares.0.created_at', now()->toIso8601String());
+
+        Carbon::setTestNow();
+    }
+
     public function test_author_can_list_active_shares_of_diagram(): void
     {
         $author = User::factory()->create();

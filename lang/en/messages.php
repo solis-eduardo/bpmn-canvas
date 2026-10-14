@@ -164,6 +164,7 @@ return [
     'share_revoked' => 'Share revoked.',
     'share_revoke_failed' => 'Could not revoke this share.',
     'expires_label' => 'Expires :time',
+    'share_created_by' => 'Created by :name on :date',
     'download_allowed' => 'Download allowed',
     'download_not_allowed' => 'Download not allowed',
     'follow_latest_version' => 'Follow latest version',
