@@ -133,6 +133,18 @@ export function handleSaveFailure(error, { stopHeartbeat, showLockLost }) {
 }
 
 /**
+ * Releases the Lock without keeping the draft: the unsaved content became a Fork.
+ * A failed release is only logged; the Lock then expires on its own.
+ */
+export async function releaseLockAfterFork({ request, url }) {
+  try {
+    await request('DELETE', url);
+  } catch (e) {
+    console.error(e);
+  }
+}
+
+/**
  * Asks for the Lock again. The server answers "acquired" when it was free;
  * otherwise the holder is asked and the answer is "waiting", so nothing is
  * resumed and the lost notice stays up. Only once acquired is the notice
@@ -212,6 +224,11 @@ export function startLockSession({ editor, request, urls, isHolder, t, banner, r
     hideLockLost();
     loop.resume();
   });
+
+  // The edits went to a Fork and the page is about to move there: the Lock on
+  // this Diagram is no use any more, and the draft the Heartbeat left on the
+  // server must not become a provisional Version here when it expires.
+  if (isHolder) editor.on('forked', () => releaseLockAfterFork({ request, url: urls.unlock }));
 
   // A save refused for the Lock is the same signal as a refused Heartbeat.
   editor.on('saveFailed', error => handleSaveFailure(error, {

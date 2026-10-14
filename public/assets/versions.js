@@ -324,7 +324,7 @@ export function createVersionHistory({ editor, canEdit = true }) {
     };
   }
 
-  async function compareWithCurrent(version) {
+  async function compareWithCurrent(version, { rethrow = false } = {}) {
     if (!modeler) return;
 
     try {
@@ -347,6 +347,7 @@ export function createVersionHistory({ editor, canEdit = true }) {
       );
     } catch (e) {
       console.error(e);
+      if (rethrow) throw e;
       toast(errorMessage(e, t('messages.version_compare_failed')), true);
     }
   }
@@ -500,6 +501,18 @@ export function createVersionHistory({ editor, canEdit = true }) {
 
   // Saving the diagram adds a Version: refresh the history.
   editor.on('saved', loadVersions);
+
+  // A save ran into a newer Version (issue #243): show how the canvas, with
+  // its unsaved edits, differs from it. The history is re-read first, as the
+  // newer Version is not in the panel yet.
+  editor.on('compare', async versionId => {
+    await loadVersions();
+
+    const newer = versionsById.get(versionId);
+    if (!newer) throw new Error('The newer Version is not in the history.');
+
+    await compareWithCurrent(newer, { rethrow: true });
+  });
 
   loadVersions();
 

@@ -39,6 +39,7 @@ const store = createHttpDiagramStore({
   urls: {
     contentUrl: body.dataset.contentUrl,
     saveUrl: body.dataset.saveUrl,
+    forkUrl: body.dataset.forkUrl,
     versionsUrl: body.dataset.versionsUrl,
     versionContentUrlTemplate: body.dataset.versionContentUrlTemplate,
     versionRestoreUrlTemplate: body.dataset.versionRestoreUrlTemplate,

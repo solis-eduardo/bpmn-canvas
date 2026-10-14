@@ -4,10 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\AuthorizesDiagramWrites;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
-use App\Models\Diagram;
 use App\Repositories\DiagramRepository;
 use App\Repositories\VersionRepository;
 use App\Rules\BpmnXml;
+use App\Services\SaveConflictDetector;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -23,6 +23,7 @@ class DiagramContentController extends Controller
     public function __construct(
         private readonly DiagramRepository $diagrams,
         private readonly VersionRepository $versions,
+        private readonly SaveConflictDetector $conflicts,
     ) {}
 
     /**
@@ -35,11 +36,16 @@ class DiagramContentController extends Controller
 
         $this->authorize('view', $diagram);
 
+        // The Version is read before the content: a save landing in between
+        // can then only make the base older than the content (a spurious
+        // conflict), never newer (which would let a stale copy overwrite it).
+        $version = $this->versions->currentVersionId($diagram);
+
         return response()->json([
             'slug' => $diagram->slug,
             'title' => $diagram->title,
             'content' => $this->diagrams->contentOf($diagram),
-            'version' => $this->currentVersion($diagram),
+            'version' => $version,
         ]);
     }
 
@@ -76,17 +82,22 @@ class DiagramContentController extends Controller
         $outcome = DB::transaction(function () use ($request, $diagram, $user, $data): array {
             DB::table('diagrams')->where('id', $diagram->id)->lockForUpdate()->first();
 
-            $current = $this->currentVersion($diagram);
+            // Without a base the save is unconditional. A newer Version only
+            // counts as a conflict when it is not this User's own draft kept
+            // by their expired Lock (SaveConflictDetector).
+            $conflict = $request->has('base_version')
+                ? $this->conflicts->conflictingVersion($diagram, $user, $data['base_version'] ?? null)
+                : null;
 
-            if ($request->has('base_version') && $request->input('base_version') !== $current) {
-                return ['conflict' => $current];
+            if ($conflict !== null) {
+                return ['conflict' => $conflict];
             }
 
             // When the content repeats the last Version nothing new is
             // recorded, and the current one is still the answer.
             $saved = $this->versions->save($diagram, $user, $data['content']);
 
-            return ['version' => $saved ?? $this->currentVersion($diagram)];
+            return ['version' => $saved ?? $this->versions->currentVersionId($diagram)];
         });
 
         if (array_key_exists('conflict', $outcome)) {
@@ -97,15 +108,5 @@ class DiagramContentController extends Controller
         }
 
         return response()->json(['saved' => true, 'version' => $outcome['version']]);
-    }
-
-    /**
-     * Id of the Version the content is at, or null when there is no history
-     * yet. The history is newest first, so its first entry is the current one
-     * (as VersionController::versions() also takes it).
-     */
-    private function currentVersion(Diagram $diagram): ?string
-    {
-        return $this->versions->list($diagram)[0]['id'] ?? null;
     }
 }

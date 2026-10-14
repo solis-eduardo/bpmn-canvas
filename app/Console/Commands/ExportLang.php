@@ -21,6 +21,7 @@ class ExportLang extends Command
     /** The shared core's modules, relative to the base path. */
     public const CORE_SOURCES = [
         'public/assets/editor-core.js',
+        'public/assets/save-conflict.js',
         'public/assets/versions.js',
         'public/assets/version-history.js',
         'public/assets/diff.js',

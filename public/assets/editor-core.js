@@ -6,6 +6,7 @@
  * createEditor() returns.
  */
 import { toast, setupZoom, errorMessage, chooseOption } from './common.js';
+import { resolveSaveConflict } from './save-conflict.js';
 
 /**
  * @param {Object} options
@@ -27,18 +28,21 @@ import { toast, setupZoom, errorMessage, chooseOption } from './common.js';
  *   revision: () => number,
  *   currentXml: () => Promise<string>,
  *   markClean: () => void,
- *   on: (event: 'dirty'|'saved'|'saveFailed', handler: Function) => void,
+ *   on: (event: 'dirty'|'saved'|'saveFailed'|'compare'|'forked', handler: Function) => void,
  * }}
  *   `dirty` handlers get the new state whenever it changes; `saved` handlers
  *   run after each successful save; `saveFailed` handlers get the error and
  *   return true when they handled it, which replaces the generic save-failure
- *   notice. revision() counts edits, so a caller can tell whether the content
- *   changed without serializing it. markClean() drops the unsaved state
+ *   notice. `compare` handlers get the id of the newer Version a conflicting
+ *   save ran into and show how the canvas differs from it (the dialog offers
+ *   "compare" only when one is registered); `forked` handlers get the Fork
+ *   ({url}) the canvas was saved as, before the page moves to it. revision()
+ *   counts edits, so a caller can tell whether the content changed without serializing it. markClean() drops the unsaved state
  *   without saving, once the content was kept or discarded some other way.
  */
 export function createEditor({ container, store, t, timeZone, Modeler }) {
   const modeler = new Modeler({ container });
-  const handlers = { dirty: [], saved: [], saveFailed: [] };
+  const handlers = { dirty: [], saved: [], saveFailed: [], compare: [], forked: [] };
   const dirtyMarker = document.getElementById('dirty');
   let dirty = false;
   let edits = 0;
@@ -85,7 +89,7 @@ export function createEditor({ container, store, t, timeZone, Modeler }) {
 
       return true;
     } catch (e) {
-      if (e.conflict) return resolveConflict();
+      if (e.conflict) return resolveConflict(e);
 
       console.error(e);
       // A listener that handles the failure (a lost Lock) returns true and
@@ -104,26 +108,47 @@ export function createEditor({ container, store, t, timeZone, Modeler }) {
     }
   }
 
-  // Someone saved a newer Version after this canvas was loaded. The User
-  // chooses: reload the newer one (the local changes go), save over it (both
-  // stay in the history), or keep editing. Resolves to whether it was stored.
-  async function resolveConflict() {
-    const choice = await chooseOption({
-      message: t('messages.diagram_conflict'),
-      choices: [
-        { value: 'cancel', label: t('messages.conflict_cancel') },
-        { value: 'overwrite', label: t('messages.conflict_overwrite') },
-        { value: 'reload', label: t('messages.conflict_reload'), primary: true },
-      ],
+  // Someone saved a newer Version after this canvas was loaded: the User
+  // settles it (see resolveSaveConflict). Resolves to whether it was stored.
+  function resolveConflict(conflict) {
+    return resolveSaveConflict({
+      t,
+      choose: chooseOption,
+      reload: () => load(),
+      overwrite: () => persist({ overwrite: true }),
+      compare: handlers.compare.length
+        ? () => compareWithNewer(conflict.currentVersion)
+        : null,
+      fork: store.fork ? forkLocalEdits : null,
     });
+  }
 
-    if (choice === 'reload') {
-      await load();
+  // Shows how the local edits differ from the newer Version; the canvas keeps
+  // them, and saving again raises the conflict again.
+  async function compareWithNewer(versionId) {
+    const done = await attempt(
+      () => Promise.all(handlers.compare.map(handler => handler(versionId))),
+      'messages.version_compare_failed',
+    );
+    if (done) toast(t('messages.conflict_compare_hint'));
+  }
 
-      return false;
-    }
+  // The Fork starts from what is on the canvas, not from the saved copy, so
+  // the local edits are not lost. They now live in the Fork: leaving is clean.
+  async function forkLocalEdits() {
+    let fork;
+    const done = await attempt(async () => { fork = await store.fork(await currentXml()); }, 'messages.conflict_fork_failed');
+    if (!done) return;
 
-    return choice === 'overwrite' ? persist({ overwrite: true }) : false;
+    setDirty(false);
+    await Promise.all(handlers.forked.map(async handler => {
+      try {
+        await handler(fork);
+      } catch (e) {
+        console.error(e);
+      }
+    }));
+    location.assign(fork.url);
   }
 
   async function save() {

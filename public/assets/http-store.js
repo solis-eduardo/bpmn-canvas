@@ -45,7 +45,7 @@ export function createJsonClient({ csrfToken, fetch = globalThis.fetch.bind(glob
 
 /**
  * @param {Object} options
- * @param {Object} options.urls  contentUrl, saveUrl, versionsUrl and the
+ * @param {Object} options.urls  contentUrl, saveUrl, forkUrl, versionsUrl and the
  *   version*UrlTemplate URLs (with a VERSION_ID placeholder), as rendered on
  *   the Editor's data-* attributes.
  * @param {string} options.csrfToken
@@ -99,10 +99,23 @@ export function createHttpDiagramStore({ urls, csrfToken, fetch, request = creat
         const answer = await request('PUT', urls.saveUrl, payload);
         baseVersion = answer.version ?? null;
       } catch (error) {
-        if (error.status === 409) error.conflict = true;
+        if (error.status === 409) {
+          error.conflict = true;
+          error.currentVersion = error.body?.current_version ?? null;
+        }
 
         throw error;
       }
+    },
+
+    /**
+     * Saves the given content (the unsaved edits on the canvas) as a Fork: a
+     * new Diagram, leaving this one untouched. Resolves to where it lives.
+     *
+     * @returns {Promise<{url: string}>}
+     */
+    async fork(xml) {
+      return request('POST', urls.forkUrl, { content: xml });
     },
 
     /** @returns {Promise<Version[]>} newest first, deleted Versions omitted */
