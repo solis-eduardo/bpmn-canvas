@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Services;
 
+use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Services\LockService;
@@ -216,5 +217,37 @@ class LockServiceTest extends TestCase
         $this->assertFalse($this->service->enter($diagram->fresh(), $other));
         $this->assertSame($holder->id, $diagram->fresh()->locked_by);
         $this->assertNull($diagram->fresh()->lock_requested_by);
+    }
+
+    public function test_reconcile_releases_the_lock_of_a_holder_who_lost_edit_rights(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = Diagram::factory()->create();
+        $diagram->collaborators()->create([
+            'user_id' => $holder->id,
+            'status' => Collaborator::STATUS_APPROVED,
+        ]);
+        $this->service->openOrRequest($diagram, $holder);
+        $this->service->renew($diagram, $holder, '<definitions/>');
+        $this->service->openOrRequest($diagram->fresh(), User::factory()->create());
+        $diagram->collaborators()->where('user_id', $holder->id)->delete();
+
+        $this->service->reconcile($diagram);
+
+        $fresh = $diagram->fresh();
+        $this->assertNull($fresh->locked_by);
+        $this->assertNull($fresh->lock_draft);
+        $this->assertNull($fresh->lock_requested_by);
+    }
+
+    public function test_reconcile_keeps_the_lock_while_the_holder_can_still_edit(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'owner')->create();
+        $this->service->openOrRequest($diagram, $holder);
+
+        $this->service->reconcile($diagram);
+
+        $this->assertSame($holder->id, $diagram->fresh()->locked_by);
     }
 }

@@ -18,7 +18,10 @@ use App\Repositories\CollaboratorRepository;
  */
 class CollaboratorService
 {
-    public function __construct(private readonly CollaboratorRepository $collaborators) {}
+    public function __construct(
+        private readonly CollaboratorRepository $collaborators,
+        private readonly LockService $locks,
+    ) {}
 
     /**
      * Adds $target either way the caller is allowed to: directly when
@@ -103,16 +106,7 @@ class CollaboratorService
             return;
         }
 
-        // Losing edit rights should not leave the Diagram locked behind: the
-        // Lock is state nothing else reconciles, and while it stands the
-        // former Collaborator still looks like its holder. Re-read first —
-        // the caller's instance predates whatever Lock the User has taken
-        // since. A User who is still a Workspace Member keeps the Lock.
-        $diagram->refresh();
-
-        if ((int) $diagram->locked_by === $user->id && ! $diagram->isEditableBy($user)) {
-            $diagram->releaseLock($user);
-        }
+        $this->locks->reconcile($diagram);
 
         $user->notify($removed->status === Collaborator::STATUS_REQUESTED
             ? new DiagramAccessRequestResolved($diagram, approved: false)

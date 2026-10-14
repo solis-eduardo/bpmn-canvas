@@ -19,6 +19,7 @@ class DiagramOwnerService
     public function __construct(
         private readonly DiagramRepository $diagrams,
         private readonly CollaboratorRepository $collaborators,
+        private readonly LockService $locks,
     ) {}
 
     /**
@@ -44,11 +45,13 @@ class DiagramOwnerService
 
             if ($giveUpAccess) {
                 $this->collaborators->removeFor($diagram, $previousOwner);
-
-                return;
+            } else {
+                $this->collaborators->upsertApproved($diagram, $previousOwner, Collaborator::ROLE_COLLABORATOR);
             }
 
-            $this->collaborators->upsertApproved($diagram, $previousOwner, Collaborator::ROLE_COLLABORATOR);
+            // A previous Diagram Owner who gave up access loses edit rights
+            // here, and the Lock follows, as for any other access change.
+            $this->locks->reconcile($diagram);
         });
 
         if ($changesHands) {

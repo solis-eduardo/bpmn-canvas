@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
+use App\Services\LockService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -107,6 +108,21 @@ class DiagramOwnershipTransferTest extends TestCase
         ]);
 
         $this->assertNewOwnerIsNotified($newOwner, $diagram);
+    }
+
+    public function test_giving_up_access_on_transfer_releases_the_lock_the_previous_owner_held(): void
+    {
+        $owner = User::factory()->create();
+        $newOwner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
+        app(LockService::class)->openOrRequest($diagram, $owner);
+
+        $this->actingAs($owner)->putJson("/diagrams/{$diagram->slug}/owner", [
+            'user_id' => $newOwner->id,
+            'give_up_access' => true,
+        ])->assertOk();
+
+        $this->assertNull($diagram->fresh()->locked_by);
     }
 
     public function test_an_administrator_can_transfer_ownership_and_the_previous_owner_gives_up_access(): void

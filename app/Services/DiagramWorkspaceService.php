@@ -12,7 +12,10 @@ use App\Repositories\DiagramRepository;
  */
 class DiagramWorkspaceService
 {
-    public function __construct(private readonly DiagramRepository $diagrams) {}
+    public function __construct(
+        private readonly DiagramRepository $diagrams,
+        private readonly LockService $locks,
+    ) {}
 
     /**
      * Moving a Diagram from one Workspace to another is just re-targeting the
@@ -21,10 +24,15 @@ class DiagramWorkspaceService
     public function assign(Diagram $diagram, Workspace $workspace): void
     {
         $this->diagrams->placeInWorkspace($diagram, $workspace);
+
+        $this->locks->reconcile($diagram);
     }
 
     public function remove(Diagram $diagram): void
     {
         $this->diagrams->placeInWorkspace($diagram, null);
+
+        // Taking it out of a Workspace ends the Members' edit rights.
+        $this->locks->reconcile($diagram);
     }
 }
