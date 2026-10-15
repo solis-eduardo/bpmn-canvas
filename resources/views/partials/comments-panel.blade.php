@@ -27,6 +27,7 @@
     id="comments-panel"
     class="{{ $class }}"
     hidden
+    data-max-length="{{ \App\Models\Comment::MAX_BODY_LENGTH }}"
     data-time-zone="{{ auth()->user()->displayTimezone() }}"
     data-comments-url="{{ route('diagrams.comments.index', $diagram->slug) }}"
     data-labels="{{ json_encode($labels, JSON_UNESCAPED_UNICODE) }}"
@@ -38,7 +39,7 @@
     <div class="collab-body">
         <form id="comment-form" class="cmt-form">
             <p id="comment-target" class="cmt-target"></p>
-            <textarea id="comment-body" rows="3" maxlength="2000" required></textarea>
+            <textarea id="comment-body" rows="3" maxlength="{{ \App\Models\Comment::MAX_BODY_LENGTH }}" required></textarea>
             <button type="submit" class="primary" id="comment-submit"></button>
         </form>
         <p id="comment-error" class="info-error" role="alert" hidden></p>

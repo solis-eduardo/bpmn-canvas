@@ -91,8 +91,9 @@ Route::middleware('auth')->group(function () {
     Route::put('/diagrams/{slug}/collaborators/{user}', [CollaboratorController::class, 'update'])->name('diagrams.collaborators.update');
     Route::delete('/diagrams/{slug}/collaborators/{user}', [CollaboratorController::class, 'destroy'])->name('diagrams.collaborators.destroy');
 
-    Route::get('/diagrams/{slug}/comment-threads', [CommentThreadController::class, 'index'])->name('diagrams.comments.index');
+    // Throttled as a whole: a listing parses the Diagram's content.
     Route::middleware('throttle:60,1')->group(function () {
+        Route::get('/diagrams/{slug}/comment-threads', [CommentThreadController::class, 'index'])->name('diagrams.comments.index');
         Route::post('/diagrams/{slug}/comment-threads', [CommentThreadController::class, 'store'])->name('diagrams.comments.store');
         Route::post('/diagrams/{slug}/comment-threads/{thread}/comments', [CommentThreadController::class, 'reply'])->name('diagrams.comments.reply');
         Route::put('/diagrams/{slug}/comment-threads/{thread}/resolution', [CommentThreadController::class, 'resolve'])->name('diagrams.comments.resolve');

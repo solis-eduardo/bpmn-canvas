@@ -6,27 +6,10 @@
  * no Lock. Its strings come from the panel's data-labels attribute; Comment
  * text is only ever inserted with textContent.
  */
-import { errorMessage, httpError, togglePanel, toast } from './common.js';
+import { errorMessage, togglePanel, toast } from './common.js';
+import { createJsonClient } from './http-store.js';
 
 const MARKER_TYPE = 'comment-marker';
-
-function jsonClient(csrfToken) {
-  return async (method, url, payload) => {
-    const res = await fetch(url, {
-      method,
-      credentials: 'same-origin',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        'X-CSRF-TOKEN': csrfToken,
-      },
-      body: payload ? JSON.stringify(payload) : undefined,
-    });
-    if (!res.ok) throw await httpError(res);
-
-    return res.json();
-  };
-}
 
 function el(tag, className, text) {
   const node = document.createElement(tag);
@@ -46,7 +29,7 @@ export function startComments({ modeler }) {
 
   const labels = JSON.parse(panel.dataset.labels);
   const baseUrl = panel.dataset.commentsUrl;
-  const request = jsonClient(document.querySelector('meta[name="csrf-token"]').content);
+  const request = createJsonClient({ csrfToken: document.querySelector('meta[name="csrf-token"]').content });
   const formatter = new Intl.DateTimeFormat(undefined, { dateStyle: 'short', timeStyle: 'short', timeZone: panel.dataset.timeZone || undefined });
   const overlays = modeler.get('overlays');
   const registry = modeler.get('elementRegistry');
@@ -61,6 +44,7 @@ export function startComments({ modeler }) {
   let threads = [];
   let selectedId = null; // the element the next new Thread is about; null means the whole Diagram
   let focusThreadId = null;
+  const drafts = new Map(); // unsent replies by Thread id, kept across list reloads
 
   body.placeholder = labels.placeholder;
   submit.textContent = labels.post;
@@ -77,6 +61,8 @@ export function startComments({ modeler }) {
   }
 
   function renderTarget() {
+    // An element deleted on the canvas can't anchor a new Thread any more.
+    if (selectedId && !registry.get(selectedId)) selectedId = null;
     target.textContent = selectedId ? labels.onElement.replace(':element', nameOf(selectedId)) : labels.onDiagram;
     target.title = selectedId ? '' : labels.hint;
   }
@@ -142,7 +128,9 @@ export function startComments({ modeler }) {
     const wrapper = el('form', 'cmt-reply');
     const input = el('input');
     input.type = 'text';
-    input.maxLength = 2000;
+    input.maxLength = Number(panel.dataset.maxLength);
+    input.value = drafts.get(thread.id) || '';
+    input.addEventListener('input', () => drafts.set(thread.id, input.value));
     input.required = true;
     input.placeholder = labels.placeholder;
     const reply = el('button', '', labels.reply);
@@ -157,6 +145,7 @@ export function startComments({ modeler }) {
       event.preventDefault();
       guarded(reply, async () => {
         await request('POST', `${baseUrl}/${thread.id}/comments`, { body: input.value });
+        drafts.delete(thread.id);
         focusThreadId = thread.id;
         await load();
       }, labels.postFailed);

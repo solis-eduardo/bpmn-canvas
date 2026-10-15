@@ -53,7 +53,7 @@ const labels = {
 function setup(threads, presentIds) {
   const ids = ['app', 'comments-panel', 'comments-list', 'comment-form', 'comment-body', 'comment-submit', 'comment-target', 'comment-error'];
   const nodes = Object.fromEntries(ids.map(id => [id, new FakeEl('x')]));
-  nodes['comments-panel'].dataset = { labels: JSON.stringify(labels), commentsUrl: '/diagrams/d/comment-threads' };
+  nodes['comments-panel'].dataset = { labels: JSON.stringify(labels), commentsUrl: '/diagrams/d/comment-threads', maxLength: '2000' };
 
   vi.stubGlobal('document', {
     getElementById: id => nodes[id] ?? null,

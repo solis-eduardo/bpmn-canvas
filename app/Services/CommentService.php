@@ -116,7 +116,7 @@ class CommentService
      */
     private function recipients(Diagram $diagram, CommentThread $thread, User $author): Collection
     {
-        $ids = $thread->comments()->pluck('author_id')->push($diagram->owner_id)->unique()->reject(fn ($id) => $id === $author->id);
+        $ids = $thread->comments()->pluck('author_id')->push($diagram->owner_id)->unique()->map(fn ($id) => (int) $id)->reject(fn (int $id) => $id === $author->id);
 
         return User::query()->whereIn('id', $ids)->get()->filter(
             fn (User $user) => $diagram->isVisibleTo($user) && Gate::forUser($user)->allows('view', $diagram),
