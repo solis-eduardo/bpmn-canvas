@@ -181,6 +181,16 @@ class DiagramRepository
     }
 
     /**
+     * The Templates $user may start a new Diagram from, by title.
+     *
+     * @return Collection<int, Diagram>
+     */
+    public function templatesFor(User $user): Collection
+    {
+        return Diagram::query()->templatesFor($user)->orderBy('title')->get(['id', 'title']);
+    }
+
+    /**
      * Generates a unique slug from a free-form name, normalizing it and
      * appending a short alphanumeric suffix on collision with the current
      * slug of any Diagram or with a reserved old slug.

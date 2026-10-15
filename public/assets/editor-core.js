@@ -6,7 +6,18 @@
  * createEditor() returns.
  */
 import { toast, setupZoom, errorMessage, chooseOption } from './common.js';
+import { browserStorage, readLintActive, setupLintUi } from './lint-ui.js';
 import { resolveSaveConflict } from './save-conflict.js';
+
+function modelerOptions(container, lint, storage) {
+  if (!lint) return { container };
+
+  return {
+    container,
+    additionalModules: lint.modules,
+    linting: { ...lint.options.linting, active: readLintActive(storage) },
+  };
+}
 
 /**
  * @param {Object} options
@@ -17,6 +28,10 @@ import { resolveSaveConflict } from './save-conflict.js';
  * @param {string} [options.timeZone]  IANA name Version times are shown in;
  *   the browser's when omitted
  * @param {Function} options.Modeler  the bpmn-js Modeler constructor
+ * @param {{modules: Array, options: Object}} [options.lint]  the modeling
+ *   checks (resources/js/editor-lint.js); without it the Editor has none and
+ *   the header's lint toggle stays hidden. Whether they start shown is the
+ *   User's last choice (lint-ui.js)
  * @returns {{
  *   modeler: Object,
  *   Modeler: Function,
@@ -41,14 +56,24 @@ import { resolveSaveConflict } from './save-conflict.js';
  *   serializing it. markClean() drops the unsaved state without saving, once
  *   the content was kept or discarded some other way.
  */
-export function createEditor({ container, store, t, timeZone, Modeler }) {
-  const modeler = new Modeler({ container });
+export function createEditor({ container, store, t, timeZone, Modeler, lint }) {
+  const storage = browserStorage();
+  const modeler = new Modeler(modelerOptions(container, lint, storage));
   const handlers = { dirty: [], saved: [], saveFailed: [], compare: [], forked: [] };
   const dirtyMarker = document.getElementById('dirty');
   let dirty = false;
   let edits = 0;
 
   setupZoom(modeler);
+  if (lint) {
+    setupLintUi({
+      modeler,
+      button: document.getElementById('btn-lint'),
+      counter: document.getElementById('lint-count'),
+      t,
+      storage,
+    });
+  }
 
   function setDirty(value) {
     if (value === dirty) return;

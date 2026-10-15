@@ -33,6 +33,15 @@
                 />
             @endif
 
+            @can('manageTemplate', $diagram)
+                <label class="flex items-center gap-2 text-sm text-gray-700">
+                    <input type="hidden" name="is_template" value="0">
+                    <input type="checkbox" name="is_template" value="1" @checked(old('is_template', $diagram->is_template)) class="rounded border-gray-300">
+                    {{ __('messages.diagram_is_template') }}
+                </label>
+                <p class="-mt-3 text-xs text-gray-500">{{ __('messages.diagram_is_template_hint') }}</p>
+            @endcan
+
             <x-form.actions />
         </x-form.card>
 
