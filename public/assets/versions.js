@@ -198,6 +198,11 @@ export function createVersionHistory({ editor, canEdit = true }) {
       addAction(actions, t('messages.restore'), () => restoreVersion(version));
     }
 
+    // A Fork is open to anyone who can open the Diagram, not only editors.
+    if (store.forkVersion) {
+      addAction(actions, t('messages.fork_from_version'), () => forkVersion(version));
+    }
+
     if (canEdit) {
       addAction(actions, t('messages.rename_version'), () => renameVersion(version));
 
@@ -210,6 +215,19 @@ export function createVersionHistory({ editor, canEdit = true }) {
     if (actions.childElementCount) li.appendChild(actions);
 
     return li;
+  }
+
+  // Creates a Fork from this Version and moves to it. The Diagram being left
+  // is untouched, so unlike a restore this needs no confirmation.
+  async function forkVersion(version) {
+    try {
+      const copyTags = Boolean($('version-fork-copy-tags')?.checked);
+      const fork = await store.forkVersion(version.id, { copyTags });
+      location.assign(fork.url);
+    } catch (e) {
+      console.error(e);
+      toast(errorMessage(e, t('messages.fork_version_failed')), true);
+    }
   }
 
   // Runs a change on one Version, then re-fetches the history to show it.
