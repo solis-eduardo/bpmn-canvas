@@ -1,6 +1,9 @@
 <x-layouts.app :title="$diagram->title" :fluid="true" :standard-header="true">
     <x-slot:head>
         <meta name="robots" content="noindex, nofollow">
+        @isset($commentsDiagram)
+            <link rel="stylesheet" href="{{ asset('assets/comments.css') }}">
+        @endisset
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/diagram-js.css') }}">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-js.css') }}">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-font/css/bpmn.css') }}">
@@ -61,6 +64,12 @@
                     {{ __('messages.force_release_lock') }}
                 </button>
             @endif
+            @isset($commentsDiagram)
+                <button type="button" id="btn-comments-entry" data-comments-toggle class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                    <x-icon name="chat" />
+                    {{ __('messages.comments') }}
+                </button>
+            @endisset
             @if ($allowDownload)
                 <div class="dropdown relative">
                     <button
@@ -97,6 +106,9 @@
                     role="{{ ($noticeTone ?? 'blue') === 'red' ? 'alert' : 'status' }}"
                     @if (! empty($lockedAt)) data-locked-at="{{ $lockedAt->toIso8601String() }}" @endif
                 >{{ $notice }}</p>
+            @endisset
+            @isset($commentsDiagram)
+                @include('partials.comments-panel', ['diagram' => $commentsDiagram, 'class' => 'cmt-floating'])
             @endisset
             <div id="message" class="absolute inset-0 flex items-center justify-center px-6 text-center text-gray-500">
                 {{ __('messages.loading') }}

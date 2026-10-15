@@ -1,6 +1,7 @@
 import {
   exportBpmn, exportSvg, exportPng, setupDropdowns, setupZoom, baseName, httpError, chooseRelease, toast, errorMessage,
 } from './common.js';
+import { startComments } from './comments.js';
 
 (async function () {
   const msg = document.getElementById('message');
@@ -18,6 +19,7 @@ import {
 
     viewer.get('canvas').zoom('fit-viewport', 'auto');
     msg.remove();
+    startComments({ modeler: viewer });
   } catch (err) {
     console.error(err);
     msg.textContent = body.dataset.openFailedNotice || 'Could not open the diagram.';

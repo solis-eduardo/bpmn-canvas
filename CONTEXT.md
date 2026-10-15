@@ -76,6 +76,14 @@ _Avoid_: Workspace Collaborator
 The single User who manages a Workspace: adds and removes Members, renames and deletes it, and can take any Diagram out of it (only a Diagram Owner puts a Diagram in). Starts as the creator; the Workspace Owner or an Administrator can transfer it to another User, with no acceptance needed (the recipient is notified). Can't leave the Workspace without transferring it first. A Workspace can't be deleted while it still holds Diagrams.
 _Avoid_: Owner (unqualified), Workspace admin, manager (reserve "Administrator" for the system-wide role)
 
+**Comment**:
+A message in a discussion about a Diagram, written in a Comment Thread. Comments are for reviewing a process ("is this gateway right?") and are never part of the BPMN content: they live in the database, are not Versions, are not restored with a Version, and are not copied into a Fork. Anyone who can open the Diagram can write one, whether or not they hold the Lock, because writing a Comment never changes the Diagram (ADR-0022). A Comment can't be edited or deleted; it goes away only with its Diagram.
+_Avoid_: note, annotation (the BPMN `textAnnotation` is a native element of the Diagram's content)
+
+**Comment Thread**:
+A conversation of Comments about a Diagram as a whole or, optionally, about one BPMN element, identified by its element id and shown as a marker on that element in the canvas. Opened by the first Comment; any later Comment is a reply. Anyone who can open the Diagram can open, reply to, resolve or reopen a Thread. A resolved Thread stays listed (marked as resolved) and can be reopened; a new reply reopens it. A Thread whose element no longer exists in the Diagram's current content is **orphaned**: it stays listed, without a marker, and is shown as orphaned, so deleting an element never loses the discussion. A new Comment notifies the Diagram Owner and the Thread's other participants (the Users who already commented in it) through the existing notification and email preferences, never the one who wrote it and never a User who can no longer open the Diagram (ADR-0022).
+_Avoid_: discussion, conversation, review (reserve for the activity), issue
+
 **Tag**:
 A global, free-text marker applied to Diagrams to organize and filter the Diagram list. Anyone who can edit a Diagram (Diagram Owner, Collaborator, Member) can apply or remove its Tags. Unrelated to the Git mechanics behind Versions, which stay invisible.
 _Avoid_: label, category, folder
@@ -105,3 +113,7 @@ The UI is localized in pt-BR (`lang/pt_BR`); code, docs and commits use the Engl
 | Workspace Owner | Dono do Ambiente |
 | Member | Membro |
 | Tag | Tag |
+| Comment | Comentário |
+| Comment Thread | Conversa de comentários |
+| Orphaned (Thread) | Órfã |
+| Resolve / Reopen (a Thread) | Resolver / Reabrir |

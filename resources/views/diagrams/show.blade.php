@@ -3,6 +3,7 @@
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/diagram-js.css') }}">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-js.css') }}">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-font/css/bpmn-embedded.css') }}">
+        <link rel="stylesheet" href="{{ asset('assets/comments.css') }}">
         @vite('resources/css/editor.css')
         <script type="importmap" nonce="{{ $cspNonce }}">
             {
@@ -218,6 +219,7 @@
                     <button type="button" id="btn-compare-selected" disabled><x-icon name="transfer" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.compare_selected') }}</button>
                 </div>
             </aside>
+            @include('partials.comments-panel', ['diagram' => $diagram])
             @can('manageCollaborators', $diagram)
                 <aside id="collaborators-panel" hidden>
                     <div class="aside-head">
@@ -293,6 +295,14 @@
                     title="{{ __('messages.version_history') }}"
                     aria-label="{{ __('messages.version_history') }}"
                 ><x-icon name="clock" /></button>
+                <button
+                    type="button"
+                    id="btn-comments-entry"
+                    class="panel-toggle"
+                    data-panel-toggle="comments-panel"
+                    title="{{ __('messages.comments') }}"
+                    aria-label="{{ __('messages.comments') }}"
+                ><x-icon name="chat" /></button>
                 @can('manageCollaborators', $diagram)
                     <button
                         type="button"

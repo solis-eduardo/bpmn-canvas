@@ -1,0 +1,47 @@
+/* The Comments panel and the canvas markers (public/assets/comments.js; ADR-0022).
+   Plain CSS, loaded by the Editor and the Viewer, which don't share a stylesheet. */
+.cmt-form { display: flex; flex-direction: column; gap: 8px; }
+.cmt-form textarea, .cmt-reply input {
+  font: inherit; width: 100%; padding: 6px 8px; border: 1px solid #d1d5db; border-radius: .375rem; background: #fff;
+}
+.cmt-form button, .cmt-reply button { align-self: flex-end; }
+.cmt-target { margin: 0; font-size: 12px; color: #6b7280; overflow-wrap: anywhere; }
+.cmt-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.cmt-list .empty { color: #6b7280; }
+.cmt-thread { border: 1px solid #e5e7eb; border-radius: .375rem; padding: 8px; background: #fff; cursor: default; }
+.cmt-thread.focus { border-color: #2563eb; box-shadow: 0 0 0 1px #2563eb; }
+.cmt-thread.resolved { opacity: .75; }
+.cmt-thread-head { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-weight: 600; }
+.cmt-link { all: unset; cursor: pointer; color: #2563eb; text-decoration: underline; }
+.cmt-badge { padding: 0 6px; border-radius: 999px; font-size: 11px; font-weight: 400; border: 1px solid #d1d5db; color: #6b7280; }
+.cmt-badge.orphaned { border-color: #dc2626; color: #dc2626; }
+.cmt-comment { margin-top: 8px; }
+.cmt-meta { font-size: 12px; color: #6b7280; }
+.cmt-text { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.cmt-reply { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.cmt-reply input { flex: 1 1 100%; }
+.cmt-marker {
+  min-width: 22px; height: 22px; padding: 0 5px; border-radius: 999px; border: 2px solid #fff; cursor: pointer;
+  background: #2563eb; color: #fff; font-size: 12px; font-weight: 600; line-height: 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .35);
+}
+.cmt-marker.resolved { background: #9ca3af; }
+
+/* In the Viewer there is no side-panel layout: the panel floats over the canvas. */
+#comments-panel.cmt-floating {
+  position: absolute; top: 0; right: 0; bottom: 0; z-index: 15; width: min(22rem, 100%);
+  display: flex; flex-direction: column; background: #fff; border-left: 1px solid #e5e7eb;
+}
+#comments-panel.cmt-floating[hidden] { display: none; }
+#comments-panel.cmt-floating .aside-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; font-weight: 600; border-bottom: 1px solid #e5e7eb; }
+#comments-panel.cmt-floating .collab-body { overflow-y: auto; flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 16px; }
+#comments-panel.cmt-floating .primary, #comments-panel.cmt-floating .cmt-reply button, #comments-panel.cmt-floating .aside-head button {
+  font: inherit; font-weight: 500; padding: 4px 10px; border-radius: .375rem; border: 1px solid #d1d5db; background: #fff; cursor: pointer;
+}
+#comments-panel.cmt-floating .primary { background: #2563eb; border-color: #2563eb; color: #fff; }
+#comments-panel.cmt-floating .info-error { color: #dc2626; font-size: 12px; }
+#comments-panel.cmt-floating svg { width: 16px; height: 16px; }
+
+/* Inside the Editor's list styling (resources/css/editor.css), which targets every aside li and text input. */
+.app aside li.cmt-thread:hover { background: #fff; }
+.app aside .cmt-reply input[type=text] { margin: 0; }
