@@ -22,6 +22,7 @@ use Illuminate\View\View;
  * screen. Each field answers to the same rule as its own endpoint (rename,
  * `diagram-owner.transfer`, Tags), so the form shows a field only to whoever
  * may change it and refuses a submission that touches one they may not.
+ * The Template mark (issue #255) is the Diagram Owner's alone.
  * The Editor's info panel reaches the same actions through the JSON endpoints.
  */
 class DiagramSettingsController extends Controller
@@ -60,6 +61,7 @@ class DiagramSettingsController extends Controller
             'give_up_access' => ['sometimes', 'boolean'],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['required', 'string', 'max:255'],
+            'is_template' => ['sometimes', 'boolean'],
         ]);
 
         // Authorize every requested change before applying any of them.
@@ -83,7 +85,7 @@ class DiagramSettingsController extends Controller
      * Which parts of the submission ask for a change.
      *
      * @param  array<string, mixed>  $data
-     * @return array{rename: bool, transfer: bool, tags: bool}
+     * @return array{rename: bool, transfer: bool, tags: bool, template: bool}
      */
     private function requestedChanges(Request $request, Diagram $diagram, array $data): array
     {
@@ -93,11 +95,12 @@ class DiagramSettingsController extends Controller
             // A form without the Tags field (it isn't shown to everyone) leaves them alone;
             // an editor's empty selection submits nothing and clears them.
             'tags' => $request->has('tags') || (isset($data['title']) && Gate::allows('manageTags', $diagram)),
+            'template' => isset($data['is_template']) && (bool) $data['is_template'] !== $diagram->is_template,
         ];
     }
 
     /**
-     * @param  array{rename: bool, transfer: bool, tags: bool}  $changes
+     * @param  array{rename: bool, transfer: bool, tags: bool, template: bool}  $changes
      */
     private function authorizeChanges(Diagram $diagram, array $changes): void
     {
@@ -110,6 +113,9 @@ class DiagramSettingsController extends Controller
         if ($changes['tags']) {
             $this->authorize('manageTags', $diagram);
         }
+        if ($changes['template']) {
+            $this->authorize('manageTemplate', $diagram);
+        }
     }
 
     /**
@@ -117,7 +123,7 @@ class DiagramSettingsController extends Controller
      * rename, the ownership transfer and the Tags share one transaction, and
      * the directory move (part of the rename) runs last.
      *
-     * @param  array{rename: bool, transfer: bool, tags: bool}  $changes
+     * @param  array{rename: bool, transfer: bool, tags: bool, template: bool}  $changes
      * @param  array<string, mixed>  $data
      */
     private function applyChanges(Diagram $diagram, array $changes, array $data): Diagram
@@ -136,13 +142,16 @@ class DiagramSettingsController extends Controller
     }
 
     /**
-     * @param  array{rename: bool, transfer: bool, tags: bool}  $changes
+     * @param  array{rename: bool, transfer: bool, tags: bool, template: bool}  $changes
      * @param  array<string, mixed>  $data
      */
     private function applyOwnerAndTags(Diagram $diagram, array $changes, array $data): void
     {
         if ($changes['transfer']) {
             $this->owners->transfer($diagram, $this->users->findOrFail($data['user_id']), (bool) ($data['give_up_access'] ?? false));
+        }
+        if ($changes['template']) {
+            $diagram->forceFill(['is_template' => (bool) $data['is_template']])->save();
         }
         if ($changes['tags']) {
             // syncTags() creates the missing Tags itself.

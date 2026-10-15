@@ -70,6 +70,7 @@ BPMN;
     protected function casts(): array
     {
         return [
+            'is_template' => 'boolean',
             'locked_at' => 'datetime',
             'last_heartbeat_at' => 'datetime',
             'lock_requested_at' => 'datetime',
@@ -246,6 +247,18 @@ BPMN;
     public function scopeOpenableBy(Builder $query, User $user): Builder
     {
         return $user->is_admin ? $query : $this->scopeEditableBy($query, $user);
+    }
+
+    /**
+     * Restricts a query to the Templates $user may start a new Diagram from
+     * (CONTEXT.md, "Template"): a Template outside any Workspace is global,
+     * one inside a Workspace is offered only to whoever can edit it.
+     */
+    public function scopeTemplatesFor(Builder $query, User $user): Builder
+    {
+        return $query->where('is_template', true)->where(fn (Builder $query) => $query
+            ->whereNull('workspace_id')
+            ->orWhere(fn (Builder $query) => $this->scopeEditableBy($query, $user)));
     }
 
     /**
