@@ -16,6 +16,7 @@
  */
 import { toast, errorMessage } from './common.js';
 import { compareBpmnXml, highlightDiff, renderRemovedGhosts } from './diff.js';
+import { summarizeDiff } from './diff-summary.js';
 import { groupVersionsByDay, oldestFirst } from './version-history.js';
 
 /**
@@ -34,16 +35,20 @@ export function createVersionHistory({ editor, canEdit = true }) {
   const list = $('version-list');
   const diffBanner = $('diff-banner');
   const diffBannerLabel = $('diff-banner-label');
-  const removedPanel = $('diff-removed-panel');
-  const removedList = $('diff-removed-list');
+  const summaryPanel = $('diff-summary-panel');
+  const summaryBody = $('diff-summary-body');
   const btnCompareSelected = $('btn-compare-selected');
   const compareCount = $('version-compare-count');
   const btnSave = $('btn-save');
 
   const MAX_SELECTED = 2;
+  // Order of the categories in the comparison's summary panel.
+  const SUMMARY_SECTIONS = ['added', 'removed', 'renamed', 'moved', 'reconnected'];
 
   let clearHighlight = null;
   let comparingIds = [];
+  // Where the elements removed in the active comparison used to be, by element id.
+  let ghostBounds = {};
   // Set only while comparing two arbitrary selected Versions (never for
   // "compare with current", which doesn't touch the canvas): the canvas
   // content to restore when the User exits that comparison.
@@ -198,6 +203,11 @@ export function createVersionHistory({ editor, canEdit = true }) {
       addAction(actions, t('messages.restore'), () => restoreVersion(version));
     }
 
+    // A Fork is open to anyone who can open the Diagram, not only editors.
+    if (store.forkVersion) {
+      addAction(actions, t('messages.fork_from_version'), () => forkVersion(version));
+    }
+
     if (canEdit) {
       addAction(actions, t('messages.rename_version'), () => renameVersion(version));
 
@@ -210,6 +220,19 @@ export function createVersionHistory({ editor, canEdit = true }) {
     if (actions.childElementCount) li.appendChild(actions);
 
     return li;
+  }
+
+  // Creates a Fork from this Version and moves to it. The Diagram being left
+  // is untouched, so unlike a restore this needs no confirmation.
+  async function forkVersion(version) {
+    try {
+      const copyTags = Boolean($('version-fork-copy-tags')?.checked);
+      const fork = await store.forkVersion(version.id, { copyTags });
+      location.assign(fork.url);
+    } catch (e) {
+      console.error(e);
+      toast(errorMessage(e, t('messages.fork_version_failed')), true);
+    }
   }
 
   // Runs a change on one Version, then re-fetches the history to show it.
@@ -317,6 +340,7 @@ export function createVersionHistory({ editor, canEdit = true }) {
 
     // Ghosts can sit outside what the canvas is showing: frame them together with the diagram.
     if (clearGhosts.bounds) frameWith(clearGhosts.bounds);
+    ghostBounds = clearGhosts.boundsById || {};
 
     return () => {
       clearMarkers();
@@ -407,38 +431,102 @@ export function createVersionHistory({ editor, canEdit = true }) {
     }
   }
 
+  // Label of an element type (e.g. "bpmn:UserTask" -> "User task"); a type
+  // with no translation falls back to its de-camel-cased name.
+  function typeLabel(type = '') {
+    const typeName = type.replace(/^bpmn:/, '');
+    const translated = t('messages.bpmn_element_types.' + typeName);
+
+    return !translated.startsWith('messages.')
+      ? translated
+      : typeName.replace(/([a-z])([A-Z])/g, '$1 $2');
+  }
+
+  // Brings an element into view: selects it on the canvas, or, for one that
+  // only exists as a ghost of the older Version, centres the view on the ghost.
+  function focusElement(id) {
+    const canvas = modeler.get('canvas');
+    const ghost = ghostBounds[id];
+
+    if (ghost) {
+      const { outer } = canvas.viewbox();
+      const scale = canvas.zoom();
+
+      canvas.viewbox({
+        x: ghost.x + ghost.width / 2 - outer.width / scale / 2,
+        y: ghost.y + ghost.height / 2 - outer.height / scale / 2,
+        width: outer.width / scale,
+        height: outer.height / scale,
+      });
+      return;
+    }
+
+    const element = modeler.get('elementRegistry').get(id);
+
+    if (element) {
+      modeler.get('selection').select(element);
+      canvas.scrollToElement(element);
+    }
+  }
+
+  // Literal keys, so `lang:export` can find them.
+  function sectionTitle(section) {
+    return {
+      added: t('messages.diff_added'),
+      removed: t('messages.diff_removed'),
+      renamed: t('messages.diff_renamed'),
+      moved: t('messages.diff_moved'),
+      reconnected: t('messages.diff_reconnected'),
+    }[section];
+  }
+
+  function summaryItem(item) {
+    const li = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.title = item.id;
+    button.addEventListener('click', () => focusElement(item.id));
+
+    const type = document.createElement('span');
+    type.className = 'type';
+    type.textContent = typeLabel(item.type);
+
+    const name = document.createElement('span');
+    name.textContent = item.oldName !== undefined
+      ? (item.oldName || item.id) + ' \u2192 ' + (item.name || item.id)
+      : item.name || item.id;
+
+    button.append(type, name);
+    li.appendChild(button);
+
+    return li;
+  }
+
   function showDiffSummary(label, result) {
     diffBannerLabel.textContent = label;
     diffBanner.hidden = false;
 
-    const removedIds = Object.keys(result.removed);
-    removedList.innerHTML = '';
+    const summary = summarizeDiff(result);
+    summaryBody.innerHTML = '';
 
-    if (removedIds.length) {
-      removedIds.forEach(id => {
-        const element = result.removed[id];
-        const li = document.createElement('li');
+    SUMMARY_SECTIONS.forEach(section => {
+      const items = summary[section];
+      if (!items.length) return;
 
-        const type = document.createElement('span');
-        type.className = 'type';
-        const typeName = (element.$type || '').replace(/^bpmn:/, '');
-        // Translated name of the element type (e.g. "UserTask"); a type with
-        // no translation comes back as its key.
-        const translatedType = t('messages.bpmn_element_types.' + typeName);
-        type.textContent = !translatedType.startsWith('messages.')
-          ? translatedType
-          : typeName.replace(/([a-z])([A-Z])/g, '$1 $2');
+      const heading = document.createElement('h3');
+      heading.textContent = sectionTitle(section) + ' (' + items.length + ')';
 
-        const name = document.createElement('span');
-        name.textContent = element.name || element.id;
+      const list = document.createElement('ul');
+      items.forEach(item => list.appendChild(summaryItem(item)));
 
-        li.appendChild(type);
-        li.appendChild(name);
-        removedList.appendChild(li);
-      });
-      removedPanel.hidden = false;
-    } else {
-      removedPanel.hidden = true;
+      summaryBody.append(heading, list);
+    });
+
+    summaryPanel.hidden = false;
+    if (!summaryBody.childElementCount) {
+      const empty = document.createElement('p');
+      empty.textContent = t('messages.diff_no_changes');
+      summaryBody.appendChild(empty);
     }
   }
 
@@ -448,8 +536,9 @@ export function createVersionHistory({ editor, canEdit = true }) {
       clearHighlight = null;
     }
     comparingIds = [];
+    ghostBounds = {};
     diffBanner.hidden = true;
-    removedPanel.hidden = true;
+    summaryPanel.hidden = true;
     highlightActiveComparison();
 
     if (canvasSnapshot !== null && modeler) {

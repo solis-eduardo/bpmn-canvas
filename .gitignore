@@ -59,3 +59,4 @@ Thumbs.db
 /demo/node_modules
 /demo/dist
 /demo/.stage
+/docker/renderer/node_modules
