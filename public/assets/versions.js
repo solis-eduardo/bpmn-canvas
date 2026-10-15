@@ -428,7 +428,6 @@ export function createVersionHistory({ editor, canEdit = true }) {
   // only exists as a ghost of the older Version, centres the view on the ghost.
   function focusElement(id) {
     const canvas = modeler.get('canvas');
-    const element = modeler.get('elementRegistry').get(id);
     const ghost = ghostBounds[id];
 
     if (ghost) {
@@ -441,7 +440,12 @@ export function createVersionHistory({ editor, canEdit = true }) {
         width: outer.width / scale,
         height: outer.height / scale,
       });
-    } else if (element) {
+      return;
+    }
+
+    const element = modeler.get('elementRegistry').get(id);
+
+    if (element) {
       modeler.get('selection').select(element);
       canvas.scrollToElement(element);
     }
