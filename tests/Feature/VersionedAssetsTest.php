@@ -57,6 +57,10 @@ class VersionedAssetsTest extends TestCase
     {
         $locale = app()->getLocale();
         $langFile = public_path("assets/lang/{$locale}.json");
+        // Generated and gitignored: absent on a fresh checkout such as CI.
+        if (! is_file($langFile)) {
+            $this->artisan('lang:export')->assertSuccessful();
+        }
         $this->assertFileExists($langFile);
 
         $this->editorPage()->assertSee("assets/lang/{$locale}.json?v=".substr(md5_file($langFile), 0, 12), false);
