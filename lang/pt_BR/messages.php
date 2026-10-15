@@ -91,6 +91,7 @@ return [
     'error_not_found' => 'O item solicitado não foi encontrado.',
     'error_too_many_requests' => 'Muitas tentativas seguidas. Aguarde um instante e tente novamente.',
     'error_server' => 'Ocorreu um erro inesperado no servidor. Tente novamente em instantes.',
+    'error_history_busy' => 'O histórico do diagrama está ocupado no momento; suas alterações não foram salvas. Tente novamente em alguns segundos.',
     'viewer_locked_notice' => 'Diagrama travado por :name (:time). Você está em modo de visualização e não pode salvar alterações.',
     'provisional_version' => 'Versão provisória (trava expirada)',
     'saved' => 'Salvo.',

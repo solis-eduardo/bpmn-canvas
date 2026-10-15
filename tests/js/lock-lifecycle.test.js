@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { chooseRelease, toast } from '../../public/assets/common.js';
-import { startLockSession } from '../../public/assets/lock-session.js';
+import { IDLE_AFTER_MS, startLockSession } from '../../public/assets/lock-session.js';
 
 // The Lock lifecycle of the server-build Editor page (ADR-0003), driven through
 // startLockSession with a fake Editor, a fake server and fake timers. The
@@ -14,7 +14,6 @@ vi.mock('../../public/assets/common.js', async importOriginal => ({
 }));
 
 const HEARTBEAT_EVERY_MS = 30000;
-const IDLE_AFTER_MS = 3 * 60 * 1000;
 const URLS = { heartbeat: '/heartbeat', unlock: '/unlock', index: '/diagrams' };
 
 function fakeEditor() {

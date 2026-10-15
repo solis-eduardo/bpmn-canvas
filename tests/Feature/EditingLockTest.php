@@ -39,7 +39,7 @@ class EditingLockTest extends TestCase
         ]);
     }
 
-    public function test_opening_the_editor_without_an_active_lock_acquires_it_for_the_current_user(): void
+    public function test_rendering_the_editor_does_not_change_the_lock_state(): void
     {
         $user = User::factory()->create();
         $diagram = Diagram::factory()->for($user, 'author')->create();
@@ -47,9 +47,56 @@ class EditingLockTest extends TestCase
         $response = $this->actingAs($user)->get('/diagrams/'.$diagram->slug);
 
         $response->assertOk();
+        $response->assertSee('data-lock-acquire-url="'.url('/diagrams/'.$diagram->slug.'/lock').'"', false);
+        $this->assertNull($diagram->fresh()->locked_by);
+        $this->assertNull($diagram->fresh()->locked_at);
+        $this->assertNull($diagram->fresh()->last_heartbeat_at);
+    }
+
+    public function test_the_editor_acquires_a_free_lock_with_a_post_for_an_authorized_user(): void
+    {
+        $user = User::factory()->create();
+        $diagram = Diagram::factory()->for($user, 'author')->create();
+
+        $response = $this->actingAs($user)->postJson('/diagrams/'.$diagram->slug.'/lock');
+
+        $response->assertOk()->assertExactJson(['state' => 'acquired']);
         $this->assertSame($user->id, $diagram->fresh()->locked_by);
         $this->assertNotNull($diagram->fresh()->locked_at);
         $this->assertNotNull($diagram->fresh()->last_heartbeat_at);
+    }
+
+    public function test_the_editor_post_is_refused_when_another_user_holds_the_lock_and_requests_nothing(): void
+    {
+        Notification::fake();
+        $holder = User::factory()->create(['name' => 'Ana Author']);
+        $other = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $other);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+
+        $response = $this->actingAs($other)->postJson('/diagrams/'.$diagram->slug.'/lock');
+
+        $response->assertStatus(423);
+        $this->assertSame($holder->id, $diagram->fresh()->locked_by);
+        $this->assertNull($diagram->fresh()->lock_requested_by);
+        $this->assertNull($diagram->fresh()->lock_requested_at);
+        Notification::assertNothingSent();
+    }
+
+    /**
+     * An Administrator who is neither Owner, Collaborator nor Member only sees
+     * and opens the Diagram in the read-only Viewer (ADR-0006), so it can't
+     * acquire the Lock.
+     */
+    public function test_a_viewer_cannot_acquire_the_lock_with_a_post(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+        $viewer = User::factory()->create(['is_admin' => true]);
+
+        $this->actingAs($viewer)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertForbidden();
+        $this->assertNull($diagram->fresh()->locked_by);
     }
 
     public function test_the_editor_offers_an_explicit_lock_release_action(): void
@@ -72,9 +119,9 @@ class EditingLockTest extends TestCase
         $this->approveCollaborator($first, $other);
         $this->approveCollaborator($second, $other);
 
-        $this->actingAs($holder)->get('/diagrams/'.$first->slug)->assertOk();
+        $this->actingAs($holder)->postJson('/diagrams/'.$first->slug.'/lock')->assertOk();
         $this->actingAs($holder)->get('/diagrams')->assertOk();
-        $this->actingAs($holder)->get('/diagrams/'.$second->slug)->assertOk();
+        $this->actingAs($holder)->postJson('/diagrams/'.$second->slug.'/lock')->assertOk();
 
         // No further Editor requests simulate closing the holder's tabs.
         $this->travel(91)->seconds();
@@ -95,7 +142,7 @@ class EditingLockTest extends TestCase
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $other);
 
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $response = $this->actingAs($other)->get('/diagrams/'.$diagram->slug);
 
@@ -109,7 +156,7 @@ class EditingLockTest extends TestCase
         $holder = User::factory()->create(['name' => 'Bruno Blocker']);
         $viewer = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $response = $this->actingAs($viewer)->get('/diagrams');
 
@@ -122,7 +169,7 @@ class EditingLockTest extends TestCase
         $holder = User::factory()->create(['name' => 'Carla Tired']);
         $viewer = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $this->travel(91)->seconds();
 
@@ -138,16 +185,18 @@ class EditingLockTest extends TestCase
         $other = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $other);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $this->actingAs($holder)->deleteJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $this->assertNull($diagram->fresh()->locked_by);
 
-        $response = $this->actingAs($other)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($other)->get('/diagrams/'.$diagram->slug)
+            ->assertOk()
+            ->assertViewIs('diagrams.show');
+        $this->assertNull($diagram->fresh()->locked_by);
 
-        $response->assertOk();
-        $response->assertViewIs('diagrams.show');
+        $this->actingAs($other)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $this->assertSame($other->id, $diagram->fresh()->locked_by);
     }
 
@@ -157,7 +206,7 @@ class EditingLockTest extends TestCase
         $other = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $other);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $this->travel(91)->seconds();
 
@@ -174,7 +223,7 @@ class EditingLockTest extends TestCase
         $other = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $other);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $this->travel(60)->seconds();
         $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
@@ -192,7 +241,7 @@ class EditingLockTest extends TestCase
         $holder = User::factory()->create();
         $other = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $response = $this->actingAs($other)->patchJson('/diagrams/'.$diagram->slug.'/lock');
 
@@ -206,7 +255,7 @@ class EditingLockTest extends TestCase
         $blocked = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $blocked);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         Storage::disk('diagrams')->put($diagram->disk_path, '<bpmn:definitions>original content</bpmn:definitions>');
 
         $response = $this->actingAs($blocked)->post('/diagrams/'.$diagram->slug.'/fork');
@@ -240,7 +289,7 @@ class EditingLockTest extends TestCase
         $user = User::factory()->create();
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
-        $response = $this->actingAs($user)->postJson('/diagrams/'.$diagram->slug.'/lock');
+        $response = $this->actingAs($user)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
 
         $response->assertOk()->assertJson(['state' => 'acquired']);
         $this->assertSame($user->id, $diagram->fresh()->locked_by);
@@ -252,15 +301,15 @@ class EditingLockTest extends TestCase
         $requester = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $requester);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
-        $waiting = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
+        $waiting = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
         $waiting->assertOk()->assertJson(['state' => 'waiting']);
         $this->assertSame($holder->id, $diagram->fresh()->locked_by);
 
         $this->travel(31)->seconds();
 
-        $stillWaiting = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
+        $stillWaiting = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
         $stillWaiting->assertOk()->assertJson(['state' => 'waiting']);
         $this->assertSame($holder->id, $diagram->fresh()->locked_by);
     }
@@ -271,16 +320,16 @@ class EditingLockTest extends TestCase
         $requester = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $requester);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
-        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock')
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request')
             ->assertJson(['state' => 'waiting']);
 
         $this->travel(20)->seconds();
         $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $this->travel(20)->seconds();
 
-        $response = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
+        $response = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
 
         $response->assertOk()->assertJson(['state' => 'waiting']);
         $this->assertSame($holder->id, $diagram->fresh()->locked_by);
@@ -291,7 +340,7 @@ class EditingLockTest extends TestCase
         $holder = User::factory()->create();
         $admin = User::factory()->create(['is_admin' => true]);
         $diagram = Diagram::factory()->for($holder, 'author')->create();
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $this->actingAs($admin)->get('/diagrams/'.$diagram->slug)
             ->assertOk()
@@ -310,7 +359,7 @@ class EditingLockTest extends TestCase
         $other = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $other);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $response = $this->actingAs($other)->deleteJson('/diagrams/'.$diagram->slug.'/lock');
 
@@ -328,7 +377,7 @@ class EditingLockTest extends TestCase
         $blocked = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $blocked);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $lockedAt = $diagram->fresh()->locked_at;
 
         $response = $this->actingAs($blocked)->get('/diagrams/'.$diagram->slug);
@@ -362,10 +411,10 @@ class EditingLockTest extends TestCase
         $requester = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $requester);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $this->travelTo(now()->addMinute());
-        $response = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
+        $response = $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
 
         $response->assertOk()->assertJson(['state' => 'waiting']);
         $requestedAt = $response->json('requested_at');
@@ -388,9 +437,9 @@ class EditingLockTest extends TestCase
         $requester = User::factory()->create(['name' => 'Rita Requester']);
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $requester);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
-        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock')
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request')
             ->assertJson(['state' => 'waiting']);
 
         $response = $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock');
@@ -412,9 +461,9 @@ class EditingLockTest extends TestCase
         $requester = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $requester);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
-        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock')
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request')
             ->assertJson(['state' => 'waiting']);
 
         // First heartbeat after the request: still reports it, then cancels it.
@@ -432,8 +481,8 @@ class EditingLockTest extends TestCase
         $requester = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $requester);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
-        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock')
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request')
             ->assertJson(['state' => 'waiting']);
 
         $response = $this->actingAs($holder)->putJson('/diagrams/'.$diagram->slug.'/lock', ['user_id' => $requester->id]);
@@ -449,7 +498,7 @@ class EditingLockTest extends TestCase
         $colleague = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $colleague);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $this->actingAs($holder)->putJson('/diagrams/'.$diagram->slug.'/lock', ['user_id' => $colleague->id])
             ->assertOk();
@@ -464,7 +513,7 @@ class EditingLockTest extends TestCase
         $admin = User::factory()->create(['is_admin' => true]);
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $colleague);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $this->actingAs($admin)->putJson('/diagrams/'.$diagram->slug.'/lock', ['user_id' => $colleague->id])
             ->assertOk();
@@ -478,7 +527,7 @@ class EditingLockTest extends TestCase
         $other = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $other);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $this->actingAs($other)->putJson('/diagrams/'.$diagram->slug.'/lock', ['user_id' => $other->id])
             ->assertForbidden();
@@ -491,7 +540,7 @@ class EditingLockTest extends TestCase
         $holder = User::factory()->create();
         $outsider = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $this->actingAs($holder)->putJson('/diagrams/'.$diagram->slug.'/lock', ['user_id' => $outsider->id])
             ->assertForbidden();
@@ -505,8 +554,8 @@ class EditingLockTest extends TestCase
         $requester = User::factory()->create(['name' => 'Rita Request']);
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $requester);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
-        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
 
         $this->actingAs($requester)->getJson('/diagrams/'.$diagram->slug.'/lock')
             ->assertOk()
@@ -520,7 +569,7 @@ class EditingLockTest extends TestCase
         $holder = User::factory()->create();
         $outsider = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $known = $this->actingAs($holder)->putJson('/diagrams/'.$diagram->slug.'/lock', ['user_id' => $outsider->id]);
         $unknown = $this->actingAs($holder)->putJson('/diagrams/'.$diagram->slug.'/lock', ['user_id' => 999999]);
@@ -541,11 +590,11 @@ class EditingLockTest extends TestCase
         $diagram = Diagram::factory()->for($former, 'author')->create();
         $this->approveCollaborator($diagram, $newHolder);
 
-        $this->actingAs($former)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($former)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         Carbon::setTestNow(now()->addMinutes(config('bpmn.lock_ttl_minutes') + 1));
         $this->artisan('locks:expire');
-        $this->actingAs($newHolder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($newHolder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $response = $this->actingAs($former)->putJson('/diagrams/'.$diagram->slug.'/content', [
             'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">stale</bpmn:definitions>',
@@ -597,9 +646,9 @@ class EditingLockTest extends TestCase
         $requester = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $requester);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
-        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request')->assertOk();
 
         Notification::assertSentTo($holder, DiagramLockRequested::class);
     }
@@ -612,11 +661,11 @@ class EditingLockTest extends TestCase
         $requester = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $requester);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
-        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
-        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
-        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
 
         Notification::assertSentToTimes($holder, DiagramLockRequested::class, 1);
     }
@@ -631,10 +680,10 @@ class EditingLockTest extends TestCase
         $requester = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $requester);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         foreach (range(1, 3) as $ignored) {
-            $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+            $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request')->assertOk();
             $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         }
 
@@ -648,12 +697,12 @@ class EditingLockTest extends TestCase
         $requester = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $requester);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
-        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
         $holder->notifications()->first()->markAsRead();
         $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock');
-        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock');
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request');
 
         $this->assertSame(2, $holder->notifications()->where('type', DiagramLockRequested::class)->count());
     }
@@ -665,7 +714,7 @@ class EditingLockTest extends TestCase
         $blocked = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $blocked);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $response = $this->actingAs($blocked)->get('/diagrams/'.$diagram->slug);
 
@@ -694,7 +743,7 @@ class EditingLockTest extends TestCase
         $user = User::factory()->create();
         $diagram = Diagram::factory()->for($user, 'author')->create();
 
-        $this->actingAs($user)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+        $this->actingAs($user)->postJson('/diagrams/'.$diagram->slug.'/lock/request')->assertOk();
 
         Notification::assertNothingSent();
     }
@@ -727,7 +776,7 @@ class EditingLockTest extends TestCase
         $saver = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $saver);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $response = $this->actingAs($saver)->putJson('/diagrams/'.$diagram->slug.'/content', [
             'content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">racing</bpmn:definitions>',
@@ -755,7 +804,7 @@ class EditingLockTest extends TestCase
         $diagram = Diagram::factory()->for($user, 'author')->create();
         $past = $this->rewindModifiedAt($diagram);
 
-        $this->actingAs($user)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($user)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $this->assertSame($user->id, $diagram->fresh()->locked_by);
         $this->assertTrue($diagram->fresh()->updated_at->equalTo($past));
@@ -765,7 +814,7 @@ class EditingLockTest extends TestCase
     {
         $holder = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $past = $this->rewindModifiedAt($diagram);
 
         $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
@@ -785,10 +834,10 @@ class EditingLockTest extends TestCase
         $requester = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $requester);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $past = $this->rewindModifiedAt($diagram);
 
-        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+        $this->actingAs($requester)->postJson('/diagrams/'.$diagram->slug.'/lock/request')->assertOk();
 
         $this->assertSame($requester->id, $diagram->fresh()->lock_requested_by);
         $this->assertTrue($diagram->fresh()->updated_at->equalTo($past));
@@ -798,7 +847,7 @@ class EditingLockTest extends TestCase
     {
         $holder = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $past = $this->rewindModifiedAt($diagram);
 
         $this->actingAs($holder)->deleteJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
@@ -813,7 +862,7 @@ class EditingLockTest extends TestCase
         $other = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $this->approveCollaborator($diagram, $other);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $past = $this->rewindModifiedAt($diagram);
 
         $this->actingAs($holder)->putJson('/diagrams/'.$diagram->slug.'/lock', [
@@ -829,7 +878,7 @@ class EditingLockTest extends TestCase
         $user = User::factory()->create();
         $diagram = Diagram::factory()->for($user, 'author')->create();
         Storage::disk('diagrams')->put($diagram->disk_path, Diagram::emptyBpmn());
-        $this->actingAs($user)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($user)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $past = $this->rewindModifiedAt($diagram);
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
@@ -844,7 +893,7 @@ class EditingLockTest extends TestCase
         $user = User::factory()->create();
         $diagram = Diagram::factory()->for($user, 'author')->create();
         Storage::disk('diagrams')->put($diagram->disk_path, Diagram::emptyBpmn());
-        $this->actingAs($user)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($user)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $past = $this->rewindModifiedAt($diagram);
 
         $this->actingAs($user)->putJson('/diagrams/'.$diagram->slug.'/content', [
@@ -866,7 +915,7 @@ class EditingLockTest extends TestCase
         $this->approveCollaborator($diagram, $restorer);
         app(VersionRepository::class)->save($diagram, $holder, '<bpmn:definitions>later</bpmn:definitions>');
         $oldestVersionId = app(VersionRepository::class)->list($diagram)[1]['id'];
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $diagram->fresh()->heartbeat($holder, '<bpmn:definitions>unsaved draft</bpmn:definitions>');
         $contentBefore = Storage::disk('diagrams')->get($diagram->disk_path);
 
@@ -889,7 +938,7 @@ class EditingLockTest extends TestCase
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         app(VersionRepository::class)->save($diagram, $holder, '<bpmn:definitions>later</bpmn:definitions>');
         $oldestVersionId = app(VersionRepository::class)->list($diagram)[1]['id'];
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $this->actingAs($holder)->postJson(
             '/diagrams/'.$diagram->slug.'/versions/'.$oldestVersionId.'/restore',
@@ -929,5 +978,51 @@ class EditingLockTest extends TestCase
         )->assertNotFound();
 
         $this->assertNull($diagram->fresh()->locked_by);
+    }
+
+    /**
+     * Nobody is keeping an expired Lock alive, so entering the Diagram takes
+     * it over at once instead of waiting for `locks:expire` (ADR-0003). The
+     * former holder's draft is kept as a provisional Version, as expiry does.
+     */
+    public function test_entering_a_diagram_whose_lock_expired_takes_it_over_and_keeps_the_former_drafts(): void
+    {
+        $former = User::factory()->create();
+        $taker = User::factory()->create();
+        $diagram = Diagram::factory()->for($former, 'author')->create();
+        $this->approveCollaborator($diagram, $taker);
+        $versions = app(VersionRepository::class);
+        $before = count($versions->list($diagram));
+        $this->actingAs($former)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+        $this->actingAs($former)->patchJson('/diagrams/'.$diagram->slug.'/lock', ['draft' => preg_replace('/ name="[^"]*"/', ' name="Unsaved"', Diagram::emptyBpmn(), 1)])->assertOk();
+
+        $this->travel(config('bpmn.lock_ttl_minutes'))->minutes();
+
+        $this->actingAs($taker)->get('/diagrams/'.$diagram->slug)->assertOk()->assertViewIs('diagrams.show');
+        $this->actingAs($taker)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk()->assertJson(['state' => 'acquired']);
+
+        $this->assertSame($taker->id, $diagram->fresh()->locked_by);
+        $list = $versions->list($diagram->fresh());
+        $this->assertCount($before + 1, $list);
+        $this->assertTrue($list[0]['provisional']);
+        $this->assertSame($former->name, $list[0]['author']);
+
+        $this->actingAs($former)->patchJson('/diagrams/'.$diagram->slug.'/lock')->assertForbidden();
+        $this->assertSame($taker->id, $diagram->fresh()->locked_by);
+    }
+
+    public function test_a_lock_within_the_ttl_still_refuses_the_acquisition(): void
+    {
+        $holder = User::factory()->create();
+        $other = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $this->approveCollaborator($diagram, $other);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+
+        $this->travel(config('bpmn.lock_ttl_minutes') - 1)->minutes();
+
+        $this->actingAs($other)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertStatus(423);
+        $this->actingAs($other)->get('/diagrams/'.$diagram->slug)->assertViewIs('shares.show');
+        $this->assertSame($holder->id, $diagram->fresh()->locked_by);
     }
 }

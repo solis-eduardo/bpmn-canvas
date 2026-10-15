@@ -66,7 +66,7 @@ class JsonErrorMessagesTest extends TestCase
             'user_id' => $other->id,
             'status' => Collaborator::STATUS_APPROVED,
         ]);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $this->actingAs($other)
             ->putJson('/diagrams/'.$diagram->slug.'/content', [
@@ -85,7 +85,7 @@ class JsonErrorMessagesTest extends TestCase
         $diagram = Diagram::factory()->for($user, 'author')->create([
             'owner_id' => $user->id,
         ]);
-        $this->actingAs($user)->get('/diagrams/'.$diagram->slug);
+        $this->actingAs($user)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $this->actingAs($user)
             ->putJson('/diagrams/'.$diagram->slug.'/content', ['content' => 'not xml'])

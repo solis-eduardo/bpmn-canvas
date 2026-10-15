@@ -29,7 +29,7 @@ class LockExpiryTest extends TestCase
     private function heldDiagram(User $holder): Diagram
     {
         $diagram = Diagram::factory()->for($holder, 'author')->create();
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         return $diagram;
     }
@@ -43,7 +43,7 @@ class LockExpiryTest extends TestCase
     {
         $diagram = $this->heldDiagram(User::factory()->create());
 
-        $this->travel(5)->minutes();
+        $this->travel(3)->minutes();
         $this->artisan('locks:expire')->assertSuccessful();
 
         $this->assertNull($diagram->fresh()->locked_by);
@@ -54,10 +54,54 @@ class LockExpiryTest extends TestCase
         $holder = User::factory()->create();
         $diagram = $this->heldDiagram($holder);
 
-        $this->travel(4)->minutes();
+        $this->travel(2)->minutes();
         $this->artisan('locks:expire')->assertSuccessful();
 
         $this->assertSame($holder->id, $diagram->fresh()->locked_by);
+    }
+
+    public function test_the_ttl_defaults_to_three_minutes(): void
+    {
+        $this->assertSame(3, config('bpmn.lock_ttl_minutes'));
+    }
+
+    public function test_a_lock_expires_exactly_three_minutes_after_the_last_heartbeat(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = $this->heldDiagram($holder);
+
+        $this->travel(179)->seconds();
+        $this->artisan('locks:expire')->assertSuccessful();
+        $this->assertSame($holder->id, $diagram->fresh()->locked_by);
+
+        $this->travel(1)->seconds();
+        $this->artisan('locks:expire')->assertSuccessful();
+        $this->assertNull($diagram->fresh()->locked_by);
+    }
+
+    public function test_a_holder_returning_after_the_idle_window_but_inside_the_ttl_keeps_the_lock(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = $this->heldDiagram($holder);
+
+        // Idle for 2 minutes: the last Heartbeat has gone out, none follow.
+        $this->travel(2)->minutes();
+        $this->artisan('locks:expire')->assertSuccessful();
+        $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+
+        $this->assertSame($holder->id, $diagram->fresh()->locked_by);
+    }
+
+    public function test_a_holder_returning_after_the_ttl_has_lost_the_lock(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = $this->heldDiagram($holder);
+
+        $this->travel(3)->minutes();
+        $this->artisan('locks:expire')->assertSuccessful();
+
+        $this->assertNull($diagram->fresh()->locked_by);
+        $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock')->assertForbidden();
     }
 
     public function test_a_heartbeat_postpones_expiry(): void
@@ -65,9 +109,9 @@ class LockExpiryTest extends TestCase
         $holder = User::factory()->create();
         $diagram = $this->heldDiagram($holder);
 
-        $this->travel(4)->minutes();
+        $this->travel(2)->minutes();
         $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
-        $this->travel(4)->minutes();
+        $this->travel(2)->minutes();
         $this->artisan('locks:expire')->assertSuccessful();
 
         $this->assertSame($holder->id, $diagram->fresh()->locked_by);
@@ -81,7 +125,7 @@ class LockExpiryTest extends TestCase
         $before = count($versions->list($diagram));
 
         $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock', ['draft' => $this->draft('Unsaved work')])->assertOk();
-        $this->travel(5)->minutes();
+        $this->travel(3)->minutes();
         $this->artisan('locks:expire')->assertSuccessful();
 
         $diagram = $diagram->fresh();
@@ -101,7 +145,7 @@ class LockExpiryTest extends TestCase
         $diagram = $this->heldDiagram(User::factory()->create());
         $before = count(app(VersionRepository::class)->list($diagram));
 
-        $this->travel(5)->minutes();
+        $this->travel(3)->minutes();
         $this->artisan('locks:expire')->assertSuccessful();
 
         $this->assertCount($before, app(VersionRepository::class)->list($diagram));
@@ -125,7 +169,7 @@ class LockExpiryTest extends TestCase
         $diagram = $this->heldDiagram($holder);
         $diagram->forceFill(['lock_requested_by' => $requester->id, 'lock_requested_at' => now()])->save();
 
-        $this->travel(5)->minutes();
+        $this->travel(3)->minutes();
         $this->artisan('locks:expire')->assertSuccessful();
 
         $diagram = $diagram->fresh();
@@ -174,7 +218,7 @@ class LockExpiryTest extends TestCase
     {
         $holder = User::factory()->create();
         $diagram = $this->heldDiagram($holder);
-        $this->travel(5)->minutes();
+        $this->travel(3)->minutes();
         $this->artisan('locks:expire');
 
         $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock')
@@ -239,7 +283,7 @@ class LockExpiryTest extends TestCase
             'user_id' => $collaborator->id,
             'status' => Collaborator::STATUS_APPROVED,
         ]);
-        $this->actingAs($collaborator)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($collaborator)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $this->assertSame($collaborator->id, (int) $diagram->fresh()->locked_by);
 
         $membership->delete();
@@ -262,7 +306,7 @@ class LockExpiryTest extends TestCase
             'user_id' => $collaborator->id,
             'status' => Collaborator::STATUS_APPROVED,
         ]);
-        $this->actingAs($collaborator)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($collaborator)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         app(CollaboratorService::class)->revoke($diagram, $collaborator);
 
@@ -284,7 +328,7 @@ class LockExpiryTest extends TestCase
             'workspace_id' => $workspace->id,
         ]);
         app(CollaboratorService::class)->grant($diagram, $collaborator);
-        $this->actingAs($collaborator)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($collaborator)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $this->actingAs($collaborator)->patchJson('/diagrams/'.$diagram->slug.'/lock', [
             'draft' => $this->draft('Still a member'),
         ])->assertOk();
@@ -310,7 +354,7 @@ class LockExpiryTest extends TestCase
             'workspace_id' => $workspace->id,
         ]);
         app(CollaboratorService::class)->grant($diagram, $collaborator);
-        $this->actingAs($collaborator)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($collaborator)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $this->actingAs($collaborator)->patchJson('/diagrams/'.$diagram->slug.'/lock', [
             'draft' => $this->draft('Not a member'),
         ])->assertOk();
@@ -336,7 +380,7 @@ class LockExpiryTest extends TestCase
             'user_id' => $collaborator->id,
             'status' => Collaborator::STATUS_APPROVED,
         ]);
-        $this->actingAs($collaborator)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($collaborator)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $this->actingAs($collaborator)->patchJson('/diagrams/'.$diagram->slug.'/lock', [
             'draft' => $this->draft('Should not land'),
         ])->assertOk();
@@ -346,7 +390,7 @@ class LockExpiryTest extends TestCase
         $membership->delete();
         $before = Storage::disk('diagrams')->get($diagram->disk_path);
 
-        $this->travel(6)->minutes();
+        $this->travel(4)->minutes();
         $this->artisan('locks:expire')->assertSuccessful();
 
         $this->assertSame($before, Storage::disk('diagrams')->get($diagram->disk_path));
@@ -382,7 +426,7 @@ class LockExpiryTest extends TestCase
             }
         });
 
-        $this->travel(5)->minutes();
+        $this->travel(3)->minutes();
         $this->artisan('locks:expire')->expectsOutput('Released 1 expired Lock(s).')->assertSuccessful();
 
         $this->assertSame($secondHolder->id, $second->fresh()->locked_by);

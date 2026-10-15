@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createHttpDiagramStore } from '../../public/assets/http-store.js';
 import { describeDiagramStoreContract } from './diagram-store-contract.js';
+import { errorMessage } from '../../public/assets/common.js';
 import { createFakeLaravelBackend, CSRF_TOKEN, urls } from './fake-laravel-backend.js';
 
 function makeStore({ csrfToken = CSRF_TOKEN } = {}) {

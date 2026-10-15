@@ -91,6 +91,7 @@ return [
     'error_not_found' => 'No se encontró el elemento solicitado.',
     'error_too_many_requests' => 'Demasiados intentos seguidos. Espera un momento e inténtalo de nuevo.',
     'error_server' => 'Ocurrió un error inesperado del servidor. Inténtalo de nuevo en unos instantes.',
+    'error_history_busy' => 'El historial del diagrama está ocupado en este momento; tus cambios no se guardaron. Inténtalo de nuevo en unos segundos.',
     'viewer_locked_notice' => 'Diagrama bloqueado por :name (:time). Estás en modo de solo lectura y no puedes guardar cambios.',
     'provisional_version' => 'Versión provisional (bloqueo expirado)',
     'saved' => 'Guardado.',

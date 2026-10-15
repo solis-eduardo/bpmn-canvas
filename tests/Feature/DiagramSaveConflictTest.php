@@ -171,7 +171,7 @@ class DiagramSaveConflictTest extends TestCase
     private function expireLockKeepingDraft(User $holder, Diagram $diagram): void
     {
         $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock', ['draft' => $this->draft('Unsaved work')])->assertOk();
-        $this->travel(5)->minutes();
+        $this->travel(config('bpmn.lock_ttl_minutes') + 1)->minutes();
         $this->artisan('locks:expire')->assertSuccessful();
         $this->assertNull($diagram->fresh()->locked_by);
     }
@@ -180,7 +180,7 @@ class DiagramSaveConflictTest extends TestCase
     {
         $holder = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $base = $this->contentOf($holder, $diagram)['version'];
 
         $this->expireLockKeepingDraft($holder, $diagram);
@@ -197,7 +197,7 @@ class DiagramSaveConflictTest extends TestCase
     {
         $holder = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $base = $this->contentOf($holder, $diagram)['version'];
         $this->expireLockKeepingDraft($holder, $diagram);
 
@@ -212,7 +212,7 @@ class DiagramSaveConflictTest extends TestCase
         $holder = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $other = $this->collaborator($diagram, User::factory()->create());
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $base = $this->contentOf($holder, $diagram)['version'];
         $this->expireLockKeepingDraft($holder, $diagram);
 
@@ -225,7 +225,7 @@ class DiagramSaveConflictTest extends TestCase
         $holder = User::factory()->create();
         $diagram = Diagram::factory()->for($holder, 'author')->create();
         $other = $this->collaborator($diagram, User::factory()->create());
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $base = $this->contentOf($holder, $diagram)['version'];
         $this->expireLockKeepingDraft($holder, $diagram);
 
@@ -235,5 +235,23 @@ class DiagramSaveConflictTest extends TestCase
         $this->actingAs($other)->deleteJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $this->save($holder, $diagram, 'stale', ['base_version' => $base])->assertStatus(409);
+    }
+
+    public function test_the_holders_draft_kept_by_a_takeover_of_the_expired_lock_is_not_a_conflict(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create();
+        $other = $this->collaborator($diagram, User::factory()->create());
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+        $base = $this->contentOf($holder, $diagram)['version'];
+        $this->actingAs($holder)->patchJson('/diagrams/'.$diagram->slug.'/lock', ['draft' => $this->draft('Unsaved work')])->assertOk();
+
+        // Nobody ran `locks:expire`: another User enters and takes the expired Lock over.
+        $this->travel(config('bpmn.lock_ttl_minutes') + 1)->minutes();
+        $this->actingAs($other)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+        $this->actingAs($other)->deleteJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+
+        $this->assertSame($holder->id, app(VersionRepository::class)->list($diagram)[0]['kept_for']);
+        $this->save($holder, $diagram, 'continued', ['base_version' => $base])->assertOk();
     }
 }

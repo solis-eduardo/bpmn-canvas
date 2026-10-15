@@ -28,7 +28,7 @@ class LockReleaseDraftTest extends TestCase
     private function heldDiagram(User $holder): Diagram
     {
         $diagram = Diagram::factory()->for($holder, 'author')->create();
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         return $diagram;
     }
@@ -174,7 +174,7 @@ class LockReleaseDraftTest extends TestCase
         $owner = User::factory()->create();
         $diagram = Diagram::factory()->for($owner, 'author')->create();
         Collaborator::create(['diagram_id' => $diagram->id, 'user_id' => $holder->id, 'status' => Collaborator::STATUS_APPROVED]);
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $this->sendDraft($holder, $diagram, 'Lapsed work');
         Collaborator::where('diagram_id', $diagram->id)->delete();
         $before = $this->versionCount($diagram);

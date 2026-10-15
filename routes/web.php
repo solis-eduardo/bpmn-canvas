@@ -101,6 +101,7 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/diagrams/{slug}/lock', [LockController::class, 'show'])->name('diagrams.lock.show');
     Route::post('/diagrams/{slug}/lock', [LockController::class, 'store'])->name('diagrams.lock.store');
+    Route::post('/diagrams/{slug}/lock/request', [LockController::class, 'requestLock'])->name('diagrams.lock.request');
     Route::patch('/diagrams/{slug}/lock', [LockController::class, 'update'])->name('diagrams.lock.update');
     Route::put('/diagrams/{slug}/lock', [LockController::class, 'transfer'])->name('diagrams.lock.transfer');
     Route::delete('/diagrams/{slug}/lock', [LockController::class, 'destroy'])->name('diagrams.lock.destroy');

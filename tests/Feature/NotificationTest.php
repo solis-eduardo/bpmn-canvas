@@ -335,8 +335,8 @@ class NotificationTest extends TestCase
             'user_id' => $requester->id,
             'status' => Collaborator::STATUS_APPROVED,
         ]);
-        $this->actingAs($holder)->get("/diagrams/{$diagram->slug}");
-        $this->actingAs($requester)->postJson("/diagrams/{$diagram->slug}/lock")->assertOk();
+        $this->actingAs($holder)->postJson("/diagrams/{$diagram->slug}/lock")->assertOk();
+        $this->actingAs($requester)->postJson("/diagrams/{$diagram->slug}/lock/request")->assertOk();
 
         $notification = $holder->notifications()->where('type', DiagramLockRequested::class)->firstOrFail();
         $listed = $this->actingAs($holder)->getJson('/notifications')->json();

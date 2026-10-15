@@ -38,13 +38,16 @@
         @endcan
         data-delete-url="{{ route('diagrams.destroy', $diagram->slug) }}"
         data-index-url="{{ route('diagrams.index') }}"
+        data-lock-acquire-url="{{ route('diagrams.lock.store', $diagram->slug) }}"
+        data-open-failed-notice="{{ __('messages.diagram_open_failed') }}"
+        data-show-url="{{ route('diagrams.show', $diagram->slug) }}"
         data-heartbeat-url="{{ route('diagrams.lock.update', $diagram->slug) }}"
-        data-lock-url="{{ route('diagrams.lock.store', $diagram->slug) }}"
+        data-lock-url="{{ route('diagrams.lock.request', $diagram->slug) }}"
         data-lock-lost-notice="{{ __('messages.lock_lost_notice') }}"
         data-reacquire-lock-failed-notice="{{ __('messages.reacquire_lock_failed') }}"
         data-lock-requested-by-notice="{{ __('messages.lock_requested_by_notice', ['name' => ':name']) }}"
         data-unlock-url="{{ route('diagrams.lock.destroy', $diagram->slug) }}"
-        data-is-lock-holder="{{ (int) $diagram->locked_by === auth()->id() ? '1' : '0' }}"
+        data-is-lock-holder="1"
         data-release-draft-holder-message="{{ __('messages.release_lock_draft_holder') }}"
         data-release-draft-admin-message="{{ __('messages.release_lock_draft_admin') }}"
         data-release-save-label="{{ __('messages.release_save_and_release') }}"
@@ -133,13 +136,12 @@
                         {{ __('messages.fork_diagram') }}
                     </button>
                 </form>
-                @php($isHolder = (int) $diagram->locked_by === auth()->id())
-                @if ($isHolder || (auth()->user()->is_admin && $diagram->locked_by !== null))
-                    <button type="button" id="btn-release-lock">
-                        <x-icon name="key" class="inline h-4 w-4 align-text-bottom" />
-                        {{ __($isHolder ? 'messages.release_lock' : 'messages.force_release_lock') }}
-                    </button>
-                @endif
+                {{-- The Editor is only ever open to its Lock's holder: the Editor acquires the Lock
+                     on load (ADR-0003), and a refusal sends the page to the Viewer instead. --}}
+                <button type="button" id="btn-release-lock">
+                    <x-icon name="key" class="inline h-4 w-4 align-text-bottom" />
+                    {{ __('messages.release_lock') }}
+                </button>
                 <span class="dirty" id="dirty" title="{{ __('messages.unsaved_changes') }}">●</span>
                 <button type="button" class="primary" id="btn-save" title="Ctrl+S"><x-icon name="save" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.save') }}</button>            </header>
             <aside id="info-panel" hidden>
