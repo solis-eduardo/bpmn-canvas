@@ -23,6 +23,9 @@ class AccessMemoWriteGuardTest extends TestCase
     private const REVIEWED = [
         // Writes searchable_text / updated_at only.
         'Repositories/Concerns/SharedVersionRepository.php',
+        // Only takes a row lock (lockForUpdate()->first()) before the save
+        // check; it writes nothing.
+        'Http/Controllers/DiagramContentController.php',
         // This rule's own docblock.
         'Support/AccessMemo.php',
         // Builder deletes that forget() right after.
