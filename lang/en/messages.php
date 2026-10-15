@@ -373,4 +373,8 @@ return [
     'demo_role_author' => 'Author',
     'demo_role_collaborator' => 'Collaborator',
     'demo_password_locked' => 'The password of a demo account cannot be changed.',
+    'delete_diagram' => 'Delete diagram',
+    'delete_diagram_confirm' => 'Delete ":title"? The diagram, its versions and its shares will be permanently removed. This cannot be undone.',
+    'delete_diagram_confirm_button' => 'Yes, delete diagram',
+    'diagram_deleted' => 'Diagram ":title" deleted.',
 ];

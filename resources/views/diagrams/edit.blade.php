@@ -35,5 +35,24 @@
 
             <x-form.actions />
         </x-form.card>
+
+        @can('delete', $diagram)
+            {{-- A <details> disclosure keeps the confirmation step JS-free
+                 (and inside the CSP): closing it cancels. --}}
+            <section class="mt-6 rounded-lg border border-red-200 bg-white p-6 shadow-sm">
+                <details>
+                    <summary class="cursor-pointer text-sm font-medium text-red-700">{{ __('messages.delete_diagram') }}</summary>
+                    <form method="POST" action="{{ route('diagrams.destroy', $diagram->slug) }}" class="mt-4 space-y-4">
+                        @csrf
+                        @method('DELETE')
+                        <p class="text-sm text-gray-700">{{ __('messages.delete_diagram_confirm', ['title' => $diagram->title]) }}</p>
+                        <x-button type="submit" variant="destructive">
+                            <x-icon name="trash" />
+                            {{ __('messages.delete_diagram_confirm_button') }}
+                        </x-button>
+                    </form>
+                </details>
+            </section>
+        @endcan
     </x-form.page>
 </x-layouts.app>

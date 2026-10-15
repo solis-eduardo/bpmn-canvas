@@ -253,14 +253,26 @@ class DiagramController extends Controller
         ]);
     }
 
-    public function destroy(string $slug): JsonResponse
+    /**
+     * Delete a Diagram. The Editor calls it with JSON; the "Delete diagram"
+     * form on the edit screen posts a plain request and lands back on the
+     * Diagram list with a flash message.
+     */
+    public function destroy(Request $request, string $slug): JsonResponse|RedirectResponse
     {
         $diagram = $this->resolveDiagramOrOldSlug($slug)->diagram;
 
         $this->authorize('delete', $diagram);
 
+        $title = $diagram->title;
+
         $this->diagrams->remove($diagram);
 
-        return response()->json(['deleted' => true]);
+        if ($request->expectsJson()) {
+            return response()->json(['deleted' => true]);
+        }
+
+        return redirect()->route('diagrams.index')
+            ->with('status', __('messages.diagram_deleted', ['title' => $title]));
     }
 }

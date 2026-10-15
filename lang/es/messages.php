@@ -373,4 +373,8 @@ return [
     'demo_role_author' => 'Autor',
     'demo_role_collaborator' => 'Colaborador',
     'demo_password_locked' => 'No se puede cambiar la contraseña de una cuenta de demostración.',
+    'delete_diagram' => 'Eliminar diagrama',
+    'delete_diagram_confirm' => '¿Eliminar ":title"? El diagrama, sus versiones y sus enlaces compartidos se eliminarán de forma permanente. Esta acción no se puede deshacer.',
+    'delete_diagram_confirm_button' => 'Sí, eliminar diagrama',
+    'diagram_deleted' => 'Diagrama ":title" eliminado.',
 ];
