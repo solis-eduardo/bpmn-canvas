@@ -75,7 +75,7 @@ class DiagramExportService
         $history = $this->versions->list($diagram);
         $version = $versionId === null
             ? ($history[0] ?? null)
-            : collect($history)->firstWhere('id', $versionId);
+            : collect($history)->firstWhere('id', $this->versions->resolve($diagram, $versionId));
 
         if ($version === null) {
             return null;
