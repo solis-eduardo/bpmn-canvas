@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  acquireLock,
   createHeartbeat,
   createHeartbeatLoop,
+  IDLE_AFTER_MS,
   handleSaveFailure,
   reacquireLock,
+  releaseLockAfterFork,
 } from '../../public/assets/lock-session.js';
 
 // The slice of the Editor's public API a Heartbeat uses.
@@ -89,6 +92,23 @@ describe('createHeartbeat', () => {
     await heartbeat.beat();
 
     expect(send).toHaveBeenCalledTimes(1);
+  });
+
+  it('goes idle after 2 minutes without activity by default', async () => {
+    const send = vi.fn(async () => ({}));
+    let clock = 0;
+    const heartbeat = createHeartbeat({ editor: { isDirty: () => false, on: () => {} }, send, now: () => clock });
+
+    expect(IDLE_AFTER_MS).toBe(2 * 60 * 1000);
+
+    clock = IDLE_AFTER_MS;
+    expect(await heartbeat.beat()).not.toBeNull();
+
+    clock = IDLE_AFTER_MS + 1;
+    expect(await heartbeat.beat()).toBeNull();
+
+    heartbeat.touch();
+    expect(await heartbeat.beat()).not.toBeNull();
   });
 
   it("returns who is asking for the Lock, from the server's answer", async () => {
@@ -258,5 +278,54 @@ describe('reacquireLock', () => {
     expect(request).toHaveBeenCalledWith('POST', '/lock');
     expect(calls).toEqual(['hide', 'beat', 'beat']);
     loop.stop();
+  });
+});
+
+describe('releaseLockAfterFork', () => {
+  it('releases the Lock without asking to keep the draft', async () => {
+    const request = vi.fn(async () => ({ unlocked: true }));
+
+    await releaseLockAfterFork({ request, url: '/unlock' });
+
+    expect(request).toHaveBeenCalledWith('DELETE', '/unlock');
+  });
+
+  it('only logs a failed release, so the page can still move to the Fork', async () => {
+    const request = vi.fn(async () => { throw new Error('offline'); });
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(releaseLockAfterFork({ request, url: '/unlock' })).resolves.toBeUndefined();
+    expect(log).toHaveBeenCalled();
+    log.mockRestore();
+  });
+});
+
+describe('acquireLock', () => {
+  const url = '/diagrams/a/lock';
+
+  it('posts to the acquire endpoint and reports the Lock as acquired', async () => {
+    const request = vi.fn(async () => ({ state: 'acquired' }));
+
+    expect(await acquireLock({ request, url })).toBe(true);
+    expect(request).toHaveBeenCalledWith('POST', url);
+  });
+
+  it('reports a refusal (423, someone else holds the Lock) as not acquired', async () => {
+    const request = vi.fn(async () => { throw Object.assign(new Error('locked'), { status: 423 }); });
+
+    expect(await acquireLock({ request, url })).toBe(false);
+  });
+
+  it('reports a refusal (403, the User cannot edit) as not acquired', async () => {
+    const request = vi.fn(async () => { throw Object.assign(new Error('forbidden'), { status: 403 }); });
+
+    expect(await acquireLock({ request, url })).toBe(false);
+  });
+
+  it('rethrows any other failure instead of treating it as a refusal', async () => {
+    const error = Object.assign(new Error('server error'), { status: 500 });
+    const request = vi.fn(async () => { throw error; });
+
+    await expect(acquireLock({ request, url })).rejects.toBe(error);
   });
 });

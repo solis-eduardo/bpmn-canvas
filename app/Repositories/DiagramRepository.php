@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Exceptions\VersionHistoryBusyException;
 use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\DiagramOldSlug;
@@ -249,6 +250,30 @@ class DiagramRepository
     public function rename(Diagram $diagram, string $newTitle): Diagram
     {
         return $this->renameWithin($diagram, $newTitle, fn () => null);
+    }
+
+    /**
+     * Like {@see create()}, then starts the Diagram's Version history. If the
+     * history is busy (issue #242) the row and directory just created are
+     * removed again, so a retry does not leave an orphan behind.
+     *
+     * @param  array<string, mixed>  $data
+     *
+     * @throws VersionHistoryBusyException
+     */
+    public function createWithHistory(array $data, string $initialContent, VersionRepository $versions, User $author): Diagram
+    {
+        $diagram = $this->create($data, $initialContent);
+
+        try {
+            $versions->initialize($diagram, $author);
+        } catch (VersionHistoryBusyException $busy) {
+            $this->remove($diagram);
+
+            throw $busy;
+        }
+
+        return $diagram;
     }
 
     /**

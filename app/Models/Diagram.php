@@ -5,6 +5,8 @@ namespace App\Models;
 use App\Models\Concerns\FiltersDiagramList;
 use App\Models\Concerns\HoldsALock;
 use App\Rules\BpmnXml;
+use App\Support\AccessMemo;
+use App\Support\AccessPredicate;
 use Database\Factories\DiagramFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,16 +27,6 @@ class Diagram extends Model
 
     use HasTags;
     use HoldsALock;
-
-    /**
-     * Answers of isEditableBy() for this instance, keyed by User id. Cleared
-     * whenever the instance is saved or re-read, so a check made after a
-     * change to the Diagram or to its access rows (through the Diagram's
-     * own instance) is never answered from before that change.
-     *
-     * @var array<int, bool>
-     */
-    private array $editableByCache = [];
 
     /**
      * Template for a newly created Diagram's seed BPMN XML. The start
@@ -140,11 +132,11 @@ BPMN;
      */
     public function hasManagerRole(User $user): bool
     {
-        return $this->collaborators()
+        return $this->memoize(AccessPredicate::Manager, $user, fn () => $this->collaborators()
             ->where('user_id', $user->id)
             ->where('status', Collaborator::STATUS_APPROVED)
             ->where('role', Collaborator::ROLE_MANAGER)
-            ->exists();
+            ->exists());
     }
 
     /**
@@ -169,10 +161,28 @@ BPMN;
      */
     public function hasApprovedCollaborator(User $user): bool
     {
-        return $this->collaborators()
+        return $this->memoize(AccessPredicate::Collaborator, $user, fn () => $this->collaborators()
             ->where('user_id', $user->id)
             ->where('status', Collaborator::STATUS_APPROVED)
-            ->exists();
+            ->exists());
+    }
+
+    /**
+     * Answers an access predicate from the request-scoped AccessMemo, keyed
+     * by predicate, Diagram and User, so the answer is shared by every
+     * instance of this Diagram in the request. Writes that can change it
+     * clear the memo (see AccessMemo).
+     *
+     * @param  callable(): bool  $resolve
+     */
+    private function memoize(AccessPredicate $predicate, User $user, callable $resolve): bool
+    {
+        // An unsaved Diagram has no id to key the memo by.
+        if (! $this->exists) {
+            return $resolve();
+        }
+
+        return app(AccessMemo::class)->remember($predicate, (int) $this->getKey(), $user->id, $resolve);
     }
 
     /**
@@ -188,28 +198,10 @@ BPMN;
             return false;
         }
 
-        return $this->editableByCache[$user->id] ??= static::query()
+        return $this->memoize(AccessPredicate::Editable, $user, fn () => static::query()
             ->whereKey($this->getKey())
             ->editableBy($user)
-            ->exists();
-    }
-
-    /**
-     * Re-reads the Diagram from the database, so the memoized answers of
-     * isEditableBy() are dropped along with the stale attributes.
-     */
-    public function refresh(): static
-    {
-        $this->editableByCache = [];
-
-        return parent::refresh();
-    }
-
-    protected static function booted(): void
-    {
-        static::saved(function (Diagram $diagram): void {
-            $diagram->editableByCache = [];
-        });
+            ->exists());
     }
 
     /**

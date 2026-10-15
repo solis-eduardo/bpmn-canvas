@@ -6,6 +6,7 @@ use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Rules\BpmnXml;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -92,5 +93,61 @@ class ForkTest extends TestCase
 
         $response->assertForbidden();
         $this->assertDatabaseMissing('diagrams', ['forked_from_id' => $diagram->id]);
+    }
+
+    private function bpmn(string $label): string
+    {
+        return '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">'.$label.'</bpmn:definitions>';
+    }
+
+    public function test_a_fork_can_start_from_unsaved_editor_content_instead_of_the_saved_copy(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+        Storage::disk('diagrams')->put($diagram->disk_path, $this->bpmn('saved'));
+
+        $response = $this->actingAs($owner)->postJson('/diagrams/'.$diagram->slug.'/fork', [
+            'content' => $this->bpmn('unsaved edits'),
+        ]);
+
+        $fork = Diagram::where('forked_from_id', $diagram->id)->firstOrFail();
+        $response->assertCreated()->assertJsonPath('url', route('diagrams.show', $fork->slug));
+        $this->assertSame($this->bpmn('unsaved edits'), Storage::disk('diagrams')->get($fork->disk_path));
+        $this->assertSame($this->bpmn('saved'), Storage::disk('diagrams')->get($diagram->disk_path));
+        $this->assertSame($owner->id, $fork->owner_id);
+    }
+
+    public function test_a_fork_from_unsaved_content_refuses_content_that_is_not_bpmn(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+
+        $this->actingAs($owner)->postJson('/diagrams/'.$diagram->slug.'/fork', ['content' => '<not-bpmn/>'])
+            ->assertStatus(422);
+
+        $this->assertSame(0, Diagram::where('forked_from_id', $diagram->id)->count());
+    }
+
+    public function test_a_fork_from_unsaved_content_refuses_oversized_content(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+
+        $this->actingAs($owner)->postJson('/diagrams/'.$diagram->slug.'/fork', [
+            'content' => $this->bpmn(str_repeat(' ', BpmnXml::MAX_LENGTH)),
+        ])->assertStatus(422)->assertJsonValidationErrors('content');
+
+        $this->assertSame(0, Diagram::where('forked_from_id', $diagram->id)->count());
+    }
+
+    public function test_a_fork_from_unsaved_content_still_needs_the_right_to_open_the_origin(): void
+    {
+        $owner = User::factory()->create();
+        $stranger = User::factory()->create();
+        $workspace = Workspace::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create(['workspace_id' => $workspace->id]);
+
+        $this->actingAs($stranger)->postJson('/diagrams/'.$diagram->slug.'/fork', ['content' => $this->bpmn('x')])
+            ->assertNotFound();
     }
 }

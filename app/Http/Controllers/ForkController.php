@@ -5,8 +5,10 @@ namespace App\Http\Controllers;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Repositories\DiagramRepository;
 use App\Repositories\WorkspaceRepository;
+use App\Rules\BpmnXml;
 use App\Services\ForkService;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 
@@ -20,12 +22,19 @@ class ForkController extends Controller
         private readonly ForkService $forks,
     ) {}
 
-    public function store(Request $request, string $slug): RedirectResponse
+    /**
+     * Forks the Diagram. A request may carry `content`, the edits open in the
+     * Editor and not saved anywhere yet (the save-conflict dialog, issue
+     * #243): the Fork then starts from those. Such a client asks for JSON and
+     * is told where the Fork is, rather than redirected.
+     */
+    public function store(Request $request, string $slug): RedirectResponse|JsonResponse
     {
         $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $data = $request->validate([
             'workspace_id' => ['nullable', 'integer'],
+            'content' => ['bail', 'sometimes', 'string', 'max:'.BpmnXml::MAX_LENGTH, new BpmnXml],
         ]);
 
         // An unknown Workspace is refused exactly like one the User isn't a
@@ -36,7 +45,11 @@ class ForkController extends Controller
 
         $this->authorize('fork.create', [$diagram, $workspace]);
 
-        $fork = $this->forks->create($diagram, $request->user(), $workspace);
+        $fork = $this->forks->create($diagram, $request->user(), $workspace, $data['content'] ?? null);
+
+        if ($request->expectsJson()) {
+            return response()->json(['url' => route('diagrams.show', $fork->slug)], 201);
+        }
 
         return redirect()->route('diagrams.show', $fork->slug);
     }

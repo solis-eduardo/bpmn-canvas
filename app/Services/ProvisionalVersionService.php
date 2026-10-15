@@ -39,7 +39,7 @@ class ProvisionalVersionService
         $versionId = $this->versions->save($diagram, $holder, $draft, VersionRepository::MESSAGE_PROVISIONAL);
 
         if ($versionId !== null) {
-            $this->versions->markProvisional($diagram, $versionId);
+            $this->versions->markProvisional($diagram, $versionId, $holder);
         }
     }
 }

@@ -14,12 +14,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * by an expiring Lock, not yet made permanent) and hidden (deleted from the
  * history without discarding it, see ADR-0004).
  */
-#[Fillable(['diagram_id', 'version_id', 'name', 'is_provisional', 'is_hidden'])]
+#[Fillable(['diagram_id', 'version_id', 'name', 'is_provisional', 'is_hidden', 'kept_for_id'])]
 class DiagramVersionName extends Model
 {
     protected function casts(): array
     {
-        return ['is_provisional' => 'boolean', 'is_hidden' => 'boolean'];
+        return ['is_provisional' => 'boolean', 'is_hidden' => 'boolean', 'kept_for_id' => 'integer'];
     }
 
     /** @return BelongsTo<Diagram, $this> */

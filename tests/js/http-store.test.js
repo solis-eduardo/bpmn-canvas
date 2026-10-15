@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createHttpDiagramStore } from '../../public/assets/http-store.js';
 import { describeDiagramStoreContract } from './diagram-store-contract.js';
+import { errorMessage } from '../../public/assets/common.js';
 import { createFakeLaravelBackend, CSRF_TOKEN, urls } from './fake-laravel-backend.js';
 
 function makeStore({ csrfToken = CSRF_TOKEN } = {}) {
@@ -61,6 +62,32 @@ describe('HttpDiagramStore', () => {
     expect(error.conflict).toBe(true);
     expect(error.status).toBe(409);
     expect(await store.load()).toBe('<other/>');
+  });
+
+  it('names the newer Version on the conflict, for the compare option', async () => {
+    const { store, backend } = makeStore();
+    await store.save('<a/>');
+    await store.load();
+    const otherSession = createHttpDiagramStore({ urls, csrfToken: CSRF_TOKEN, fetch: backend.fetch });
+    await otherSession.save('<other/>');
+    const newest = (await store.versions())[0].id;
+
+    const error = await store.save('<mine/>').catch(e => e);
+
+    expect(error.currentVersion).toBe(newest);
+  });
+
+  it('forks the given unsaved content without touching this Diagram', async () => {
+    const { store, backend } = makeStore();
+    await store.save('<a/>');
+    await store.load();
+
+    const fork = await store.fork('<unsaved/>');
+
+    expect(fork.url).toMatch(/\/diagrams\/fork-1$/);
+    expect(backend.forks).toEqual(['<unsaved/>']);
+    expect(await store.load()).toBe('<a/>');
+    expect((await store.versions()).map(v => v.number)).toEqual([1]);
   });
 
   it('saves on top of a newer Version when asked to overwrite it', async () => {

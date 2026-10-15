@@ -17,7 +17,7 @@ class MemberRepositoryTest extends TestCase
     {
         $workspace = Workspace::factory()->create();
         $user = User::factory()->create();
-        $repository = new MemberRepository;
+        $repository = app(MemberRepository::class);
 
         $first = $repository->upsertManual($workspace, $user);
         $second = $repository->upsertManual($workspace, $user);
@@ -33,7 +33,7 @@ class MemberRepositoryTest extends TestCase
     {
         $workspace = Workspace::factory()->create();
         $user = User::factory()->create();
-        $repository = new MemberRepository;
+        $repository = app(MemberRepository::class);
         $repository->createGroupIfMissing($workspace, $user);
 
         $member = $repository->upsertManual($workspace, $user);
@@ -45,7 +45,7 @@ class MemberRepositoryTest extends TestCase
     {
         $workspace = Workspace::factory()->create();
         $user = User::factory()->create();
-        $repository = new MemberRepository;
+        $repository = app(MemberRepository::class);
         $repository->upsertManual($workspace, $user);
 
         $member = $repository->createGroupIfMissing($workspace, $user);
@@ -59,7 +59,7 @@ class MemberRepositoryTest extends TestCase
         $workspace = Workspace::factory()->create();
         $user = User::factory()->create();
 
-        $member = (new MemberRepository)->createGroupIfMissing($workspace, $user);
+        $member = app(MemberRepository::class)->createGroupIfMissing($workspace, $user);
 
         $this->assertSame(Member::ORIGIN_GROUP, $member->origin);
     }
@@ -68,7 +68,7 @@ class MemberRepositoryTest extends TestCase
     {
         $workspace = Workspace::factory()->create();
         $user = User::factory()->create();
-        $repository = new MemberRepository;
+        $repository = app(MemberRepository::class);
         $repository->upsertManual($workspace, $user);
 
         $this->assertTrue($repository->removeFor($workspace, $user));
@@ -82,7 +82,7 @@ class MemberRepositoryTest extends TestCase
         $kept = Workspace::factory()->create(['keycloak_group' => 'finance']);
         $dropped = Workspace::factory()->create(['keycloak_group' => 'hr']);
         $manual = Workspace::factory()->create(['keycloak_group' => 'hr']);
-        $repository = new MemberRepository;
+        $repository = app(MemberRepository::class);
         $repository->createGroupIfMissing($kept, $user);
         $repository->createGroupIfMissing($dropped, $user);
         $repository->upsertManual($manual, $user);

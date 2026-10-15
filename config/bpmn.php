@@ -9,11 +9,16 @@ return [
     'keycloak_admin_role' => env('KEYCLOAK_ADMIN_ROLE', 'bpmn-admin'),
 
     // Minutes without a Heartbeat after which a Lock expires and is released (ADR-0003).
-    'lock_ttl_minutes' => (int) env('LOCK_TTL_MINUTES', 5),
+    'lock_ttl_minutes' => (int) env('LOCK_TTL_MINUTES', 3),
 
     // Where Version history is kept: "git" (one Git repository per Diagram, the
     // default) or "database" (rows in diagram_versions, no subprocesses; ADR-0018).
     'version_store' => env('VERSION_STORE', 'git'),
+
+    // Seconds a writer waits for a Diagram's Version history lock before giving
+    // up with a retryable 503 (ADR-0018, issue #242). At least 1: 0 or a negative
+    // value would fail every save that finds the lock taken, without waiting.
+    'version_lock_wait_seconds' => max(1, (int) env('VERSION_LOCK_WAIT_SECONDS', 30)),
 
     // Browser demo affordances (ADR-0018): demo sign-in, banner and reset.
     // Off by default; only .env.demo turns it on.

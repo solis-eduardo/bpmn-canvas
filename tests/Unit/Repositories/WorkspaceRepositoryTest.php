@@ -17,7 +17,7 @@ class WorkspaceRepositoryTest extends TestCase
 
     private function repository(): WorkspaceRepository
     {
-        return new WorkspaceRepository(new MemberRepository);
+        return new WorkspaceRepository(app(MemberRepository::class));
     }
 
     public function test_finds_a_workspace(): void
@@ -122,7 +122,7 @@ class WorkspaceRepositoryTest extends TestCase
         $workspace = Workspace::factory()->create();
         $newOwner = User::factory()->create();
 
-        (new WorkspaceRepository(new MemberRepository))->changeOwner($workspace, $newOwner);
+        (new WorkspaceRepository(app(MemberRepository::class)))->changeOwner($workspace, $newOwner);
 
         $this->assertSame($newOwner->id, $workspace->fresh()->owner_id);
     }
