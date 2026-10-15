@@ -6,18 +6,10 @@
  * no Lock. Its strings come from the panel's data-labels attribute; Comment
  * text is only ever inserted with textContent.
  */
-import { errorMessage, togglePanel, toggleFloating, toast } from './common.js';
+import { el, errorMessage, togglePanel, toggleFloating, toast } from './common.js';
 import { createJsonClient } from './http-store.js';
 
 const MARKER_TYPE = 'comment-marker';
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-
-  return node;
-}
 
 /**
  * @param {Object} options

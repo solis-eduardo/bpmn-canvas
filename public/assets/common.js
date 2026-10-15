@@ -97,6 +97,15 @@ export function togglePanel(id, open) {
   });
 }
 
+// A new element with an optional class and text (textContent, so never parsed as markup).
+export function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+
+  return node;
+}
+
 // The Viewer has no side-panel layout: its panels float over the canvas, one at a time.
 export function toggleFloating(panel) {
   const open = panel.hidden;

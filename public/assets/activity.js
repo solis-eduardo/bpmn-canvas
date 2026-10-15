@@ -4,16 +4,8 @@
  * Server-only and read-only, so it needs no Lock. Its strings come from the
  * panel's data-labels attribute; every value is inserted with textContent.
  */
-import { errorMessage, toggleFloating } from './common.js';
+import { el, errorMessage, toggleFloating } from './common.js';
 import { createJsonClient } from './http-store.js';
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-
-  return node;
-}
 
 export function startActivity() {
   const panel = document.getElementById('activity-panel');
