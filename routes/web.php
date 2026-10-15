@@ -9,6 +9,7 @@ use App\Http\Controllers\CollaboratorController;
 use App\Http\Controllers\DemoController;
 use App\Http\Controllers\DiagramContentController;
 use App\Http\Controllers\DiagramController;
+use App\Http\Controllers\DiagramExportController;
 use App\Http\Controllers\DiagramOwnerController;
 use App\Http\Controllers\DiagramSettingsController;
 use App\Http\Controllers\DiagramTagController;
@@ -48,7 +49,7 @@ Route::middleware(EnsureDemoMode::class)->prefix('demo')->name('demo.')->group(f
 });
 
 Route::get('/s/{share:token}', [PublicShareController::class, 'show'])->name('shares.show');
-Route::get('/s/{share:token}/download/{format}', [PublicShareController::class, 'download'])->name('shares.download');
+Route::get('/s/{share:token}/download/{format}', [PublicShareController::class, 'download'])->middleware('throttle:30,1')->name('shares.download');
 
 Route::middleware('auth')->group(function () {
     Route::get('/account/notifications', fn () => redirect()->route('account.edit'))->name('account.notifications.edit');
@@ -84,6 +85,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/diagrams/{slug}/content', [DiagramContentController::class, 'update'])->name('diagrams.save');
     Route::put('/diagrams/{slug}', [DiagramController::class, 'update'])->name('diagrams.rename');
     Route::delete('/diagrams/{slug}', [DiagramController::class, 'destroy'])->name('diagrams.destroy');
+
+    Route::get('/diagrams/{slug}/export/{format}', [DiagramExportController::class, 'show'])->middleware('throttle:30,1')->name('diagrams.export');
 
     Route::get('/diagrams/{slug}/collaborators', [CollaboratorController::class, 'index'])->name('diagrams.collaborators.index');
     Route::post('/diagrams/{slug}/collaborators', [CollaboratorController::class, 'store'])->name('diagrams.collaborators.store');

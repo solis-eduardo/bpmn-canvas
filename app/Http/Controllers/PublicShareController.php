@@ -3,7 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Share;
+use App\Rendering\ExportFormat;
+use App\Rendering\RenderingFailedException;
 use App\Repositories\VersionRepository;
+use App\Services\DiagramExportService;
 use Illuminate\Http\Response;
 use Illuminate\View\View;
 
@@ -21,22 +24,29 @@ class PublicShareController extends Controller
         return view('shares.show', [
             'diagram' => $diagram,
             'diagramXml' => $diagramXml,
-            'allowDownload' => $share->allow_download,
+            'downloadUrls' => $share->downloadUrls(),
         ]);
     }
 
-    public function download(Share $share, string $format, VersionRepository $versions): Response
+    public function download(Share $share, string $format, VersionRepository $versions, DiagramExportService $exports): Response
     {
         abort_unless($share->isValid(), 403);
         abort_unless($share->allow_download, 403);
-        abort_unless($format === 'bpmn', 404);
 
         $diagram = $share->diagram;
         $content = $share->content($versions);
 
-        return response($content, 200, [
-            'Content-Type' => 'application/xml',
-            'Content-Disposition' => 'attachment; filename="'.$diagram->slug.'.bpmn"',
-        ]);
+        if ($format === 'bpmn') {
+            return $exports->exportBpmn($diagram, $content);
+        }
+
+        $exportFormat = ExportFormat::tryFrom($format) ?? abort(404);
+
+        try {
+            return $exports->export($diagram, $content, $share->pinned_version_id, $exportFormat);
+        } catch (RenderingFailedException $e) {
+            report($e);
+            abort(503, __('messages.export_unavailable'));
+        }
     }
 }

@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\AuthorizesDiagramWrites;
 use App\Http\Controllers\Concerns\ListsOwnerCandidates;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Diagram;
+use App\Models\Share;
 use App\Models\Tag;
 use App\Models\User;
 use App\Repositories\DiagramListCriteria;
@@ -221,7 +222,9 @@ class DiagramController extends Controller
         return view('shares.show', [
             'diagram' => $diagram,
             'diagramXml' => $this->diagrams->contentOf($diagram),
-            'allowDownload' => true,
+            'downloadUrls' => collect(Share::DOWNLOAD_FORMATS)
+                ->mapWithKeys(fn (string $format) => [$format => route('diagrams.export', [$diagram->slug, $format])])
+                ->all(),
             'backUrl' => route('diagrams.index'),
             'notice' => $notice,
             'noticeTone' => $tone,

@@ -129,6 +129,10 @@
                 </x-button>
                 <span class="brand" id="editor-brand">{{ $diagram->title }}</span>
                 <span class="spacer"></span>
+                <x-button :href="route('diagrams.export', [$diagram->slug, 'pdf'])" id="btn-export-pdf" variant="secondary" size="sm">
+                    <x-icon name="download" />
+                    {{ __('messages.export_pdf') }}
+                </x-button>
                 <form method="POST" action="{{ route('diagrams.fork', $diagram->slug) }}">
                     @csrf
                     <button type="submit" id="btn-fork">

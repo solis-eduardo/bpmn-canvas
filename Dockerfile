@@ -26,6 +26,14 @@ COPY composer.json composer.lock ./
 RUN --mount=type=cache,target=/tmp/composer-cache \
     composer install --no-dev --no-interaction --no-progress --no-scripts --optimize-autoloader
 
+# --- Stage 2b: server-side renderer dependencies (bpmn-js + puppeteer-core, issue #250) ---
+# Pure JavaScript, so the modules built here run on the app image's Node.
+FROM node:22.23.3-alpine3.24 AS renderer-deps
+WORKDIR /build
+COPY docker/renderer/package.json docker/renderer/package-lock.json ./
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --no-audit --no-fund --omit=dev
+
 # --- Stage 4: PHP-FPM application (Laravel) ---
 FROM php:8.4.26-fpm-alpine3.24 AS app
 # libpq-dev (not postgresql-dev) avoids transitively pulling in llvm/clang/icu
@@ -34,6 +42,10 @@ FROM php:8.4.26-fpm-alpine3.24 AS app
 RUN --mount=type=cache,target=/var/cache/apk,sharing=locked \
     apk add --update --virtual .build-deps $PHPIZE_DEPS libpq-dev \
     && apk add --update libpq git postgresql16-client fcgi \
+    # Server-side PNG/SVG/PDF export (docker/renderer): Node runs bpmn-js inside
+    # headless Chromium; font-liberation is metric-compatible with the Arial
+    # that bpmn-js labels use, so text wraps the way it does in the Editor.
+    && apk add --update nodejs chromium font-liberation \
     && docker-php-ext-install -j$(nproc) pdo pdo_pgsql opcache \
     && apk del .build-deps \
     && git config --system --add safe.directory '*' \
@@ -45,6 +57,7 @@ WORKDIR /var/www/html
 COPY --from=composer-deps /build/vendor ./vendor
 COPY . .
 COPY --from=vite-build /build/public/build/ ./public/build/
+COPY --from=renderer-deps /build/node_modules ./docker/renderer/node_modules
 # Composer is only needed here: mounted for this step, not shipped in the image.
 RUN --mount=from=composer-deps,source=/usr/bin/composer,target=/usr/bin/composer \
     composer dump-autoload --no-dev --optimize \

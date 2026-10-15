@@ -112,12 +112,29 @@ class Share extends Model
         return route('shares.show', ['share' => $this->token]);
     }
 
-    public function downloadUrl(): ?string
+    /** Formats a Share with `allow_download` offers: the stored BPMN plus the server-rendered ones. */
+    public const DOWNLOAD_FORMATS = ['bpmn', 'png', 'svg', 'pdf'];
+
+    public function downloadUrl(string $format = 'bpmn'): ?string
     {
         if (! $this->allow_download) {
             return null;
         }
 
-        return route('shares.download', ['share' => $this->token, 'format' => 'bpmn']);
+        return route('shares.download', ['share' => $this->token, 'format' => $format]);
+    }
+
+    /**
+     * @return array<string, string>|null download link per format, keyed by format.
+     */
+    public function downloadUrls(): ?array
+    {
+        if (! $this->allow_download) {
+            return null;
+        }
+
+        return collect(self::DOWNLOAD_FORMATS)
+            ->mapWithKeys(fn (string $format) => [$format => $this->downloadUrl($format)])
+            ->all();
     }
 }
