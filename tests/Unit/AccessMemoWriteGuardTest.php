@@ -28,6 +28,9 @@ class AccessMemoWriteGuardTest extends TestCase
         'Http/Controllers/DiagramContentController.php',
         // This rule's own docblock.
         'Support/AccessMemo.php',
+        // Builder update that clears lock_requested_by/lock_requested_at only
+        // (clearLockRequestsBy); the memoized access predicates never read them.
+        'Repositories/DiagramRepository.php',
         // Builder deletes that forget() right after.
         'Repositories/MemberRepository.php',
     ];

@@ -89,6 +89,47 @@ class UserDeactivationTest extends TestCase
         $this->assertCount(1, $provisional);
     }
 
+    public function test_taking_over_an_expired_lock_of_a_deactivated_holder_keeps_their_draft_as_a_provisional_version_in_their_name(): void
+    {
+        $former = User::factory()->create();
+        $taker = User::factory()->create();
+        $diagram = Diagram::factory()->for($former, 'author')->create();
+        Collaborator::create(['diagram_id' => $diagram->id, 'user_id' => $taker->id, 'status' => Collaborator::STATUS_APPROVED]);
+        $this->actingAs($former)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
+        $this->actingAs($former)->patchJson('/diagrams/'.$diagram->slug.'/lock', ['draft' => $this->draft('stale work')])->assertOk();
+        // A Lock that outlived the deactivation (the release is skipped here
+        // on purpose): the holder relation must still resolve the account.
+        $former->forceFill(['deactivated_at' => now()])->save();
+        $this->assertSame($former->id, $diagram->fresh()->lockedBy?->id);
+
+        $this->travel(config('bpmn.lock_ttl_minutes'))->minutes();
+        $this->actingAs($taker)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk()->assertJson(['state' => 'acquired']);
+
+        $this->assertSame($taker->id, $diagram->fresh()->locked_by);
+        $provisional = array_values(array_filter(
+            app(VersionRepository::class)->list($diagram->fresh()),
+            fn (array $version) => $version['provisional'],
+        ));
+        $this->assertCount(1, $provisional);
+        $this->assertSame($former->name, $provisional[0]['author']);
+        $this->assertSame($former->id, $provisional[0]['kept_for']);
+    }
+
+    public function test_a_diagram_owned_by_a_deactivated_user_can_still_be_forked_by_an_active_user(): void
+    {
+        $owner = User::factory()->create();
+        $forker = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+        Collaborator::create(['diagram_id' => $diagram->id, 'user_id' => $forker->id, 'status' => Collaborator::STATUS_APPROVED]);
+        app(UserDeactivationService::class)->deactivate($owner);
+
+        $this->actingAs($forker)->postJson('/diagrams/'.$diagram->slug.'/fork', ['content' => Diagram::emptyBpmn()])->assertCreated();
+
+        $fork = Diagram::where('forked_from_id', $diagram->id)->firstOrFail();
+        $this->assertSame($forker->id, $fork->owner_id);
+        $this->assertSame($owner->id, $diagram->fresh()->owner->id);
+    }
+
     public function test_deactivated_user_is_hidden_from_pickers(): void
     {
         $gone = User::factory()->create(['name' => 'Gone Person']);
