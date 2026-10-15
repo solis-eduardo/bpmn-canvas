@@ -2,12 +2,15 @@
 
 namespace App\Services\Backup;
 
+use Illuminate\Container\Attributes\Bind;
+
 /**
  * The boundary between backup verification (BackupVerificationRepository)
  * and a throwaway database: loads a dump into it, reports what came back,
  * and discards it. An interface so a test can swap the real Postgres work
  * for a fake without a server.
  */
+#[Bind(PgRestoreVerifier::class)]
 interface RestoreVerifier
 {
     /**
