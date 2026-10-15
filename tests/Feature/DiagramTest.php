@@ -247,7 +247,7 @@ class DiagramTest extends TestCase
         $diagram->refresh();
         $renamedSlug = $diagram->slug;
 
-        $this->actingAs($user)->delete('/diagrams/'.$renamedSlug)->assertOk();
+        $this->actingAs($user)->deleteJson('/diagrams/'.$renamedSlug)->assertOk();
 
         $this->assertDatabaseMissing('diagrams', ['id' => $diagram->id]);
         $this->assertDatabaseMissing('diagram_old_slugs', ['diagram_id' => $diagram->id]);
@@ -264,7 +264,7 @@ class DiagramTest extends TestCase
         $revokedShare = Share::factory()->for($diagram)->for($user, 'author')->create(['revoked_at' => now()]);
         $activeShare = Share::factory()->for($diagram)->for($user, 'author')->create();
 
-        $this->actingAs($user)->delete('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($user)->deleteJson('/diagrams/'.$diagram->slug)->assertOk();
 
         $this->assertDatabaseMissing('diagrams', ['id' => $diagram->id]);
         $this->assertDatabaseMissing('shares', ['id' => $revokedShare->id]);
@@ -329,7 +329,7 @@ class DiagramTest extends TestCase
         $disk->shouldReceive('deleteDirectory')->once()->andThrow(new \RuntimeException('Simulated disk failure.'));
         Storage::set('diagrams', $disk);
 
-        $response = $this->actingAs($user)->delete('/diagrams/'.$diagram->slug);
+        $response = $this->actingAs($user)->deleteJson('/diagrams/'.$diagram->slug);
 
         $response->assertServerError();
         $this->assertDatabaseMissing('diagrams', ['id' => $diagram->id]);
@@ -392,7 +392,7 @@ class DiagramTest extends TestCase
         $this->actingAs($author)->delete('/diagrams/'.$diagram->slug)->assertForbidden();
         $this->assertDatabaseHas('diagrams', ['id' => $diagram->id]);
 
-        $this->actingAs($owner)->delete('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($owner)->deleteJson('/diagrams/'.$diagram->slug)->assertOk();
         $this->assertDatabaseMissing('diagrams', ['id' => $diagram->id]);
     }
 
