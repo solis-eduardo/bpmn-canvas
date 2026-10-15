@@ -303,6 +303,15 @@
                         aria-label="{{ __('messages.collaborators') }}"
                     ><x-icon name="users" /></button>
                 @endcan
+                @can('viewActivity', $diagram)
+                    <a
+                        id="btn-activity-entry"
+                        class="btn panel-toggle"
+                        href="{{ route('diagrams.activity', $diagram->slug) }}"
+                        title="{{ __('messages.activity') }}"
+                        aria-label="{{ __('messages.activity') }}"
+                    ><x-icon name="shield-check" /></a>
+                @endcan
                 @can('manageShares', $diagram)
                     <button
                         type="button"

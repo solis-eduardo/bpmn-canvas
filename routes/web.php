@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AccountNotificationController;
+use App\Http\Controllers\Admin\ActivityController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\KeycloakLoginController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CollaboratorController;
 use App\Http\Controllers\DemoController;
+use App\Http\Controllers\DiagramActivityController;
 use App\Http\Controllers\DiagramContentController;
 use App\Http\Controllers\DiagramController;
 use App\Http\Controllers\DiagramOwnerController;
@@ -69,6 +71,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/users/{managedUser}/reactivate', [UserController::class, 'reactivate'])->name('admin.users.reactivate');
     Route::post('/admin/users/{managedUser}/transfer-ownership', [UserController::class, 'transferOwnership'])->name('admin.users.transfer-ownership');
 
+    Route::get('/admin/activity', [ActivityController::class, 'index'])->name('admin.activity.index');
+
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/history', [NotificationController::class, 'history'])->name('notifications.history');
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
@@ -89,6 +93,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/diagrams/{slug}/collaborators', [CollaboratorController::class, 'store'])->name('diagrams.collaborators.store');
     Route::put('/diagrams/{slug}/collaborators/{user}', [CollaboratorController::class, 'update'])->name('diagrams.collaborators.update');
     Route::delete('/diagrams/{slug}/collaborators/{user}', [CollaboratorController::class, 'destroy'])->name('diagrams.collaborators.destroy');
+
+    Route::get('/diagrams/{slug}/activity', [DiagramActivityController::class, 'index'])->name('diagrams.activity');
 
     Route::put('/diagrams/{slug}/tags', [DiagramTagController::class, 'sync'])->name('diagrams.tags.sync');
     Route::post('/diagrams/{slug}/tags', [DiagramTagController::class, 'store'])->name('diagrams.tags.store');

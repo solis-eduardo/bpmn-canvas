@@ -7,6 +7,7 @@ use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Repositories\DiagramRepository;
 use App\Repositories\UserRepository;
 use App\Rules\BpmnXml;
+use App\Services\ActivityLogger;
 use App\Services\LockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -25,6 +26,7 @@ class LockController extends Controller
         private readonly DiagramRepository $diagrams,
         private readonly UserRepository $users,
         private readonly LockService $locks,
+        private readonly ActivityLogger $activity,
     ) {}
 
     public function show(string $slug): JsonResponse
@@ -140,11 +142,18 @@ class LockController extends Controller
 
         $data = $request->validate(['save_draft' => ['sometimes', 'boolean']]);
 
+        $holder = $diagram->lockedBy;
+
         $this->locks->release(
             $diagram,
             (bool) ($data['save_draft'] ?? false),
             $diagram->isLockedBy($request->user()) ? $this->usableDraft($request->input('draft')) : null,
         );
+
+        // Releasing someone else's Lock is the Administrator's force-release.
+        if ($holder !== null && ! $holder->is($request->user())) {
+            $this->activity->record('lock.force_released', $holder, diagram: $diagram, before: ['holder' => $holder->name]);
+        }
 
         return response()->json(['unlocked' => true]);
     }

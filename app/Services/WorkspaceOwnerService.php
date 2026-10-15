@@ -15,7 +15,10 @@ use Illuminate\Support\Facades\DB;
  */
 class WorkspaceOwnerService
 {
-    public function __construct(private readonly WorkspaceRepository $workspaces) {}
+    public function __construct(
+        private readonly WorkspaceRepository $workspaces,
+        private readonly ActivityLogger $activity,
+    ) {}
 
     /**
      * The recipient becomes Workspace Owner and, if not already, a Member.
@@ -23,10 +26,20 @@ class WorkspaceOwnerService
      */
     public function transfer(Workspace $workspace, User $newOwner): void
     {
-        DB::transaction(function () use ($workspace, $newOwner) {
+        $previousOwner = $workspace->owner;
+
+        DB::transaction(function () use ($workspace, $newOwner, $previousOwner) {
             $this->workspaces->addMember($workspace, $newOwner);
 
             $this->workspaces->changeOwner($workspace, $newOwner);
+
+            $this->activity->record(
+                'workspace.owner_transferred',
+                $newOwner,
+                workspace: $workspace,
+                before: ['owner' => $previousOwner->name],
+                after: ['owner' => $newOwner->name],
+            );
         });
 
         $newOwner->notify(new WorkspaceOwnershipTransferred($workspace));

@@ -20,6 +20,7 @@ class DiagramOwnerService
         private readonly DiagramRepository $diagrams,
         private readonly CollaboratorRepository $collaborators,
         private readonly LockService $locks,
+        private readonly ActivityLogger $activity,
     ) {}
 
     /**
@@ -44,6 +45,17 @@ class DiagramOwnerService
             }
 
             $this->settlePreviousOwner($diagram, $previousOwner, $giveUpAccess);
+
+            $this->activity->record(
+                'diagram.owner_transferred',
+                $newOwner,
+                diagram: $diagram,
+                before: ['owner' => $previousOwner->name],
+                after: [
+                    'owner' => $newOwner->name,
+                    'previous_owner_access' => $giveUpAccess ? 'none' : Collaborator::ROLE_COLLABORATOR,
+                ],
+            );
 
             // A previous Diagram Owner who gave up access loses edit rights
             // here, and the Lock follows, as for any other access change.

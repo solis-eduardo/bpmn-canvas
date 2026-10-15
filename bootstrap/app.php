@@ -57,6 +57,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Offset from :00, same reasoning as backup:run above — avoids the
         // crowd of jobs everyone else schedules on the hour.
         $schedule->command('shares:warn-expiring')->hourlyAt(45)->onOneServer();
+        $schedule->command('activity:prune')->dailyAt('03:20')->onOneServer();
         // Lock expiry (ADR-0003) is time-sensitive, so it runs every minute.
         // Its output is kept: a failure here leaves a Lock stuck, and without
         // a trace nobody finds out why.

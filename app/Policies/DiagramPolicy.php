@@ -49,6 +49,16 @@ class DiagramPolicy
     }
 
     /**
+     * Read a Diagram's Activity tab (CONTEXT.md, "Activity Log"; ADR-0022):
+     * the same people who manage its Collaborators — Diagram Owner, Diagram
+     * Manager or Administrator.
+     */
+    public function viewActivity(User $user, Diagram $diagram): bool
+    {
+        return $diagram->canManageCollaborators($user);
+    }
+
+    /**
      * Manage a Diagram's Shares (create/revoke/list): the Diagram Owner or
      * an approved Collaborator (CONTEXT.md, "Share"; ADR-0016). No
      * exception for Administrator, and Workspace Members who are not

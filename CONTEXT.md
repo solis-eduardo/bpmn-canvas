@@ -76,6 +76,10 @@ _Avoid_: Workspace Collaborator
 The single User who manages a Workspace: adds and removes Members, renames and deletes it, and can take any Diagram out of it (only a Diagram Owner puts a Diagram in). Starts as the creator; the Workspace Owner or an Administrator can transfer it to another User, with no acceptance needed (the recipient is notified). Can't leave the Workspace without transferring it first. A Workspace can't be deleted while it still holds Diagrams.
 _Avoid_: Owner (unqualified), Workspace admin, manager (reserve "Administrator" for the system-wide role)
 
+**Activity Log**:
+The append-only record of sensitive access changes: Diagram and Workspace ownership transfers, Collaborator grants, removals and role changes, Share creation and revocation, an Administrator's Lock force-release, Workspace Member additions and removals, and Administrator role changes. Each entry keeps the actor (none for what a Keycloak login does on its own, shown as "System"), the action, the Diagram or Workspace, the subject, a before and after, and the time, with names copied so it survives renames and deletions. Entries are never edited or deleted, except by the configurable retention (`ACTIVITY_LOG_RETENTION_DAYS`, default: kept forever). Shown per Diagram on its Activity tab to the Diagram Owner, Diagram Managers and Administrators, and globally to Administrators with filters (ADR-0022). Not a Notification: it is a record for those who administer access, not a message to the affected User.
+_Avoid_: audit trail, history (Version history is a different thing)
+
 **Tag**:
 A global, free-text marker applied to Diagrams to organize and filter the Diagram list. Anyone who can edit a Diagram (Diagram Owner, Collaborator, Member) can apply or remove its Tags. Unrelated to the Git mechanics behind Versions, which stay invisible.
 _Avoid_: label, category, folder
@@ -105,3 +109,5 @@ The UI is localized in pt-BR (`lang/pt_BR`); code, docs and commits use the Engl
 | Workspace Owner | Dono do Ambiente |
 | Member | Membro |
 | Tag | Tag |
+| Activity Log | Registro de atividade |
+| Activity (tab) | Atividade |
