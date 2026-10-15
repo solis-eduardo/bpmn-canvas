@@ -192,7 +192,11 @@ return [
     'diff_added' => 'Añadido',
     'diff_removed' => 'Eliminado',
     'diff_changed' => 'Modificado',
-    'diff_removed_elements' => 'Elementos eliminados (no están en el canvas actual)',
+    'diff_summary' => 'Cambios',
+    'diff_renamed' => 'Renombrado',
+    'diff_moved' => 'Movido',
+    'diff_reconnected' => 'Reconectado',
+    'diff_no_changes' => 'No hay diferencias entre estas versiones.',
     'bpmn_element_types' => [
         'Task' => 'Tarea', 'UserTask' => 'Tarea de usuario', 'ServiceTask' => 'Tarea de servicio', 'ScriptTask' => 'Tarea de script',
         'BusinessRuleTask' => 'Tarea de regla de negocio', 'ManualTask' => 'Tarea manual', 'SendTask' => 'Tarea de envío',

@@ -192,7 +192,11 @@ return [
     'diff_added' => 'Added',
     'diff_removed' => 'Removed',
     'diff_changed' => 'Changed',
-    'diff_removed_elements' => 'Removed elements (not on the current canvas)',
+    'diff_summary' => 'Changes',
+    'diff_renamed' => 'Renamed',
+    'diff_moved' => 'Moved',
+    'diff_reconnected' => 'Reconnected',
+    'diff_no_changes' => 'No differences between these Versions.',
     'bpmn_element_types' => [
         'Task' => 'Task', 'UserTask' => 'User task', 'ServiceTask' => 'Service task', 'ScriptTask' => 'Script task',
         'BusinessRuleTask' => 'Business rule task', 'ManualTask' => 'Manual task', 'SendTask' => 'Send task',
