@@ -22,29 +22,35 @@ class DiagramExportService
     ) {}
 
     /**
-     * @param  string  $content  the BPMN XML to render.
-     * @param  string|null  $versionId  the Version $content belongs to; null for the latest.
+     * The download for $format: the stored BPMN as is, or a server rendering.
      *
-     * @throws RenderingFailedException
+     * @param  string  $content  the BPMN XML to export.
+     * @param  string|null  $versionId  the Version $content belongs to; null for the latest.
      */
-    public function export(Diagram $diagram, string $content, ?string $versionId, ExportFormat $format): Response
+    public function download(Diagram $diagram, string $content, ?string $versionId, string $format): Response
     {
-        $titleBlock = $format === ExportFormat::Pdf ? $this->titleBlock($diagram, $versionId) : null;
+        if ($format === 'bpmn') {
+            return $this->respond($diagram, $content, 'application/xml', $format);
+        }
 
-        $bytes = $this->renderer->render($content, $format, $titleBlock);
+        $exportFormat = ExportFormat::tryFrom($format) ?? abort(404);
+        $titleBlock = $exportFormat === ExportFormat::Pdf ? $this->titleBlock($diagram, $versionId) : null;
 
-        return response($bytes, 200, [
-            'Content-Type' => $format->mimeType(),
-            'Content-Disposition' => 'attachment; filename="'.$diagram->slug.'.'.$format->value.'"',
-        ]);
+        try {
+            $bytes = $this->renderer->render($content, $exportFormat, $titleBlock);
+        } catch (RenderingFailedException $e) {
+            report($e);
+            abort(503, __('messages.export_unavailable'));
+        }
+
+        return $this->respond($diagram, $bytes, $exportFormat->mimeType(), $format);
     }
 
-    /** The stored BPMN as is: no rendering involved. */
-    public function exportBpmn(Diagram $diagram, string $content): Response
+    private function respond(Diagram $diagram, string $body, string $mimeType, string $extension): Response
     {
-        return response($content, 200, [
-            'Content-Type' => 'application/xml',
-            'Content-Disposition' => 'attachment; filename="'.$diagram->slug.'.bpmn"',
+        return response($body, 200, [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'attachment; filename="'.$diagram->slug.'.'.$extension.'"',
         ]);
     }
 

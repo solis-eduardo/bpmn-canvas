@@ -3,8 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
-use App\Rendering\ExportFormat;
-use App\Rendering\RenderingFailedException;
 use App\Repositories\DiagramRepository;
 use App\Repositories\VersionRepository;
 use App\Services\DiagramExportService;
@@ -26,7 +24,6 @@ class DiagramExportController extends Controller
 
     public function show(Request $request, string $slug, string $format, DiagramExportService $exports, VersionRepository $versions): Response
     {
-        $exportFormat = $format === 'bpmn' ? null : (ExportFormat::tryFrom($format) ?? abort(404));
         $diagram = $this->resolveDiagramAllowingOldSlug($slug);
 
         $this->authorize('view', $diagram);
@@ -42,15 +39,6 @@ class DiagramExportController extends Controller
             abort(404);
         }
 
-        if ($exportFormat === null) {
-            return $exports->exportBpmn($diagram, $content);
-        }
-
-        try {
-            return $exports->export($diagram, $content, $versionId, $exportFormat);
-        } catch (RenderingFailedException $e) {
-            report($e);
-            abort(503, __('messages.export_unavailable'));
-        }
+        return $exports->download($diagram, $content, $versionId, $format);
     }
 }
