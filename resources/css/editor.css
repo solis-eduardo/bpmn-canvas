@@ -249,3 +249,4 @@
 /* Blocked screen: request-Lock countdown (issue #9). */
 #lock-countdown { color: var(--muted); font-size: 13px; }
 }
+.app .fork-copy-tags { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--muted); }

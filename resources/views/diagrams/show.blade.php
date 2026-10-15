@@ -135,6 +135,7 @@
                         <x-icon name="copy" class="inline h-4 w-4 align-text-bottom" />
                         {{ __('messages.fork_diagram') }}
                     </button>
+                    <label class="fork-copy-tags"><input type="checkbox" name="copy_tags" value="1"> {{ __('messages.fork_copy_tags') }}</label>
                 </form>
                 {{-- The Editor is only ever open to its Lock's holder: the Editor acquires the Lock
                      on load (ADR-0003), and a refusal sends the page to the Viewer instead. --}}
@@ -201,6 +202,7 @@
                     <div><dt>{{ __('messages.created_at_label') }}</dt><dd><x-timestamp :at="$diagram->created_at" /></dd></div>
                     <div><dt>{{ __('messages.diagram_column_modified') }}</dt><dd><x-timestamp :at="$diagram->updated_at" /></dd></div>
                     <div><dt>{{ __('messages.slug_label') }}</dt><dd class="break-all" id="info-slug">{{ $diagram->slug }}</dd></div>
+                    @include('diagrams._fork-lineage')
                 </dl>
                 <p class="info-footer">
                     <a id="info-edit-link" href="{{ route('diagrams.edit', $diagram->slug) }}">{{ __('messages.edit_diagram') }}</a>
@@ -212,6 +214,7 @@
                     <button type="button" id="btn-history-close" data-panel-close aria-label="{{ __('messages.close') }}"><x-icon name="x-mark" /></button>
                 </div>
                 <p class="version-hint">{{ __('messages.select_two_versions_hint') }}</p>
+                <label class="fork-copy-tags version-hint"><input type="checkbox" id="version-fork-copy-tags"> {{ __('messages.fork_copy_tags') }}</label>
                 <ul id="version-list"></ul>
                 <div class="version-compare-bar">
                     <span id="version-compare-count">0/2</span>

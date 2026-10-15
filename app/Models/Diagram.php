@@ -156,6 +156,17 @@ BPMN;
     }
 
     /**
+     * The Forks made from this Diagram (CONTEXT.md, "Fork"), regardless of
+     * who may see them: narrow with {@see scopeVisibleTo()}.
+     *
+     * @return HasMany<Diagram, $this>
+     */
+    public function forks(): HasMany
+    {
+        return $this->hasMany(Diagram::class, 'forked_from_id');
+    }
+
+    /**
      * True if $user is a direct, approved Collaborator of this Diagram
      * (not merely a Workspace Member).
      */
@@ -253,6 +264,21 @@ BPMN;
         }
 
         return $this->isEditableBy($user);
+    }
+
+    /**
+     * Query counterpart of {@see isVisibleTo()}: Diagrams outside any
+     * Workspace, plus those $user can edit; everything for an Administrator.
+     */
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        if ($user->is_admin) {
+            return $query;
+        }
+
+        return $query->where(fn (Builder $visible) => $visible
+            ->whereNull('workspace_id')
+            ->orWhere(fn (Builder $editable) => $this->scopeEditableBy($editable, $user)));
     }
 
     /** @return HasMany<DiagramOldSlug, $this> */

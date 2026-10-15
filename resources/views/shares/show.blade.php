@@ -43,6 +43,7 @@
                         <x-icon name="copy" />
                         {{ __('messages.fork_diagram') }}
                     </x-button>
+                    <label class="fork-copy-tags text-sm text-gray-700"><input type="checkbox" name="copy_tags" value="1"> {{ __('messages.fork_copy_tags') }}</label>
                 </form>
             @endisset
             @if (isset($unlockUrl))
@@ -88,6 +89,12 @@
                 </div>
             @endif
         </div>
+
+        @isset($forks)
+            <dl id="fork-lineage" class="shrink-0 border-b border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 empty:hidden sm:px-6">
+                @include('diagrams._fork-lineage')
+            </dl>
+        @endisset
 
         <div id="viewer" class="relative min-h-0 flex-1" data-title="{{ $diagram->title }}" data-open-failed-notice="{{ __('messages.diagram_open_failed') }}">
             <div id="canvas" class="absolute inset-0 bg-white"></div>

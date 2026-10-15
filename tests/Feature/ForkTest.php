@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Models\Collaborator;
 use App\Models\Diagram;
+use App\Models\Tag;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Repositories\VersionRepository;
 use App\Rules\BpmnXml;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -149,5 +151,121 @@ class ForkTest extends TestCase
 
         $this->actingAs($stranger)->postJson('/diagrams/'.$diagram->slug.'/fork', ['content' => $this->bpmn('x')])
             ->assertNotFound();
+    }
+
+    public function test_a_fork_copies_the_origin_tags_only_when_asked(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+        $diagram->attachTags([Tag::findOrCreate('Finance'), Tag::findOrCreate('HR')]);
+
+        $this->actingAs($owner)->post('/diagrams/'.$diagram->slug.'/fork')->assertRedirect();
+        $plain = Diagram::where('forked_from_id', $diagram->id)->firstOrFail();
+        $this->assertCount(0, $plain->tags);
+
+        $this->actingAs($owner)->post('/diagrams/'.$diagram->slug.'/fork', ['copy_tags' => '1'])->assertRedirect();
+        $copy = Diagram::where('forked_from_id', $diagram->id)->where('id', '!=', $plain->id)->firstOrFail();
+        $this->assertEqualsCanonicalizing(['Finance', 'HR'], $copy->tags->pluck('name')->all());
+        $this->assertCount(2, $diagram->fresh()->tags);
+        $this->assertSame(2, Tag::count());
+    }
+
+    public function test_a_fork_can_start_from_an_older_version_and_begins_again_at_version_one(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+        Storage::disk('diagrams')->put($diagram->disk_path, $this->bpmn('first'));
+        $versions = app(VersionRepository::class);
+        $versions->save($diagram, $owner, $this->bpmn('first'));
+        $versions->save($diagram, $owner, $this->bpmn('second'));
+        $first = collect($versions->list($diagram))->first(fn (array $v) => $versions->get($diagram, $v['id']) === $this->bpmn('first'))['id'];
+
+        $response = $this->actingAs($owner)->postJson('/diagrams/'.$diagram->slug.'/fork', ['version' => $first]);
+
+        $fork = Diagram::where('forked_from_id', $diagram->id)->firstOrFail();
+        $response->assertCreated()->assertJsonPath('url', route('diagrams.show', $fork->slug));
+        $this->assertSame($this->bpmn('first'), Storage::disk('diagrams')->get($fork->disk_path));
+        $this->assertSame($this->bpmn('second'), Storage::disk('diagrams')->get($diagram->disk_path));
+        $this->assertSame([1], array_column($versions->list($fork), 'number'));
+    }
+
+    public function test_forking_from_a_version_that_does_not_exist_is_a_404_and_creates_nothing(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+        Storage::disk('diagrams')->put($diagram->disk_path, $this->bpmn('x'));
+
+        $this->actingAs($owner)->postJson('/diagrams/'.$diagram->slug.'/fork', ['version' => str_repeat('a', 40)])
+            ->assertNotFound();
+
+        $this->assertSame(0, Diagram::where('forked_from_id', $diagram->id)->count());
+    }
+
+    public function test_a_fork_takes_either_unsaved_content_or_a_version_not_both(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+
+        $this->actingAs($owner)->postJson('/diagrams/'.$diagram->slug.'/fork', ['version' => 'abc', 'content' => $this->bpmn('x')])
+            ->assertStatus(422);
+    }
+
+    public function test_forking_from_a_version_does_not_tell_a_stranger_whether_it_exists(): void
+    {
+        $owner = User::factory()->create();
+        $stranger = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create(['workspace_id' => Workspace::factory()->create()->id]);
+
+        $this->actingAs($stranger)->postJson('/diagrams/'.$diagram->slug.'/fork', ['version' => 'abc'])
+            ->assertNotFound();
+    }
+
+    public function test_the_fork_names_its_origin_and_the_origin_lists_its_forks(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create(['title' => 'Compras']);
+        Storage::disk('diagrams')->put($diagram->disk_path, $this->bpmn('x'));
+        $this->actingAs($owner)->post('/diagrams/'.$diagram->slug.'/fork');
+        $fork = Diagram::where('forked_from_id', $diagram->id)->firstOrFail();
+
+        $this->actingAs($owner)->get('/diagrams/'.$fork->slug)
+            ->assertSee('id="info-forked-from"', false)
+            ->assertSee(route('diagrams.show', $diagram->slug), false);
+        $this->actingAs($owner)->get('/diagrams/'.$diagram->slug)
+            ->assertDontSee('id="info-forked-from"', false)
+            ->assertSee('id="info-forks"', false)
+            ->assertSee(route('diagrams.show', $fork->slug), false);
+    }
+
+    public function test_the_lineage_hides_diagrams_the_user_cannot_see(): void
+    {
+        $owner = User::factory()->create();
+        $forker = User::factory()->create();
+        $workspace = Workspace::factory()->create();
+        $workspace->members()->create(['user_id' => $owner->id]);
+        $hidden = Diagram::factory()->for($owner, 'author')->create(['workspace_id' => $workspace->id]);
+        $fork = Diagram::factory()->for($forker, 'author')->create(['forked_from_id' => $hidden->id]);
+        $hiddenFork = Diagram::factory()->for($owner, 'author')->create(['forked_from_id' => $fork->id, 'workspace_id' => $workspace->id]);
+        Storage::disk('diagrams')->put($fork->disk_path, $this->bpmn('x'));
+
+        $this->actingAs($forker)->get('/diagrams/'.$fork->slug)
+            ->assertOk()
+            ->assertDontSee('id="info-forked-from"', false)
+            ->assertDontSee('id="info-forks"', false)
+            ->assertDontSee($hiddenFork->title);
+    }
+
+    public function test_the_read_only_viewer_shows_the_lineage_too(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create();
+        $fork = Diagram::factory()->for($owner, 'author')->create(['forked_from_id' => $diagram->id]);
+        Storage::disk('diagrams')->put($diagram->disk_path, $this->bpmn('x'));
+
+        $this->actingAs($admin)->get('/diagrams/'.$diagram->slug)
+            ->assertOk()
+            ->assertSee('id="info-forks"', false)
+            ->assertSee(route('diagrams.show', $fork->slug), false);
     }
 }
