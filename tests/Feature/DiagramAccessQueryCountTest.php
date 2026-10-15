@@ -39,7 +39,7 @@ class DiagramAccessQueryCountTest extends TestCase
     public function test_a_heartbeat_evaluates_each_access_predicate_once(): void
     {
         [, $diagram, $member] = $this->workspaceDiagramWithMember();
-        $this->actingAs($member)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($member)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         $access = $this->measure('PATCH /diagrams/{slug}/lock', function () use ($diagram, $member) {
             $this->actingAs($member)->patch('/diagrams/'.$diagram->slug.'/lock')->assertSuccessful();
