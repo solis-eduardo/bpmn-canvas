@@ -29,7 +29,8 @@ class ForkService
         $title = __('Copy of :title', ['title' => $origin->title], config('app.default_locale') ?? config('app.locale'));
         $slug = $this->diagrams->uniqueSlug($title);
 
-        $fork = $this->diagrams->create([
+        // A Fork has its own Version history, starting again at Version 1.
+        $fork = $this->diagrams->createWithHistory([
             'title' => $title,
             'slug' => $slug,
             'author_id' => $forker->id,
@@ -37,10 +38,7 @@ class ForkService
             'workspace_id' => $workspace?->id,
             'disk_path' => $slug.'/diagram.bpmn',
             'forked_from_id' => $origin->id,
-        ], $content);
-
-        // A Fork has its own Version history, starting again at Version 1.
-        $this->versions->initialize($fork, $forker);
+        ], $content, $this->versions, $forker);
 
         return $fork;
     }

@@ -91,6 +91,7 @@ return [
     'error_not_found' => 'The requested item was not found.',
     'error_too_many_requests' => 'Too many attempts in a row. Wait a moment and try again.',
     'error_server' => 'An unexpected server error occurred. Please try again shortly.',
+    'error_history_busy' => 'The diagram history is busy right now; your changes were not saved. Please try again in a few seconds.',
     'viewer_locked_notice' => 'Diagram locked by :name (:time). You are in view-only mode and cannot save changes.',
     'provisional_version' => 'Provisional version (Lock expired)',
     'saved' => 'Saved.',
