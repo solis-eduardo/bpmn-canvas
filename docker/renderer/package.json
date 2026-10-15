@@ -1,0 +1,10 @@
+{
+    "name": "bpmn-canvas-renderer",
+    "private": true,
+    "type": "module",
+    "description": "Server-side PNG/SVG/PDF rendering: bpmn-js inside headless Chromium (issue #250). Bump versions here.",
+    "dependencies": {
+        "bpmn-js": "18.30.0",
+        "puppeteer-core": "24.10.0"
+    }
+}
