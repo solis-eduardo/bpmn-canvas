@@ -1,3 +1,5 @@
 # Unify Diagram search and discovery
 
 Use one search form and one paginated results table for Diagrams a User can open and out-of-Workspace Diagrams they can discover. Search applies to openable Diagram titles, Slugs, and BPMN content, while discoverable Diagrams match by title only and expose only their title, Diagram Owner, and access-request action; workspace-hidden Diagrams remain absent. Existing filters continue to narrow openable results, and legacy `discover` query URLs redirect to the unified `q` search. This preserves the request-access path while removing the separate discovery entry point described in ADR-0010. Discoverable Diagrams appear only when a search term is given; the unfiltered list shows exactly what the User can open, and opening a Diagram without permission is refused.
+
+Search matching is case- and accent-insensitive in both directions (typing "aprovacao" finds "Aprovação" and vice versa), for titles, Slugs and BPMN content alike. On Postgres this uses the `unaccent` extension and a `simple_unaccent` text-search configuration behind the content GIN index; the sqlite test suite registers an equivalent `unaccent()` SQL function.

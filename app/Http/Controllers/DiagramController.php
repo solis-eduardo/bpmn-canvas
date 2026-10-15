@@ -6,6 +6,7 @@ use App\Http\Controllers\Concerns\AuthorizesDiagramWrites;
 use App\Http\Controllers\Concerns\ListsOwnerCandidates;
 use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Models\Diagram;
+use App\Models\Share;
 use App\Models\Tag;
 use App\Models\User;
 use App\Repositories\DiagramListCriteria;
@@ -14,6 +15,7 @@ use App\Repositories\UserRepository;
 use App\Repositories\VersionRepository;
 use App\Repositories\WorkspaceRepository;
 use App\Services\CollaboratorService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -211,7 +213,30 @@ class DiagramController extends Controller
 
         $ownerCandidates = $this->ownerCandidates($diagram);
 
-        return view('diagrams.show', compact('diagram', 'tagNames', 'collaboratorOptions', 'ownerCandidates'));
+        return view('diagrams.show', [
+            'diagram' => $diagram,
+            'tagNames' => $tagNames,
+            'collaboratorOptions' => $collaboratorOptions,
+            'ownerCandidates' => $ownerCandidates,
+            ...$this->forkLineage($diagram, $user),
+        ]);
+    }
+
+    /**
+     * Where this Diagram came from and what came from it, limited to what
+     * $user can see exist (CONTEXT.md, "Fork"): the origin is named only when
+     * visible to them, and so is each Fork listed.
+     *
+     * @return array{forkedFrom: ?Diagram, forks: Collection<int, Diagram>}
+     */
+    private function forkLineage(Diagram $diagram, User $user): array
+    {
+        $origin = $diagram->forkedFrom;
+
+        return [
+            'forkedFrom' => $origin?->isVisibleTo($user) ? $origin : null,
+            'forks' => $diagram->forks()->visibleTo($user)->orderBy('created_at')->orderBy('id')->get(['id', 'slug', 'title']),
+        ];
     }
 
     private function viewer(Diagram $diagram, string $notice, string $tone, User $user, bool $requestLock = false): View
@@ -223,7 +248,9 @@ class DiagramController extends Controller
             'diagramXml' => $this->diagrams->contentOf($diagram),
             // Comments are written without the Lock, so the Viewer has them too (ADR-0024).
             'commentsDiagram' => $diagram,
-            'allowDownload' => true,
+            'downloadUrls' => collect(Share::DOWNLOAD_FORMATS)
+                ->mapWithKeys(fn (string $format) => [$format => route('diagrams.export', [$diagram->slug, $format])])
+                ->all(),
             'backUrl' => route('diagrams.index'),
             'notice' => $notice,
             'noticeTone' => $tone,
@@ -233,6 +260,7 @@ class DiagramController extends Controller
             // as the way out of someone else's Lock.
             'forkUrl' => route('diagrams.fork', $diagram->slug),
             'showUrl' => route('diagrams.show', $diagram->slug),
+            ...$this->forkLineage($diagram, $user),
             'unlockUrl' => $user->is_admin && $diagram->hasActiveLock() ? route('diagrams.lock.destroy', $diagram->slug) : null,
         ]);
     }

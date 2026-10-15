@@ -109,6 +109,7 @@ class ShareController extends Controller
 
         if ($downloadUrl = $share->downloadUrl()) {
             $data['download_url'] = $downloadUrl;
+            $data['download_urls'] = $share->downloadUrls();
         }
 
         return $data;

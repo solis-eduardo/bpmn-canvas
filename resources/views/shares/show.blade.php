@@ -46,6 +46,7 @@
                         <x-icon name="copy" />
                         {{ __('messages.fork_diagram') }}
                     </x-button>
+                    <label class="fork-copy-tags text-sm text-gray-700"><input type="checkbox" name="copy_tags" value="1"> {{ __('messages.fork_copy_tags') }}</label>
                 </form>
             @endisset
             @if (isset($unlockUrl))
@@ -70,7 +71,7 @@
                     {{ __('messages.comments') }}
                 </button>
             @endisset
-            @if ($allowDownload)
+                        @if (! empty($downloadUrls))
                 <div class="dropdown relative">
                     <button
                         type="button"
@@ -81,22 +82,32 @@
                         {{ __('messages.download') }}
                     </button>
                     <div class="dropdown-menu absolute right-0 top-full z-20 mt-1 min-w-[170px] rounded-md border border-gray-200 bg-white p-1 shadow-lg">
-                        <button type="button" data-export="png" class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
+                        <a href="{{ $downloadUrls['png'] }}" download class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
                             <x-icon name="download" />
                             {{ __('messages.png_image') }}
-                        </button>
-                        <button type="button" data-export="svg" class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
+                        </a>
+                        <a href="{{ $downloadUrls['svg'] }}" download class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
                             <x-icon name="download" />
                             {{ __('messages.svg_image') }}
-                        </button>
-                        <button type="button" data-export="bpmn" class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
+                        </a>
+                        <a href="{{ $downloadUrls['pdf'] }}" download class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
+                            <x-icon name="download" />
+                            {{ __('messages.pdf_document') }}
+                        </a>
+                        <a href="{{ $downloadUrls['bpmn'] }}" download class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
                             <x-icon name="download" />
                             {{ __('messages.bpmn_file') }}
-                        </button>
+                        </a>
                     </div>
                 </div>
             @endif
         </div>
+
+        @if (isset($forks) && ($forkedFrom || $forks->isNotEmpty()))
+            <dl id="fork-lineage" class="shrink-0 border-b border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 sm:px-6">
+                @include('diagrams._fork-lineage')
+            </dl>
+        @endif
 
         <div id="viewer" class="relative min-h-0 flex-1" data-title="{{ $diagram->title }}" data-open-failed-notice="{{ __('messages.diagram_open_failed') }}">
             <div id="canvas" class="absolute inset-0 bg-white"></div>
