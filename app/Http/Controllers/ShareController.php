@@ -70,11 +70,7 @@ class ShareController extends Controller
             'pinned_version_id' => $pinnedVersionId,
         ]);
 
-        $this->activity->record('share.created', $share, diagram: $diagram, after: [
-            'expires_at' => $share->expires_at->toIso8601String(),
-            'allow_download' => $share->allow_download,
-            'pinned_version_id' => $share->pinned_version_id,
-        ]);
+        $this->activity->record('share.created', $share, diagram: $diagram, after: $this->snapshot($share));
 
         return response()->json($this->present($share, $versionsById), 201);
     }
@@ -85,13 +81,23 @@ class ShareController extends Controller
 
         $this->shares->revoke($share);
 
-        $this->activity->record('share.revoked', $share, diagram: $share->diagram, before: [
+        $this->activity->record('share.revoked', $share, diagram: $share->diagram, before: $this->snapshot($share));
+
+        return response()->json(['revoked' => true]);
+    }
+
+    /**
+     * What the activity log keeps of a Share: its terms, never its token.
+     *
+     * @return array<string, mixed>
+     */
+    private function snapshot(Share $share): array
+    {
+        return [
             'expires_at' => $share->expires_at->toIso8601String(),
             'allow_download' => $share->allow_download,
             'pinned_version_id' => $share->pinned_version_id,
-        ]);
-
-        return response()->json(['revoked' => true]);
+        ];
     }
 
     /**

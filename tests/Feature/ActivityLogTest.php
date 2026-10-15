@@ -44,8 +44,8 @@ class ActivityLogTest extends TestCase
         $this->assertSame('user', $entry->subject_type);
         $this->assertSame($newOwner->id, $entry->subject_id);
         $this->assertSame('Nora Newowner', $entry->subject_label);
-        $this->assertSame(['owner' => 'Olivia Owner'], $entry->before);
-        $this->assertSame(['owner' => 'Nora Newowner', 'previous_owner_access' => 'collaborator'], $entry->after);
+        $this->assertSame(['diagram_owner' => 'Olivia Owner'], $entry->before);
+        $this->assertSame(['diagram_owner' => 'Nora Newowner', 'previous_owner_access' => 'collaborator'], $entry->after);
         $this->assertNotNull($entry->created_at);
     }
 
@@ -84,8 +84,8 @@ class ActivityLogTest extends TestCase
         $this->assertSame($workspace->id, $entry->workspace_id);
         $this->assertNull($entry->diagram_id);
         $this->assertSame('Walt New', $entry->subject_label);
-        $this->assertSame(['owner' => 'Wanda Owner'], $entry->before);
-        $this->assertSame(['owner' => 'Walt New'], $entry->after);
+        $this->assertSame(['workspace_owner' => 'Wanda Owner'], $entry->before);
+        $this->assertSame(['workspace_owner' => 'Walt New'], $entry->after);
     }
 
     public function test_collaborator_grant_role_change_and_removal_are_logged(): void

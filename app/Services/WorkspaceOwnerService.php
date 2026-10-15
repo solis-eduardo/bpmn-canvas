@@ -37,8 +37,8 @@ class WorkspaceOwnerService
                 'workspace.owner_transferred',
                 $newOwner,
                 workspace: $workspace,
-                before: ['owner' => $previousOwner->name],
-                after: ['owner' => $newOwner->name],
+                before: ['workspace_owner' => $previousOwner->name],
+                after: ['workspace_owner' => $newOwner->name],
             );
         });
 

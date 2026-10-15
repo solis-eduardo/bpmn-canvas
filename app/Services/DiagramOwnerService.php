@@ -50,9 +50,9 @@ class DiagramOwnerService
                 'diagram.owner_transferred',
                 $newOwner,
                 diagram: $diagram,
-                before: ['owner' => $previousOwner->name],
+                before: ['diagram_owner' => $previousOwner->name],
                 after: [
-                    'owner' => $newOwner->name,
+                    'diagram_owner' => $newOwner->name,
                     'previous_owner_access' => $giveUpAccess ? 'none' : Collaborator::ROLE_COLLABORATOR,
                 ],
             );

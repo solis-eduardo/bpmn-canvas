@@ -18,5 +18,6 @@ Sensitive changes used to leave no trace other than the notification sent to the
 **Why:** a notification is addressed to the affected User, can be read and dismissed, and says nothing to the people who administer access. A log written at the point of change, with snapshots, answers the audit question without depending on current state.
 
 **Consequences:**
+- Rows removed by a cascade (deleting a Diagram drops its Collaborators and Shares, deleting a Workspace drops its Members) are not logged entry by entry.
 - Changes made directly in the database, or by code paths that bypass the services and controllers above, are not logged.
 - Entries record names as they were; a later rename does not rewrite history.

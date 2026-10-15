@@ -35,6 +35,7 @@ class ActivityLogger
     ): ActivityLog {
         $actor = $system ? null : auth()->user();
         $workspace ??= $diagram?->workspace;
+        [$subjectType, $subjectLabel] = $this->describeSubject($subject);
 
         return ActivityLog::create([
             'actor_id' => $actor?->id,
@@ -44,9 +45,9 @@ class ActivityLogger
             'diagram_title' => $diagram?->title,
             'workspace_id' => $workspace?->id,
             'workspace_name' => $workspace?->name,
-            'subject_type' => $this->subjectType($subject),
+            'subject_type' => $subjectType,
             'subject_id' => $subject->getKey(),
-            'subject_label' => $this->subjectLabel($subject),
+            'subject_label' => $subjectLabel,
             'before' => $before ?: null,
             'after' => $after ?: null,
         ]);
@@ -73,24 +74,17 @@ class ActivityLogger
         );
     }
 
-    private function subjectType(Model $subject): string
+    /**
+     * @return array{string, string} the subject's type and its display label
+     */
+    private function describeSubject(Model $subject): array
     {
         return match (true) {
-            $subject instanceof User => 'user',
-            $subject instanceof Workspace => 'workspace',
-            $subject instanceof Diagram => 'diagram',
-            $subject instanceof Share => 'share',
-            default => strtolower(class_basename($subject)),
-        };
-    }
-
-    private function subjectLabel(Model $subject): string
-    {
-        return match (true) {
-            $subject instanceof User, $subject instanceof Workspace => $subject->name,
-            $subject instanceof Diagram => $subject->title,
-            $subject instanceof Share => 'Share #'.$subject->getKey(),
-            default => (string) $subject->getKey(),
+            $subject instanceof User => ['user', $subject->name],
+            $subject instanceof Workspace => ['workspace', $subject->name],
+            $subject instanceof Diagram => ['diagram', $subject->title],
+            $subject instanceof Share => ['share', 'Share #'.$subject->getKey()],
+            default => [strtolower(class_basename($subject)), (string) $subject->getKey()],
         };
     }
 }

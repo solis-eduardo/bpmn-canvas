@@ -12,6 +12,7 @@ use App\Support\KeycloakResolution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Contracts\User as SocialiteUserContract;
 use Laravel\Socialite\Facades\Socialite;
@@ -70,9 +71,11 @@ class KeycloakLoginController extends Controller
         $wasAdmin = (bool) $user->is_admin;
         $this->syncAdminFromClaim($user, $emailVerified && $this->hasAdminRoleClaim($tokenPayload));
 
-        $user->save();
+        DB::transaction(function () use ($user, $wasAdmin): void {
+            $user->save();
 
-        $this->activity->recordAdministratorChange($user, $wasAdmin, system: true);
+            $this->activity->recordAdministratorChange($user, $wasAdmin, system: true);
+        });
         $groups = $this->keycloakGroups($tokenPayload);
         $this->syncWorkspaceMemberships($user, $groups, $members);
 
