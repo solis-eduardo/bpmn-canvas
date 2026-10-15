@@ -1,11 +1,10 @@
 import {
-  exportBpmn, exportSvg, exportPng, setupDropdowns, setupZoom, baseName, httpError, chooseRelease, toast, errorMessage,
+  setupDropdowns, setupZoom, httpError, chooseRelease, toast, errorMessage,
 } from './common.js';
 
 (async function () {
   const msg = document.getElementById('message');
   const body = document.getElementById('viewer');
-  const name = baseName(body.dataset.title) + '.bpmn';
   const viewer = new BpmnJS({ container: '#canvas' });
 
   setupDropdowns();
@@ -73,17 +72,4 @@ import {
       }
     });
   }
-
-  document.querySelectorAll('[data-export]').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      try {
-        const kind = btn.dataset.export;
-        if (kind === 'png') await exportPng(viewer, name);
-        if (kind === 'svg') await exportSvg(viewer, name);
-        if (kind === 'bpmn') await exportBpmn(viewer, name);
-      } catch (e) {
-        console.error(e);
-      }
-    });
-  });
 })();

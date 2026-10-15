@@ -93,6 +93,20 @@ export function highlightDiff(bpmnJS, result) {
 // Containers have no shape of their own worth drawing as a "ghost".
 const GHOST_SKIPPED_TYPES = ['bpmn:Process', 'bpmn:Collaboration', 'bpmn:Participant', 'bpmn:Lane'];
 
+// The bounding box ({x, y, width, height}) of a shape or of a connection's waypoints.
+function boxOf(element) {
+  if (!element.waypoints) {
+    return { x: element.x, y: element.y, width: element.width, height: element.height };
+  }
+
+  const xs = element.waypoints.map(point => point.x);
+  const ys = element.waypoints.map(point => point.y);
+  const x = Math.min(...xs);
+  const y = Math.min(...ys);
+
+  return { x, y, width: Math.max(...xs) - x, height: Math.max(...ys) - y };
+}
+
 /**
  * Draws the elements removed in a comparison on the live canvas, as red
  * dashed "ghosts" at the position they had in the old Version. The old XML is
@@ -114,6 +128,7 @@ export async function renderRemovedGhosts(bpmnJS, oldXml, result, Modeler) {
 
   const oldViewer = new Modeler({ container: document.createElement('div') });
   const added = [];
+  const boundsById = {};
   let bounds = null;
 
   try {
@@ -142,20 +157,16 @@ export async function renderRemovedGhosts(bpmnJS, oldXml, result, Modeler) {
     }
 
     function grow(element) {
-      const points = element.waypoints
-        ? element.waypoints.map(({ x, y }) => ({ x, y, width: 0, height: 0 }))
-        : [{ x: element.x, y: element.y, width: element.width, height: element.height }];
+      const { x, y, width, height } = boxOf(element);
 
-      points.forEach(({ x, y, width, height }) => {
-        bounds = bounds
-          ? {
-              left: Math.min(bounds.left, x),
-              top: Math.min(bounds.top, y),
-              right: Math.max(bounds.right, x + width),
-              bottom: Math.max(bounds.bottom, y + height),
-            }
-          : { left: x, top: y, right: x + width, bottom: y + height };
-      });
+      bounds = bounds
+        ? {
+            left: Math.min(bounds.left, x),
+            top: Math.min(bounds.top, y),
+            right: Math.max(bounds.right, x + width),
+            bottom: Math.max(bounds.bottom, y + height),
+          }
+        : { left: x, top: y, right: x + width, bottom: y + height };
     }
 
     function ghost(element) {
@@ -177,6 +188,7 @@ export async function renderRemovedGhosts(bpmnJS, oldXml, result, Modeler) {
       if (!element || GHOST_SKIPPED_TYPES.includes(element.type)) return;
 
       ghost(element);
+      boundsById[id] = boxOf(element);
       (element.labels || []).forEach(ghost);
     });
   } finally {
@@ -188,6 +200,8 @@ export async function renderRemovedGhosts(bpmnJS, oldXml, result, Modeler) {
   };
   // Diagram-coordinate bounds of what was drawn ({left, top, right, bottom}), or null.
   clear.bounds = bounds;
+  // Where each removed element used to be ({x, y, width, height}), by element id.
+  clear.boundsById = boundsById;
 
   return clear;
 }
