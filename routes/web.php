@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\KeycloakLoginController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CollaboratorController;
+use App\Http\Controllers\CommentThreadController;
 use App\Http\Controllers\DemoController;
 use App\Http\Controllers\DiagramContentController;
 use App\Http\Controllers\DiagramController;
@@ -92,6 +93,14 @@ Route::middleware('auth')->group(function () {
     Route::post('/diagrams/{slug}/collaborators', [CollaboratorController::class, 'store'])->name('diagrams.collaborators.store');
     Route::put('/diagrams/{slug}/collaborators/{user}', [CollaboratorController::class, 'update'])->name('diagrams.collaborators.update');
     Route::delete('/diagrams/{slug}/collaborators/{user}', [CollaboratorController::class, 'destroy'])->name('diagrams.collaborators.destroy');
+
+    // Throttled as a whole: a listing parses the Diagram's content.
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::get('/diagrams/{slug}/comment-threads', [CommentThreadController::class, 'index'])->name('diagrams.comments.index');
+        Route::post('/diagrams/{slug}/comment-threads', [CommentThreadController::class, 'store'])->name('diagrams.comments.store');
+        Route::post('/diagrams/{slug}/comment-threads/{thread}/comments', [CommentThreadController::class, 'reply'])->name('diagrams.comments.reply');
+        Route::put('/diagrams/{slug}/comment-threads/{thread}/resolution', [CommentThreadController::class, 'resolve'])->name('diagrams.comments.resolve');
+    });
 
     Route::put('/diagrams/{slug}/tags', [DiagramTagController::class, 'sync'])->name('diagrams.tags.sync');
     Route::post('/diagrams/{slug}/tags', [DiagramTagController::class, 'store'])->name('diagrams.tags.store');

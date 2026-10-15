@@ -246,6 +246,8 @@ class DiagramController extends Controller
         return view('shares.show', [
             'diagram' => $diagram,
             'diagramXml' => $this->diagrams->contentOf($diagram),
+            // Comments are written without the Lock, so the Viewer has them too (ADR-0024).
+            'commentsDiagram' => $diagram,
             'downloadUrls' => collect(Share::DOWNLOAD_FORMATS)
                 ->mapWithKeys(fn (string $format) => [$format => route('diagrams.export', [$diagram->slug, $format])])
                 ->all(),
