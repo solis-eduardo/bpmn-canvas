@@ -2,6 +2,7 @@
 
 namespace App\Repositories\Concerns;
 
+use App\Enums\ProvisionalReason;
 use App\Exceptions\VersionHistoryBusyException;
 use App\Models\Diagram;
 use App\Models\DiagramVersionName;
@@ -117,11 +118,12 @@ trait SharedVersionRepository
         $this->setState($diagram, $this->requireId($diagram, $version), ['name' => $name]);
     }
 
-    public function markProvisional(Diagram $diagram, string $version, ?User $keptFor = null): void
+    public function markProvisional(Diagram $diagram, string $version, ?User $keptFor = null, ProvisionalReason $reason = ProvisionalReason::Expired): void
     {
         $this->setState($diagram, $this->requireId($diagram, $version), [
             'is_provisional' => true,
             'kept_for_id' => $keptFor?->id,
+            'provisional_reason' => $reason,
         ]);
     }
 
@@ -178,7 +180,7 @@ trait SharedVersionRepository
                 'saved_at' => $savedAt,
                 'author' => $author,
                 'number' => $number,
-                'name' => $customName ?? ($provisional ? __('messages.provisional_version') : VersionName::default($number)),
+                'name' => $customName ?? ($provisional ? ($state->provisional_reason ?? ProvisionalReason::Expired)->label() : VersionName::default($number)),
                 'renamed' => $customName !== null,
                 'provisional' => $provisional,
                 'hidden' => (bool) $state?->is_hidden,

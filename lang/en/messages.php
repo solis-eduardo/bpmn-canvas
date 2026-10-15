@@ -94,6 +94,7 @@ return [
     'error_history_busy' => 'The diagram history is busy right now; your changes were not saved. Please try again in a few seconds.',
     'viewer_locked_notice' => 'Diagram locked by :name (:time). You are in view-only mode and cannot save changes.',
     'provisional_version' => 'Provisional version (Lock expired)',
+    'provisional_version_released' => 'Provisional version (Lock released)',
     'saved' => 'Saved.',
     'diagram_load_failed' => 'Could not load the diagram.',
     'diagram_save_failed' => 'Could not save the diagram.',

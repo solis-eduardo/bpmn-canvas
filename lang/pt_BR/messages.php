@@ -94,6 +94,7 @@ return [
     'error_history_busy' => 'O histórico do diagrama está ocupado no momento; suas alterações não foram salvas. Tente novamente em alguns segundos.',
     'viewer_locked_notice' => 'Diagrama travado por :name (:time). Você está em modo de visualização e não pode salvar alterações.',
     'provisional_version' => 'Versão provisória (trava expirada)',
+    'provisional_version_released' => 'Versão provisória (trava liberada)',
     'saved' => 'Salvo.',
     'diagram_load_failed' => 'Não foi possível carregar o diagrama.',
     'diagram_save_failed' => 'Não foi possível salvar o diagrama.',

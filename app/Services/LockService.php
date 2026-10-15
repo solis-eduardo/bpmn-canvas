@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\ProvisionalReason;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Models\Workspace;
@@ -144,7 +145,7 @@ class LockService
                 return false;
             }
 
-            $this->provisional->save($previous);
+            $this->provisional->save($previous, reason: ProvisionalReason::Expired);
 
             return true;
         });
@@ -162,17 +163,18 @@ class LockService
     /**
      * Releases the Lock, dropping the holder's draft unless $saveDraft asks
      * to keep it as a provisional Version first ($draft being the holder's
-     * latest Editor content, newer than what the last Heartbeat carried).
+     * latest Editor content, newer than what the last Heartbeat carried, and
+     * $reason what the Version is named after: the expiry job passes Expired).
      * The Version is written before the Lock goes, so a failed save leaves
      * the Lock and the draft untouched.
      */
-    public function release(Diagram $diagram, bool $saveDraft = false, ?string $draft = null): void
+    public function release(Diagram $diagram, bool $saveDraft = false, ?string $draft = null, ProvisionalReason $reason = ProvisionalReason::Released): void
     {
         // In a transaction so a release that fails after the save has
         // cleared the draft doesn't leave a held Lock with its draft gone.
-        DB::transaction(function () use ($diagram, $saveDraft, $draft): void {
+        DB::transaction(function () use ($diagram, $saveDraft, $draft, $reason): void {
             if ($saveDraft) {
-                $this->provisional->save($diagram, $draft);
+                $this->provisional->save($diagram, $draft, $reason);
             }
 
             $diagram->releaseLock();
