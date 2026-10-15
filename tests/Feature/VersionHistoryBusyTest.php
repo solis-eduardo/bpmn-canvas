@@ -49,7 +49,7 @@ class VersionHistoryBusyTest extends TestCase
     private function heldDiagram(User $holder): Diagram
     {
         $diagram = Diagram::factory()->for($holder, 'author')->create();
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         return $diagram;
     }
