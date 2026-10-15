@@ -8,6 +8,7 @@ use App\Models\Share;
 use App\Repositories\DiagramRepository;
 use App\Repositories\ShareRepository;
 use App\Repositories\VersionRepository;
+use App\Services\ActivityLogger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
@@ -20,6 +21,7 @@ class ShareController extends Controller
     public function __construct(
         private readonly DiagramRepository $diagrams,
         private readonly ShareRepository $shares,
+        private readonly ActivityLogger $activity,
     ) {}
 
     public function index(string $slug, VersionRepository $versions): JsonResponse
@@ -68,6 +70,8 @@ class ShareController extends Controller
             'pinned_version_id' => $pinnedVersionId,
         ]);
 
+        $this->activity->record('share.created', $share, diagram: $diagram, after: $this->snapshot($share));
+
         return response()->json($this->present($share, $versionsById), 201);
     }
 
@@ -77,7 +81,23 @@ class ShareController extends Controller
 
         $this->shares->revoke($share);
 
+        $this->activity->record('share.revoked', $share, diagram: $share->diagram, before: $this->snapshot($share));
+
         return response()->json(['revoked' => true]);
+    }
+
+    /**
+     * What the activity log keeps of a Share: its terms, never its token.
+     *
+     * @return array<string, mixed>
+     */
+    private function snapshot(Share $share): array
+    {
+        return [
+            'expires_at' => $share->expires_at->toIso8601String(),
+            'allow_download' => $share->allow_download,
+            'pinned_version_id' => $share->pinned_version_id,
+        ];
     }
 
     /**

@@ -6,18 +6,10 @@
  * no Lock. Its strings come from the panel's data-labels attribute; Comment
  * text is only ever inserted with textContent.
  */
-import { errorMessage, togglePanel, toast } from './common.js';
+import { el, errorMessage, togglePanel, toggleFloating, toast } from './common.js';
 import { createJsonClient } from './http-store.js';
 
 const MARKER_TYPE = 'comment-marker';
-
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text !== undefined) node.textContent = text;
-
-  return node;
-}
 
 /**
  * @param {Object} options
@@ -204,7 +196,7 @@ export function startComments({ modeler }) {
 
   function openPanel() {
     if (insideEditor) togglePanel('comments-panel', true);
-    else panel.hidden = false;
+    else if (panel.hidden) toggleFloating(panel);
   }
 
   form.addEventListener('submit', event => {
@@ -228,7 +220,7 @@ export function startComments({ modeler }) {
 
   if (!insideEditor) {
     document.querySelectorAll('[data-comments-toggle]').forEach(button =>
-      button.addEventListener('click', () => { panel.hidden = !panel.hidden; }));
+      button.addEventListener('click', () => toggleFloating(panel)));
     panel.querySelector('[data-panel-close]').addEventListener('click', () => { panel.hidden = true; });
   }
 

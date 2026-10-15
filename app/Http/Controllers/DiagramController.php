@@ -248,6 +248,8 @@ class DiagramController extends Controller
             'diagramXml' => $this->diagrams->contentOf($diagram),
             // Comments are written without the Lock, so the Viewer has them too (ADR-0024).
             'commentsDiagram' => $diagram,
+            // An Administrator who isn't the Owner opens the Viewer, and still reads the Diagram's Activity (ADR-0025).
+            'activityDiagram' => $user->can('viewActivity', $diagram) ? $diagram : null,
             'downloadUrls' => collect(Share::DOWNLOAD_FORMATS)
                 ->mapWithKeys(fn (string $format) => [$format => route('diagrams.export', [$diagram->slug, $format])])
                 ->all(),

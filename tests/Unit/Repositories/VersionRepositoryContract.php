@@ -2,6 +2,7 @@
 
 namespace Tests\Unit\Repositories;
 
+use App\Enums\ProvisionalReason;
 use App\Models\Diagram;
 use App\Models\DiagramVersionName;
 use App\Models\User;
@@ -290,6 +291,25 @@ abstract class VersionRepositoryContract extends TestCase
         $this->assertTrue($repository->makePermanent($diagram, $id));
         $this->assertFalse($repository->list($diagram)[0]['provisional']);
         $this->assertFalse($repository->makePermanent($diagram, $id));
+    }
+
+    public function test_a_provisional_version_is_named_after_why_it_was_kept(): void
+    {
+        $diagram = $this->bareDiagram('<bpmn>A</bpmn>');
+        $repository = $this->adapter();
+        $holder = $this->author($diagram);
+        $repository->initialize($diagram, $holder);
+        $repository->save($diagram, $holder, '<bpmn>B</bpmn>');
+        $repository->save($diagram, $holder, '<bpmn>C</bpmn>');
+        [$released, $expired] = [$repository->list($diagram)[0]['id'], $repository->list($diagram)[1]['id']];
+
+        $repository->markProvisional($diagram, $released, $holder, ProvisionalReason::Released);
+        $repository->markProvisional($diagram, $expired, $holder, ProvisionalReason::Expired);
+
+        $list = $repository->list($diagram);
+        $this->assertSame(__('messages.provisional_version_released'), $list[0]['name']);
+        $this->assertSame(__('messages.provisional_version'), $list[1]['name']);
+        $this->assertFalse($list[0]['renamed']);
     }
 
     public function test_the_current_version_id_is_the_newest_one_or_null_without_history(): void
