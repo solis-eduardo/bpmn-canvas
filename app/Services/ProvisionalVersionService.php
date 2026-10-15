@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\ProvisionalReason;
 use App\Models\Diagram;
 use App\Repositories\VersionRepository;
 
@@ -16,10 +17,10 @@ class ProvisionalVersionService
 
     /**
      * Saves $draft, or the draft the server holds when none is given, as a
-     * provisional Version in the holder's name. Does nothing if there is no
+     * provisional Version in the holder's name, named after $reason. Does nothing if there is no
      * holder or content, or if the holder can no longer edit the Diagram.
      */
-    public function save(Diagram $diagram, ?string $draft = null): void
+    public function save(Diagram $diagram, ?string $draft = null, ProvisionalReason $reason = ProvisionalReason::Released): void
     {
         $holder = $diagram->lockedBy;
         $draft ??= $diagram->lock_draft;
@@ -36,10 +37,10 @@ class ProvisionalVersionService
             return;
         }
 
-        $versionId = $this->versions->save($diagram, $holder, $draft, VersionRepository::MESSAGE_PROVISIONAL);
+        $versionId = $this->versions->save($diagram, $holder, $draft, $reason->message());
 
         if ($versionId !== null) {
-            $this->versions->markProvisional($diagram, $versionId, $holder);
+            $this->versions->markProvisional($diagram, $versionId, $holder, $reason);
         }
     }
 }

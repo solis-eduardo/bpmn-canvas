@@ -94,6 +94,7 @@ return [
     'error_history_busy' => 'El historial del diagrama está ocupado en este momento; tus cambios no se guardaron. Inténtalo de nuevo en unos segundos.',
     'viewer_locked_notice' => 'Diagrama bloqueado por :name (:time). Estás en modo de solo lectura y no puedes guardar cambios.',
     'provisional_version' => 'Versión provisional (bloqueo expirado)',
+    'provisional_version_released' => 'Versión provisional (bloqueo liberado)',
     'saved' => 'Guardado.',
     'diagram_load_failed' => 'No se pudo cargar el diagrama.',
     'diagram_save_failed' => 'No se pudo guardar el diagrama.',

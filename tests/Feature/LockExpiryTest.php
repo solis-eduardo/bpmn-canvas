@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\ProvisionalReason;
 use App\Models\Collaborator;
 use App\Models\Diagram;
 use App\Models\User;
@@ -415,14 +416,14 @@ class LockExpiryTest extends TestCase
                 parent::__construct($provisional);
             }
 
-            public function release(Diagram $diagram, bool $saveDraft = false, ?string $draft = null): void
+            public function release(Diagram $diagram, bool $saveDraft = false, ?string $draft = null, ProvisionalReason $reason = ProvisionalReason::Released): void
             {
                 if (! $this->heartbeatSent) {
                     $this->heartbeatSent = true;
                     $this->renewed->heartbeat($this->renewedHolder);
                 }
 
-                parent::release($diagram, $saveDraft, $draft);
+                parent::release($diagram, $saveDraft, $draft, $reason);
             }
         });
 
