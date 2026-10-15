@@ -97,6 +97,13 @@ export function togglePanel(id, open) {
   });
 }
 
+// The Viewer has no side-panel layout: its panels float over the canvas, one at a time.
+export function toggleFloating(panel) {
+  const open = panel.hidden;
+  document.querySelectorAll('aside.cmt-floating').forEach(other => { other.hidden = true; });
+  panel.hidden = !open;
+}
+
 export function setupPanels() {
   if (!document.getElementById('app')) return;
   document.querySelectorAll('[data-panel-toggle]').forEach(button => {

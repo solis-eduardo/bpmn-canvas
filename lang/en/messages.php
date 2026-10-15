@@ -393,6 +393,8 @@ return [
     'activity' => 'Activity',
     'activity_log_heading' => 'Activity log',
     'activity_nav' => 'Activity',
+    'activity_load_failed' => 'Could not load the activity.',
+    'activity_load_more' => 'Load more',
     'activity_empty' => 'No activity recorded yet.',
     'activity_no_match' => 'No activity matches the filters.',
     'activity_system' => 'System',

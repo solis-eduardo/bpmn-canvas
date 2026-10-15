@@ -393,6 +393,8 @@ return [
     'activity' => 'Atividade',
     'activity_log_heading' => 'Registro de atividade',
     'activity_nav' => 'Atividade',
+    'activity_load_failed' => 'Não foi possível carregar a atividade.',
+    'activity_load_more' => 'Carregar mais',
     'activity_empty' => 'Nenhuma atividade registrada ainda.',
     'activity_no_match' => 'Nenhuma atividade corresponde aos filtros.',
     'activity_system' => 'Sistema',

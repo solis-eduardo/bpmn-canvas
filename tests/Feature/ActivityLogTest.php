@@ -231,7 +231,7 @@ class ActivityLogTest extends TestCase
         ActivityLog::sole()->delete();
     }
 
-    public function test_the_diagram_activity_tab_lists_only_that_diagrams_entries_for_those_who_manage_it(): void
+    public function test_the_editors_activity_panel_loads_only_that_diagrams_entries_for_those_who_manage_it(): void
     {
         $owner = User::factory()->create();
         $manager = User::factory()->create();
@@ -245,31 +245,64 @@ class ActivityLogTest extends TestCase
         $this->actingAs($owner)->postJson("/diagrams/{$other->slug}/shares")->assertCreated();
 
         foreach ([$owner, $manager, $admin] as $viewer) {
-            $this->actingAs($viewer)->get("/diagrams/{$diagram->slug}/activity")
+            $this->actingAs($viewer)->getJson("/diagrams/{$diagram->slug}/activity")
                 ->assertOk()
-                ->assertSee(__('messages.activity_action_share_created'))
-                ->assertDontSee('Unrelated Diagram');
+                ->assertJsonCount(1, 'entries')
+                ->assertJsonPath('entries.0.action', __('messages.activity_action_share_created'))
+                ->assertJsonPath('entries.0.actor', $owner->name)
+                ->assertJsonPath('next_page', null);
+            $this->get("/diagrams/{$diagram->slug}")->assertOk()
+                ->assertSee('id="activity-panel"', false)
+                ->assertSee("/diagrams/{$diagram->slug}/activity", false);
         }
 
-        $this->actingAs($collaborator)->get("/diagrams/{$diagram->slug}/activity")->assertForbidden();
-        $this->actingAs($manager)->get("/diagrams/{$diagram->slug}")->assertSee("/diagrams/{$diagram->slug}/activity", false);
+        $this->actingAs($collaborator)->getJson("/diagrams/{$diagram->slug}/activity")->assertForbidden();
+        $this->get("/diagrams/{$diagram->slug}")->assertDontSee('id="activity-panel"', false);
     }
 
-    public function test_the_activity_tab_of_a_hidden_diagram_answers_404(): void
+    public function test_the_activity_panel_filters_and_pages_entries(): void
+    {
+        config(['activity.per_page' => 2]);
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
+        $shareId = $this->actingAs($owner)->postJson("/diagrams/{$diagram->slug}/shares")->json('id');
+        $this->actingAs($owner)->deleteJson("/shares/{$shareId}");
+        $this->actingAs($owner)->postJson("/diagrams/{$diagram->slug}/shares")->assertCreated();
+
+        $first = $this->actingAs($owner)->getJson("/diagrams/{$diagram->slug}/activity")
+            ->assertJsonCount(2, 'entries')->assertJsonPath('next_page', 2);
+        $this->assertNotNull($first->json('entries.0.created_at'));
+        $this->getJson("/diagrams/{$diagram->slug}/activity?page=2")->assertJsonCount(1, 'entries')->assertJsonPath('next_page', null);
+        $this->getJson("/diagrams/{$diagram->slug}/activity?action=share.revoked")->assertJsonCount(1, 'entries');
+        $this->getJson("/diagrams/{$diagram->slug}/activity?actor=nobody")->assertJsonCount(0, 'entries');
+    }
+
+    public function test_the_activity_of_a_hidden_diagram_answers_404(): void
     {
         $workspace = Workspace::factory()->create();
         $diagram = Diagram::factory()->create(['workspace_id' => $workspace->id]);
 
-        $this->actingAs(User::factory()->create())->get("/diagrams/{$diagram->slug}/activity")->assertNotFound();
+        $this->actingAs(User::factory()->create())->getJson("/diagrams/{$diagram->slug}/activity")->assertNotFound();
     }
 
-    public function test_entries_escape_user_controlled_names(): void
+    public function test_entries_are_json_encoded_not_markup_so_the_panel_can_insert_them_as_text(): void
     {
         $owner = User::factory()->create(['name' => '<script>alert(1)</script>']);
         $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
         $this->actingAs($owner)->postJson("/diagrams/{$diagram->slug}/shares")->assertCreated();
 
-        $this->actingAs($owner)->get("/diagrams/{$diagram->slug}/activity")
+        $this->actingAs($owner)->getJson("/diagrams/{$diagram->slug}/activity")
+            ->assertOk()->assertJsonPath('entries.0.actor', '<script>alert(1)</script>');
+    }
+
+    public function test_the_global_log_escapes_user_controlled_names(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $owner = User::factory()->create(['name' => '<script>alert(1)</script>']);
+        $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
+        $this->actingAs($owner)->postJson("/diagrams/{$diagram->slug}/shares")->assertCreated();
+
+        $this->actingAs($admin)->get('/admin/activity')
             ->assertOk()->assertDontSee('<script>alert(1)</script>', false)->assertSee('&lt;script&gt;', false);
     }
 
