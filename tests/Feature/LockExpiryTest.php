@@ -29,7 +29,7 @@ class LockExpiryTest extends TestCase
     private function heldDiagram(User $holder): Diagram
     {
         $diagram = Diagram::factory()->for($holder, 'author')->create();
-        $this->actingAs($holder)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         return $diagram;
     }
@@ -283,7 +283,7 @@ class LockExpiryTest extends TestCase
             'user_id' => $collaborator->id,
             'status' => Collaborator::STATUS_APPROVED,
         ]);
-        $this->actingAs($collaborator)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($collaborator)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $this->assertSame($collaborator->id, (int) $diagram->fresh()->locked_by);
 
         $membership->delete();
@@ -306,7 +306,7 @@ class LockExpiryTest extends TestCase
             'user_id' => $collaborator->id,
             'status' => Collaborator::STATUS_APPROVED,
         ]);
-        $this->actingAs($collaborator)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($collaborator)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
 
         app(CollaboratorService::class)->revoke($diagram, $collaborator);
 
@@ -328,7 +328,7 @@ class LockExpiryTest extends TestCase
             'workspace_id' => $workspace->id,
         ]);
         app(CollaboratorService::class)->grant($diagram, $collaborator);
-        $this->actingAs($collaborator)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($collaborator)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $this->actingAs($collaborator)->patchJson('/diagrams/'.$diagram->slug.'/lock', [
             'draft' => $this->draft('Still a member'),
         ])->assertOk();
@@ -354,7 +354,7 @@ class LockExpiryTest extends TestCase
             'workspace_id' => $workspace->id,
         ]);
         app(CollaboratorService::class)->grant($diagram, $collaborator);
-        $this->actingAs($collaborator)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($collaborator)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $this->actingAs($collaborator)->patchJson('/diagrams/'.$diagram->slug.'/lock', [
             'draft' => $this->draft('Not a member'),
         ])->assertOk();
@@ -380,7 +380,7 @@ class LockExpiryTest extends TestCase
             'user_id' => $collaborator->id,
             'status' => Collaborator::STATUS_APPROVED,
         ]);
-        $this->actingAs($collaborator)->get('/diagrams/'.$diagram->slug)->assertOk();
+        $this->actingAs($collaborator)->postJson('/diagrams/'.$diagram->slug.'/lock')->assertOk();
         $this->actingAs($collaborator)->patchJson('/diagrams/'.$diagram->slug.'/lock', [
             'draft' => $this->draft('Should not land'),
         ])->assertOk();

@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Repositories\VersionRepository;
 use App\Services\Backup\DatabaseDumper;
 use App\Services\Backup\DatabaseRestorer;
+use App\Support\AccessMemo;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -83,6 +84,30 @@ class RestoreTest extends TestCase
 
         $this->app->bind(DatabaseDumper::class, fn () => $fake);
         $this->app->bind(DatabaseRestorer::class, fn () => $fake);
+    }
+
+    public function test_restore_drops_the_memoized_access_answers(): void
+    {
+        $owner = User::factory()->create();
+        $collaborator = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->for($owner, 'owner')->create();
+        Collaborator::create([
+            'diagram_id' => $diagram->id,
+            'user_id' => $collaborator->id,
+            'status' => Collaborator::STATUS_APPROVED,
+        ]);
+        $this->artisan('backup:run')->assertSuccessful();
+        $artifact = collect(Storage::disk('backups')->files())
+            ->first(fn ($file) => str_ends_with($file, '.tar.gz'));
+
+        // A write with no model event, then an answer memoized from it.
+        DB::table('collaborators')->delete();
+        $this->app->make(AccessMemo::class)->forget();
+        $this->assertFalse($diagram->isEditableBy($collaborator));
+
+        $this->artisan('backup:restore', ['artifact' => $artifact, '--force' => true])->assertSuccessful();
+
+        $this->assertTrue($diagram->isEditableBy($collaborator));
     }
 
     public function test_restore_brings_back_diagrams_versions_collaborators_and_shares_through_the_http_endpoints(): void

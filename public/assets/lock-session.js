@@ -12,6 +12,29 @@ export const IDLE_AFTER_MS = 2 * 60 * 1000;
 const ACTIVITY_EVENTS = ['pointerdown', 'pointermove', 'keydown', 'wheel', 'touchstart'];
 
 /**
+ * Acquires the Lock for the Editor that has just loaded (ADR-0003). Resolves
+ * to false when the server refuses it — 423 when someone else holds the Lock,
+ * 403 when the User can't edit — and the caller then falls back to the
+ * read-only Viewer. Any other failure is thrown, not treated as a refusal, so
+ * a transient error can't send the page into a reload loop.
+ *
+ * @param {Object} options
+ * @param {(method: string, url: string, payload?: Object) => Promise<any>} options.request
+ * @param {string} options.url  the Lock acquire endpoint (POST)
+ * @returns {Promise<boolean>}
+ */
+export async function acquireLock({ request, url }) {
+  try {
+    await request('POST', url);
+    return true;
+  } catch (e) {
+    if (e.status === 423 || e.status === 403) return false;
+
+    throw e;
+  }
+}
+
+/**
  * One Heartbeat at a time. The Lock expires after a few minutes without one
  * (ADR-0003), so a beat only goes out while the holder is actually using the
  * Editor: an abandoned tab stops renewing and its Lock is released. When

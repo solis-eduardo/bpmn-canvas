@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createHttpDiagramStore } from '../../public/assets/http-store.js';
 import { describeDiagramStoreContract } from './diagram-store-contract.js';
+import { errorMessage } from '../../public/assets/common.js';
 import { createFakeLaravelBackend, CSRF_TOKEN, urls } from './fake-laravel-backend.js';
 
 function makeStore({ csrfToken = CSRF_TOKEN } = {}) {
@@ -39,12 +40,41 @@ describe('HttpDiagramStore', () => {
     const { store, backend } = makeStore();
     await store.save('<a/>');
     backend.addProvisional('<b/>');
+    await store.load();
     await store.save('<c/>');
     const provisional = (await store.versions()).find(v => v.provisional);
 
     await store.deleteVersion(provisional.id);
 
     expect((await store.versions()).map(v => v.number)).toEqual([3, 1]);
+  });
+
+  it('refuses a save over a Version someone else saved after the load (issue #243)', async () => {
+    const { store, backend } = makeStore();
+    await store.save('<a/>');
+    await store.load();
+    const otherSession = createHttpDiagramStore({ urls, csrfToken: CSRF_TOKEN, fetch: backend.fetch });
+    await otherSession.load();
+    await otherSession.save('<other/>');
+
+    const error = await store.save('<mine/>').catch(e => e);
+
+    expect(error.conflict).toBe(true);
+    expect(error.status).toBe(409);
+    expect(await store.load()).toBe('<other/>');
+  });
+
+  it('saves on top of a newer Version when asked to overwrite it', async () => {
+    const { store, backend } = makeStore();
+    await store.save('<a/>');
+    await store.load();
+    const otherSession = createHttpDiagramStore({ urls, csrfToken: CSRF_TOKEN, fetch: backend.fetch });
+    await otherSession.save('<other/>');
+
+    await store.save('<mine/>', { overwrite: true });
+
+    expect(await store.load()).toBe('<mine/>');
+    expect((await store.versions()).map(v => v.number)).toEqual([3, 2, 1]);
   });
 
   it("rejects with the HTTP status and the server's own message", async () => {

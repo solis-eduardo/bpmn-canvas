@@ -71,15 +71,38 @@ export function createHttpDiagramStore({ urls, csrfToken, fetch, request = creat
     }));
   }
 
+  // The Version the loaded content is at, sent back on save so the server can
+  // refuse a save made over a newer Version. undefined until the first load,
+  // when there is nothing to compare against.
+  let baseVersion;
+
   return {
     /** @returns {Promise<string>} */
     async load() {
-      return (await request('GET', urls.contentUrl)).content;
+      const answer = await request('GET', urls.contentUrl);
+      baseVersion = answer.version ?? null;
+
+      return answer.content;
     },
 
-    /** Saves the content as a new Version. */
-    async save(xml) {
-      await request('PUT', urls.saveUrl, { content: xml });
+    /**
+     * Saves the content as a new Version. Unless `overwrite` is set, the save
+     * names the Version the content was loaded from: when someone saved a newer
+     * one since, the server refuses it and the rejection has `conflict` set.
+     * `overwrite` saves on top of the newer Version (the history keeps both).
+     */
+    async save(xml, { overwrite = false } = {}) {
+      const payload = { content: xml };
+      if (!overwrite && baseVersion !== undefined) payload.base_version = baseVersion;
+
+      try {
+        const answer = await request('PUT', urls.saveUrl, payload);
+        baseVersion = answer.version ?? null;
+      } catch (error) {
+        if (error.status === 409) error.conflict = true;
+
+        throw error;
+      }
     },
 
     /** @returns {Promise<Version[]>} newest first, deleted Versions omitted */
