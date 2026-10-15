@@ -306,8 +306,6 @@ BPMN;
                 return;
             }
 
-            self::registerSqliteUnaccent();
-
             $query->orWhereRaw("unaccent(lower(coalesce(searchable_text, ''))) LIKE unaccent(lower(?)) ESCAPE '\\'", [self::likeTerm($search)]);
         });
     }
@@ -327,9 +325,7 @@ BPMN;
      */
     private static function whereLikeMatch(Builder $query, string $column, string $search, string $boolean): void
     {
-        if (DB::getDriverName() !== 'pgsql') {
-            self::registerSqliteUnaccent();
-        }
+        self::registerSqliteUnaccent();
 
         $query->whereRaw("unaccent(lower({$column})) LIKE unaccent(lower(?)) ESCAPE '\\'", [self::likeTerm($search)], $boolean);
     }
@@ -350,11 +346,11 @@ BPMN;
      */
     private static function registerSqliteUnaccent(): void
     {
-        $pdo = DB::connection()->getPdo();
-
-        if ($pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) !== 'sqlite') {
+        if (DB::getDriverName() !== 'sqlite') {
             return;
         }
+
+        $pdo = DB::connection()->getPdo();
 
         $pdo->sqliteCreateFunction(
             'unaccent',
