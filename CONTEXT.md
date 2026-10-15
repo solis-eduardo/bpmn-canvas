@@ -32,14 +32,14 @@ _Avoid_: Manager (unqualified; collides with Administrator and Workspace Owner)
 A User with the privilege to grant Collaborator access on any Diagram regardless of its Diagram Owner, transfer any Diagram's ownership, to create accounts manually, and to manage any Workspace (including transferring Workspace ownership). Sees every Diagram, including those hidden inside Workspaces they're not a Member of. The role can come from two coexisting sources: set manually by another Administrator, or granted automatically by the corresponding role/claim in the Keycloak token (see User). A claim-granted Administrator follows the claim at each Keycloak login: the claim's absence turns the role off, and it can only be revoked manually while the claim is present; a manually set Administrator is never turned off by the claim's absence (ADR-0005, as amended).
 
 **Share**:
-A link reachable by anyone holding its random, unguessable address, with an expiration (`expires_at`) set in days (default 7, max 60), granting read access to a Diagram without requiring login. A Share either follows the Diagram's latest Version or is pinned to one specific Version. Has a download permission (`allow_download`, disabled by default) and can be revoked before it expires (`revoked_at`). A Diagram can have multiple active Shares simultaneously, each with its own expiration/permission. The Diagram Owner and the Diagram's Collaborators create and revoke Shares (Workspace Members who are not Collaborators, and Administrators, cannot). A Share keeps working when its Diagram is hidden inside a Workspace — visibility in the Diagram list doesn't affect Shares.
+A link reachable by anyone holding its random, unguessable address, with an expiration (`expires_at`) set in days (default 7, max 60), granting read access to a Diagram without requiring login. A Share either follows the Diagram's latest Version or is pinned to one specific Version. Has a download permission (`allow_download`, disabled by default) that offers `bpmn` plus PNG, SVG and PDF rendered on the server (ADR-0023), and can be revoked before it expires (`revoked_at`). A Diagram can have multiple active Shares simultaneously, each with its own expiration/permission. The Diagram Owner and the Diagram's Collaborators create and revoke Shares (Workspace Members who are not Collaborators, and Administrators, cannot). A Share keeps working when its Diagram is hidden inside a Workspace — visibility in the Diagram list doesn't affect Shares.
 _Avoid_: Share token, public link (use "Share" for the entity; the URL itself can be called a "share link")
 
 **Editor**:
 Authenticated interface for creating/editing a Diagram (bpmn-js Modeler). Accessible by the Diagram Owner, Collaborators, and Members of the Diagram's Workspace.
 
 **Public Viewer**:
-Read-only interface for viewing a Diagram by anyone with a valid Share link (not expired, not revoked), without authentication. Exports PNG/SVG/BPMN only if the Share allows download (`allow_download`).
+Read-only interface for viewing a Diagram by anyone with a valid Share link (not expired, not revoked), without authentication. Exports PNG/SVG/PDF/BPMN only if the Share allows download (`allow_download`), through direct links to the server-rendered files (ADR-0023).
 _Avoid_: Viewer (without qualifying "public")
 
 **Lock**:
@@ -76,6 +76,10 @@ _Avoid_: Workspace Collaborator
 The single User who manages a Workspace: adds and removes Members, renames and deletes it, and can take any Diagram out of it (only a Diagram Owner puts a Diagram in). Starts as the creator; the Workspace Owner or an Administrator can transfer it to another User, with no acceptance needed (the recipient is notified). Can't leave the Workspace without transferring it first. A Workspace can't be deleted while it still holds Diagrams.
 _Avoid_: Owner (unqualified), Workspace admin, manager (reserve "Administrator" for the system-wide role)
 
+**Export**:
+A PNG, SVG or PDF rendering of a Diagram's content, produced on the server by headless bpmn-js (ADR-0023), as opposed to the stored `.bpmn`. Available to Users who can open the Diagram (Editor) and through a Share with `allow_download`. The PDF carries a **title block**: the Diagram's title, the Version (its name and, when renamed, its number), the Diagram Owner and the export date. A Share pinned to a Version exports that Version; otherwise the latest.
+_Avoid_: Download (that is the Share permission; an Export is what it hands out)
+
 **Tag**:
 A global, free-text marker applied to Diagrams to organize and filter the Diagram list. Anyone who can edit a Diagram (Diagram Owner, Collaborator, Member) can apply or remove its Tags. Unrelated to the Git mechanics behind Versions, which stay invisible.
 _Avoid_: label, category, folder
@@ -105,3 +109,4 @@ The UI is localized in pt-BR (`lang/pt_BR`); code, docs and commits use the Engl
 | Workspace Owner | Dono do Ambiente |
 | Member | Membro |
 | Tag | Tag |
+| Export | Exportação |

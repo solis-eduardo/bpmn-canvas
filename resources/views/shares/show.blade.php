@@ -62,7 +62,7 @@
                     {{ __('messages.force_release_lock') }}
                 </button>
             @endif
-            @if ($allowDownload)
+            @if (! empty($downloadUrls))
                 <div class="dropdown relative">
                     <button
                         type="button"
@@ -73,18 +73,22 @@
                         {{ __('messages.download') }}
                     </button>
                     <div class="dropdown-menu absolute right-0 top-full z-20 mt-1 min-w-[170px] rounded-md border border-gray-200 bg-white p-1 shadow-lg">
-                        <button type="button" data-export="png" class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
+                        <a href="{{ $downloadUrls['png'] }}" download class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
                             <x-icon name="download" />
                             {{ __('messages.png_image') }}
-                        </button>
-                        <button type="button" data-export="svg" class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
+                        </a>
+                        <a href="{{ $downloadUrls['svg'] }}" download class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
                             <x-icon name="download" />
                             {{ __('messages.svg_image') }}
-                        </button>
-                        <button type="button" data-export="bpmn" class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
+                        </a>
+                        <a href="{{ $downloadUrls['pdf'] }}" download class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
+                            <x-icon name="download" />
+                            {{ __('messages.pdf_document') }}
+                        </a>
+                        <a href="{{ $downloadUrls['bpmn'] }}" download class="flex w-full items-center gap-2 rounded px-3 py-1.5 text-left text-sm text-gray-700 hover:bg-gray-100">
                             <x-icon name="download" />
                             {{ __('messages.bpmn_file') }}
-                        </button>
+                        </a>
                     </div>
                 </div>
             @endif
