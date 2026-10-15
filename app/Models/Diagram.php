@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Spatie\Tags\HasTags;
 
 #[Fillable(['slug', 'title', 'author_id', 'owner_id', 'workspace_id', 'disk_path', 'forked_from_id'])]
@@ -274,20 +275,21 @@ BPMN;
     }
 
     /**
-     * Matches $search, case-insensitively, against title, Slug (issue #38),
-     * or the BPMN content's searchable text (issue #41; see
-     * BpmnSearchableText). '%' and '_' in the User's input are literal
-     * characters here, not LIKE wildcards — escaped before being wrapped in
-     * the pattern.
+     * Matches $search, case- and accent-insensitively, against title, Slug
+     * (issue #38), or the BPMN content's searchable text (issue #41; see
+     * BpmnSearchableText). Accents fold in both directions: "aprovacao"
+     * finds "Aprovação" and vice versa (issue #247). '%' and '_' in the
+     * User's input are literal characters here, not LIKE wildcards —
+     * escaped before being wrapped in the pattern.
      *
-     * On Postgres, title/Slug go through ILIKE (locale-aware casing, so
-     * accented letters fold correctly — unlike a hand-rolled LOWER()
-     * comparison) and the content clause queries through the GIN expression
-     * index the migration builds (to_tsvector/plainto_tsquery), instead of
-     * leaving that index unused. Every other driver — in practice only
-     * sqlite, which the test suite is forced onto by phpunit.xml — falls
-     * back to a portable LOWER()+LIKE match; LOWER() there only folds
-     * ASCII case, a known sqlite limitation that never reaches production.
+     * On Postgres, title/Slug compare through unaccent(lower(...)) and the
+     * content clause queries through the GIN expression index the
+     * migration builds, over the 'simple_unaccent' text-search
+     * configuration (the 'simple' parser plus the unaccent dictionary).
+     * sqlite — which the test suite is forced onto by phpunit.xml — has
+     * neither the extension nor to_tsvector(), so an unaccent() SQL
+     * function is registered on the connection (see registerSqliteUnaccent)
+     * and the content clause falls back to a portable LIKE match.
      */
     public function scopeSearch(Builder $query, string $search): Builder
     {
@@ -297,21 +299,23 @@ BPMN;
 
             if (DB::getDriverName() === 'pgsql') {
                 $query->orWhereRaw(
-                    "to_tsvector('simple', coalesce(searchable_text, '')) @@ plainto_tsquery('simple', ?)",
+                    "to_tsvector('simple_unaccent', coalesce(searchable_text, '')) @@ plainto_tsquery('simple_unaccent', ?)",
                     [$search]
                 );
 
                 return;
             }
 
-            $query->orWhereRaw("LOWER(coalesce(searchable_text, '')) LIKE ? ESCAPE '\\'", [self::likeTerm($search)]);
+            self::registerSqliteUnaccent();
+
+            $query->orWhereRaw("unaccent(lower(coalesce(searchable_text, ''))) LIKE unaccent(lower(?)) ESCAPE '\\'", [self::likeTerm($search)]);
         });
     }
 
     /**
-     * Matches $search against the title alone, with the same escaping and
-     * casing rules as scopeSearch(). Used by discovery, which only matches
-     * by title (ADR-0013).
+     * Matches $search against the title alone, with the same escaping,
+     * casing and accent rules as scopeSearch(). Used by discovery, which
+     * only matches by title (ADR-0013).
      */
     public function scopeTitleMatches(Builder $query, string $search): Builder
     {
@@ -319,26 +323,44 @@ BPMN;
     }
 
     /**
-     * Adds a LIKE clause on $column: ILIKE on Postgres, LOWER()+LIKE elsewhere.
+     * Adds an accent- and case-insensitive LIKE clause on $column.
      */
     private static function whereLikeMatch(Builder $query, string $column, string $search, string $boolean): void
     {
-        $isPostgres = DB::getDriverName() === 'pgsql';
-        $expression = $isPostgres ? $column : "LOWER({$column})";
-        $operator = $isPostgres ? 'ILIKE' : 'LIKE';
+        if (DB::getDriverName() !== 'pgsql') {
+            self::registerSqliteUnaccent();
+        }
 
-        $query->whereRaw("{$expression} {$operator} ? ESCAPE '\\'", [self::likeTerm($search)], $boolean);
+        $query->whereRaw("unaccent(lower({$column})) LIKE unaccent(lower(?)) ESCAPE '\\'", [self::likeTerm($search)], $boolean);
     }
 
     /**
      * The LIKE pattern for $search: '%' and '_' (and the escape character
-     * itself) escaped so they match literally, wrapped in '%', and lowercased
-     * on the non-Postgres path, where LIKE is case-sensitive or ASCII-only.
+     * itself) escaped so they match literally, wrapped in '%'.
      */
     private static function likeTerm(string $search): string
     {
-        $escaped = strtr($search, ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']);
+        return '%'.strtr($search, ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']).'%';
+    }
 
-        return '%'.(DB::getDriverName() === 'pgsql' ? $escaped : mb_strtolower($escaped)).'%';
+    /**
+     * Gives the sqlite connection an unaccent() function so the same SQL as
+     * Postgres's unaccent extension works there. It also lowercases, since
+     * sqlite's own lower() only folds ASCII. Idempotent per connection.
+     */
+    private static function registerSqliteUnaccent(): void
+    {
+        $pdo = DB::connection()->getPdo();
+
+        if ($pdo->getAttribute(\PDO::ATTR_DRIVER_NAME) !== 'sqlite') {
+            return;
+        }
+
+        $pdo->sqliteCreateFunction(
+            'unaccent',
+            fn (?string $text): string => strtolower(Str::ascii($text ?? '')),
+            1,
+            \PDO::SQLITE_DETERMINISTIC,
+        );
     }
 }
