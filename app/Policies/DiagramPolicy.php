@@ -71,6 +71,16 @@ class DiagramPolicy
     }
 
     /**
+     * Mark a Diagram as a Template, or take the mark off: Diagram Owner only
+     * (CONTEXT.md, "Template"; issue #255). A global Template is offered to
+     * every User, so the choice stays with the one responsible for it.
+     */
+    public function manageTemplate(User $user, Diagram $diagram): bool
+    {
+        return $diagram->isOwnedBy($user);
+    }
+
+    /**
      * Transfer the Diagram Owner role to another User: current Diagram
      * Owner or Administrator (CONTEXT.md, "Diagram Owner"; ADR-0006; issue
      * #14). Same rule as manageCollaborators, kept as its own ability since

@@ -125,6 +125,7 @@ class DiagramController extends Controller
     {
         return view('diagrams.create', [
             'workspaces' => $this->workspaces->forUserOrderedByName($request->user()),
+            'templates' => $this->diagrams->templatesFor($request->user()),
             'tagNames' => Tag::sortedNames(),
             'collaboratorOptions' => $this->userOptions($this->users->allOrderedByName(), $request->user()),
         ]);
@@ -136,8 +137,13 @@ class DiagramController extends Controller
         // as DiagramWorkspacePolicy::assign); anything else is a field error.
         $memberWorkspaceIds = $this->workspaces->forUserOrderedByName($request->user())->modelKeys();
 
+        // Only Templates offered to the User may be chosen; an unknown ID, a
+        // plain Diagram and a hidden Template are refused alike.
+        $templateIds = $this->diagrams->templatesFor($request->user())->modelKeys();
+
         $data = $request->validate([
             'title' => ['required', 'string', 'max:255'],
+            'template_id' => ['nullable', 'integer', Rule::in($templateIds)],
             'workspace_id' => ['nullable', 'integer', Rule::in($memberWorkspaceIds)],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['string', 'max:255'],
@@ -154,7 +160,7 @@ class DiagramController extends Controller
             'owner_id' => $request->user()->id,
             'workspace_id' => $data['workspace_id'] ?? null,
             'disk_path' => $slug.'/diagram.bpmn',
-        ], Diagram::emptyBpmn(), $versions, $request->user());
+        ], $this->startingContent($data['template_id'] ?? null), $versions, $request->user());
 
         // Tags are global and created implicitly on first use (CONTEXT.md, "Tag").
         foreach (array_unique(array_filter(array_map('trim', $data['tags'] ?? []))) as $name) {
@@ -169,6 +175,17 @@ class DiagramController extends Controller
         return $request->input('submit_action') === 'exit'
             ? redirect()->route('diagrams.index')
             : redirect()->route('diagrams.show', $diagram->slug);
+    }
+
+    /**
+     * A new Diagram's first content: a copy of the chosen Template's current
+     * content (no origin link, unlike a Fork), else the empty seed.
+     */
+    private function startingContent(?int $templateId): string
+    {
+        $template = $templateId === null ? null : $this->diagrams->find($templateId);
+
+        return $template === null ? Diagram::emptyBpmn() : $this->diagrams->contentOf($template);
     }
 
     public function show(Request $request, string $slug): View|RedirectResponse

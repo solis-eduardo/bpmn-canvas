@@ -373,4 +373,8 @@ return [
     'demo_role_author' => 'Author',
     'demo_role_collaborator' => 'Collaborator',
     'demo_password_locked' => 'The password of a demo account cannot be changed.',
+    'template_label' => 'Template',
+    'no_template' => 'No template, start empty',
+    'diagram_is_template' => 'This diagram is a template',
+    'diagram_is_template_hint' => 'New diagrams can start from a copy of it. Offered to everyone, or only to the workspace members when it is in a workspace.',
 ];

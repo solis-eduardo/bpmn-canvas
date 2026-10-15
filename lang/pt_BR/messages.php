@@ -373,4 +373,8 @@ return [
     'demo_role_author' => 'Autor',
     'demo_role_collaborator' => 'Colaborador',
     'demo_password_locked' => 'A senha de uma conta de demonstração não pode ser alterada.',
+    'template_label' => 'Modelo',
+    'no_template' => 'Sem modelo, começar vazio',
+    'diagram_is_template' => 'Este diagrama é um modelo',
+    'diagram_is_template_hint' => 'Novos diagramas podem começar a partir de uma cópia dele. Oferecido a todos, ou só aos Membros do Ambiente quando está em um Ambiente.',
 ];
