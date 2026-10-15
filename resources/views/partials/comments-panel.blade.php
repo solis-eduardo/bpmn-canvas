@@ -1,4 +1,4 @@
-{{-- The Comments panel (CONTEXT.md, "Comment Thread"; ADR-0022), shared by the Editor and the
+{{-- The Comments panel (CONTEXT.md, "Comment Thread"; ADR-0024), shared by the Editor and the
      read-only Viewer: public/assets/comments.js fills it. Its strings stay on data-* (server-only script). --}}
 @props(['diagram', 'class' => ''])
 

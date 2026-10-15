@@ -7,7 +7,7 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Comment Threads and their Comments (CONTEXT.md; ADR-0022). A Thread
+     * Comment Threads and their Comments (CONTEXT.md; ADR-0024). A Thread
      * belongs to a Diagram and optionally to one BPMN element id, stored as
      * plain text: whether that element still exists is decided on read.
      */

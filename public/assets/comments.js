@@ -1,5 +1,5 @@
 /*
- * The Comments panel (CONTEXT.md, "Comment Thread"; ADR-0022): lists a
+ * The Comments panel (CONTEXT.md, "Comment Thread"; ADR-0024): lists a
  * Diagram's Threads, writes Comments, resolves Threads, and marks the
  * commented elements on the canvas. Server-only: it works on whatever bpmn-js
  * instance the page hands it (the Editor's Modeler or the Viewer), so it needs

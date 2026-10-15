@@ -12,7 +12,7 @@ use Illuminate\Http\Request;
 
 /**
  * A Diagram's Comment Threads as a JSON resource (CONTEXT.md, "Comment
- * Thread"; ADR-0022). Every verb needs only the right to open the Diagram
+ * Thread"; ADR-0024). Every verb needs only the right to open the Diagram
  * (`view`): writing one never takes the Lock.
  */
 class CommentThreadController extends Controller

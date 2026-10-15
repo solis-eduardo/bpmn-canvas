@@ -10,7 +10,7 @@ use Illuminate\Support\Carbon;
 
 /**
  * A conversation about a Diagram, or about one of its BPMN elements
- * (CONTEXT.md, "Comment Thread"; ADR-0022).
+ * (CONTEXT.md, "Comment Thread"; ADR-0024).
  *
  * @property int $id
  * @property int $diagram_id

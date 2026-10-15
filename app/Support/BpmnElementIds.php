@@ -8,7 +8,7 @@ use DOMXPath;
 /**
  * The ids of a BPMN diagram's model elements (tasks, gateways, flows, ...),
  * not those of its diagram-interchange shapes. A Comment Thread anchored to an
- * element is orphaned once its id is no longer among them (ADR-0022).
+ * element is orphaned once its id is no longer among them (ADR-0024).
  */
 class BpmnElementIds
 {

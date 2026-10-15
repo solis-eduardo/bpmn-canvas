@@ -221,7 +221,7 @@ class DiagramController extends Controller
         return view('shares.show', [
             'diagram' => $diagram,
             'diagramXml' => $this->diagrams->contentOf($diagram),
-            // Comments are written without the Lock, so the Viewer has them too (ADR-0022).
+            // Comments are written without the Lock, so the Viewer has them too (ADR-0024).
             'commentsDiagram' => $diagram,
             'allowDownload' => true,
             'backUrl' => route('diagrams.index'),

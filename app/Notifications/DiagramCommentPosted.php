@@ -9,7 +9,7 @@ use App\Models\User;
 /**
  * Sent to a Diagram's Diagram Owner and to the other participants of a
  * Comment Thread when someone adds a Comment (CONTEXT.md, "Comment Thread";
- * ADR-0022). It names who commented and where, never what was written, so a
+ * ADR-0024). It names who commented and where, never what was written, so a
  * recipient who has since lost access to the Diagram learns nothing from it.
  */
 class DiagramCommentPosted extends PreferenceAwareNotification

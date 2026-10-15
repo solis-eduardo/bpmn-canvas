@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * Comment Threads (CONTEXT.md, "Comment Thread"; ADR-0022): written by anyone
+ * Comment Threads (CONTEXT.md, "Comment Thread"; ADR-0024): written by anyone
  * who can open the Diagram, without the Lock; resolvable; orphaned when their
  * element is gone; and they notify the Diagram Owner and the participants.
  */

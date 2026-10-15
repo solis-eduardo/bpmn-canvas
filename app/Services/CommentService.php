@@ -14,7 +14,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 
 /**
- * Comment Threads of a Diagram (CONTEXT.md, "Comment Thread"; ADR-0022).
+ * Comment Threads of a Diagram (CONTEXT.md, "Comment Thread"; ADR-0024).
  * Authorization (who may open the Diagram) is the controller's; this class
  * holds the rules about Threads: replies reopen, orphans are derived on
  * read, and who is told about a new Comment.

@@ -1,4 +1,4 @@
-/* The Comments panel and the canvas markers (public/assets/comments.js; ADR-0022).
+/* The Comments panel and the canvas markers (public/assets/comments.js; ADR-0024).
    Plain CSS, loaded by the Editor and the Viewer, which don't share a stylesheet. */
 .cmt-form { display: flex; flex-direction: column; gap: 8px; }
 .cmt-form textarea, .cmt-reply input {

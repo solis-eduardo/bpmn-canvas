@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * One message in a Comment Thread (CONTEXT.md, "Comment"; ADR-0022).
+ * One message in a Comment Thread (CONTEXT.md, "Comment"; ADR-0024).
  *
  * @property int $id
  * @property int $comment_thread_id
