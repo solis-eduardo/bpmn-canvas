@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Notifications\BackupVerificationFailed;
 use App\Notifications\DiagramCollaboratorRemoved;
 use App\Notifications\DiagramCommentPosted;
 use App\Notifications\DiagramLockRequested;
@@ -111,6 +112,10 @@ class NotificationController extends Controller
 
         if ($record->type === DiagramCollaboratorRemoved::class) {
             return redirect()->route('diagrams.index');
+        }
+
+        if ($record->type === BackupVerificationFailed::class) {
+            return redirect()->route('admin.backups.index');
         }
 
         $diagram = $this->diagrams->find($record->data['diagram_id'] ?? 0);
