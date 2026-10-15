@@ -159,6 +159,10 @@ class VersionHistoryBusyTest extends TestCase
         $this->actingAs($user)->postJson('/diagrams', ['title' => 'Brand new'])
             ->assertStatus(503)
             ->assertHeader('Retry-After', '5');
+
+        $this->assertSame(0, Diagram::count());
+        $this->assertSame([], Storage::disk('diagrams')->allFiles());
+        $this->assertSame([], Storage::disk('diagrams')->allDirectories());
     }
 
     public function test_forking_answers_503(): void
@@ -171,6 +175,35 @@ class VersionHistoryBusyTest extends TestCase
         $this->actingAs($owner)->postJson('/diagrams/'.$diagram->slug.'/fork')
             ->assertStatus(503)
             ->assertHeader('Retry-After', '5');
+
+        $this->assertSame(1, Diagram::count());
+        $this->assertSame([$diagram->slug], Storage::disk('diagrams')->directories());
+    }
+
+    public function test_the_lock_wait_setting_is_at_least_one_second(): void
+    {
+        foreach (['0', '-5', 'abc'] as $value) {
+            putenv('VERSION_LOCK_WAIT_SECONDS='.$value);
+            $this->assertSame(1, (require base_path('config/bpmn.php'))['version_lock_wait_seconds'], $value);
+        }
+
+        putenv('VERSION_LOCK_WAIT_SECONDS=12');
+        $this->assertSame(12, (require base_path('config/bpmn.php'))['version_lock_wait_seconds']);
+        putenv('VERSION_LOCK_WAIT_SECONDS');
+    }
+
+    public function test_a_busy_restore_leaves_the_free_lock_with_the_requester(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = Diagram::factory()->for($holder, 'author')->create(['owner_id' => $holder->id]);
+        Storage::disk('diagrams')->put($diagram->disk_path, Diagram::emptyBpmn());
+        $first = app(VersionRepository::class)->save($diagram, $holder, $this->content('One'));
+        app(VersionRepository::class)->save($diagram, $holder, $this->content('Two'));
+        $this->holdHistory($diagram->id);
+
+        $this->assertBusy($this->actingAs($holder)->postJson('/diagrams/'.$diagram->slug.'/versions/'.$first.'/restore'));
+
+        $this->assertSame($holder->id, $diagram->fresh()->locked_by);
     }
 
     public function test_lock_expiry_skips_a_busy_diagram_and_still_releases_the_others(): void

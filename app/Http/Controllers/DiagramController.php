@@ -149,16 +149,14 @@ class DiagramController extends Controller
 
         $slug = $this->diagrams->uniqueSlug($data['title']);
 
-        $diagram = $this->diagrams->create([
+        $diagram = $this->diagrams->createWithHistory([
             'title' => $data['title'],
             'slug' => $slug,
             'author_id' => $request->user()->id,
             'owner_id' => $request->user()->id,
             'workspace_id' => $data['workspace_id'] ?? null,
             'disk_path' => $slug.'/diagram.bpmn',
-        ], Diagram::emptyBpmn());
-
-        $versions->initialize($diagram, $request->user());
+        ], Diagram::emptyBpmn(), $versions, $request->user());
 
         // Tags are global and created implicitly on first use (CONTEXT.md, "Tag").
         foreach (array_unique(array_filter(array_map('trim', $data['tags'] ?? []))) as $name) {

@@ -16,8 +16,9 @@ return [
     'version_store' => env('VERSION_STORE', 'git'),
 
     // Seconds a writer waits for a Diagram's Version history lock before giving
-    // up with a retryable 503 (ADR-0018, issue #242).
-    'version_lock_wait_seconds' => (int) env('VERSION_LOCK_WAIT_SECONDS', 30),
+    // up with a retryable 503 (ADR-0018, issue #242). At least 1: 0 or a negative
+    // value would fail every save that finds the lock taken, without waiting.
+    'version_lock_wait_seconds' => max(1, (int) env('VERSION_LOCK_WAIT_SECONDS', 30)),
 
     // Browser demo affordances (ADR-0018): demo sign-in, banner and reset.
     // Off by default; only .env.demo turns it on.
