@@ -22,6 +22,7 @@ class MemberService
         private readonly MemberRepository $members,
         private readonly WorkspaceRepository $workspaces,
         private readonly LockService $locks,
+        private readonly ActivityLogger $activity,
     ) {}
 
     /**
@@ -33,6 +34,8 @@ class MemberService
         $member = $this->members->upsertManual($workspace, $user);
 
         if ($member->wasRecentlyCreated) {
+            $this->activity->record('workspace.member_added', $user, workspace: $workspace, after: ['origin' => $member->origin]);
+
             $user->notify(new WorkspaceMemberAdded($workspace));
         }
 
@@ -47,6 +50,8 @@ class MemberService
         $removed = $this->members->removeFor($workspace, $user);
 
         if ($removed) {
+            $this->activity->record('workspace.member_removed', $user, workspace: $workspace);
+
             // A Lock the User holds stays only if they can still edit the
             // Diagram another way (Diagram Owner or Collaborator).
             $this->locks->reconcileHeldBy($user, $workspace);
@@ -71,11 +76,15 @@ class MemberService
     public function syncFromKeycloakGroups(User $user, array $groups): void
     {
         DB::transaction(function () use ($user, $groups) {
+            $dropped = $this->members->workspacesOfGroupMembershipsOutside($user, $groups);
             $removed = $this->members->removeGroupMembershipsOutside($user, $groups);
+
+            $dropped->each(fn (Workspace $workspace) => $this->activity->record('workspace.member_removed', $user, workspace: $workspace, before: ['origin' => Member::ORIGIN_GROUP], system: true));
 
             $this->workspaces->linkedToKeycloakGroups($groups)
                 ->each(function (Workspace $workspace) use ($user) {
                     if ($this->members->createGroupIfMissing($workspace, $user)->wasRecentlyCreated) {
+                        $this->activity->record('workspace.member_added', $user, workspace: $workspace, after: ['origin' => Member::ORIGIN_GROUP], system: true);
                         $user->notify(new WorkspaceMemberAdded($workspace));
                     }
                 });
