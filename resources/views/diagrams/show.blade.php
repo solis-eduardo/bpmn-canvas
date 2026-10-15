@@ -331,9 +331,9 @@
                     <span class="legend"><span class="swatch removed"></span>{{ __('messages.diff_removed') }}</span>
                     <button type="button" id="btn-diff-exit"><x-icon name="x-mark" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.exit_comparison') }}</button>
                 </div>
-                <div class="diff-removed-panel" id="diff-removed-panel" hidden>
-                    <div class="head">{{ __('messages.diff_removed_elements') }}</div>
-                    <ul id="diff-removed-list"></ul>
+                <div class="diff-summary-panel" id="diff-summary-panel" hidden>
+                    <div class="head">{{ __('messages.diff_summary') }}</div>
+                    <div id="diff-summary-body"></div>
                 </div>
             </main>
             @can('diagram-owner.transfer', $diagram)
