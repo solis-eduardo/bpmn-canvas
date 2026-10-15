@@ -219,7 +219,7 @@ class DiagramVisibilityTest extends TestCase
     {
         $owner = User::factory()->create();
         $diagram = Diagram::factory()->for($owner, 'author')->create();
-        $this->actingAs($owner)->get("/diagrams/{$diagram->slug}");
+        $this->actingAs($owner)->postJson("/diagrams/{$diagram->slug}/lock")->assertOk();
 
         $admin = User::factory()->create(['is_admin' => true]);
         $this->actingAs($admin)->get("/diagrams/{$diagram->slug}")->assertOk();
@@ -231,7 +231,7 @@ class DiagramVisibilityTest extends TestCase
     {
         $owner = User::factory()->create();
         $diagram = Diagram::factory()->for($owner, 'author')->create();
-        $this->actingAs($owner)->get("/diagrams/{$diagram->slug}");
+        $this->actingAs($owner)->postJson("/diagrams/{$diagram->slug}/lock")->assertOk();
 
         $admin = User::factory()->create(['is_admin' => true]);
         $this->actingAs($admin)->postJson("/diagrams/{$diagram->slug}/lock")->assertForbidden();

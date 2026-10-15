@@ -23,7 +23,7 @@ class LockExpiryService
      */
     public function releaseExpired(): int
     {
-        $cutoff = Carbon::now()->subMinutes(config('bpmn.lock_ttl_minutes'));
+        $cutoff = Diagram::lockExpiryCutoff();
 
         $released = 0;
 

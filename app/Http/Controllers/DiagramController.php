@@ -14,7 +14,6 @@ use App\Repositories\UserRepository;
 use App\Repositories\VersionRepository;
 use App\Repositories\WorkspaceRepository;
 use App\Services\CollaboratorService;
-use App\Services\LockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -36,7 +35,6 @@ class DiagramController extends Controller
     public function __construct(
         private readonly DiagramRepository $diagrams,
         private readonly WorkspaceRepository $workspaces,
-        private readonly LockService $locks,
         private readonly UserRepository $users,
     ) {}
 
@@ -195,10 +193,11 @@ class DiagramController extends Controller
             return $this->viewer($diagram, __('messages.read_only_diagram_notice'), 'blue', $user);
         }
 
-        // The Lock only concerns actual editors. When someone else
-        // holds it, the Editor stays closed: the Viewer opens instead, with
-        // a red notice and the option to request the Lock.
-        if (! $this->locks->enter($diagram, $user)) {
+        // Rendering never takes the Lock: the Editor acquires it with its own
+        // POST once loaded (ADR-0003), and refusal sends it to the Viewer. Here
+        // the Viewer is only chosen up front when someone else already holds it
+        // and is still alive: the Editor takes over an expired Lock.
+        if ($diagram->isLockedByOther($user) && ! $diagram->hasExpiredLock()) {
             return $this->viewer($diagram, __('messages.viewer_locked_notice', [
                 'name' => $diagram->lockedBy->name,
                 'time' => $diagram->locked_at?->diffForHumans() ?? '',
@@ -229,7 +228,7 @@ class DiagramController extends Controller
             'notice' => $notice,
             'noticeTone' => $tone,
             'lockedAt' => $diagram->locked_at,
-            'requestLockUrl' => $requestLock ? route('diagrams.lock.store', $diagram->slug) : null,
+            'requestLockUrl' => $requestLock ? route('diagrams.lock.request', $diagram->slug) : null,
             // A Fork is available at any time (CONTEXT.md, "Fork"), not only
             // as the way out of someone else's Lock.
             'forkUrl' => route('diagrams.fork', $diagram->slug),
