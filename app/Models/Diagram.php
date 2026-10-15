@@ -294,6 +294,12 @@ BPMN;
         return $this->hasMany(Collaborator::class);
     }
 
+    /** @return HasMany<CommentThread, $this> */
+    public function commentThreads(): HasMany
+    {
+        return $this->hasMany(CommentThread::class);
+    }
+
     /** @return HasMany<Share, $this> */
     public function shares(): HasMany
     {

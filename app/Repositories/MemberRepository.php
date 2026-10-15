@@ -6,6 +6,7 @@ use App\Models\Member;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\AccessMemo;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Persistence for a Workspace's Members. Deciding who gets notified about a
@@ -60,6 +61,22 @@ class MemberRepository
         $this->access->forget();
 
         return $removed;
+    }
+
+    /**
+     * The Workspaces where {@see removeGroupMembershipsOutside()} would drop
+     * the User's group-managed membership.
+     *
+     * @param  list<string>  $groups
+     * @return Collection<int, Workspace>
+     */
+    public function workspacesOfGroupMembershipsOutside(User $user, array $groups): Collection
+    {
+        return Workspace::whereHas('members', fn ($query) => $query
+            ->where('user_id', $user->id)
+            ->where('origin', Member::ORIGIN_GROUP))
+            ->where(fn ($query) => $query->whereNull('keycloak_group')->orWhereNotIn('keycloak_group', $groups))
+            ->get();
     }
 
     /**

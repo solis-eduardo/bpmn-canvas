@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\ProvisionalReason;
 use App\Exceptions\VersionHistoryBusyException;
 use App\Models\Diagram;
 use Illuminate\Database\Eloquent\Builder;
@@ -84,7 +85,7 @@ class LockExpiryService
                 return false;
             }
 
-            $this->locks->release($diagram, saveDraft: true);
+            $this->locks->release($diagram, saveDraft: true, reason: ProvisionalReason::Expired);
 
             return true;
         });

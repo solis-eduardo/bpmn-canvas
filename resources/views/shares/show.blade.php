@@ -1,6 +1,9 @@
 <x-layouts.app :title="$diagram->title" :fluid="true" :standard-header="true">
     <x-slot:head>
         <meta name="robots" content="noindex, nofollow">
+        @if (isset($commentsDiagram) || isset($activityDiagram))
+            <link rel="stylesheet" href="@assetUrl('comments.css')">
+        @endif
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/diagram-js.css') }}">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-js.css') }}">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-font/css/bpmn.css') }}">
@@ -62,6 +65,18 @@
                     {{ __('messages.force_release_lock') }}
                 </button>
             @endif
+            @isset($commentsDiagram)
+                <button type="button" id="btn-comments-entry" data-comments-toggle class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                    <x-icon name="chat" />
+                    {{ __('messages.comments') }}
+                </button>
+            @endisset
+            @isset($activityDiagram)
+                <button type="button" id="btn-activity-entry" data-activity-toggle class="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50">
+                    <x-icon name="shield-check" />
+                    {{ __('messages.activity') }}
+                </button>
+            @endisset
             @if (! empty($downloadUrls))
                 <div class="dropdown relative">
                     <button
@@ -109,6 +124,12 @@
                     @if (! empty($lockedAt)) data-locked-at="{{ $lockedAt->toIso8601String() }}" @endif
                 >{{ $notice }}</p>
             @endisset
+            @isset($commentsDiagram)
+                @include('partials.comments-panel', ['diagram' => $commentsDiagram, 'class' => 'cmt-floating'])
+            @endisset
+            @isset($activityDiagram)
+                @include('partials.activity-panel', ['diagram' => $activityDiagram, 'class' => 'cmt-floating'])
+            @endisset
             <div id="message" class="absolute inset-0 flex items-center justify-center px-6 text-center text-gray-500">
                 {{ __('messages.loading') }}
             </div>
@@ -124,6 +145,9 @@
     <script id="diagram-xml" type="application/json">@json($diagramXml, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)</script>
     <script src="{{ asset('vendor/bpmn-js/bpmn-navigated-viewer.production.min.js') }}"></script>
     <script type="module" src="@assetUrl('share-viewer.js')"></script>
+    @isset($activityDiagram)
+        <script type="module" src="@assetUrl('activity.js')"></script>
+    @endisset
     @isset($requestLockUrl)
         <script src="@assetUrl('locked.js')"></script>
     @endisset

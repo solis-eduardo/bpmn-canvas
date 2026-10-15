@@ -5,12 +5,14 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Repositories\UserRepository;
+use App\Services\ActivityLogger;
 use App\Services\MemberService;
 use App\Support\KeycloakProvider;
 use App\Support\KeycloakResolution;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Contracts\User as SocialiteUserContract;
 use Laravel\Socialite\Facades\Socialite;
@@ -26,6 +28,7 @@ class KeycloakLoginController extends Controller
 
     public function __construct(
         private readonly UserRepository $users,
+        private readonly ActivityLogger $activity,
     ) {}
 
     public function redirect(): BaseRedirectResponse
@@ -65,9 +68,14 @@ class KeycloakLoginController extends Controller
 
         // Only a verified identity may be elevated: the claim is trusted, the
         // unverified email behind it is not.
+        $wasAdmin = (bool) $user->is_admin;
         $this->syncAdminFromClaim($user, $emailVerified && $this->hasAdminRoleClaim($tokenPayload));
 
-        $user->save();
+        DB::transaction(function () use ($user, $wasAdmin): void {
+            $user->save();
+
+            $this->activity->recordAdministratorChange($user, $wasAdmin, system: true);
+        });
         $groups = $this->keycloakGroups($tokenPayload);
         $this->syncWorkspaceMemberships($user, $groups, $members);
 

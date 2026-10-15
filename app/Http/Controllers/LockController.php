@@ -7,9 +7,11 @@ use App\Http\Controllers\Concerns\ResolvesVisibleDiagram;
 use App\Repositories\DiagramRepository;
 use App\Repositories\UserRepository;
 use App\Rules\BpmnXml;
+use App\Services\ActivityLogger;
 use App\Services\LockService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 
@@ -25,6 +27,7 @@ class LockController extends Controller
         private readonly DiagramRepository $diagrams,
         private readonly UserRepository $users,
         private readonly LockService $locks,
+        private readonly ActivityLogger $activity,
     ) {}
 
     public function show(string $slug): JsonResponse
@@ -140,11 +143,20 @@ class LockController extends Controller
 
         $data = $request->validate(['save_draft' => ['sometimes', 'boolean']]);
 
-        $this->locks->release(
-            $diagram,
-            (bool) ($data['save_draft'] ?? false),
-            $diagram->isLockedBy($request->user()) ? $this->usableDraft($request->input('draft')) : null,
-        );
+        // Releasing a live Lock held by someone else is the Administrator's force-release.
+        $forcedHolder = $diagram->hasActiveLock() && ! $diagram->isLockedBy($request->user()) ? $diagram->lockedBy : null;
+
+        DB::transaction(function () use ($request, $diagram, $data, $forcedHolder): void {
+            $this->locks->release(
+                $diagram,
+                (bool) ($data['save_draft'] ?? false),
+                $diagram->isLockedBy($request->user()) ? $this->usableDraft($request->input('draft')) : null,
+            );
+
+            if ($forcedHolder !== null) {
+                $this->activity->record('lock.force_released', $forcedHolder, diagram: $diagram, before: ['holder' => $forcedHolder->name]);
+            }
+        });
 
         return response()->json(['unlocked' => true]);
     }

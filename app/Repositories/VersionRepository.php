@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Enums\ProvisionalReason;
 use App\Models\Diagram;
 use App\Models\User;
 use Carbon\CarbonInterface;
@@ -19,15 +20,6 @@ use Carbon\CarbonInterface;
  */
 interface VersionRepository
 {
-    /**
-     * Commit message for the Version an expiring Lock leaves behind
-     * (ADR-0003). Public because ProvisionalVersionService is the one caller
-     * that passes it; it runs on both Lock expiry and manual release, via
-     * LockService::release(). The User-facing name of that Version is the
-     * localized `messages.provisional_version`, not this.
-     */
-    public const MESSAGE_PROVISIONAL = 'Provisional version (Lock expired)';
-
     /**
      * Ensures the Diagram has a Version history, registering the content
      * currently on disk as the first Version if there is none yet (created via
@@ -79,9 +71,9 @@ interface VersionRepository
 
     /**
      * Flags a Version as provisional: content an expiring Lock kept for its
-     * holder (ADR-0003). $keptFor is that holder.
+     * holder (ADR-0003). $keptFor is that holder, and $reason why it was kept, which decides its name.
      */
-    public function markProvisional(Diagram $diagram, string $version, ?User $keptFor = null): void;
+    public function markProvisional(Diagram $diagram, string $version, ?User $keptFor = null, ProvisionalReason $reason = ProvisionalReason::Expired): void;
 
     /**
      * Keeps a provisional Version: it becomes an ordinary Version.
