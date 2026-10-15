@@ -6,6 +6,13 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ isset($title) ? $title . ' | ' . config('app.name') : config('app.name') }}</title>
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    {{-- Rewrites the modules' relative imports to their versioned URLs (see PublicAssets); must precede every module script. --}}
+    <script type="importmap" nonce="{{ $cspNonce }}">
+        {!! app(\App\Support\PublicAssets::class)->importMapJson([
+            'bpmn-js-differ' => asset('vendor/bpmn-js-differ/index.esm.js'),
+            'min-dash' => asset('vendor/bpmn-js-differ/min-dash.esm.js'),
+        ]) !!}
+    </script>
     {{ $head ?? '' }}
 </head>
 <body class="h-full font-sans text-gray-900 antialiased" data-ts-no-results="{{ __('messages.select_no_results') }}" data-ts-create="{{ __('messages.select_create_option') }}"@if (auth()->check() && auth()->user()->timezone === null) data-detect-timezone="{{ route('account.timezone.detect') }}"@endif>
@@ -98,7 +105,7 @@
     </div>
 
     @auth
-        <script type="module" src="{{ asset('assets/notifications.js') }}"></script>
+        <script type="module" src="@assetUrl('notifications.js')"></script>
     @endauth
 </body>
 </html>
