@@ -1,5 +1,5 @@
 /*
- * The Editor's modeling checks (ADR-0026): bpmnlint's recommended rules plus
+ * The Editor's modeling checks (ADR-0027): bpmnlint's recommended rules plus
  * ours, wired into the Modeler through bpmn-js-bpmnlint. Shared by both
  * builds: the standalone build imports this module, the server build loads
  * its Vite bundle (the server page runs the vendored, unbundled bpmn-js).

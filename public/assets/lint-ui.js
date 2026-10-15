@@ -2,7 +2,7 @@
  * The Editor's modeling-check controls (the lint toggle and issue count in
  * the header), on top of the bpmn-js-bpmnlint service in the Modeler. Part of
  * the shared core (ADR-0019); the checks themselves are wired by
- * resources/js/editor-lint.js (ADR-0026).
+ * resources/js/editor-lint.js (ADR-0027).
  */
 
 export const LINT_KEY = 'bpmn-canvas.lint';
