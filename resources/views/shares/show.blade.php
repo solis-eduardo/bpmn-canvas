@@ -112,8 +112,8 @@
     {{-- Non-executing JSON block: JSON_HEX_* escapes every `<`, `>`, `&` and quote, so the XML can't close the tag or start another one. --}}
     <script id="diagram-xml" type="application/json">@json($diagramXml, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT)</script>
     <script src="{{ asset('vendor/bpmn-js/bpmn-navigated-viewer.production.min.js') }}"></script>
-    <script type="module" src="{{ asset('assets/share-viewer.js') }}"></script>
+    <script type="module" src="@assetUrl('share-viewer.js')"></script>
     @isset($requestLockUrl)
-        <script src="{{ asset('assets/locked.js') }}"></script>
+        <script src="@assetUrl('locked.js')"></script>
     @endisset
 </x-layouts.app>
