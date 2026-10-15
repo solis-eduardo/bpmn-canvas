@@ -11,7 +11,7 @@ use Illuminate\View\View;
 
 /**
  * A Diagram's Activity tab: the log entries about that Diagram (CONTEXT.md,
- * "Activity Log"; ADR-0022).
+ * "Activity Log"; ADR-0025).
  */
 class DiagramActivityController extends Controller
 {

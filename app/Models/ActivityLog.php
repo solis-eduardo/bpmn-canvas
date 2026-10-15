@@ -8,7 +8,7 @@ use LogicException;
 
 /**
  * One entry of the append-only activity log (CONTEXT.md, "Activity Log";
- * ADR-0022). An entry is written once by ActivityLogger and never changed or
+ * ADR-0025). An entry is written once by ActivityLogger and never changed or
  * deleted through the model; the only way entries leave is the retention
  * prune ({@see prune()}).
  */

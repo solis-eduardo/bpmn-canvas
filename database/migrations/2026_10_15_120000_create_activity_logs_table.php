@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * The append-only activity log (CONTEXT.md, "Activity Log"; ADR-0022).
+ * The append-only activity log (CONTEXT.md, "Activity Log"; ADR-0025).
  * Names and titles are copied into the row and the Diagram/Workspace/User
  * columns carry no foreign key: an entry must outlive the thing it describes
  * and stay readable after a rename or a deletion.

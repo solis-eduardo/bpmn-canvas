@@ -10,7 +10,7 @@ use App\Models\Workspace;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Writes the append-only activity log (CONTEXT.md, "Activity Log"; ADR-0022).
+ * Writes the append-only activity log (CONTEXT.md, "Activity Log"; ADR-0025).
  * The actor is whoever is signed in; entries made outside a request by a
  * person (a Keycloak login, a group sync) have none. Names are copied into
  * the entry so it stays readable after a rename or deletion.

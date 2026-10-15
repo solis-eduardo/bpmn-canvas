@@ -10,7 +10,7 @@ use Illuminate\View\View;
 
 /**
  * The global activity log, for Administrators (CONTEXT.md, "Activity Log";
- * ADR-0022).
+ * ADR-0025).
  */
 class ActivityController extends Controller
 {

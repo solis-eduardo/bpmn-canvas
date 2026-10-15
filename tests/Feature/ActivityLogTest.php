@@ -15,7 +15,7 @@ use Tests\TestCase;
 
 /**
  * The append-only activity log of sensitive access changes (CONTEXT.md,
- * "Activity Log"; ADR-0022; issue #252).
+ * "Activity Log"; ADR-0025; issue #252).
  */
 class ActivityLogTest extends TestCase
 {
