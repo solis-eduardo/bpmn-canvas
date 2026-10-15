@@ -9,13 +9,13 @@ import { toast, setupZoom, errorMessage, chooseOption } from './common.js';
 import { browserStorage, readLintActive, setupLintUi } from './lint-ui.js';
 import { resolveSaveConflict } from './save-conflict.js';
 
-function modelerOptions(container, lint) {
+function modelerOptions(container, lint, storage) {
   if (!lint) return { container };
 
   return {
     container,
     additionalModules: lint.modules,
-    linting: { ...lint.options.linting, active: readLintActive(browserStorage()) },
+    linting: { ...lint.options.linting, active: readLintActive(storage) },
   };
 }
 
@@ -57,7 +57,8 @@ function modelerOptions(container, lint) {
  *   the content was kept or discarded some other way.
  */
 export function createEditor({ container, store, t, timeZone, Modeler, lint }) {
-  const modeler = new Modeler(modelerOptions(container, lint));
+  const storage = browserStorage();
+  const modeler = new Modeler(modelerOptions(container, lint, storage));
   const handlers = { dirty: [], saved: [], saveFailed: [], compare: [], forked: [] };
   const dirtyMarker = document.getElementById('dirty');
   let dirty = false;
@@ -70,7 +71,7 @@ export function createEditor({ container, store, t, timeZone, Modeler, lint }) {
       button: document.getElementById('btn-lint'),
       counter: document.getElementById('lint-count'),
       t,
-      storage: browserStorage(),
+      storage,
     });
   }
 
