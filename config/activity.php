@@ -5,6 +5,6 @@ return [
     // (CONTEXT.md, "Activity Log"; ADR-0025). 0 keeps entries forever.
     'retention_days' => (int) env('ACTIVITY_LOG_RETENTION_DAYS', 0),
 
-    // Entries per page on the Diagram's Activity tab and the global log.
+    // Entries per page on the Diagram's Activity panel and the global log.
     'per_page' => 25,
 ];

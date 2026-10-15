@@ -49,7 +49,7 @@ class DiagramPolicy
     }
 
     /**
-     * Read a Diagram's Activity tab (CONTEXT.md, "Activity Log"; ADR-0025):
+     * Read a Diagram's Activity panel (CONTEXT.md, "Activity Log"; ADR-0025):
      * the same people who manage its Collaborators — Diagram Owner, Diagram
      * Manager or Administrator.
      */
