@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Notifications\BackupVerificationFailed;
 use App\Notifications\DiagramCollaboratorRemoved;
+use App\Notifications\DiagramCommentPosted;
 use App\Notifications\DiagramLockRequested;
 use App\Repositories\DiagramRepository;
 use App\Repositories\WorkspaceRepository;
@@ -122,9 +123,15 @@ class NotificationController extends Controller
         if ($diagram) {
             // A Lock request is about the Editor itself, not about who may
             // edit, so it opens the Diagram without the Collaborators panel.
-            return $record->type === DiagramLockRequested::class
-                ? redirect()->route('diagrams.show', $diagram->slug)
-                : redirect(route('diagrams.show', $diagram->slug).'?open-panel=collaborators');
+            return match ($record->type) {
+                DiagramLockRequested::class => redirect()->route('diagrams.show', $diagram->slug),
+                // A Comment opens the Comments panel on its Thread.
+                DiagramCommentPosted::class => redirect(route('diagrams.show', $diagram->slug).'?'.http_build_query([
+                    'open-panel' => 'comments',
+                    'thread' => $record->data['thread_id'] ?? null,
+                ])),
+                default => redirect(route('diagrams.show', $diagram->slug).'?open-panel=collaborators'),
+            };
         }
 
         $workspace = $this->workspaces->find($record->data['workspace_id'] ?? 0);

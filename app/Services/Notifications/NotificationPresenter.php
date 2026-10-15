@@ -9,6 +9,7 @@ use App\Notifications\DiagramAccessRequestResolved;
 use App\Notifications\DiagramCollaboratorInvited;
 use App\Notifications\DiagramCollaboratorRemoved;
 use App\Notifications\DiagramCollaboratorRoleChanged;
+use App\Notifications\DiagramCommentPosted;
 use App\Notifications\DiagramLockRequested;
 use App\Notifications\DiagramOwnershipTransferred;
 use App\Notifications\WorkspaceMemberAdded;
@@ -68,6 +69,10 @@ class NotificationPresenter
             ]),
             BackupVerificationFailed::class => __('messages.notification_backup_verification_failed', [
                 'reason' => $data['reason'] ?? '',
+            ]),
+            DiagramCommentPosted::class => __('messages.notification_comment_posted', [
+                'name' => $data['author_name'] ?? '',
+                'diagram' => $data['diagram_title'] ?? '',
             ]),
             default => '',
         };
