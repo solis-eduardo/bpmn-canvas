@@ -5,8 +5,6 @@ namespace App\Providers;
 use App\Auth\DeactivatedAwareUserProvider;
 use App\Listeners\CheckDatabaseHealth;
 use App\Models\User;
-use App\Rendering\DiagramRenderer;
-use App\Rendering\NodeDiagramRenderer;
 use App\Repositories\DatabaseVersionRepository;
 use App\Repositories\GitVersionRepository;
 use App\Repositories\VersionRepository;
@@ -34,8 +32,6 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(DatabaseDumper::class, PgDumpDatabaseDumper::class);
         $this->app->bind(DatabaseRestorer::class, PgRestoreDatabaseRestorer::class);
-
-        $this->app->bind(DiagramRenderer::class, NodeDiagramRenderer::class);
 
         // The Version store is chosen by configuration (ADR-0018). Resolved per
         // call so the choice always follows the current config.

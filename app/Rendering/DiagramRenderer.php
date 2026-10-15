@@ -2,11 +2,14 @@
 
 namespace App\Rendering;
 
+use Illuminate\Container\Attributes\Bind;
+
 /**
  * Port for turning BPMN XML into an image or a PDF (issue #250). The adapter
  * is a headless bpmn-js run in a headless browser (NodeDiagramRenderer);
  * tests substitute a fake.
  */
+#[Bind(NodeDiagramRenderer::class)]
 interface DiagramRenderer
 {
     /**
