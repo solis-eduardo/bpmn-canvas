@@ -90,11 +90,11 @@
             @endif
         </div>
 
-        @isset($forks)
-            <dl id="fork-lineage" class="shrink-0 border-b border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 empty:hidden sm:px-6">
+        @if (isset($forks) && ($forkedFrom || $forks->isNotEmpty()))
+            <dl id="fork-lineage" class="shrink-0 border-b border-gray-200 bg-white px-4 py-2 text-sm text-gray-700 sm:px-6">
                 @include('diagrams._fork-lineage')
             </dl>
-        @endisset
+        @endif
 
         <div id="viewer" class="relative min-h-0 flex-1" data-title="{{ $diagram->title }}" data-open-failed-notice="{{ __('messages.diagram_open_failed') }}">
             <div id="canvas" class="absolute inset-0 bg-white"></div>
