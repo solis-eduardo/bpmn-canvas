@@ -207,4 +207,38 @@ class ServerSideExportTest extends TestCase
         $this->get("/diagrams/{$diagram->slug}/export/pdf")->assertRedirect('/login');
         $this->actingAs($owner)->get("/diagrams/{$diagram->slug}/export/zip")->assertNotFound();
     }
+
+    public function test_editor_export_can_target_a_specific_version(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = $this->diagramFor($owner);
+        $this->actingAs($owner)->putJson("/diagrams/{$diagram->slug}/content", ['content' => '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">two</bpmn:definitions>'])->assertOk();
+        $oldest = collect($this->getJson("/diagrams/{$diagram->slug}/versions")->json('versions'))->last();
+
+        $this->get("/diagrams/{$diagram->slug}/export/pdf?version={$oldest['id']}")->assertOk();
+
+        $this->assertSame(app(VersionRepository::class)->get($diagram, $oldest['id']), $this->renderer->calls[0]['xml']);
+        $this->assertSame('Version 1', $this->renderer->calls[0]['titleBlock']->version);
+        $this->get("/diagrams/{$diagram->slug}/export/pdf?version=nope")->assertNotFound();
+    }
+
+    public function test_editor_route_serves_the_stored_bpmn_without_rendering(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = $this->diagramFor($owner, '<bpmn:definitions/>');
+
+        $response = $this->actingAs($owner)->get("/diagrams/{$diagram->slug}/export/bpmn");
+
+        $response->assertOk();
+        $response->assertHeader('Content-Type', 'application/xml');
+        $this->assertSame([], $this->renderer->calls);
+    }
+
+    public function test_a_user_without_access_cannot_export(): void
+    {
+        $diagram = $this->diagramFor(User::factory()->create());
+
+        $this->actingAs(User::factory()->create())->get("/diagrams/{$diagram->slug}/export/png")->assertForbidden();
+        $this->assertSame([], $this->renderer->calls);
+    }
 }
