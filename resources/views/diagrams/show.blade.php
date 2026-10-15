@@ -3,6 +3,7 @@
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/diagram-js.css') }}">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-js.css') }}">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-font/css/bpmn-embedded.css') }}">
+        <link rel="stylesheet" href="{{ asset('assets/comments.css') }}">
         @vite('resources/css/editor.css')
         <script type="importmap" nonce="{{ $cspNonce }}">
             {
@@ -129,12 +130,17 @@
                 </x-button>
                 <span class="brand" id="editor-brand">{{ $diagram->title }}</span>
                 <span class="spacer"></span>
+                <x-button :href="route('diagrams.export', [$diagram->slug, 'pdf'])" id="btn-export-pdf" variant="secondary" size="sm">
+                    <x-icon name="download" />
+                    {{ __('messages.export_pdf') }}
+                </x-button>
                 <form method="POST" action="{{ route('diagrams.fork', $diagram->slug) }}">
                     @csrf
                     <button type="submit" id="btn-fork">
                         <x-icon name="copy" class="inline h-4 w-4 align-text-bottom" />
                         {{ __('messages.fork_diagram') }}
                     </button>
+                    <label class="fork-copy-tags"><input type="checkbox" name="copy_tags" value="1"> {{ __('messages.fork_copy_tags') }}</label>
                 </form>
                 {{-- The Editor is only ever open to its Lock's holder: the Editor acquires the Lock
                      on load (ADR-0003), and a refusal sends the page to the Viewer instead. --}}
@@ -201,6 +207,7 @@
                     <div><dt>{{ __('messages.created_at_label') }}</dt><dd><x-timestamp :at="$diagram->created_at" /></dd></div>
                     <div><dt>{{ __('messages.diagram_column_modified') }}</dt><dd><x-timestamp :at="$diagram->updated_at" /></dd></div>
                     <div><dt>{{ __('messages.slug_label') }}</dt><dd class="break-all" id="info-slug">{{ $diagram->slug }}</dd></div>
+                    @include('diagrams._fork-lineage')
                 </dl>
                 <p class="info-footer">
                     <a id="info-edit-link" href="{{ route('diagrams.edit', $diagram->slug) }}">{{ __('messages.edit_diagram') }}</a>
@@ -212,12 +219,14 @@
                     <button type="button" id="btn-history-close" data-panel-close aria-label="{{ __('messages.close') }}"><x-icon name="x-mark" /></button>
                 </div>
                 <p class="version-hint">{{ __('messages.select_two_versions_hint') }}</p>
+                <label class="fork-copy-tags version-hint"><input type="checkbox" id="version-fork-copy-tags"> {{ __('messages.fork_copy_tags') }}</label>
                 <ul id="version-list"></ul>
                 <div class="version-compare-bar">
                     <span id="version-compare-count">0/2</span>
                     <button type="button" id="btn-compare-selected" disabled><x-icon name="transfer" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.compare_selected') }}</button>
                 </div>
             </aside>
+            @include('partials.comments-panel', ['diagram' => $diagram])
             @can('manageCollaborators', $diagram)
                 <aside id="collaborators-panel" hidden>
                     <div class="aside-head">
@@ -293,6 +302,14 @@
                     title="{{ __('messages.version_history') }}"
                     aria-label="{{ __('messages.version_history') }}"
                 ><x-icon name="clock" /></button>
+                <button
+                    type="button"
+                    id="btn-comments-entry"
+                    class="panel-toggle"
+                    data-panel-toggle="comments-panel"
+                    title="{{ __('messages.comments') }}"
+                    aria-label="{{ __('messages.comments') }}"
+                ><x-icon name="chat" /></button>
                 @can('manageCollaborators', $diagram)
                     <button
                         type="button"
@@ -328,9 +345,9 @@
                     <span class="legend"><span class="swatch removed"></span>{{ __('messages.diff_removed') }}</span>
                     <button type="button" id="btn-diff-exit"><x-icon name="x-mark" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.exit_comparison') }}</button>
                 </div>
-                <div class="diff-removed-panel" id="diff-removed-panel" hidden>
-                    <div class="head">{{ __('messages.diff_removed_elements') }}</div>
-                    <ul id="diff-removed-list"></ul>
+                <div class="diff-summary-panel" id="diff-summary-panel" hidden>
+                    <div class="head">{{ __('messages.diff_summary') }}</div>
+                    <div id="diff-summary-body"></div>
                 </div>
             </main>
             @can('diagram-owner.transfer', $diagram)

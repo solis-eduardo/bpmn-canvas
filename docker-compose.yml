@@ -26,7 +26,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    mem_limit: 768m
+    # Headroom for the headless Chromium the PNG/SVG/PDF export starts per request.
+    mem_limit: 1536m
     healthcheck:
       # Speaks FastCGI to php-fpm directly and re-runs the Laravel `/up`
       # route, which only answers 200 once PHP-FPM is serving requests and

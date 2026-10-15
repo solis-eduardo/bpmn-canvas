@@ -118,6 +118,16 @@ export function createHttpDiagramStore({ urls, csrfToken, fetch, request = creat
       return request('POST', urls.forkUrl, { content: xml });
     },
 
+    /**
+     * Forks from one Version of the history instead of the current content,
+     * optionally copying this Diagram's Tags. Resolves to where it lives.
+     *
+     * @returns {Promise<{url: string}>}
+     */
+    async forkVersion(versionId, { copyTags = false } = {}) {
+      return request('POST', urls.forkUrl, { version: versionId, copy_tags: copyTags });
+    },
+
     /** @returns {Promise<Version[]>} newest first, deleted Versions omitted */
     async versions() {
       return toVersions((await request('GET', urls.versionsUrl)).versions || []);

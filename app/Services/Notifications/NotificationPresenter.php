@@ -8,6 +8,7 @@ use App\Notifications\DiagramAccessRequestResolved;
 use App\Notifications\DiagramCollaboratorInvited;
 use App\Notifications\DiagramCollaboratorRemoved;
 use App\Notifications\DiagramCollaboratorRoleChanged;
+use App\Notifications\DiagramCommentPosted;
 use App\Notifications\DiagramLockRequested;
 use App\Notifications\DiagramOwnershipTransferred;
 use App\Notifications\WorkspaceMemberAdded;
@@ -63,6 +64,10 @@ class NotificationPresenter
                 'diagram' => $data['diagram_title'] ?? '',
             ]),
             DiagramOwnershipTransferred::class => __('messages.notification_diagram_ownership_transferred', [
+                'diagram' => $data['diagram_title'] ?? '',
+            ]),
+            DiagramCommentPosted::class => __('messages.notification_comment_posted', [
+                'name' => $data['author_name'] ?? '',
                 'diagram' => $data['diagram_title'] ?? '',
             ]),
             default => '',
