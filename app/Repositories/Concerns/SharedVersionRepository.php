@@ -117,9 +117,12 @@ trait SharedVersionRepository
         $this->setState($diagram, $this->requireId($diagram, $version), ['name' => $name]);
     }
 
-    public function markProvisional(Diagram $diagram, string $version): void
+    public function markProvisional(Diagram $diagram, string $version, ?User $keptFor = null): void
     {
-        $this->setState($diagram, $this->requireId($diagram, $version), ['is_provisional' => true]);
+        $this->setState($diagram, $this->requireId($diagram, $version), [
+            'is_provisional' => true,
+            'kept_for_id' => $keptFor?->id,
+        ]);
     }
 
     public function makePermanent(Diagram $diagram, string $version): bool
@@ -149,7 +152,7 @@ trait SharedVersionRepository
      * and names/flags from the state table.
      *
      * @param  array<int, array{0: string, 1: CarbonInterface, 2: string}>  $newestFirst
-     * @return array<int, array{id: string, saved_at: CarbonInterface, author: string, number: int, name: string, renamed: bool, provisional: bool, hidden: bool}>
+     * @return array<int, array{id: string, saved_at: CarbonInterface, author: string, number: int, name: string, renamed: bool, provisional: bool, hidden: bool, kept_for: int|null}>
      */
     protected function describeHistory(Diagram $diagram, array $newestFirst): array
     {
@@ -179,6 +182,7 @@ trait SharedVersionRepository
                 'renamed' => $customName !== null,
                 'provisional' => $provisional,
                 'hidden' => (bool) $state?->is_hidden,
+                'kept_for' => $state?->kept_for_id,
             ];
         }, $newestFirst, array_keys($newestFirst));
     }

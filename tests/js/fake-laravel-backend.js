@@ -10,6 +10,7 @@ const BASE = 'http://bpmn.test/diagrams/d';
 export const urls = {
   contentUrl: `${BASE}/content`,
   saveUrl: `${BASE}/content`,
+  forkUrl: `${BASE}/fork`,
   versionsUrl: `${BASE}/versions`,
   versionContentUrlTemplate: `${BASE}/versions/VERSION_ID/content`,
   versionRestoreUrlTemplate: `${BASE}/versions/VERSION_ID/restore`,
@@ -27,6 +28,8 @@ export function createFakeLaravelBackend({ initialXml = '<definitions/>' } = {})
   let content = initialXml;
   // Oldest first; `number` is the position, as VersionRepository::list() derives it.
   const versions = [];
+  // What ForkController::store was asked to create, in order.
+  const forks = [];
   let clock = Date.parse('2026-10-13T12:00:00Z');
 
   function saveVersion(xml, { provisional = false } = {}) {
@@ -102,6 +105,10 @@ export function createFakeLaravelBackend({ initialXml = '<definitions/>' } = {})
       saveVersion(body.content);
       return json(200, { saved: true, version: currentId() });
     }
+    if (local === '/fork' && method === 'POST') {
+      forks.push(body.content);
+      return json(201, { url: `http://bpmn.test/diagrams/fork-${forks.length}` });
+    }
     if (local === '/versions' && method === 'GET') return json(200, { versions: history() });
 
     const match = local.match(/^\/versions\/([^/]+)(?:\/(\w+))?$/);
@@ -124,6 +131,7 @@ export function createFakeLaravelBackend({ initialXml = '<definitions/>' } = {})
   }
 
   return {
+    forks,
     fetch,
     // A Version kept by an expiring Lock: only the server creates these.
     addProvisional: xml => saveVersion(xml, { provisional: true }),

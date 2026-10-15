@@ -17,6 +17,12 @@ use Illuminate\Contracts\Validation\ValidationRule;
  */
 class BpmnXml implements ValidationRule
 {
+    /**
+     * Upper bound, in characters, for BPMN sent by a client on endpoints that
+     * have no other cap (the Fork from unsaved content).
+     */
+    public const MAX_LENGTH = 5_000_000;
+
     public const BPMN_MODEL_NAMESPACE = 'http://www.omg.org/spec/BPMN/20100524/MODEL';
 
     /**

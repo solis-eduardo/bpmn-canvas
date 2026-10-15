@@ -48,6 +48,11 @@ class DatabaseVersionRepository implements VersionRepository
         ])->all());
     }
 
+    public function currentVersionId(Diagram $diagram): ?string
+    {
+        return $this->query($diagram)->orderByDesc('id')->value('version_id');
+    }
+
     protected function findVersion(Diagram $diagram, string $version): ?string
     {
         return $this->query($diagram)->where('version_id', $version)->exists() ? $version : null;

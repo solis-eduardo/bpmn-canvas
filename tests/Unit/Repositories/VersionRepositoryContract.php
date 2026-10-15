@@ -292,6 +292,37 @@ abstract class VersionRepositoryContract extends TestCase
         $this->assertFalse($repository->makePermanent($diagram, $id));
     }
 
+    public function test_the_current_version_id_is_the_newest_one_or_null_without_history(): void
+    {
+        $diagram = $this->bareDiagram('<bpmn>A</bpmn>');
+        $repository = $this->adapter();
+
+        $this->assertNull($repository->currentVersionId($diagram));
+
+        $repository->initialize($diagram, $this->author($diagram));
+        $this->assertSame($repository->list($diagram)[0]['id'], $repository->currentVersionId($diagram));
+
+        $repository->save($diagram, $this->author($diagram), '<bpmn>B</bpmn>');
+        $this->assertSame($repository->list($diagram)[0]['id'], $repository->currentVersionId($diagram));
+        $this->assertCount(2, $repository->list($diagram));
+    }
+
+    public function test_a_provisional_version_remembers_whose_content_it_kept(): void
+    {
+        $diagram = $this->bareDiagram('<bpmn>A</bpmn>');
+        $repository = $this->adapter();
+        $holder = $this->author($diagram);
+        $repository->initialize($diagram, $holder);
+        $repository->save($diagram, $holder, '<bpmn>B</bpmn>');
+        $id = $repository->list($diagram)[0]['id'];
+
+        $this->assertNull($repository->list($diagram)[0]['kept_for']);
+
+        $repository->markProvisional($diagram, $id, $holder);
+
+        $this->assertSame($holder->id, $repository->list($diagram)[0]['kept_for']);
+    }
+
     public function test_a_hidden_version_keeps_its_number_and_still_resolves(): void
     {
         $diagram = $this->bareDiagram('<bpmn>A</bpmn>');

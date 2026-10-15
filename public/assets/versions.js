@@ -324,7 +324,7 @@ export function createVersionHistory({ editor, canEdit = true }) {
     };
   }
 
-  async function compareWithCurrent(version) {
+  async function compareWithCurrent(version, { rethrow = false } = {}) {
     if (!modeler) return;
 
     try {
@@ -347,6 +347,7 @@ export function createVersionHistory({ editor, canEdit = true }) {
       );
     } catch (e) {
       console.error(e);
+      if (rethrow) throw e;
       toast(errorMessage(e, t('messages.version_compare_failed')), true);
     }
   }
@@ -500,6 +501,20 @@ export function createVersionHistory({ editor, canEdit = true }) {
 
   // Saving the diagram adds a Version: refresh the history.
   editor.on('saved', loadVersions);
+
+  // A save ran into a newer Version (issue #243): show how the canvas, with
+  // its unsaved edits, differs from it. The history is re-read first, as the
+  // newer Version is not in the panel yet.
+  editor.on('compare', async versionId => {
+    await loadVersions();
+
+    // A deleted (hidden) Version is not in the panel's history but can still
+    // be the current one: compare against it all the same.
+    const newer = versionsById.get(versionId)
+      ?? { id: versionId, name: t('messages.current_version_badge'), savedAt: new Date().toISOString() };
+
+    await compareWithCurrent(newer, { rethrow: true });
+  });
 
   loadVersions();
 

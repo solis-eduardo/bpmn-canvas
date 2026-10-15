@@ -11,8 +11,10 @@ use App\Repositories\VersionRepository;
 /**
  * Creates a Fork: a new, independent Diagram with the origin's current
  * content (CONTEXT.md, "Fork"), titled "Copy of <origin title>" in the
- * application's default language. Whether the User may fork, or place the
- * Fork in $workspace, is ForkPolicy's call.
+ * application's default language. When the forker brings $content (the edits
+ * open in their Editor, not yet saved), the Fork starts from that instead of
+ * the origin's saved content (issue #243). Whether the User may fork, or place
+ * the Fork in $workspace, is ForkPolicy's call.
  */
 class ForkService
 {
@@ -21,9 +23,9 @@ class ForkService
         private readonly VersionRepository $versions,
     ) {}
 
-    public function create(Diagram $origin, User $forker, ?Workspace $workspace = null): Diagram
+    public function create(Diagram $origin, User $forker, ?Workspace $workspace = null, ?string $content = null): Diagram
     {
-        $content = $this->diagrams->contentOf($origin);
+        $content ??= $this->diagrams->contentOf($origin);
         // The prefix is localized in the application's default language, not
         // the forker's, and resolved once: the stored title never changes.
         $title = __('Copy of :title', ['title' => $origin->title], config('app.default_locale') ?? config('app.locale'));

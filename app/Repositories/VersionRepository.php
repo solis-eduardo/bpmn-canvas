@@ -57,9 +57,19 @@ interface VersionRepository
      * Versions are returned flagged `hidden`; the history shown to the User
      * filters them out.
      *
-     * @return array<int, array{id: string, saved_at: CarbonInterface, author: string, number: int, name: string, renamed: bool, provisional: bool, hidden: bool}>
+     * `kept_for` is the id of the User whose unsaved content a provisional
+     * Version kept, when known.
+     *
+     * @return array<int, array{id: string, saved_at: CarbonInterface, author: string, number: int, name: string, renamed: bool, provisional: bool, hidden: bool, kept_for: int|null}>
      */
     public function list(Diagram $diagram): array;
+
+    /**
+     * Id of the newest Version, or null when there is no history yet. Cheaper
+     * than list()[0]['id'], which describes the whole history; this is what a
+     * save compares its base against (issue #243).
+     */
+    public function currentVersionId(Diagram $diagram): ?string;
 
     /**
      * Gives a Version a custom name to mark a milestone. Names needn't be
@@ -69,9 +79,9 @@ interface VersionRepository
 
     /**
      * Flags a Version as provisional: content an expiring Lock kept for its
-     * holder (ADR-0003).
+     * holder (ADR-0003). $keptFor is that holder.
      */
-    public function markProvisional(Diagram $diagram, string $version): void;
+    public function markProvisional(Diagram $diagram, string $version, ?User $keptFor = null): void;
 
     /**
      * Keeps a provisional Version: it becomes an ordinary Version.

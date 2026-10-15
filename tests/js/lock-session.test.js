@@ -6,6 +6,7 @@ import {
   IDLE_AFTER_MS,
   handleSaveFailure,
   reacquireLock,
+  releaseLockAfterFork,
 } from '../../public/assets/lock-session.js';
 
 // The slice of the Editor's public API a Heartbeat uses.
@@ -277,6 +278,25 @@ describe('reacquireLock', () => {
     expect(request).toHaveBeenCalledWith('POST', '/lock');
     expect(calls).toEqual(['hide', 'beat', 'beat']);
     loop.stop();
+  });
+});
+
+describe('releaseLockAfterFork', () => {
+  it('releases the Lock without asking to keep the draft', async () => {
+    const request = vi.fn(async () => ({ unlocked: true }));
+
+    await releaseLockAfterFork({ request, url: '/unlock' });
+
+    expect(request).toHaveBeenCalledWith('DELETE', '/unlock');
+  });
+
+  it('only logs a failed release, so the page can still move to the Fork', async () => {
+    const request = vi.fn(async () => { throw new Error('offline'); });
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    await expect(releaseLockAfterFork({ request, url: '/unlock' })).resolves.toBeUndefined();
+    expect(log).toHaveBeenCalled();
+    log.mockRestore();
   });
 });
 

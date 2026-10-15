@@ -85,6 +85,22 @@ class VersionHistoryBusyTest extends TestCase
         $this->assertSame($before, Storage::disk('diagrams')->get($diagram->disk_path));
     }
 
+    public function test_a_save_naming_its_base_version_answers_503_and_writes_nothing(): void
+    {
+        $holder = User::factory()->create();
+        $diagram = $this->heldDiagram($holder);
+        $base = $this->actingAs($holder)->getJson('/diagrams/'.$diagram->slug.'/content')->json('version');
+        $before = Storage::disk('diagrams')->get($diagram->disk_path);
+        $this->holdHistory($diagram->id);
+
+        $this->assertBusy($this->actingAs($holder)->putJson('/diagrams/'.$diagram->slug.'/content', [
+            'content' => $this->content('Busy'),
+            'base_version' => $base,
+        ]));
+
+        $this->assertSame($before, Storage::disk('diagrams')->get($diagram->disk_path));
+    }
+
     public function test_the_message_is_translated_to_the_users_locale(): void
     {
         $holder = User::factory()->create();
@@ -173,6 +189,21 @@ class VersionHistoryBusyTest extends TestCase
         $this->holdHistory((int) Diagram::max('id') + 1);
 
         $this->actingAs($owner)->postJson('/diagrams/'.$diagram->slug.'/fork')
+            ->assertStatus(503)
+            ->assertHeader('Retry-After', '5');
+
+        $this->assertSame(1, Diagram::count());
+        $this->assertSame([$diagram->slug], Storage::disk('diagrams')->directories());
+    }
+
+    public function test_forking_local_edits_answers_503_and_leaves_no_orphan_diagram(): void
+    {
+        $owner = User::factory()->create();
+        $diagram = Diagram::factory()->for($owner, 'author')->create(['owner_id' => $owner->id]);
+        Storage::disk('diagrams')->put($diagram->disk_path, Diagram::emptyBpmn());
+        $this->holdHistory((int) Diagram::max('id') + 1);
+
+        $this->actingAs($owner)->postJson('/diagrams/'.$diagram->slug.'/fork', ['content' => $this->content('Local edits')])
             ->assertStatus(503)
             ->assertHeader('Retry-After', '5');
 

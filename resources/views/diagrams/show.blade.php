@@ -23,6 +23,7 @@
         data-release-lock-failed-notice="{{ __('messages.release_lock_failed') }}"
         data-content-url="{{ route('diagrams.content', $diagram->slug) }}"
         data-save-url="{{ route('diagrams.save', $diagram->slug) }}"
+        data-fork-url="{{ route('diagrams.fork', $diagram->slug) }}"
         data-rename-url="{{ route('diagrams.rename', $diagram->slug) }}"
         data-tags-url="{{ route('diagrams.tags.sync', $diagram->slug) }}"
         data-document-title-suffix=" | {{ __('messages.bpmn_editor') }}"
