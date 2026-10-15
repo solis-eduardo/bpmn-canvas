@@ -462,6 +462,7 @@ export function createVersionHistory({ editor, canEdit = true }) {
     const li = document.createElement('li');
     const button = document.createElement('button');
     button.type = 'button';
+    button.title = item.id;
     button.addEventListener('click', () => focusElement(item.id));
 
     const type = document.createElement('span');
