@@ -54,6 +54,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // away from :00 to dodge the crowd of jobs everyone else also
         // schedules on the hour.
         $schedule->command('backup:run')->dailyAt('02:15')->onOneServer()->when(fn () => config('bpmn.backups_enabled'));
+        // Restores the artifact backup:run just made into a throwaway
+        // database and directory (ADR-0026); runs well after it so the
+        // artifact (and its off-site upload) is complete.
+        $schedule->command('backup:verify')->dailyAt('03:15')->onOneServer()->when(fn () => config('bpmn.backups_enabled'));
         // Offset from :00, same reasoning as backup:run above — avoids the
         // crowd of jobs everyone else schedules on the hour.
         $schedule->command('shares:warn-expiring')->hourlyAt(45)->onOneServer();
