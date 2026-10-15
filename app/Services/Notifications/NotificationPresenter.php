@@ -3,6 +3,7 @@
 namespace App\Services\Notifications;
 
 use App\Models\Collaborator;
+use App\Notifications\BackupVerificationFailed;
 use App\Notifications\DiagramAccessRequested;
 use App\Notifications\DiagramAccessRequestResolved;
 use App\Notifications\DiagramCollaboratorInvited;
@@ -64,6 +65,9 @@ class NotificationPresenter
             ]),
             DiagramOwnershipTransferred::class => __('messages.notification_diagram_ownership_transferred', [
                 'diagram' => $data['diagram_title'] ?? '',
+            ]),
+            BackupVerificationFailed::class => __('messages.notification_backup_verification_failed', [
+                'reason' => $data['reason'] ?? '',
             ]),
             default => '',
         };

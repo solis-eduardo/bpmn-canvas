@@ -12,6 +12,8 @@ use App\Services\Backup\DatabaseDumper;
 use App\Services\Backup\DatabaseRestorer;
 use App\Services\Backup\PgDumpDatabaseDumper;
 use App\Services\Backup\PgRestoreDatabaseRestorer;
+use App\Services\Backup\PgRestoreVerifier;
+use App\Services\Backup\RestoreVerifier;
 use App\Support\KeycloakProvider;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Events\DiagnosingHealth;
@@ -32,6 +34,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->bind(DatabaseDumper::class, PgDumpDatabaseDumper::class);
         $this->app->bind(DatabaseRestorer::class, PgRestoreDatabaseRestorer::class);
+        $this->app->bind(RestoreVerifier::class, PgRestoreVerifier::class);
 
         // The Version store is chosen by configuration (ADR-0018). Resolved per
         // call so the choice always follows the current config.

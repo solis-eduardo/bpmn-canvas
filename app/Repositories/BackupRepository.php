@@ -3,7 +3,9 @@
 namespace App\Repositories;
 
 use App\Services\Backup\DatabaseDumper;
+use App\Support\BackupManifest;
 use App\Support\ProcessRunner;
+use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -22,13 +24,12 @@ use RuntimeException;
  *                      `.bpmn` file and its internal Version repository,
  *                      see VersionRepository / ADR-0004).
  *   - `database.dump` a `pg_dump --format=custom` dump of the database.
- *   - `manifest.json` metadata (format version, creation time) for a future
- *                      restore command to validate before touching anything.
+ *   - `manifest.json` metadata (format version, creation time, row counts, see
+ *                      BackupManifest) for restore and verification to
+ *                      validate before touching anything.
  */
 class BackupRepository
 {
-    private const MANIFEST_FORMAT = 1;
-
     private const FILENAME_FORMAT = 'Y-m-d_His';
 
     private const FILENAME_PATTERN = '/^backup-(\d{4}-\d{2}-\d{2}_\d{6})-[0-9a-f]{8}\.tar\.gz$/';
@@ -62,7 +63,7 @@ class BackupRepository
 
             $this->copyDiagrams($stagingDir.'/diagrams');
             $this->databaseDumper->dump($stagingDir.'/database.dump');
-            $this->writeManifest($stagingDir.'/manifest.json');
+            BackupManifest::write($stagingDir.'/manifest.json');
 
             // Archived under a `.part` name and renamed into place only once
             // complete, so nothing ever sees `backup-*.tar.gz` under its
@@ -94,8 +95,61 @@ class BackupRepository
      */
     public function prune(): array
     {
-        $disk = Storage::disk('backups');
-        $cutoff = Carbon::now()->subDays((int) config('backup.retention_days'));
+        return $this->pruneDisk(Storage::disk('backups'), (int) config('backup.retention_days'));
+    }
+
+    /**
+     * Copies $artifact (a filename on the `backups` disk) to the off-site
+     * disk (ADR-0026). Streamed, so a large artifact is never held in memory.
+     */
+    public function upload(string $artifact): void
+    {
+        $stream = fopen(Storage::disk('backups')->path($artifact), 'rb');
+
+        try {
+            Storage::disk($this->offsiteDisk())->writeStream($artifact, $stream);
+        } finally {
+            fclose($stream);
+        }
+    }
+
+    /**
+     * Prunes the off-site disk by its own retention window, which is
+     * normally much longer than the local one. Returns the removed filenames.
+     *
+     * @return array<int, string>
+     */
+    public function pruneOffsite(): array
+    {
+        return $this->pruneDisk(Storage::disk($this->offsiteDisk()), (int) config('backup.offsite.retention_days'));
+    }
+
+    /**
+     * The newest artifact on the `backups` disk, or null when there is none.
+     * Ordered by the timestamp in the filename (see prune()), which sorts
+     * lexicographically.
+     */
+    public function latest(): ?string
+    {
+        $artifacts = collect(Storage::disk('backups')->files())
+            ->filter(fn (string $file) => preg_match(self::FILENAME_PATTERN, basename($file)) === 1)
+            ->sort()
+            ->values();
+
+        return $artifacts->last();
+    }
+
+    private function offsiteDisk(): string
+    {
+        return (string) config('backup.offsite.disk');
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function pruneDisk(Filesystem $disk, int $retentionDays): array
+    {
+        $cutoff = Carbon::now()->subDays($retentionDays);
 
         $expired = [];
 
@@ -137,14 +191,6 @@ class BackupRepository
     private function archive(string $stagingDir, string $destinationPath): void
     {
         ProcessRunner::run(['tar', '-czf', $destinationPath, '-C', $stagingDir, '.']);
-    }
-
-    private function writeManifest(string $destination): void
-    {
-        file_put_contents($destination, json_encode([
-            'format' => self::MANIFEST_FORMAT,
-            'created_at' => Carbon::now()->toIso8601String(),
-        ], JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR));
     }
 
     private function removeStaleStagingDirectories(string $backupsRoot): void

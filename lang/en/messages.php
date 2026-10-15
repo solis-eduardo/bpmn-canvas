@@ -373,4 +373,12 @@ return [
     'demo_role_author' => 'Author',
     'demo_role_collaborator' => 'Collaborator',
     'demo_password_locked' => 'The password of a demo account cannot be changed.',
+    'backups' => 'Backups',
+    'backups_heading' => 'Backups',
+    'backup_last_backup' => 'Last successful backup',
+    'backup_last_offsite' => 'Last successful off-site copy',
+    'backup_last_verification' => 'Last successful restore verification',
+    'backup_never' => 'Never',
+    'backup_last_failure' => 'Latest failure (not yet followed by a success)',
+    'notification_backup_verification_failed' => 'The latest backup could not be restored: :reason',
 ];

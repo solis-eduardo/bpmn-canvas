@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AccountNotificationController;
+use App\Http\Controllers\Admin\BackupController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\KeycloakLoginController;
 use App\Http\Controllers\Auth\LoginController;
@@ -60,6 +61,7 @@ Route::middleware('auth')->group(function () {
     Route::put('/account/timezone', [AccountController::class, 'detectTimezone'])->name('account.timezone.detect');
     Route::put('/account/password', [AccountController::class, 'updatePassword'])->name('account.password.update');
 
+    Route::get('/admin/backups', [BackupController::class, 'index'])->name('admin.backups.index');
     Route::get('/admin/users', [UserController::class, 'index'])->name('admin.users.index');
     Route::get('/admin/users/create', [UserController::class, 'create'])->name('admin.users.create');
     Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');

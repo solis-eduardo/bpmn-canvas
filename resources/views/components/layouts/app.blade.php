@@ -49,6 +49,13 @@
                             <x-icon name="users" />
                             {{ __('messages.users') }}
                         </a>
+                        <a
+                            href="{{ route('admin.backups.index') }}"
+                            class="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 {{ request()->routeIs('admin.backups.*') ? 'bg-gray-100 text-gray-900' : '' }}"
+                        >
+                            <x-icon name="backups" />
+                            {{ __('messages.backups') }}
+                        </a>
                     @endif
                 </nav>
 
