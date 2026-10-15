@@ -74,6 +74,21 @@ return [
             'report' => false,
         ],
 
+        // S3-compatible off-site destination for backup artifacts (see
+        // config/backup.php, ADR-0026). Separate credentials from the
+        // generic `s3` disk below so a backup bucket never shares them.
+        'backups_offsite' => [
+            'driver' => 's3',
+            'key' => env('BACKUP_OFFSITE_KEY'),
+            'secret' => env('BACKUP_OFFSITE_SECRET'),
+            'region' => env('BACKUP_OFFSITE_REGION', 'us-east-1'),
+            'bucket' => env('BACKUP_OFFSITE_BUCKET'),
+            'endpoint' => env('BACKUP_OFFSITE_ENDPOINT'),
+            'use_path_style_endpoint' => env('BACKUP_OFFSITE_PATH_STYLE', false),
+            'throw' => true,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

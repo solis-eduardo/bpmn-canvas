@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Services\Backup\DatabaseRestorer;
 use App\Support\AccessMemo;
+use App\Support\BackupManifest;
 use App\Support\ProcessRunner;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -21,8 +22,6 @@ use RuntimeException;
  */
 class RestoreRepository
 {
-    private const MANIFEST_FORMAT = 1;
-
     public function __construct(private DatabaseRestorer $databaseRestorer, private AccessMemo $access) {}
 
     /**
@@ -46,7 +45,7 @@ class RestoreRepository
         try {
             $this->makeDirectory($stagingDir);
             $this->extract($disk->path($artifact), $stagingDir);
-            $this->validateManifest($stagingDir.'/manifest.json');
+            BackupManifest::read($stagingDir.'/manifest.json');
 
             // Only once the artifact has been extracted and validated does
             // anything existing get touched.
@@ -64,19 +63,6 @@ class RestoreRepository
     private function extract(string $archivePath, string $destination): void
     {
         ProcessRunner::run(['tar', '-xzf', $archivePath, '-C', $destination]);
-    }
-
-    private function validateManifest(string $manifestPath): void
-    {
-        if (! is_file($manifestPath)) {
-            throw new RuntimeException('Backup artifact is missing manifest.json.');
-        }
-
-        $manifest = json_decode((string) file_get_contents($manifestPath), true);
-
-        if (! is_array($manifest) || ($manifest['format'] ?? null) !== self::MANIFEST_FORMAT) {
-            throw new RuntimeException('Backup artifact has an unsupported manifest format.');
-        }
     }
 
     private function replaceDiagrams(string $source): void
