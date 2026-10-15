@@ -27,4 +27,14 @@ return [
     // Whether the scheduled backup runs. The browser demo has no Postgres to
     // dump and no scheduler, so .env.demo turns it off.
     'backups_enabled' => (bool) env('BACKUPS_ENABLED', true),
+
+    // Server-side PNG/SVG/PDF rendering: headless bpmn-js in Chromium, run as
+    // a Node subprocess (docker/renderer, issue #250).
+    'renderer' => [
+        'node_binary' => env('RENDERER_NODE_BINARY', 'node'),
+        'script' => env('RENDERER_SCRIPT', base_path('docker/renderer/render.mjs')),
+        // Null lets the script find a Chromium on the usual paths.
+        'chromium_path' => env('RENDERER_CHROMIUM_PATH'),
+        'timeout_seconds' => max(5, (int) env('RENDERER_TIMEOUT_SECONDS', 60)),
+    ],
 ];

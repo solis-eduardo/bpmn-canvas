@@ -203,7 +203,7 @@ class ShareTest extends TestCase
         $response->assertOk();
         $response->assertSee($diagram->title);
         $response->assertSee('id="btn-download"', false);
-        $response->assertSee('data-export="bpmn"', false);
+        $response->assertSee('href="'.$share->downloadUrl('bpmn').'"', false);
     }
 
     public function test_public_viewer_hides_download_buttons_when_share_disallows_download(): void

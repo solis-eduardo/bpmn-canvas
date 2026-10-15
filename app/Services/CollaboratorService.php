@@ -21,6 +21,7 @@ class CollaboratorService
     public function __construct(
         private readonly CollaboratorRepository $collaborators,
         private readonly LockService $locks,
+        private readonly ActivityLogger $activity,
     ) {}
 
     /**
@@ -40,7 +41,10 @@ class CollaboratorService
      */
     public function grant(Diagram $diagram, User $target, ?string $role = null): Collaborator
     {
+        $previous = $this->collaborators->findFor($diagram, $target);
         $collaborator = $this->collaborators->upsertApproved($diagram, $target, $role);
+
+        $this->logApproval($diagram, $target, $previous, $collaborator);
 
         if ($collaborator->wasRecentlyCreated || $collaborator->wasChanged('status')) {
             $target->notify(new DiagramCollaboratorInvited($diagram, $collaborator->role));
@@ -82,8 +86,11 @@ class CollaboratorService
      */
     public function approve(Diagram $diagram, User $user, ?string $role = null): Collaborator
     {
-        $wasPending = $this->collaborators->findForOrFail($diagram, $user)->status === Collaborator::STATUS_REQUESTED;
+        $previous = $this->collaborators->findForOrFail($diagram, $user);
+        $wasPending = $previous->status === Collaborator::STATUS_REQUESTED;
         $collaborator = $this->collaborators->upsertApproved($diagram, $user, $role);
+
+        $this->logApproval($diagram, $user, $previous, $collaborator);
 
         if ($wasPending) {
             $user->notify(new DiagramAccessRequestResolved($diagram, approved: true));
@@ -108,8 +115,51 @@ class CollaboratorService
 
         $this->locks->reconcile($diagram);
 
+        $this->activity->record(
+            $removed->status === Collaborator::STATUS_REQUESTED ? 'collaborator.request_declined' : 'collaborator.removed',
+            $user,
+            diagram: $diagram,
+            before: $this->describe($removed),
+        );
+
         $user->notify($removed->status === Collaborator::STATUS_REQUESTED
             ? new DiagramAccessRequestResolved($diagram, approved: false)
             : new DiagramCollaboratorRemoved($diagram));
+    }
+
+    /**
+     * Logs what an approval changed: a new grant (direct, or approving a
+     * request), or the role of someone already approved. Nothing changed,
+     * nothing logged.
+     */
+    private function logApproval(Diagram $diagram, User $user, ?Collaborator $previous, Collaborator $current): void
+    {
+        $wasApproved = $previous?->status === Collaborator::STATUS_APPROVED;
+
+        if (! $wasApproved) {
+            $this->activity->record(
+                'collaborator.granted',
+                $user,
+                diagram: $diagram,
+                before: $previous ? ['status' => $previous->status] : [],
+                after: $this->describe($current),
+            );
+        } elseif ($previous->role !== $current->role) {
+            $this->activity->record(
+                'collaborator.role_changed',
+                $user,
+                diagram: $diagram,
+                before: ['role' => $previous->role],
+                after: ['role' => $current->role],
+            );
+        }
+    }
+
+    /**
+     * @return array{status: string, role: string}
+     */
+    private function describe(Collaborator $collaborator): array
+    {
+        return ['status' => $collaborator->status, 'role' => $collaborator->role];
     }
 }

@@ -2,13 +2,17 @@
 
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AccountNotificationController;
+use App\Http\Controllers\Admin\ActivityController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Auth\KeycloakLoginController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\CollaboratorController;
+use App\Http\Controllers\CommentThreadController;
 use App\Http\Controllers\DemoController;
+use App\Http\Controllers\DiagramActivityController;
 use App\Http\Controllers\DiagramContentController;
 use App\Http\Controllers\DiagramController;
+use App\Http\Controllers\DiagramExportController;
 use App\Http\Controllers\DiagramOwnerController;
 use App\Http\Controllers\DiagramSettingsController;
 use App\Http\Controllers\DiagramTagController;
@@ -48,7 +52,7 @@ Route::middleware(EnsureDemoMode::class)->prefix('demo')->name('demo.')->group(f
 });
 
 Route::get('/s/{share:token}', [PublicShareController::class, 'show'])->name('shares.show');
-Route::get('/s/{share:token}/download/{format}', [PublicShareController::class, 'download'])->name('shares.download');
+Route::get('/s/{share:token}/download/{format}', [PublicShareController::class, 'download'])->middleware('throttle:30,1')->name('shares.download');
 
 Route::middleware('auth')->group(function () {
     Route::get('/account/notifications', fn () => redirect()->route('account.edit'))->name('account.notifications.edit');
@@ -69,6 +73,8 @@ Route::middleware('auth')->group(function () {
     Route::post('/admin/users/{managedUser}/reactivate', [UserController::class, 'reactivate'])->name('admin.users.reactivate');
     Route::post('/admin/users/{managedUser}/transfer-ownership', [UserController::class, 'transferOwnership'])->name('admin.users.transfer-ownership');
 
+    Route::get('/admin/activity', [ActivityController::class, 'index'])->name('admin.activity.index');
+
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/history', [NotificationController::class, 'history'])->name('notifications.history');
     Route::get('/notifications/unread-count', [NotificationController::class, 'unreadCount'])->name('notifications.unread-count');
@@ -85,10 +91,21 @@ Route::middleware('auth')->group(function () {
     Route::put('/diagrams/{slug}', [DiagramController::class, 'update'])->name('diagrams.rename');
     Route::delete('/diagrams/{slug}', [DiagramController::class, 'destroy'])->name('diagrams.destroy');
 
+    Route::get('/diagrams/{slug}/export/{format}', [DiagramExportController::class, 'show'])->middleware('throttle:30,1')->name('diagrams.export');
+
     Route::get('/diagrams/{slug}/collaborators', [CollaboratorController::class, 'index'])->name('diagrams.collaborators.index');
     Route::post('/diagrams/{slug}/collaborators', [CollaboratorController::class, 'store'])->name('diagrams.collaborators.store');
     Route::put('/diagrams/{slug}/collaborators/{user}', [CollaboratorController::class, 'update'])->name('diagrams.collaborators.update');
     Route::delete('/diagrams/{slug}/collaborators/{user}', [CollaboratorController::class, 'destroy'])->name('diagrams.collaborators.destroy');
+
+    Route::get('/diagrams/{slug}/activity', [DiagramActivityController::class, 'index'])->name('diagrams.activity');
+    // Throttled as a whole: a listing parses the Diagram's content.
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::get('/diagrams/{slug}/comment-threads', [CommentThreadController::class, 'index'])->name('diagrams.comments.index');
+        Route::post('/diagrams/{slug}/comment-threads', [CommentThreadController::class, 'store'])->name('diagrams.comments.store');
+        Route::post('/diagrams/{slug}/comment-threads/{thread}/comments', [CommentThreadController::class, 'reply'])->name('diagrams.comments.reply');
+        Route::put('/diagrams/{slug}/comment-threads/{thread}/resolution', [CommentThreadController::class, 'resolve'])->name('diagrams.comments.resolve');
+    });
 
     Route::put('/diagrams/{slug}/tags', [DiagramTagController::class, 'sync'])->name('diagrams.tags.sync');
     Route::post('/diagrams/{slug}/tags', [DiagramTagController::class, 'store'])->name('diagrams.tags.store');

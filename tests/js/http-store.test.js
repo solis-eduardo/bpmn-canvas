@@ -90,6 +90,21 @@ describe('HttpDiagramStore', () => {
     expect((await store.versions()).map(v => v.number)).toEqual([1]);
   });
 
+  it('forks from a chosen Version, naming it and whether to copy the Tags (issue #248)', async () => {
+    const calls = [];
+    const fetch = async (url, init) => {
+      calls.push({ url, method: init.method, body: JSON.parse(init.body) });
+
+      return new Response(JSON.stringify({ url: '/diagrams/copy' }), { status: 201, headers: { 'Content-Type': 'application/json' } });
+    };
+    const store = createHttpDiagramStore({ urls, csrfToken: CSRF_TOKEN, fetch });
+
+    const fork = await store.forkVersion('abc123', { copyTags: true });
+
+    expect(fork.url).toBe('/diagrams/copy');
+    expect(calls).toEqual([{ url: urls.forkUrl, method: 'POST', body: { version: 'abc123', copy_tags: true } }]);
+  });
+
   it('saves on top of a newer Version when asked to overwrite it', async () => {
     const { store, backend } = makeStore();
     await store.save('<a/>');

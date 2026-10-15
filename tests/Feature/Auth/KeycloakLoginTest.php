@@ -3,6 +3,7 @@
 namespace Tests\Feature\Auth;
 
 use App\Http\Controllers\Auth\KeycloakLoginController;
+use App\Models\ActivityLog;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\KeycloakProvider;
@@ -695,5 +696,31 @@ class KeycloakLoginTest extends TestCase
         $this->get('/login/keycloak/callback')->assertRedirect(route('home'));
 
         $this->assertSame('Ana@Example.com', $user->fresh()->email);
+    }
+
+    public function test_keycloak_driven_changes_are_logged_without_an_actor(): void
+    {
+        $owner = User::factory()->create();
+        $other = User::factory()->create(['is_admin' => true]);
+        $member = User::factory()->create(['login_method' => 'keycloak', 'keycloak_id' => 'keycloak-sub-log']);
+        $finance = Workspace::factory()->create(['owner_id' => $owner->id, 'keycloak_group' => '/finance']);
+        $legal = Workspace::factory()->create(['owner_id' => $owner->id, 'keycloak_group' => '/legal']);
+        $this->addMember($finance, $owner);
+        $this->addGroupMember($legal, $member);
+
+        $this->mockSocialiteUser($this->fakeSocialiteUser(
+            'keycloak-sub-log', $member->name, $member->email, ['bpmn-admin'], ['/finance'],
+        ));
+
+        // Someone else being signed in is not the actor of what Keycloak does.
+        $this->actingAs($other)->get('/login/keycloak/callback');
+
+        $entries = ActivityLog::all()->keyBy('action');
+        $this->assertSame(['administrator.granted', 'workspace.member_added', 'workspace.member_removed'], $entries->keys()->sort()->values()->all());
+        $this->assertNull($entries['administrator.granted']->actor_id);
+        $this->assertNull($entries['workspace.member_added']->actor_id);
+        $this->assertSame($finance->id, $entries['workspace.member_added']->workspace_id);
+        $this->assertNull($entries['workspace.member_removed']->actor_id);
+        $this->assertSame($legal->id, $entries['workspace.member_removed']->workspace_id);
     }
 }
