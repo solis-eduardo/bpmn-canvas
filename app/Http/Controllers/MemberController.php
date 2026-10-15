@@ -50,12 +50,12 @@ class MemberController extends Controller
 
         $data = $request->validate([
             'members' => ['nullable', 'array'],
-            'members.*' => ['integer', 'exists:users,id'],
+            'members.*' => ['integer', $this->activeUserRule()],
         ]);
 
         $wanted = collect($data['members'] ?? [])->map(fn ($id) => (int) $id)->unique();
 
-        if (! $wanted->contains($workspace->owner_id)) {
+        if ($workspace->wouldDropOwner($wanted)) {
             throw ValidationException::withMessages(['members' => __('messages.cannot_remove_workspace_owner')]);
         }
 

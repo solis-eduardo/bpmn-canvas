@@ -63,11 +63,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin/users', [UserController::class, 'index'])->name('admin.users.index');
     Route::get('/admin/users/create', [UserController::class, 'create'])->name('admin.users.create');
     Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');
-    Route::get('/admin/users/{user}/edit', [UserController::class, 'edit'])->name('admin.users.edit');
-    Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
-    Route::post('/admin/users/{user}/deactivate', [UserController::class, 'deactivate'])->name('admin.users.deactivate');
-    Route::post('/admin/users/{user}/reactivate', [UserController::class, 'reactivate'])->name('admin.users.reactivate');
-    Route::post('/admin/users/{user}/transfer-ownership', [UserController::class, 'transferOwnership'])->name('admin.users.transfer-ownership');
+    Route::get('/admin/users/{managedUser}/edit', [UserController::class, 'edit'])->name('admin.users.edit');
+    Route::put('/admin/users/{managedUser}', [UserController::class, 'update'])->name('admin.users.update');
+    Route::post('/admin/users/{managedUser}/deactivate', [UserController::class, 'deactivate'])->name('admin.users.deactivate');
+    Route::post('/admin/users/{managedUser}/reactivate', [UserController::class, 'reactivate'])->name('admin.users.reactivate');
+    Route::post('/admin/users/{managedUser}/transfer-ownership', [UserController::class, 'transferOwnership'])->name('admin.users.transfer-ownership');
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
     Route::get('/notifications/history', [NotificationController::class, 'history'])->name('notifications.history');

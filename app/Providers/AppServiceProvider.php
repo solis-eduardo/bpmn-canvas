@@ -2,7 +2,9 @@
 
 namespace App\Providers;
 
+use App\Auth\DeactivatedAwareUserProvider;
 use App\Listeners\CheckDatabaseHealth;
+use App\Models\User;
 use App\Repositories\DatabaseVersionRepository;
 use App\Repositories\GitVersionRepository;
 use App\Repositories\VersionRepository;
@@ -13,7 +15,10 @@ use App\Services\Backup\PgRestoreDatabaseRestorer;
 use App\Support\KeycloakProvider;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Foundation\Events\DiagnosingHealth;
+use Illuminate\Notifications\Events\NotificationSending;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 use SocialiteProviders\Manager\SocialiteWasCalled;
@@ -46,6 +51,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Resolves the signed-in User even when deactivated, so EnsureUserIsActive can sign them out (ADR-0020).
+        Auth::provider('eloquent-with-deactivated', fn (Application $app, array $config) => new DeactivatedAwareUserProvider($app['hash'], $config['model']));
+
+        // The admin screens address a User by id whatever its state (ADR-0020).
+        Route::bind('managedUser', fn (string $id) => User::withDeactivated()->findOrFail($id));
+
+        // A deactivated User receives nothing: no database row, no email.
+        Event::listen(NotificationSending::class, fn (NotificationSending $event) => ! ($event->notifiable instanceof User && $event->notifiable->isDeactivated()));
+
         Event::listen(SocialiteWasCalled::class, fn (SocialiteWasCalled $event) => $event->extendSocialite('keycloak', KeycloakProvider::class));
         Event::listen(DiagnosingHealth::class, CheckDatabaseHealth::class);
     }

@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 
 /**
  * A group of Users (its Members) that holds Diagrams (CONTEXT.md,
@@ -26,7 +27,19 @@ class Workspace extends Model
     /** @return BelongsTo<User, $this> */
     public function owner(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'owner_id');
+        return $this->belongsTo(User::class, 'owner_id')->withDeactivated();
+    }
+
+    /**
+     * Whether $memberIds would drop an Owner who still has to be a Member. A
+     * deactivated Owner can't act, so the picker no longer lists them and they
+     * may be absent (ADR-0020).
+     *
+     * @param  Collection<int, int>  $memberIds
+     */
+    public function wouldDropOwner(Collection $memberIds): bool
+    {
+        return ! $memberIds->contains($this->owner_id) && ! $this->owner->isDeactivated();
     }
 
     /** @return HasMany<Member, $this> */

@@ -21,7 +21,9 @@ class SendQueuedNotificationEmail implements ShouldQueue
 
     public function handle(MailChannel $mailChannel): void
     {
-        if (! $this->notifiable->email_notifications_enabled) {
+        // Models are restored without global scopes, so a recipient deactivated
+        // after dispatch is still found here and must be skipped (ADR-0020).
+        if ($this->notifiable->isDeactivated() || ! $this->notifiable->email_notifications_enabled) {
             return;
         }
 

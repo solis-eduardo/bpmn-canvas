@@ -32,7 +32,7 @@ class DemoSeeder extends Seeder
     public function run(): void
     {
         $users = collect(Demo::ACCOUNTS)->map(function (array $account): User {
-            $user = User::firstOrNew(['email' => $account['email']]);
+            $user = User::withDeactivated()->firstOrNew(['email' => $account['email']]);
             $user->name = $account['name'];
             $user->password = Hash::make(Demo::PASSWORD);
             $user->is_admin = $account['is_admin'];

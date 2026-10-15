@@ -68,7 +68,7 @@ class WorkspaceController extends Controller
     {
         $data = $request->validate($this->rules() + [
             'members' => ['nullable', 'array'],
-            'members.*' => ['integer', 'exists:users,id'],
+            'members.*' => ['integer', $this->activeUserRule()],
         ]);
 
         if ($request->has('keycloak_group')) {
@@ -92,10 +92,8 @@ class WorkspaceController extends Controller
     {
         $this->authorize('update', $workspace);
 
-        $workspace->load('members.user');
-
         $everyone = $this->users->allOrderedByName();
-        $memberIds = $workspace->members->pluck('user_id');
+        $memberIds = $workspace->members()->ofActiveUsers()->pluck('user_id');
 
         $memberOptions = $this->userOptions($everyone);
         $ownerCandidates = $this->userOptions($everyone->reject(fn (User $candidate) => $workspace->isOwnedBy($candidate)));
@@ -130,8 +128,8 @@ class WorkspaceController extends Controller
         // chips) and, optionally, the new Workspace Owner.
         $data = $request->validate($this->rules() + [
             'members' => ['nullable', 'array'],
-            'members.*' => ['integer', 'exists:users,id'],
-            'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'members.*' => ['integer', $this->activeUserRule()],
+            'user_id' => ['nullable', 'integer', $this->activeUserRule()],
         ]);
 
         $newOwnerId = $this->requestedNewOwnerId($data, $workspace);
@@ -194,7 +192,7 @@ class WorkspaceController extends Controller
             return $wanted->push($workspace->owner_id, $newOwnerId)->unique();
         }
 
-        if (! $wanted->contains($workspace->owner_id)) {
+        if ($workspace->wouldDropOwner($wanted)) {
             throw ValidationException::withMessages(['members' => __('messages.cannot_remove_workspace_owner')]);
         }
 

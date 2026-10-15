@@ -56,7 +56,7 @@ class DiagramSettingsController extends Controller
 
         $data = $request->validate([
             'title' => ['sometimes', 'required', 'string', 'max:255'],
-            'user_id' => ['nullable', 'integer', 'exists:users,id'],
+            'user_id' => ['nullable', 'integer', $this->activeUserRule()],
             'give_up_access' => ['sometimes', 'boolean'],
             'tags' => ['nullable', 'array'],
             'tags.*' => ['required', 'string', 'max:255'],

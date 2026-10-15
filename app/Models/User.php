@@ -3,10 +3,12 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Scopes\ActiveUserScope;
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -18,6 +20,7 @@ use Illuminate\Notifications\Notifiable;
 // validated Administrator input or by the OAuth flow.
 #[Fillable(['name', 'email', 'password', 'keycloak_id', 'login_method', 'email_notifications_enabled', 'timezone'])]
 #[Hidden(['password', 'remember_token'])]
+#[ScopedBy(ActiveUserScope::class)]
 class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
@@ -63,7 +66,7 @@ class User extends Authenticatable
 
     /**
      * Whether an Administrator deactivated this account (ADR-0020): it can't
-     * sign in by either method, and it's hidden from pickers.
+     * sign in by either method, and every default query skips it.
      */
     public function isDeactivated(): bool
     {
@@ -71,12 +74,16 @@ class User extends Authenticatable
     }
 
     /**
+     * Opts out of the default scope (ActiveUserScope): User administration,
+     * login lookups and the relations to past records ask for deactivated
+     * Users too.
+     *
      * @param  Builder<User>  $query
      * @return Builder<User>
      */
-    public function scopeActive(Builder $query): Builder
+    public function scopeWithDeactivated(Builder $query): Builder
     {
-        return $query->whereNull('deactivated_at');
+        return $query->withoutGlobalScope(ActiveUserScope::class);
     }
 
     /**

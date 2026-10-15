@@ -102,7 +102,7 @@ class KeycloakLoginController extends Controller
         $keycloakId = $socialiteUser->getId();
 
         // The stable `sub` always wins over email.
-        $user = $this->users->findByKeycloakId($keycloakId);
+        $user = $this->users->findByKeycloakIdForLogin($keycloakId);
 
         if ($user) {
             $user->login_method = User::LOGIN_METHOD_KEYCLOAK;
@@ -122,7 +122,7 @@ class KeycloakLoginController extends Controller
         // linked to the Keycloak identity (same person) instead of creating a
         // duplicate account, which would also collide with the unique constraint
         // on `email`. Its login method becomes `keycloak` (ADR-0015).
-        $user = $this->users->findUnlinkedByEmail($email);
+        $user = $this->users->findUnlinkedByEmailForLogin($email);
 
         if ($user) {
             $user->keycloak_id = $keycloakId;
@@ -133,7 +133,7 @@ class KeycloakLoginController extends Controller
 
         // The email belongs to an account already linked to a different Keycloak
         // identity: never re-link it, and don't collide with the unique constraint.
-        if ($this->users->findByEmail($email)) {
+        if ($this->users->findByEmailForLogin($email)) {
             return KeycloakResolution::rejected();
         }
 
@@ -210,7 +210,7 @@ class KeycloakLoginController extends Controller
             return false;
         }
 
-        $holder = $this->users->findByEmail($email);
+        $holder = $this->users->findByEmailForLogin($email);
 
         if ($holder !== null && ! $holder->is($user)) {
             Log::warning('Keycloak login did not update the email: the address belongs to another account.', [

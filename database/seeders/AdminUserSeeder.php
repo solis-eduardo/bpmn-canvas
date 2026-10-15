@@ -14,7 +14,7 @@ class AdminUserSeeder extends Seeder
         $host = parse_url((string) config('app.url'), PHP_URL_HOST) ?: 'localhost';
         $email = config('bpmn.admin_email') ?: "admin@{$host}";
 
-        $user = User::firstOrNew(['email' => $email]);
+        $user = User::withDeactivated()->firstOrNew(['email' => $email]);
         $isNew = ! $user->exists;
 
         if ($isNew) {

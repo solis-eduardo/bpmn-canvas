@@ -21,13 +21,13 @@ trait HoldsALock
     /** @return BelongsTo<User, $this> */
     public function lockedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'locked_by');
+        return $this->belongsTo(User::class, 'locked_by')->withDeactivated();
     }
 
     /** @return BelongsTo<User, $this> */
     public function lockRequestedBy(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'lock_requested_by');
+        return $this->belongsTo(User::class, 'lock_requested_by')->withDeactivated();
     }
 
     /**

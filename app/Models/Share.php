@@ -47,7 +47,7 @@ class Share extends Model
     /** @return BelongsTo<User, $this> */
     public function author(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class, 'created_by')->withDeactivated();
     }
 
     /**

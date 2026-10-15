@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -33,6 +34,18 @@ class Collaborator extends Model
     /** @return BelongsTo<User, $this> */
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->withDeactivated();
+    }
+
+    /**
+     * Rows of active Users only (ADR-0020): the row of a deactivated User is
+     * kept, so reactivation needs no re-invitation, but no list counts it.
+     *
+     * @param  Builder<static>  $query
+     * @return Builder<static>
+     */
+    public function scopeOfActiveUsers(Builder $query): Builder
+    {
+        return $query->whereIn($this->qualifyColumn('user_id'), User::query()->select('id'));
     }
 }

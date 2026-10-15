@@ -40,6 +40,16 @@ class WorkspaceRepository
     }
 
     /**
+     * The Workspaces $user owns, by name.
+     *
+     * @return Collection<int, Workspace>
+     */
+    public function ownedBy(User $user): Collection
+    {
+        return Workspace::where('owner_id', $user->getKey())->orderBy('name')->get();
+    }
+
+    /**
      * @return Collection<int, Workspace>
      */
     public function forUserOrderedByName(User $user): Collection
@@ -60,7 +70,7 @@ class WorkspaceRepository
 
         return $query
             ->with('owner')
-            ->withCount('members')
+            ->withCount(['members' => fn ($members) => $members->ofActiveUsers()])
             ->withExists(['members as is_member' => fn (Builder $m) => $m->where('user_id', $user->id)])
             ->when($filters->name !== '', fn (Builder $q) => $q->where('workspaces.name', 'like', self::like($filters->name)))
             ->when($filters->owner !== null, fn (Builder $q) => $q->where('workspaces.owner_id', $filters->owner))

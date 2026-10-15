@@ -5,6 +5,8 @@ namespace App\Services\Identity;
 use App\Models\Diagram;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Repositories\DiagramRepository;
+use App\Repositories\WorkspaceRepository;
 use App\Services\DiagramOwnerService;
 use App\Services\LockService;
 use App\Services\WorkspaceOwnerService;
@@ -23,11 +25,13 @@ class UserDeactivationService
         private readonly DiagramOwnerService $diagramOwners,
         private readonly WorkspaceOwnerService $workspaceOwners,
         private readonly LockService $locks,
+        private readonly DiagramRepository $diagrams,
+        private readonly WorkspaceRepository $workspaces,
     ) {}
 
     /**
      * Blocks both login methods, releases the User's Locks (keeping their
-     * unsaved content as provisional Versions) and ends their sessions. Their
+     * unsaved content as provisional Versions), withdraws their Lock requests and ends their sessions. Their
      * authorship and any Diagrams or Workspaces they own are left as they are.
      */
     public function deactivate(User $user): void
@@ -35,10 +39,10 @@ class UserDeactivationService
         DB::transaction(function () use ($user): void {
             $user->forceFill(['deactivated_at' => now()])->save();
 
-            Diagram::query()
-                ->where('locked_by', $user->getKey())
-                ->get()
+            $this->diagrams->lockedBy($user)
                 ->each(fn (Diagram $diagram) => $this->locks->release($diagram, saveDraft: true));
+
+            $this->diagrams->clearLockRequestsBy($user);
         });
 
         $this->sessionRevoker->revoke($user);
@@ -72,7 +76,7 @@ class UserDeactivationService
      */
     public function ownedDiagrams(User $user): Collection
     {
-        return Diagram::query()->ownedBy($user)->orderBy('title')->get();
+        return $this->diagrams->ownedBy($user);
     }
 
     /**
@@ -80,6 +84,6 @@ class UserDeactivationService
      */
     public function ownedWorkspaces(User $user): Collection
     {
-        return Workspace::query()->where('owner_id', $user->getKey())->orderBy('name')->get();
+        return $this->workspaces->ownedBy($user);
     }
 }

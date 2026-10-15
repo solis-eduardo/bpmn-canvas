@@ -2,9 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Scopes\ActiveUserScope;
 use App\Models\User;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Exists;
 
 abstract class Controller
 {
@@ -29,16 +32,26 @@ abstract class Controller
     }
 
     /**
+     * Validation rule for a User id: it must belong to an active User, the
+     * validation counterpart of the default scope (ActiveUserScope), which
+     * `exists:users` would bypass. A deactivated id fails like an unknown one.
+     */
+    protected function activeUserRule(): Exists
+    {
+        return Rule::exists('users', 'id')->whereNull(ActiveUserScope::COLUMN);
+    }
+
+    /**
      * Validation rules for identifying a target User by either `user_id` or
      * `email`, exactly one required — the pair every endpoint using
      * ResolvesTargetUser::resolveUserFrom() validates against.
      *
-     * @return array<string, array<int, string>>
+     * @return array<string, array<int, string|Exists>>
      */
     protected function userIdentifierRules(): array
     {
         return [
-            'user_id' => ['required_without:email', 'integer', 'exists:users,id'],
+            'user_id' => ['required_without:email', 'integer', $this->activeUserRule()],
             'email' => ['required_without:user_id', 'email'],
         ];
     }
