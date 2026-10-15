@@ -90,24 +90,64 @@ class LockService
     }
 
     /**
-     * Opens the Editor for $user: false when someone else holds the Lock.
-     * Otherwise the Lock is theirs — a holder only gets the heartbeat
-     * refreshed, so the original "locked since" stays.
+     * Acquires the Lock for $user on behalf of an Editor that has just loaded
+     * (ADR-0003): false when someone else holds it, and nothing is requested
+     * in that case. A holder only gets the heartbeat refreshed, so the
+     * original "locked since" stays.
      */
-    public function enter(Diagram $diagram, User $user): bool
+    public function acquire(Diagram $diagram, User $user): bool
     {
-        if ($diagram->isLockedByOther($user)) {
-            return false;
-        }
-
+        // Renew the User's own Lock, claim a free one, or take over one that
+        // expired under someone else (not yet released by locks:expire). A
+        // lost takeover may mean locks:expire released it first, so the free
+        // Lock is tried once more.
         if ($this->renew($diagram, $user) || $diagram->acquireLock($user)) {
             return true;
         }
 
-        // Lost the race for a free Lock: report it as held by someone else.
+        if ($this->takeOverOrClaim($diagram, $user)) {
+            return true;
+        }
+
+        // Lost the race, or someone else holds a live Lock: report the real
+        // holder.
         $diagram->refresh();
 
         return false;
+    }
+
+    /** Takes over an expired Lock; a lost takeover may have left the Lock free, so claim that. */
+    private function takeOverOrClaim(Diagram $diagram, User $user): bool
+    {
+        return $this->takeOverExpired($diagram, $user) || $diagram->acquireLock($user);
+    }
+
+    /**
+     * Takes the Lock from a holder whose Lock has expired, handling their
+     * draft the way `locks:expire` does: kept as a provisional Version. Only
+     * one of several concurrent takeovers wins (see takeOverExpiredLock()); a
+     * loser writes nothing. The Version is saved in the same transaction as
+     * the takeover, so a failed save leaves the Lock and the draft untouched.
+     */
+    private function takeOverExpired(Diagram $diagram, User $user): bool
+    {
+        if (! $diagram->hasExpiredLock()) {
+            return false;
+        }
+
+        // What the takeover observed, and what is then replaced: the draft
+        // that goes to the provisional Version is the one of this snapshot.
+        $previous = clone $diagram;
+
+        return DB::transaction(function () use ($diagram, $previous, $user): bool {
+            if (! $diagram->takeOverExpiredLock($user, $previous->locked_by, $previous->lockLastSeenAt(), $previous->lock_draft)) {
+                return false;
+            }
+
+            $this->provisional->save($previous);
+
+            return true;
+        });
     }
 
     /**
