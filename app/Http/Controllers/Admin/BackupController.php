@@ -18,15 +18,12 @@ class BackupController extends Controller
 
         $kinds = [
             BackupRun::KIND_BACKUP => 'messages.backup_last_backup',
+            BackupRun::KIND_OFFSITE => 'messages.backup_last_offsite',
             BackupRun::KIND_VERIFICATION => 'messages.backup_last_verification',
         ];
 
-        if (config('backup.offsite.enabled')) {
-            $kinds = [
-                BackupRun::KIND_BACKUP => $kinds[BackupRun::KIND_BACKUP],
-                BackupRun::KIND_OFFSITE => 'messages.backup_last_offsite',
-                BackupRun::KIND_VERIFICATION => $kinds[BackupRun::KIND_VERIFICATION],
-            ];
+        if (! config('backup.offsite.enabled')) {
+            unset($kinds[BackupRun::KIND_OFFSITE]);
         }
 
         $rows = [];
