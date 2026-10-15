@@ -55,17 +55,19 @@
                     @endif
                     <td class="px-4 py-3 text-sm text-gray-600">{{ $entry->subject_label ?? '—' }}</td>
                     <td class="px-4 py-3 text-sm text-gray-600">
-                        @foreach (array_unique(array_merge(array_keys($entry->before ?? []), array_keys($entry->after ?? []))) as $key)
+                        @php($before = $entry->before ?? [])
+                        @php($after = $entry->after ?? [])
+                        @foreach (array_unique([...array_keys($before), ...array_keys($after)]) as $key)
                             <div>
                                 <span class="font-medium">{{ __('messages.activity_field_'.$key) }}:</span>
-                                @if (array_key_exists($key, $entry->before ?? []))
-                                    {{ $display($key, $entry->before[$key]) }}
+                                @if (array_key_exists($key, $before))
+                                    {{ $display($key, $before[$key]) }}
                                 @endif
-                                @if (isset($entry->before) && isset($entry->after) && array_key_exists($key, $entry->before) && array_key_exists($key, $entry->after))
+                                @if (array_key_exists($key, $before) && array_key_exists($key, $after))
                                     →
                                 @endif
-                                @if (array_key_exists($key, $entry->after ?? []))
-                                    {{ $display($key, $entry->after[$key]) }}
+                                @if (array_key_exists($key, $after))
+                                    {{ $display($key, $after[$key]) }}
                                 @endif
                             </div>
                         @endforeach
