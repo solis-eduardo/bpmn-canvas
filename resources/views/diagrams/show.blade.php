@@ -3,20 +3,13 @@
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/diagram-js.css') }}">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-js.css') }}">
         <link rel="stylesheet" href="{{ asset('vendor/bpmn-js/assets/bpmn-font/css/bpmn-embedded.css') }}">
+        <link rel="stylesheet" href="@assetUrl('comments.css')">
         @vite('resources/css/editor.css')
-        <script type="importmap" nonce="{{ $cspNonce }}">
-            {
-                "imports": {
-                    "bpmn-js-differ": "{{ asset('vendor/bpmn-js-differ/index.esm.js') }}",
-                    "min-dash": "{{ asset('vendor/bpmn-js-differ/min-dash.esm.js') }}"
-                }
-            }
-        </script>
     </x-slot:head>
 
     <div
         id="editor"
-        data-lang-url="{{ asset('assets/lang/'.app()->getLocale().'.json') }}"
+        data-lang-url="@assetUrl('lang/'.app()->getLocale().'.json')"
         data-slug="{{ $diagram->slug }}"
         data-title="{{ $diagram->title }}"
         data-save-failed-notice="{{ __('messages.diagram_save_failed') }}"
@@ -231,6 +224,7 @@
                     <button type="button" id="btn-compare-selected" disabled><x-icon name="transfer" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.compare_selected') }}</button>
                 </div>
             </aside>
+            @include('partials.comments-panel', ['diagram' => $diagram])
             @can('manageCollaborators', $diagram)
                 <aside id="collaborators-panel" hidden>
                     <div class="aside-head">
@@ -259,6 +253,9 @@
                         </section>
                     </div>
                 </aside>
+            @endcan
+            @can('viewActivity', $diagram)
+                @include('partials.activity-panel', ['diagram' => $diagram])
             @endcan
             @can('manageShares', $diagram)
                 <aside id="shares-panel" hidden>
@@ -306,6 +303,14 @@
                     title="{{ __('messages.version_history') }}"
                     aria-label="{{ __('messages.version_history') }}"
                 ><x-icon name="clock" /></button>
+                <button
+                    type="button"
+                    id="btn-comments-entry"
+                    class="panel-toggle"
+                    data-panel-toggle="comments-panel"
+                    title="{{ __('messages.comments') }}"
+                    aria-label="{{ __('messages.comments') }}"
+                ><x-icon name="chat" /></button>
                 @can('manageCollaborators', $diagram)
                     <button
                         type="button"
@@ -315,6 +320,16 @@
                         title="{{ __('messages.collaborators') }}"
                         aria-label="{{ __('messages.collaborators') }}"
                     ><x-icon name="users" /></button>
+                @endcan
+                @can('viewActivity', $diagram)
+                    <button
+                        type="button"
+                        id="btn-activity-entry"
+                        class="panel-toggle"
+                        data-panel-toggle="activity-panel"
+                        title="{{ __('messages.activity') }}"
+                        aria-label="{{ __('messages.activity') }}"
+                    ><x-icon name="shield-check" /></button>
                 @endcan
                 @can('manageShares', $diagram)
                     <button
@@ -373,9 +388,12 @@
     </div>
 
     <script src="{{ asset('vendor/bpmn-js/bpmn-modeler.production.min.js') }}"></script>
-    <script type="module" src="{{ asset('assets/editor.js') }}"></script>
-    <script type="module" src="{{ asset('assets/diagram-settings.js') }}"></script>
+    <script type="module" src="@assetUrl('editor.js')"></script>
+    <script type="module" src="@assetUrl('diagram-settings.js')"></script>
     @if (auth()->user()->can('manageCollaborators', $diagram) || auth()->user()->can('manageShares', $diagram))
-        <script type="module" src="{{ asset('assets/collaborators.js') }}"></script>
+        <script type="module" src="@assetUrl('collaborators.js')"></script>
     @endif
+    @can('viewActivity', $diagram)
+        <script type="module" src="@assetUrl('activity.js')"></script>
+    @endcan
 </x-layouts.app>

@@ -8,6 +8,7 @@
  * read-only Viewer instead.
  */
 import { errorMessage, setupPanels, toast } from './common.js';
+import { startComments } from './comments.js';
 import { createEditor } from './editor-core.js';
 import { createHttpDiagramStore, createJsonClient } from './http-store.js';
 import { acquireLock, startLockSession } from './lock-session.js';
@@ -81,6 +82,8 @@ async function openEditor() {
 
   // The server-only scripts (collaborators.js) listen for saves on the document.
   editor.on('saved', () => document.dispatchEvent(new CustomEvent('diagram:saved')));
+
+  startComments({ modeler: editor.modeler });
 
   createVersionHistory({ editor, canEdit: body.dataset.canEditVersions === 'true' });
 

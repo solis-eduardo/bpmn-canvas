@@ -97,7 +97,8 @@ class LockReleaseDraftTest extends TestCase
 
         $list = app(VersionRepository::class)->list($diagram);
         $this->assertCount($before + 1, $list);
-        $this->assertSame(__('messages.provisional_version'), $list[0]['name']);
+        $this->assertSame(__('messages.provisional_version_released'), $list[0]['name']);
+        $this->assertNotSame(__('messages.provisional_version'), $list[0]['name']);
         $this->assertSame($holder->name, $list[0]['author']);
         $this->assertStringContainsString('Holder work', Storage::disk('diagrams')->get($diagram->disk_path));
     }
