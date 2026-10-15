@@ -22,6 +22,7 @@ import { createVersionHistory } from '../public/assets/versions.js';
 import en from '../public/assets/lang/en.json';
 import es from '../public/assets/lang/es.json';
 import pt_BR from '../public/assets/lang/pt_BR.json';
+import { createLinting } from '../resources/js/editor-lint.js';
 import { openDb } from './db.js';
 import { createLocalServer, installLocalServer } from './local-server.js';
 import { createDiagram, getDiagram, listDiagrams } from './library.js';
@@ -259,6 +260,7 @@ function startEditor() {
     t,
     timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     Modeler: BpmnModeler,
+    lint: createLinting(),
   });
 
   setupPanels();

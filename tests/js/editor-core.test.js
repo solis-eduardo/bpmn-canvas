@@ -148,3 +148,55 @@ describe('createEditor save conflicts', () => {
     expect(toast).toHaveBeenCalledWith('messages.saved');
   });
 });
+
+describe('createEditor modeling checks', () => {
+  function lintSetup({ lint, stored = null }) {
+    const element = { classList: { toggle: vi.fn() }, addEventListener: vi.fn(), setAttribute: vi.fn(), hidden: true };
+    vi.stubGlobal('document', { getElementById: () => element, addEventListener: vi.fn() });
+    vi.stubGlobal('window', {
+      addEventListener: vi.fn(),
+      localStorage: { getItem: () => stored, setItem: vi.fn() },
+    });
+    const linting = { isActive: () => true, toggle: vi.fn() };
+    const canvas = { zoom: vi.fn() };
+    const Modeler = vi.fn(function Modeler() {
+      return {
+        get: name => (name === 'linting' ? linting : canvas),
+        on: vi.fn(),
+        importXML: vi.fn(async () => ({ warnings: [] })),
+        saveXML: vi.fn(async () => ({ xml: '<x/>' })),
+      };
+    });
+    createEditor({ container: '#canvas', store: { load: vi.fn(async () => '<x/>') }, t: key => key, Modeler, lint });
+
+    return { Modeler, element };
+  }
+
+  afterEach(() => { vi.unstubAllGlobals(); });
+
+  const lint = { modules: ['lintModule'], options: { linting: { bpmnlint: 'rules', active: true } } };
+
+  it('starts a plain Modeler, and keeps the toggle hidden, without the checks', () => {
+    const { Modeler, element } = lintSetup({ lint: undefined });
+
+    expect(Modeler).toHaveBeenCalledWith({ container: '#canvas' });
+    expect(element.hidden).toBe(true);
+  });
+
+  it('adds the lint module to the Modeler and shows the toggle', () => {
+    const { Modeler, element } = lintSetup({ lint });
+
+    expect(Modeler).toHaveBeenCalledWith({
+      container: '#canvas',
+      additionalModules: ['lintModule'],
+      linting: { bpmnlint: 'rules', active: true },
+    });
+    expect(element.hidden).toBe(false);
+  });
+
+  it('starts the checks hidden when the User turned them off', () => {
+    const { Modeler } = lintSetup({ lint, stored: '0' });
+
+    expect(Modeler.mock.calls[0][0].linting.active).toBe(false);
+  });
+});

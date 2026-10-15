@@ -7,6 +7,7 @@
  * the same theme tokens as the other screens. Only app chrome is styled here;
  * the bpmn-js stylesheets are scoped by their own `.djs-*` / `.bjs-*` classes.
  */
+@import 'bpmn-js-bpmnlint/dist/assets/css/bpmn-js-bpmnlint.css';
 @reference './app.css';
 
 @layer components {
@@ -57,6 +58,13 @@
   background: var(--panel); box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
 }
 .suffix { color: var(--muted); margin-left: -4px; }
+.lint-toggle { display: inline-flex; align-items: center; gap: 4px; }
+.lint-toggle[hidden] { display: none; }
+.lint-toggle[aria-pressed="true"] { background: var(--color-blue-50); border-color: var(--color-blue-500); color: var(--color-blue-700); }
+
+/* The header's lint toggle replaces bpmn-js-bpmnlint's own canvas button. */
+.bjsl-button { display: none !important; }
+
 .dirty { color: var(--danger); font-weight: 600; visibility: hidden; }
 .dirty.on { visibility: visible; }
 

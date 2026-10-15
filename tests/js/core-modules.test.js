@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 // ADR-0019: the shared core is plain ES modules that import what they use and
 // get their UI strings through `t`, so it can be bundled into the standalone build.
-const CORE = ['common', 'editor-core', 'save-conflict', 'versions', 'version-history', 'diff', 'http-store', 'translator'];
+const CORE = ['common', 'editor-core', 'lint-ui', 'save-conflict', 'versions', 'version-history', 'diff', 'http-store', 'translator'];
 
 describe.each(CORE)('shared core module %s', name => {
   const source = readFileSync(`public/assets/${name}.js`, 'utf8');

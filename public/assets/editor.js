@@ -35,6 +35,18 @@ async function loadMessages(url) {
   }
 }
 
+// The modeling checks are a Vite bundle (the vendored bpmn-js here is not
+// bundled with them). Without them the Editor still opens, just unchecked.
+async function loadLinting(url) {
+  try {
+    return (await import(url)).createLinting();
+  } catch (e) {
+    console.error('Could not load the modeling checks', e);
+
+    return undefined;
+  }
+}
+
 async function openEditor() {
   const messages = await loadMessages(body.dataset.langUrl);
   const t = createTranslator(messages);
@@ -65,6 +77,7 @@ async function openEditor() {
     t,
     timeZone: body.dataset.timeZone,
     Modeler: window.BpmnJS,
+    lint: await loadLinting(body.dataset.lintUrl),
   });
 
   // The server-only scripts (collaborators.js) listen for saves on the document.
