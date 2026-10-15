@@ -76,6 +76,10 @@ _Avoid_: Workspace Collaborator
 The single User who manages a Workspace: adds and removes Members, renames and deletes it, and can take any Diagram out of it (only a Diagram Owner puts a Diagram in). Starts as the creator; the Workspace Owner or an Administrator can transfer it to another User, with no acceptance needed (the recipient is notified). Can't leave the Workspace without transferring it first. A Workspace can't be deleted while it still holds Diagrams.
 _Avoid_: Owner (unqualified), Workspace admin, manager (reserve "Administrator" for the system-wide role)
 
+**Activity Log**:
+The append-only record of sensitive access changes: Diagram and Workspace ownership transfers, Collaborator grants, removals and role changes, Share creation and revocation, an Administrator's Lock force-release, Workspace Member additions and removals, and Administrator role changes. Each entry keeps the actor (none for what a Keycloak login does on its own, shown as "System"), the action, the Diagram or Workspace, the subject, a before and after, and the time, with names copied so it survives renames and deletions. Entries are never edited or deleted, except by the configurable retention (`ACTIVITY_LOG_RETENTION_DAYS`, default: kept forever). Shown per Diagram in the Editor's Activity panel (a tab beside Versions, Comments and Collaborators) to the Diagram Owner, Diagram Managers and Administrators, and globally to Administrators with filters (ADR-0025). Not a Notification: it is a record for those who administer access, not a message to the affected User.
+_Avoid_: audit trail, history (Version history is a different thing)
+
 **Comment**:
 A message in a discussion about a Diagram, written in a Comment Thread. Comments are for reviewing a process ("is this gateway right?") and are never part of the BPMN content: they live in the database, are not Versions, are not restored with a Version, and are not copied into a Fork. Anyone who can open the Diagram can write one, whether or not they hold the Lock, because writing a Comment never changes the Diagram (ADR-0024). A Comment can't be edited or deleted; it goes away only with its Diagram.
 _Avoid_: note, annotation (the BPMN `textAnnotation` is a native element of the Diagram's content)
@@ -117,6 +121,8 @@ The UI is localized in pt-BR (`lang/pt_BR`); code, docs and commits use the Engl
 | Workspace Owner | Dono do Ambiente |
 | Member | Membro |
 | Tag | Tag |
+| Activity Log | Registro de atividade |
+| Activity (tab) | Atividade |
 | Comment | Comentário |
 | Comment Thread | Conversa de comentários |
 | Orphaned (Thread) | Órfã |

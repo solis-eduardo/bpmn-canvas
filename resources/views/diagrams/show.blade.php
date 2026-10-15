@@ -256,6 +256,9 @@
                     </div>
                 </aside>
             @endcan
+            @can('viewActivity', $diagram)
+                @include('partials.activity-panel', ['diagram' => $diagram])
+            @endcan
             @can('manageShares', $diagram)
                 <aside id="shares-panel" hidden>
                     <div class="aside-head">
@@ -320,6 +323,16 @@
                         aria-label="{{ __('messages.collaborators') }}"
                     ><x-icon name="users" /></button>
                 @endcan
+                @can('viewActivity', $diagram)
+                    <button
+                        type="button"
+                        id="btn-activity-entry"
+                        class="panel-toggle"
+                        data-panel-toggle="activity-panel"
+                        title="{{ __('messages.activity') }}"
+                        aria-label="{{ __('messages.activity') }}"
+                    ><x-icon name="shield-check" /></button>
+                @endcan
                 @can('manageShares', $diagram)
                     <button
                         type="button"
@@ -382,4 +395,7 @@
     @if (auth()->user()->can('manageCollaborators', $diagram) || auth()->user()->can('manageShares', $diagram))
         <script type="module" src="{{ asset('assets/collaborators.js') }}"></script>
     @endif
+    @can('viewActivity', $diagram)
+        <script type="module" src="{{ asset('assets/activity.js') }}"></script>
+    @endcan
 </x-layouts.app>

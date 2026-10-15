@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Repositories\ListSort;
 use App\Repositories\UserListFilters;
 use App\Repositories\UserRepository;
+use App\Services\ActivityLogger;
 use App\Services\Identity\UserDeactivationService;
 use App\Services\Identity\UserSessionRevoker;
 use App\Support\KeycloakConfig;
@@ -29,6 +30,7 @@ class UserController extends Controller
         private readonly UserRepository $users,
         private readonly UserSessionRevoker $sessionRevoker,
         private readonly UserDeactivationService $deactivation,
+        private readonly ActivityLogger $activity,
     ) {}
 
     /**
@@ -171,12 +173,15 @@ class UserController extends Controller
             $managedUser->is_admin = $data['is_admin'];
         }
 
-        DB::transaction(function () use ($managedUser, $revokesAdmin): void {
+        $wasAdmin = (bool) $managedUser->getOriginal('is_admin');
+
+        DB::transaction(function () use ($managedUser, $revokesAdmin, $wasAdmin): void {
             if ($revokesAdmin && $managedUser->getOriginal('is_admin')) {
                 $this->assertAnotherAdministratorRemains($managedUser);
             }
 
             $managedUser->save();
+            $this->activity->recordAdministratorChange($managedUser, $wasAdmin);
         });
 
         return $methodChanged
