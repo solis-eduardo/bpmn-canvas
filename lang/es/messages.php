@@ -79,6 +79,9 @@ return [
     // Editor
     'bpmn_editor' => 'Editor BPMN',
     'unsaved_changes' => 'Cambios sin guardar',
+    'lint_count' => 'Verificaciones de modelado: :count encontradas',
+    'lint_show' => 'Mostrar verificaciones de modelado en el lienzo',
+    'lint_hide' => 'Ocultar verificaciones de modelado del lienzo',
     'back' => 'Volver',
     'save_and_exit' => 'Guardar y salir',
     'read_only_diagram_notice' => 'Puedes ver este diagrama pero no editarlo: no eres su propietario, colaborador ni miembro del workspace.',

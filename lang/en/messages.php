@@ -79,6 +79,9 @@ return [
     // Editor
     'bpmn_editor' => 'BPMN Editor',
     'unsaved_changes' => 'Unsaved changes',
+    'lint_count' => 'Modeling checks: :count found',
+    'lint_show' => 'Show modeling checks on the canvas',
+    'lint_hide' => 'Hide modeling checks from the canvas',
     'back' => 'Back',
     'save_and_exit' => 'Save and exit',
     'read_only_diagram_notice' => 'You can view this diagram but not edit it: you are not its owner, a collaborator or a workspace member.',

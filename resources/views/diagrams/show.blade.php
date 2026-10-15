@@ -54,6 +54,7 @@
         data-release-discard-label="{{ __('messages.release_discard_and_release') }}"
         data-release-cancel-label="{{ __('messages.release_cancel') }}"
         data-versions-url="{{ route('diagrams.versions', $diagram->slug) }}"
+        data-lint-url="{{ Vite::asset('resources/js/editor-lint.js') }}"
         data-time-zone="{{ auth()->user()->displayTimezone() }}"
         data-version-content-url-template="{{ route('diagrams.versions.content', [$diagram->slug, 'VERSION_ID']) }}"
         data-version-restore-url-template="{{ route('diagrams.versions.restore', [$diagram->slug, 'VERSION_ID']) }}"
@@ -146,6 +147,11 @@
                 <button type="button" id="btn-release-lock">
                     <x-icon name="key" class="inline h-4 w-4 align-text-bottom" />
                     {{ __('messages.release_lock') }}
+                </button>
+                {{-- Hidden until the Editor starts its modeling checks (lint); the count is how many issues they found. --}}
+                <button type="button" id="btn-lint" class="lint-toggle" aria-pressed="true" hidden>
+                    <x-icon name="check-circle" class="inline h-4 w-4 align-text-bottom" />
+                    <span id="lint-count" aria-hidden="true">0</span>
                 </button>
                 <span class="dirty" id="dirty" title="{{ __('messages.unsaved_changes') }}">●</span>
                 <button type="button" class="primary" id="btn-save" title="Ctrl+S"><x-icon name="save" class="inline h-4 w-4 align-text-bottom" /> {{ __('messages.save') }}</button>            </header>

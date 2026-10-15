@@ -38,6 +38,10 @@ _Avoid_: Share token, public link (use "Share" for the entity; the URL itself ca
 **Editor**:
 Authenticated interface for creating/editing a Diagram (bpmn-js Modeler). Accessible by the Diagram Owner, Collaborators, and Members of the Diagram's Workspace.
 
+**Modeling check**:
+A non-blocking warning the Editor shows for a likely mistake in the Diagram (a disconnected element, a missing start or end event, an unlabeled task, a gateway with no outgoing flow), computed in the browser by bpmnlint. Shown on the canvas with a count in the Editor header, and the User can switch them off. Never prevents saving and is not stored with the Diagram.
+_Avoid_: validation, error (they are warnings, and XML validity is a separate matter)
+
 **Public Viewer**:
 Read-only interface for viewing a Diagram by anyone with a valid Share link (not expired, not revoked), without authentication. Exports PNG/SVG/PDF/BPMN only if the Share allows download (`allow_download`), through direct links to the server-rendered files (ADR-0023).
 _Avoid_: Viewer (without qualifying "public")
@@ -99,6 +103,7 @@ The UI is localized in pt-BR (`lang/pt_BR`); code, docs and commits use the Engl
 | Administrator | Administrador |
 | Share | Compartilhamento |
 | Editor | Editor |
+| Modeling check | Verificação de modelagem |
 | Public Viewer | Visualizador Público |
 | Lock (request, release, transfer) | Trava (solicitar, liberar, transferir) |
 | Fork | Fork |
